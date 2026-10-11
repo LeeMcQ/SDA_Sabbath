@@ -50,8 +50,10 @@ export function select(options, current, onchange, cls = 'field') {
 }
 
 let openModal = null;
+const FOCUSABLE = 'button:not([disabled]),[href],input:not([disabled]):not([type=hidden]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 /** modal({title, body: Node, actions:[{label, primary, danger, onclick -> false keeps open}], wide}) */
 export function modal({ title, body, actions = [], wide = false, onclose }) {
+  const returnTo = openModal ? openModal.returnTo : document.activeElement;
   closeModal();
   const back = h('div.modal-back', { onmousedown: (e) => { if (e.target === back) closeModal(); } });
   const foot = h('div.modal-f');
@@ -66,9 +68,19 @@ export function modal({ title, body, actions = [], wide = false, onclose }) {
     h('div.modal-b', body),
     actions.length ? foot : null);
   back.appendChild(m);
+  // Esc closes the dialog; Tab stays inside it (keyboard and screen-reader users).
+  back.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeModal(); return; }
+    if (e.key !== 'Tab') return;
+    const f = Array.prototype.filter.call(m.querySelectorAll(FOCUSABLE), (x) => x.offsetParent !== null);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && (document.activeElement === first || !m.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && (document.activeElement === last || !m.contains(document.activeElement))) { e.preventDefault(); first.focus(); }
+  });
   document.body.appendChild(back);
-  openModal = { back, onclose };
-  const f = m.querySelector('input,select,textarea,button.primary');
+  openModal = { back, onclose, returnTo };
+  const f = m.querySelector('input,select,textarea,button.primary') || m.querySelector('.modal-h button');
   if (f) setTimeout(() => f.focus(), 30);
   return m;
 }
@@ -77,6 +89,10 @@ export function closeModal() {
   const o = openModal; openModal = null;
   o.back.remove();
   if (o.onclose) o.onclose();
+  // Give focus back to whatever opened the dialog (unless another dialog opened meanwhile).
+  if (!openModal && o.returnTo && o.returnTo.isConnected && typeof o.returnTo.focus === 'function') {
+    try { o.returnTo.focus({ preventScroll: true }); } catch (e) { /* */ }
+  }
 }
 export const modalOpen = () => !!openModal;
 
@@ -120,13 +136,38 @@ export function menu(anchor, items) {
   m.style.left = Math.max(8, x) + 'px'; m.style.top = y + 'px';
   setTimeout(() => document.addEventListener('pointerdown', outside, true), 0);
   function outside(e) { if (!m.contains(e.target)) closeMenu(); }
-  openMenu = { m, outside };
+  // Keyboard: Esc closes, ↑/↓ move between items.
+  m.addEventListener('keydown', (e) => {
+    const its = Array.prototype.filter.call(m.querySelectorAll('button'), (b) => !b.disabled);
+    const i = its.indexOf(document.activeElement);
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeMenu(); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); (its[i + 1] || its[0]).focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); (its[i - 1] || its[its.length - 1]).focus(); }
+    else if (e.key === 'Tab') closeMenu();
+  });
+  openMenu = { m, outside, anchor };
+  if (anchor && anchor.matches && anchor.matches(':focus-visible')) { const fb = m.querySelector('button:not([disabled])'); if (fb) fb.focus(); }
   return m;
 }
 export function closeMenu() {
   if (!openMenu) return;
-  document.removeEventListener('pointerdown', openMenu.outside, true);
-  openMenu.m.remove(); openMenu = null;
+  const o = openMenu; openMenu = null;
+  document.removeEventListener('pointerdown', o.outside, true);
+  const hadFocus = o.m.contains(document.activeElement);
+  o.m.remove();
+  if (hadFocus && o.anchor && o.anchor.isConnected) { try { o.anchor.focus({ preventScroll: true }); } catch (e) { /* */ } }
+}
+
+/** Make a clickable non-button element (verse row, plan item) usable from the keyboard. */
+export function activatable(el, label) {
+  el.tabIndex = 0;
+  el.setAttribute('role', 'button');
+  if (label) el.setAttribute('aria-label', label);
+  el.addEventListener('keydown', (e) => {
+    if (e.target !== el || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); el.dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: e.shiftKey })); }
+  });
+  return el;
 }
 
 /** Drag-and-drop + click file zone. */

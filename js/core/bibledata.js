@@ -16,11 +16,25 @@ async function fetchJSON(url) {
   return r.json();
 }
 
+// Licensed Bibles in data/bibles-private/ exist only in builds made on a church's own machine.
+// tools/build.py lists them in asset-manifest.json, so look there first instead of requesting a
+// file that is missing on the public site (that showed up as a 404 error on every page load).
+let privateListed = null;
+function hasPrivateBibles() {
+  if (!privateListed) {
+    privateListed = fetchJSON('asset-manifest.json')
+      .then((m) => !Array.isArray(m.files) || m.files.indexOf('data/bibles-private/index.json') >= 0)
+      .catch(() => true); // no manifest (plain dev server): just try
+  }
+  return privateListed;
+}
+
 /** All translations: [{id, abbr, name, lang, license, src:'builtin'|'private'|'imported', dir}] */
 export async function listTranslations(force) {
   if (listCache && !force) return listCache;
   const out = [];
   for (const [dir, src] of [['data/bibles', 'builtin'], ['data/bibles-private', 'private']]) {
+    if (src === 'private' && !(await hasPrivateBibles())) continue;
     try { (await fetchJSON(dir + '/index.json')).forEach((t) => out.push(Object.assign({}, t, { src, dir: dir + '/' + t.id }))); }
     catch (e) { /* private folder is optional */ }
   }
