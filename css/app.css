@@ -227,7 +227,7 @@ input[type=range] { accent-color: var(--next); }
 .book-grid button[aria-pressed="true"], .num-grid button[aria-pressed="true"] { border-color: var(--next); background: var(--next-soft); }
 .book-grid .grp { grid-column: 1 / -1; font-size: 12px; color: var(--muted); padding: 6px 2px 2px; font-weight: 700; }
 .num-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 4px; padding: 8px; }
-.verse-list .vr { display: flex; gap: 10px; padding: 9px 12px; border-bottom: 1px solid var(--line); cursor: pointer; line-height: 1.45; user-select: none; }
+.verse-list .vr { position: relative; display: flex; gap: 10px; padding: 9px 12px; border-bottom: 1px solid var(--line); cursor: pointer; line-height: 1.45; user-select: none; }
 .verse-list .vr:hover { background: var(--panel); }
 .verse-list .vr.sel { background: var(--next-soft); box-shadow: inset 3px 0 0 var(--next); }
 .verse-list .vr.live { box-shadow: inset 3px 0 0 var(--live); }
@@ -338,4 +338,72 @@ input[type=range] { accent-color: var(--next); }
 @media (max-width: 760px) and (orientation: landscape) and (max-height: 500px) {
   .monitors { display: none; }
 }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+/* ---------- Motion (operator screen only) ----------
+   Short ease-out moves of opacity and transform only, so nothing reflows or shifts.
+   Everything sits behind prefers-reduced-motion and is skipped in low-power mode (html.lp).
+   The congregation display (display.html, the "this device" screen, stage.css) gets none of it. */
+:root { --ease: cubic-bezier(.22, .8, .3, 1); --t-fast: 150ms; --t: 220ms; }
+
+/* Placeholder blocks while the Bibles load (they stay still when motion is reduced). */
+.sk { position: relative; overflow: hidden; height: 38px; border-radius: var(--r-sm); background: var(--panel); }
+.verse-list { display: flow-root; } /* placeholder margins stay inside the list: no jump when verses arrive */
+.verse-list .sk.line { height: 14px; margin: 15px 12px; border-radius: 4px; }
+.verse-list .sk.line:nth-child(3n+2) { width: 72%; }
+.verse-list .sk.line:nth-child(3n) { width: 86%; }
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes s-fade { from { opacity: 0; } }
+  @keyframes s-rise { from { opacity: 0; transform: translateY(6px); } }
+  @keyframes s-pop { from { opacity: 0; transform: scale(.96); } }
+  @keyframes s-pop-in { from { opacity: 0; transform: scale(.6); } 70% { transform: scale(1.06); } }
+  @keyframes s-sheet { from { opacity: .4; transform: translateY(28px); } }
+  @keyframes s-from-right { from { opacity: 0; transform: translateX(16px); } }
+  @keyframes s-from-left { from { opacity: 0; transform: translateX(-16px); } }
+  @keyframes s-out { to { opacity: 0; transform: translateY(6px); } }
+  @keyframes s-gone { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes s-bar-y { from { transform: scaleY(0); } }
+  @keyframes s-bar-x { from { transform: scaleX(0); } }
+  @keyframes s-shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+
+  /* Tabs: the newly opened tab fades up a few pixels; the rail marker grows in. */
+  html:not(.lp) .tabpanel.enter { animation: s-rise var(--t) var(--ease) both; }
+  html:not(.lp) .rail button[aria-selected="true"]::before { animation: s-bar-y var(--t) var(--ease) both; }
+
+  /* Bible: a new chapter fades in; search results and hymn stanzas settle in one after another. */
+  html:not(.lp) .verse-list.fade { animation: s-fade 180ms var(--ease) both; }
+  html:not(.lp) .verse-list.stagger > .vr,
+  html:not(.lp) .stanza-grid.stagger > .stanza { animation: s-rise var(--t) var(--ease) both; animation-delay: calc(var(--i, 12) * 18ms); }
+  html:not(.lp) .pane.from-right { animation: s-from-right var(--t) var(--ease) both; }
+  html:not(.lp) .pane.from-left { animation: s-from-left var(--t) var(--ease) both; }
+
+  /* Selection: a soft pulse of the green highlight as a verse or stanza is picked, then it settles. */
+  html:not(.lp) .verse-list .vr.pick::after,
+  html:not(.lp) .stanza.pick::after { content: ""; position: absolute; inset: 0; background: var(--next-soft); pointer-events: none; animation: s-gone 360ms var(--ease) forwards; }
+
+  /* Dialogs, menus, search pop-up, toasts. Dialogs close at once; only the dim fades out. */
+  html:not(.lp) .modal-back { animation: s-fade var(--t-fast) var(--ease) both; }
+  html:not(.lp) .modal { animation: s-pop var(--t) var(--ease) both; }
+  .modal-dim { position: fixed; inset: 0; z-index: 79; background: rgba(5,8,14,.62); pointer-events: none; animation: s-gone 180ms var(--ease) forwards; }
+  html:not(.lp) .menu { animation: s-pop var(--t-fast) var(--ease) both; }
+  html:not(.lp) .quick-pop { transform-origin: top center; animation: s-pop var(--t-fast) var(--ease) both; }
+  html:not(.lp) .toast { animation: s-rise var(--t) var(--ease) both; }
+  html:not(.lp) .toast.out { animation: s-out 180ms var(--ease) forwards; }
+  html:not(.lp) .btn.pop { animation: s-pop-in 280ms var(--ease) both; }
+
+  /* Press and hover feedback. */
+  html:not(.lp) :is(.btn, .chip, .seg button, .rail button, .book-grid button, .num-grid button, .keypad button, .mon-frames button, .disp-btn, .stanza, .thumb) { transition: transform 120ms var(--ease); }
+  html:not(.lp) .present { transition: background .12s, transform 120ms var(--ease); }
+  html:not(.lp) :is(.btn, .chip, .seg button, .rail button, .book-grid button, .num-grid button, .keypad button, .mon-frames button, .disp-btn):active:not(:disabled) { transform: scale(.96); }
+  html:not(.lp) :is(.stanza, .thumb):active { transform: scale(.98); }
+  @media (hover: hover) { html:not(.lp) :is(.stanza, .thumb):hover:not(:active) { transform: translateY(-2px); } }
+
+  /* Loading shimmer. */
+  html:not(.lp) .sk::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(150,160,180,.14), transparent); animation: s-shimmer 1.2s linear infinite; }
+
+  @media (max-width: 760px) {
+    html:not(.lp) .rail button[aria-selected="true"]::before { animation-name: s-bar-x; }
+    html:not(.lp) .modal { animation-name: s-sheet; } /* bottom sheet slides up */
+  }
+}
+@media (max-width: 760px) { .split { overflow-x: hidden; } } /* sideways pane slides never add a scrollbar */
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }

@@ -2,7 +2,7 @@
 // press Present. Long passages are split into readable slides automatically.
 import { h, clear, esc, debounce } from '../core/util.js';
 import { icon } from '../core/icons.js';
-import { btn, modal, seg, toggle, menu, select, activatable } from '../core/ui.js';
+import { btn, modal, seg, toggle, menu, select, activatable, enter, motionOK } from '../core/ui.js';
 import { EN, SHORT, parseRef, refText } from '../core/books.js';
 import { listTranslations, getInfo, versesFor, verseHtml, verseText, search as bibleSearch } from '../core/bibledata.js';
 import { fitsText } from '../core/render.js';
@@ -125,6 +125,7 @@ export default function create(ctx) {
       frag.appendChild(row);
     });
     verseList.appendChild(frag);
+    enter(verseList, 'fade');
     markSelection();
     markLive();
     renderCrumbs();
@@ -146,6 +147,7 @@ export default function create(ctx) {
     for (const r of rows) {
       const v = +r.getAttribute('data-v');
       const on = st.selBook === st.book && (st.segs || []).some((s) => inSeg(s, st.chapter, v));
+      if (on && !r.classList.contains('sel')) enter(r, 'pick'); // soft pulse on newly picked verses
       r.classList.toggle('sel', on);
       r.setAttribute('aria-pressed', String(on));
     }
@@ -166,7 +168,15 @@ export default function create(ctx) {
     return true;
   };
 
-  function setStep(step) { st.step = step; split.setAttribute('data-step', step); renderCrumbs(); }
+  function setStep(step) {
+    const was = st.step;
+    st.step = step; split.setAttribute('data-step', step); renderCrumbs();
+    // Phones show one pane at a time: slide the new one in from the side it comes from.
+    if (was !== step && ctx.isMobile()) {
+      const order = ['books', 'chapters', 'verses'];
+      enter(split.querySelector('.p-' + step), order.indexOf(step) > order.indexOf(was) ? 'from-right' : 'from-left');
+    }
+  }
   function renderCrumbs() {
     if (!info) return;
     clear(crumbs);
@@ -183,7 +193,7 @@ export default function create(ctx) {
       renderBooks();
       markSelection();
       const row = verseList.querySelector('.vr.sel');
-      if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest' });
+      if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest', behavior: motionOK() ? 'smooth' : 'auto' });
       if (ctx.isMobile()) setStep('verses');
     }
     refInput.value = refText(info.names, book, segs);
@@ -373,13 +383,15 @@ export default function create(ctx) {
     // Highlight in the plain text and escape each piece, so a search for e.g. "quota" cannot
     // match inside an escaped character such as &quot; and break the verse.
     const marked = (t) => verseText(t).split(re).map((part, i) => (i % 2 ? '<mark>' + esc(part) + '</mark>' : esc(part))).join('');
-    res.forEach((r) => {
+    res.forEach((r, i) => {
       const ref = info.names[r.b - 1] + ' ' + r.c + ':' + r.v;
       const row = h('div.vr', { html: '<b style="min-width:auto;white-space:nowrap">' + esc(ref) + '</b><span>' + marked(r.text) + '</span>' });
+      if (i < 12) row.style.setProperty('--i', i); // stagger the first rows only
       activatable(row);
       row.addEventListener('click', () => { setMode('browse'); selectVerses(r.b, [{ c1: r.c, v1: r.v, c2: r.c, v2: r.v }]); });
       sResults.appendChild(row);
     });
+    enter(sResults, 'stagger', 700);
     if (res.length >= 200) sResults.appendChild(h('p.note.pad', 'Showing the first 200 matches. Add more words to narrow it down.'));
   }
 
@@ -433,14 +445,18 @@ export default function create(ctx) {
   live.on('live', markLive);
   window.addEventListener('selah-bibles', () => { loadTranslations().then(() => { if (!trList.some((t) => t.id === st.tr) && trList[0]) setTr(trList[0].id); }); });
 
+  // Placeholder blocks while the Bibles load (they shimmer unless reduced motion is on).
+  const skel = (n, cls) => { const f = document.createDocumentFragment(); for (let i = 0; i < n; i++) f.appendChild(h('div.sk' + (cls ? '.' + cls : ''), { 'aria-hidden': 'true' })); return f; };
+  bookGrid.appendChild(skel(24)); verseList.appendChild(skel(6, 'line'));
+  bookGrid.setAttribute('aria-busy', 'true');
   renderHistory(); // draw saved history straight away so the layout does not jump when the Bibles arrive
   const ready = (async () => {
     await loadTranslations();
     info = await getInfo(st.tr);
     st.tr = info.id;
-    renderBooks(); renderChapters(); await renderVerses();
+    renderBooks(); bookGrid.removeAttribute('aria-busy'); renderChapters(); await renderVerses();
     renderHistory();
-  })().catch((e) => { el.appendChild(h('div.empty-state', icon('bible'), h('p', 'The Bibles could not be loaded: ' + e.message))); });
+  })().catch((e) => { clear(bookGrid); clear(verseList); el.appendChild(h('div.empty-state', icon('bible'), h('p', 'The Bibles could not be loaded: ' + e.message))); });
 
   return api;
 }

@@ -79,8 +79,10 @@ async function showTab(id) {
   if (current === id && tabs.has(id)) return tabs.get(id);
   const api = await getTab(id);
   if (current && tabs.has(current)) { const prev = tabs.get(current); prev.el.hidden = true; if (prev.onHide) prev.onHide(); }
+  const switching = !!current;
   current = id;
   api.el.hidden = false;
+  if (switching) ui.enter(api.el); // gentle fade-in of the new tab (not on first load)
   railBtns.forEach((b, k) => b.setAttribute('aria-selected', String(k === id)));
   if (api.onShow) api.onShow();
   live.stage(stagedBy.get(id) || null);
@@ -105,6 +107,7 @@ function applyLayout() {
   appEl.classList.toggle('rail-right', a.railSide === 'right');
   appEl.classList.toggle('no-monitors', a.monitors === false);
   document.documentElement.classList.toggle('no-mon', a.monitors === false);
+  document.documentElement.classList.toggle('lp', settings.lowPower()); // low-power mode: no UI motion
   const meta = document.querySelector('meta[name=theme-color]');
   if (meta) meta.content = getComputedStyle(document.documentElement).getPropertyValue('--sunk').trim() || '#161c28';
 }
@@ -215,7 +218,7 @@ const installBtn = ui.btn('download', 'Install Selah on this device', promptInst
 installBtn.hidden = true;
 const helpBtn = ui.btn('kbd', 'Keyboard shortcuts (?)', () => showHelp(), { cls: 'sm' });
 topIcons.append(searchBtn, installBtn, helpBtn);
-window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); ctx.installPrompt = e; installBtn.hidden = false; });
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); ctx.installPrompt = e; installBtn.hidden = false; ui.enter(installBtn, 'pop'); });
 window.addEventListener('appinstalled', () => { ctx.installPrompt = null; installBtn.hidden = true; ui.toast('Selah is installed.', 'ok'); });
 const mq = matchMedia('(max-width: 760px)');
 const syncSearch = () => { searchBtn.hidden = !mq.matches; helpBtn.hidden = mq.matches; };
@@ -338,6 +341,9 @@ function registerSW() {
 const qTab = new URLSearchParams(location.search).get('tab');
 const firstTab = [qTab, settings.v.app.lastTab].find((id) => TABS.some((t) => t && t.id === id)) || 'bible';
 showTab(firstTab);
+// UI motion starts only after the first load has settled, so nothing animates during start-up.
+const markBooted = () => setTimeout(() => document.documentElement.classList.add('booted'), 300);
+if (document.readyState === 'complete') markBooted(); else window.addEventListener('load', markBooted, { once: true });
 // Opening a PDF / PowerPoint file with Selah (installed app on Chrome / Edge).
 if ('launchQueue' in window) {
   window.launchQueue.setConsumer(async (params) => {
