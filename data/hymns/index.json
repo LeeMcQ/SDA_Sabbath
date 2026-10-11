@@ -1,0 +1,9 @@
+[
+ {
+  "id": "sda-sample",
+  "name": "SDA Hymnal (public-domain samples)",
+  "short": "SDAH",
+  "lang": "en",
+  "file": "sda-sample.json"
+ }
+]

@@ -1,0 +1,143 @@
+// Modal, toast, menu and small control factories shared by every tab.
+import { h, clear } from './util.js';
+import { icon } from './icons.js';
+
+let toastHost;
+export function toast(msg, kind = '', ms = 3200) {
+  if (!toastHost) { toastHost = h('div.toasts', { role: 'status', 'aria-live': 'polite' }); document.body.appendChild(toastHost); }
+  const t = h('div.toast' + (kind ? '.' + kind : ''), msg);
+  toastHost.appendChild(t);
+  setTimeout(() => t.remove(), ms);
+  return t;
+}
+
+/** Icon button. btn('play', 'Play', onclick, {cls:'sm', label:true}) */
+export function btn(ic, title, onclick, opt = {}) {
+  const b = h('button.btn' + (opt.cls ? '.' + opt.cls.split(' ').join('.') : '') + (opt.label ? '' : '.icon'),
+    { type: 'button', title: title + (opt.key ? '  (' + opt.key + ')' : ''), 'aria-label': title, onclick });
+  if (ic) b.appendChild(icon(ic));
+  if (opt.label) b.appendChild(h('span', typeof opt.label === 'string' ? opt.label : title));
+  if (opt.pressed != null) b.setAttribute('aria-pressed', String(!!opt.pressed));
+  return b;
+}
+
+export function setPressed(b, on) { b.setAttribute('aria-pressed', String(!!on)); return b; }
+
+/** Segmented control. seg([[value,label],...], current, onchange) */
+export function seg(options, current, onchange) {
+  const wrap = h('div.seg', { role: 'group' });
+  const render = (val) => {
+    clear(wrap);
+    options.forEach(([v, label, title]) => {
+      wrap.appendChild(h('button', { type: 'button', title: title || label, 'aria-pressed': String(v === val),
+        onclick: () => { render(v); onchange(v); } }, label));
+    });
+  };
+  render(current);
+  wrap.set = render;
+  return wrap;
+}
+
+export function toggle(label, checked, onchange, title) {
+  const inp = h('input', { type: 'checkbox', checked: !!checked, onchange: () => onchange(inp.checked) });
+  return h('label.switch', { title: title || label }, inp, h('span', label));
+}
+
+export function select(options, current, onchange, cls = 'field') {
+  const s = h('select.' + cls, { onchange: () => onchange(s.value) });
+  options.forEach(([v, label]) => s.appendChild(h('option', { value: v, selected: v === current }, label)));
+  return s;
+}
+
+let openModal = null;
+/** modal({title, body: Node, actions:[{label, primary, danger, onclick -> false keeps open}], wide}) */
+export function modal({ title, body, actions = [], wide = false, onclose }) {
+  closeModal();
+  const back = h('div.modal-back', { onmousedown: (e) => { if (e.target === back) closeModal(); } });
+  const foot = h('div.modal-f');
+  actions.forEach((a) => {
+    foot.appendChild(h('button.btn' + (a.primary ? '.primary' : '') + (a.danger ? '.danger' : ''), {
+      type: 'button',
+      onclick: async () => { const r = a.onclick ? await a.onclick() : undefined; if (r !== false) closeModal(); },
+    }, a.label));
+  });
+  const m = h('div.modal' + (wide ? '.wide' : ''), { role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
+    h('div.modal-h', h('h2.grow', title), btn('x', 'Close', () => closeModal(), { cls: 'sm' })),
+    h('div.modal-b', body),
+    actions.length ? foot : null);
+  back.appendChild(m);
+  document.body.appendChild(back);
+  openModal = { back, onclose };
+  const f = m.querySelector('input,select,textarea,button.primary');
+  if (f) setTimeout(() => f.focus(), 30);
+  return m;
+}
+export function closeModal() {
+  if (!openModal) return;
+  const o = openModal; openModal = null;
+  o.back.remove();
+  if (o.onclose) o.onclose();
+}
+export const modalOpen = () => !!openModal;
+
+export function confirmBox(title, text, okLabel = 'OK', danger = false) {
+  return new Promise((resolve) => {
+    let done = false;
+    modal({ title, body: h('p', text), onclose: () => { if (!done) resolve(false); },
+      actions: [{ label: 'Cancel', onclick: () => { done = true; resolve(false); } },
+        { label: okLabel, primary: !danger, danger, onclick: () => { done = true; resolve(true); } }] });
+  });
+}
+
+export function promptBox(title, label, value = '', placeholder = '') {
+  return new Promise((resolve) => {
+    let done = false;
+    const inp = h('input.field', { value, placeholder, style: { width: '100%' },
+      onkeydown: (e) => { if (e.key === 'Enter') { done = true; resolve(inp.value); closeModal(); } } });
+    modal({ title, body: h('div.col', h('label.muted', label), inp), onclose: () => { if (!done) resolve(null); },
+      actions: [{ label: 'Cancel', onclick: () => { done = true; resolve(null); } },
+        { label: 'OK', primary: true, onclick: () => { done = true; resolve(inp.value); } }] });
+  });
+}
+
+let openMenu = null;
+/** Pop-up menu anchored to an element. items: [{label, icon, onclick} | '-'] */
+export function menu(anchor, items) {
+  closeMenu();
+  const m = h('div.menu', { role: 'menu' });
+  items.forEach((it) => {
+    if (it === '-') { m.appendChild(h('hr')); return; }
+    if (!it) return;
+    const b = h('button', { type: 'button', role: 'menuitem', disabled: !!it.disabled, onclick: () => { closeMenu(); it.onclick && it.onclick(); } },
+      it.icon ? icon(it.icon) : null, h('span.grow', it.label), it.hint ? h('span.faint', it.hint) : null);
+    m.appendChild(b);
+  });
+  document.body.appendChild(m);
+  const r = anchor.getBoundingClientRect();
+  const mw = m.offsetWidth, mh = m.offsetHeight;
+  let x = Math.min(r.left, innerWidth - mw - 8), y = r.bottom + 4;
+  if (y + mh > innerHeight - 8) y = Math.max(8, r.top - mh - 4);
+  m.style.left = Math.max(8, x) + 'px'; m.style.top = y + 'px';
+  setTimeout(() => document.addEventListener('pointerdown', outside, true), 0);
+  function outside(e) { if (!m.contains(e.target)) closeMenu(); }
+  openMenu = { m, outside };
+  return m;
+}
+export function closeMenu() {
+  if (!openMenu) return;
+  document.removeEventListener('pointerdown', openMenu.outside, true);
+  openMenu.m.remove(); openMenu = null;
+}
+
+/** Drag-and-drop + click file zone. */
+export function dropzone(text, accept, onfiles) {
+  const inp = h('input', { type: 'file', multiple: true, accept, style: { display: 'none' },
+    onchange: () => { onfiles(Array.from(inp.files)); inp.value = ''; } });
+  const z = h('div.dropzone', { tabindex: 0, role: 'button', onclick: () => inp.click(),
+    onkeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inp.click(); } } },
+  icon('upload'), h('div', text), inp);
+  z.addEventListener('dragover', (e) => { e.preventDefault(); z.classList.add('over'); });
+  z.addEventListener('dragleave', () => z.classList.remove('over'));
+  z.addEventListener('drop', (e) => { e.preventDefault(); z.classList.remove('over'); onfiles(Array.from(e.dataTransfer.files || [])); });
+  return z;
+}

@@ -1,0 +1,109 @@
+/* Presentation stage — shared by the display window and the Next/Live monitors.
+   The stage has a fixed logical size (1920 × 1080 by default) and is scaled with a
+   transform, so text fitting gives identical results on every screen. */
+
+@font-face { font-family: "Hyperlegible"; font-weight: 400; font-style: normal; font-display: swap;
+  src: url(../fonts/ahn-latin-400-normal.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Hyperlegible"; font-weight: 400; font-style: normal; font-display: swap;
+  src: url(../fonts/ahn-latin-ext-400-normal.woff2) format("woff2"); unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "Hyperlegible"; font-weight: 700; font-style: normal; font-display: swap;
+  src: url(../fonts/ahn-latin-700-normal.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Hyperlegible"; font-weight: 700; font-style: normal; font-display: swap;
+  src: url(../fonts/ahn-latin-ext-700-normal.woff2) format("woff2"); unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "Hyperlegible"; font-weight: 400; font-style: italic; font-display: swap;
+  src: url(../fonts/ahn-latin-400-italic.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Hyperlegible"; font-weight: 400; font-style: italic; font-display: swap;
+  src: url(../fonts/ahn-latin-ext-400-italic.woff2) format("woff2"); unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "Selah Serif"; font-weight: 400; font-style: normal; font-display: swap;
+  src: url(../fonts/ss4-latin-400-normal.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Selah Serif"; font-weight: 400; font-style: normal; font-display: swap;
+  src: url(../fonts/ss4-latin-ext-400-normal.woff2) format("woff2"); unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "Selah Serif"; font-weight: 600; font-style: normal; font-display: swap;
+  src: url(../fonts/ss4-latin-600-normal.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Selah Serif"; font-weight: 600; font-style: normal; font-display: swap;
+  src: url(../fonts/ss4-latin-ext-600-normal.woff2) format("woff2"); unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "Selah Serif"; font-weight: 400; font-style: italic; font-display: swap;
+  src: url(../fonts/ss4-latin-400-italic.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+.stage {
+  --sw: 1920px; --sh: 1080px;
+  --d-fg: #ffffff; --d-bg: #000000; --d-accent: #f2cf7a; --d-wj: #ff8f85;
+  --d-font: "Hyperlegible", system-ui, sans-serif;
+  --d-pad: 80px; --d-align: center; --d-fade: 250ms; --d-weight: 700;
+  position: relative; width: var(--sw); height: var(--sh);
+  overflow: hidden; background: var(--d-bg); color: var(--d-fg);
+  font-family: var(--d-font); transform-origin: 0 0; contain: strict;
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+}
+.stage.serif { --d-font: "Selah Serif", Georgia, serif; --d-weight: 600; }
+.stage.sysfont { --d-font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+
+.stage .bgimg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+.stage .bgimg.dim::after { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,var(--d-dim,.45)); }
+.stage .layer { position: absolute; inset: 0; transition: opacity var(--d-fade) linear; }
+.stage .layer.hide { opacity: 0; pointer-events: none; }
+.stage.cut .layer { transition: none; }
+
+/* Text frames (Bible, hymns, plain) */
+.f-text { position: absolute; inset: 0; display: flex; flex-direction: column; padding: var(--d-pad); }
+.f-head { font-size: 40px; line-height: 1.2; opacity: .8; margin-bottom: 20px; text-align: var(--d-align); }
+.f-body { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.f-fit { max-width: 100%; line-height: 1.24; font-weight: var(--d-weight); text-align: var(--d-align); text-wrap: pretty; overflow-wrap: anywhere; }
+.f-foot { display: flex; justify-content: space-between; gap: 40px; font-size: 40px; line-height: 1.2; opacity: .82; margin-top: 28px; }
+.f-foot:empty { display: none; }
+.f-foot .fl { flex: 1; text-align: left; }
+.f-foot .fr { text-align: right; white-space: nowrap; }
+.f-foot.center .fl { text-align: center; }
+.ref-top .f-foot { order: -1; margin: 0 0 28px; }
+.ref-none .f-foot { display: none; }
+.shadow .f-text { text-shadow: 0 3px 10px rgba(0,0,0,.9), 0 0 2px rgba(0,0,0,.9); }
+
+.f-fit .vn { font-size: .5em; font-weight: 400; color: var(--d-accent); vertical-align: .62em; line-height: 0; margin: 0 .18em 0 .1em; }
+.f-fit .wj { color: var(--d-wj); }
+.f-fit i { font-style: italic; font-weight: inherit; }
+.f-fit .v + .v::before { content: " "; }
+.f-fit.lines { text-wrap: balance; }
+.f-par { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; width: 100%; align-items: center; }
+.f-par.rows { grid-template-columns: 1fr; gap: 40px; }
+.f-par .f-fit { width: 100%; }
+.f-par .f-col-ref { display: block; font-size: .42em; font-weight: 400; opacity: .7; margin-top: .4em; }
+
+/* Hymn title slide */
+.f-title .f-fit { line-height: 1.12; }
+.f-title .hn { display: block; font-size: .5em; font-weight: 400; color: var(--d-accent); margin-bottom: .25em; }
+.f-title .ha { display: block; font-size: .3em; font-weight: 400; opacity: .75; margin-top: .6em; }
+.f-hymn .f-fit { line-height: 1.3; }
+.f-hymn .chorus { font-style: italic; }
+.f-text.caps .f-fit { text-transform: uppercase; letter-spacing: .01em; }
+.f-text.is-chorus .f-fit { font-style: italic; }
+
+/* Images, PDFs, slides */
+.f-image { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.f-image img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.f-image.cover img { object-fit: cover; }
+.f-html { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; background: #fff; }
+.f-html .sp { position: absolute; overflow: hidden; }
+.f-html .sp p { margin: 0; }
+.f-html .sp img { width: 100%; height: 100%; display: block; object-fit: fill; }
+
+/* Video, stream, web */
+.f-media { position: absolute; inset: 0; background: #000; }
+.f-media video, .f-media iframe, .f-media canvas { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; object-fit: contain; background: #000; }
+.f-media.fit-cover video { object-fit: cover; }
+.f-media.fit-fill video { object-fit: fill; }
+.f-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 24px; align-items: center; justify-content: center; font-size: 64px; color: #cfd6e2; background: #10151f; text-align: center; padding: 80px; }
+.f-placeholder small { font-size: 40px; opacity: .7; }
+.f-placeholder img { max-width: 100%; max-height: 70%; object-fit: contain; }
+
+/* Overlays */
+.stage .blackout { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity var(--d-fade) linear; z-index: 20; }
+.stage.is-black .blackout { opacity: 1; }
+.stage .logo { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity var(--d-fade) linear; z-index: 19; background: var(--d-bg); }
+.stage .logo img { max-width: 60%; max-height: 60%; object-fit: contain; }
+.stage .logo .logo-text { font-size: 96px; font-weight: 700; opacity: .9; }
+.stage.is-logo .logo { opacity: 1; }
+.stage .caption { position: absolute; left: 6%; right: 6%; bottom: 5%; z-index: 21; text-align: center; font-size: 52px; line-height: 1.25; }
+.stage .caption span { background: rgba(0,0,0,.72); padding: .1em .35em; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.stage .caption:empty { display: none; }
+
+@media (prefers-reduced-motion: reduce) { .stage .layer, .stage .blackout, .stage .logo { transition: none; } }

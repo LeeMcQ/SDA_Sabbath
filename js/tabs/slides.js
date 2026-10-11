@@ -1,0 +1,263 @@
+// Slides tab: PDF, PowerPoint and pictures. Files are converted once on import and kept
+// offline on this device, so presenting is instant and needs no internet.
+import { h, clear, uid, fmtBytes } from '../core/util.js';
+import { icon } from '../core/icons.js';
+import { btn, dropzone, menu, toast, confirmBox, promptBox, seg, modal } from '../core/ui.js';
+import { db } from '../core/db.js';
+import { createStage } from '../core/render.js';
+
+export default function create(ctx) {
+  const { settings, live } = ctx;
+  let decks = [];
+  let deck = null;
+  let frames = null;     // frames of the selected deck
+  let thumbs = [];       // thumb blobs (pdf/images)
+  let stagedIndex = 0;
+  let autoT = null;
+  const urls = [];
+
+  const libList = h('div.list');
+  const grid = h('div.thumbs');
+  const head = h('h2.grow.trunc', '');
+  const info = h('span.note', '');
+  const prog = h('div', { hidden: true, style: { padding: '10px 14px' } }, h('div.note', ''), h('div.progress', h('i')));
+  const notes = h('div.note.pad', { hidden: true, style: { whiteSpace: 'pre-wrap', borderTop: '1px solid var(--line)' } });
+  const zone = dropzone('Drop PDF, PowerPoint (.pptx) or pictures here, or tap to choose', '.pdf,.pptx,image/*', (files) => importFiles(files));
+  const addBtn = btn('plus', 'Add files', () => zone.querySelector('input').click(), { cls: 'sm', label: 'Add' });
+  const deckMenuBtn = btn('more', 'Deck options', () => deck && menu(deckMenuBtn, [
+    { label: 'Rename', icon: 'edit', onclick: renameDeck },
+    { label: 'Add to the service plan', icon: 'plan', onclick: addToPlan },
+    { label: 'Delete', icon: 'trash', onclick: deleteDeck },
+  ]), { cls: 'sm' });
+  const fitSeg = seg([['contain', 'Fit'], ['cover', 'Fill']], settings.v.slides.fit, (v) => { settings.set('slides.fit', v); if (deck) stageAt(stagedIndex); });
+
+  const el = h('section',
+    h('div.toolbar', h('h2', 'Slides'), addBtn, h('div.grow'), fitSeg),
+    prog,
+    h('div.split.lib-split',
+      h('div.pane', h('div.pane-h', 'Library'), h('div.scroll', { style: { flex: '1' } }, libList, h('div.pad', zone))),
+      h('div.pane', h('div.pane-h', head, info, deckMenuBtn), h('div.scroll', { style: { flex: '1' } }, grid, notes))));
+
+  // ------------------------------------------------------------ library
+  async function loadLibrary() {
+    const all = await db.all('files');
+    decks = all.filter((f) => f.kind === 'deck').sort((a, b) => b.added - a.added);
+    renderLibrary();
+    if (!deck && decks[0]) selectDeck(decks[0].id);
+    if (!decks.length) renderDeck();
+  }
+
+  function renderLibrary() {
+    clear(libList);
+    decks.forEach((d) => libList.appendChild(h('button', { type: 'button', 'aria-selected': String(deck && deck.id === d.id), onclick: () => selectDeck(d.id) },
+      icon(d.type === 'pdf' ? 'slides' : d.type === 'pptx' ? 'present' : 'snapshot'),
+      h('span.grow', h('div.trunc', d.name), h('div.note', d.count + (d.count === 1 ? ' slide' : ' slides') + ' · ' + d.type.toUpperCase())))));
+    if (!decks.length) libList.appendChild(h('p.note.pad', 'No slides yet. Add a PDF, PowerPoint or pictures below.'));
+  }
+
+  async function selectDeck(id) {
+    deck = decks.find((d) => d.id === id) || null;
+    stagedIndex = 0;
+    urls.splice(0).forEach((u) => URL.revokeObjectURL(u));
+    frames = null; thumbs = [];
+    renderLibrary();
+    if (!deck) { renderDeck(); return; }
+    if (deck.type === 'pptx') {
+      const rec = await db.get('renders', deck.id + '/frames');
+      frames = rec ? rec.frames : [];
+    } else {
+      frames = []; thumbs = [];
+      for (let i = 0; i < deck.count; i++) {
+        const r = await db.get('renders', deck.id + '/' + i);
+        frames.push({ kind: 'image', src: r ? r.full : null });
+        thumbs.push(r ? r.thumb : null);
+      }
+    }
+    renderDeck();
+    stageAt(0);
+  }
+
+  let io = null;
+  function renderDeck() {
+    clear(grid);
+    if (io) { io.disconnect(); io = null; }
+    notes.hidden = true;
+    if (!deck) { head.textContent = ''; info.textContent = ''; grid.appendChild(h('div.empty-state', { style: { gridColumn: '1/-1' } }, icon('slides'), h('p', 'Pick a slide deck from the library, or add one.'))); return; }
+    head.textContent = deck.name;
+    info.textContent = deck.count + ' slides' + (deck.size ? ' · ' + fmtBytes(deck.size) : '');
+    // Thumbnails for PowerPoint slides are drawn lazily as they scroll into view.
+    if ('IntersectionObserver' in window) io = new IntersectionObserver((ents) => ents.forEach((e) => { if (e.isIntersecting) { drawThumb(e.target); io.unobserve(e.target); } }), { root: grid.parentNode, rootMargin: '200px' });
+    frames.forEach((f, i) => {
+      const t = h('button.thumb', { type: 'button', 'aria-selected': String(i === stagedIndex), 'data-i': i, title: 'Slide ' + (i + 1) + ' — double-click to present',
+        onclick: () => { stageAt(i); if (isLiveDeck()) live.go(i); },
+        ondblclick: () => { stageAt(i); live.take(); } });
+      if (deck.type !== 'pptx' && thumbs[i]) { const u = URL.createObjectURL(thumbs[i]); urls.push(u); t.appendChild(h('img', { src: u, alt: '', loading: 'lazy' })); }
+      t.appendChild(h('span.n', String(i + 1)));
+      grid.appendChild(t);
+      if (deck.type === 'pptx') { if (io) io.observe(t); else drawThumb(t); }
+    });
+  }
+
+  function drawThumb(t) {
+    const i = +t.getAttribute('data-i');
+    if (t.querySelector('.stage-host')) return;
+    const host = h('div.stage-host');
+    t.insertBefore(host, t.firstChild);
+    const st = createStage(host, { placeholderOnly: true, aspect: 16 / 9 });
+    st.applyStyle({ fade: 0, bg: '#000' });
+    st.show(frames[i]);
+  }
+
+  const isLiveDeck = () => live.cue && live.cue.tab === 'slides' && deck && live.cue.deckId === deck.id;
+
+  function stageAt(i) {
+    if (!deck || !frames || !frames.length) { ctx.setStaged('slides', null); return; }
+    stagedIndex = Math.max(0, Math.min(i, frames.length - 1));
+    const fit = settings.v.slides.fit;
+    const fr = frames.map((f) => (f.kind === 'image' ? Object.assign({}, f, { fit }) : f));
+    const cue = {
+      id: 'slides:' + deck.id, tab: 'slides', title: deck.name, sub: deck.type.toUpperCase(),
+      deck: { kind: deck.type === 'pptx' ? 'html' : 'image', frames: fr }, index: stagedIndex, deckId: deck.id,
+      labels: fr.map((_, k) => String(k + 1)),
+      plan: { tab: 'slides', deck: deck.id, label: deck.name },
+    };
+    ctx.setStaged('slides', cue);
+    Array.prototype.forEach.call(grid.children, (c, k) => c.setAttribute && c.setAttribute('aria-selected', String(k === stagedIndex)));
+    const f = frames[stagedIndex];
+    notes.hidden = !(f && f.notes);
+    if (f && f.notes) notes.textContent = 'Speaker notes: ' + f.notes;
+  }
+
+  function markLive() {
+    Array.prototype.forEach.call(grid.children, (c, k) => c.classList && c.classList.toggle('live', isLiveDeck() && live.index === k));
+  }
+  live.on('go', markLive); live.on('live', markLive);
+
+  // ------------------------------------------------------------ import
+  function showProgress(text, frac) {
+    prog.hidden = text == null;
+    if (text != null) { prog.firstChild.textContent = text; prog.querySelector('i').style.width = Math.round((frac || 0) * 100) + '%'; }
+  }
+
+  function box() {
+    const a = ctx.link.aspect();
+    const lp = settings.lowPower();
+    const W = lp ? 1280 : 1920;
+    return { boxW: W, boxH: Math.round(W / a) };
+  }
+
+  async function importFiles(files) {
+    const imgs = files.filter((f) => /^image\//.test(f.type));
+    for (const f of files) {
+      try {
+        if (/\.pdf$/i.test(f.name) || f.type === 'application/pdf') await importPdf(f);
+        else if (/\.pptx$/i.test(f.name)) await importPptx(f);
+        else if (/\.(ppt|key|odp)$/i.test(f.name)) toast(f.name + ': save it as .pptx or PDF first.', 'err', 6000);
+      } catch (e) { console.error(e); toast('Could not import ' + f.name + ': ' + e.message, 'err', 7000); }
+    }
+    if (imgs.length) await importImages(imgs);
+    showProgress(null);
+    const newId = deck && deck.id;
+    await loadLibrary();
+    if (newId) await selectDeck(newId);
+  }
+
+  async function importPdf(file, name) {
+    const { renderPdf } = await import('../lib/pdf.js');
+    const id = uid();
+    let count = 0;
+    showProgress('Preparing ' + (name || file.name) + '…', 0);
+    await renderPdf(file, Object.assign(box(), {
+      quality: settings.v.slides.quality,
+      onPage: async (i, r, n) => {
+        await db.put('renders', id + '/' + i, { full: r.full, thumb: r.thumb });
+        count = i + 1;
+        showProgress('Preparing ' + (name || file.name) + ' — page ' + count + ' of ' + n, count / n);
+      },
+    }));
+    await db.put('files', id, { id, kind: 'deck', type: 'pdf', name: (name || file.name).replace(/\.(pdf|pptx)$/i, ''), count, size: file.size, added: Date.now() });
+    toast((name || file.name) + ': ' + count + ' slides ready offline.', 'ok');
+    deck = { id };
+  }
+
+  async function importPptx(file) {
+    // Exact conversion through the companion (LibreOffice) when it is available.
+    if (ctx.companion && ctx.companion.converter) {
+      try {
+        showProgress('Converting ' + file.name + ' with the companion…', 0.1);
+        const r = await fetch('api/convert', { method: 'POST', body: file, headers: { 'X-Filename': encodeURIComponent(file.name), 'X-Selah-Pin': settings.v.companion.pin || '' } });
+        if (r.ok) { const pdf = await r.blob(); await importPdf(pdf, file.name); return; }
+      } catch (e) { console.warn('convert', e); }
+    }
+    showProgress('Reading ' + file.name + '…', 0.2);
+    const { parsePptx } = await import('../lib/pptx.js');
+    const res = await parsePptx(file);
+    if (!res.slides.length) throw new Error('No slides found.');
+    const id = uid();
+    await db.put('renders', id + '/frames', { frames: res.slides });
+    await db.put('files', id, { id, kind: 'deck', type: 'pptx', name: file.name.replace(/\.pptx$/i, ''), count: res.slides.length, size: file.size, added: Date.now(), w: res.w, h: res.h });
+    toast(file.name + ': ' + res.slides.length + ' slides imported. For an exact copy of the design, save it as PDF in PowerPoint.', 'ok', 7000);
+    deck = { id };
+  }
+
+  async function importImages(files) {
+    const { prepareImage } = await import('../lib/pdf.js');
+    let name = files.length === 1 ? files[0].name.replace(/\.[^.]+$/, '') : 'Pictures (' + files.length + ')';
+    if (files.length > 1) name = (await promptBox('Name this set of pictures', 'For example “Announcements”', name)) || name;
+    const id = uid();
+    let size = 0;
+    files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    for (let i = 0; i < files.length; i++) {
+      showProgress('Preparing pictures — ' + (i + 1) + ' of ' + files.length, (i + 1) / files.length);
+      const r = await prepareImage(files[i], box());
+      size += r.full.size;
+      await db.put('renders', id + '/' + i, { full: r.full, thumb: r.thumb });
+    }
+    await db.put('files', id, { id, kind: 'deck', type: 'images', name, count: files.length, size, added: Date.now() });
+    deck = { id };
+  }
+
+  async function renameDeck() {
+    const n = await promptBox('Rename', 'Name', deck.name);
+    if (!n) return;
+    deck.name = n; await db.put('files', deck.id, deck);
+    renderLibrary(); head.textContent = n; stageAt(stagedIndex);
+  }
+  async function deleteDeck() {
+    if (!(await confirmBox('Delete slides?', 'Remove “' + deck.name + '” from this device?', 'Delete', true))) return;
+    await db.delPrefix('renders', deck.id + '/');
+    await db.del('files', deck.id);
+    deck = null; ctx.setStaged('slides', null);
+    await loadLibrary();
+  }
+  async function addToPlan() { const c = ctx.stagedOf('slides'); if (c) (await ctx.tab('plan')).addItem(c.plan); }
+
+  // ------------------------------------------------------------ auto-advance (announcement loops)
+  function stopAuto() { clearInterval(autoT); autoT = null; }
+  live.on('live', (c) => { if (!c || c.tab !== 'slides') stopAuto(); });
+
+  const api = {
+    el,
+    importFiles,
+    async open({ deck: id, index = 0 }) {
+      await ready;
+      await ctx.showTab('slides');
+      if (!decks.some((d) => d.id === id)) { toast('Those slides are no longer on this device.', 'err'); return null; }
+      await selectDeck(id); stageAt(index);
+      return ctx.stagedOf('slides');
+    },
+    controls(cue) {
+      const secs = settings.v.slides.autoSec || 8;
+      const sel = h('select.field', { title: 'Seconds per slide', style: { height: '36px' }, onchange: () => { settings.set('slides.autoSec', +sel.value); if (autoT) { stopAuto(); start(); } } },
+        [5, 8, 10, 15, 20, 30].map((s) => h('option', { value: s, selected: s === secs }, s + ' s')));
+      const autoB = h('button.btn.sm', { type: 'button', 'aria-pressed': String(!!autoT), title: 'Advance automatically and loop (for announcements)',
+        onclick: () => { if (autoT) stopAuto(); else start(); autoB.setAttribute('aria-pressed', String(!!autoT)); } }, icon('loop'), h('span', 'Auto'));
+      function start() { cue.autoLoop = true; autoT = setInterval(() => live.next(), (settings.v.slides.autoSec || 8) * 1000); }
+      const go = h('input.field', { type: 'number', min: 1, max: cue.deck.frames.length, placeholder: '#', title: 'Go to slide number', style: { width: '64px', height: '36px' },
+        onkeydown: (e) => { if (e.key === 'Enter') { live.go((+go.value || 1) - 1); go.value = ''; go.blur(); } } });
+      return h('div.row', autoB, sel, h('span.hide-sm', go));
+    },
+  };
+  const ready = loadLibrary();
+  return api;
+}
