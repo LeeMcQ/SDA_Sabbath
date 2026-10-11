@@ -1,6 +1,6 @@
 // Selah service worker: installs the whole app (Bibles, hymns, fonts, pdf.js) in one go
 // so it runs with no internet. VERSION is rewritten by tools/build.py on every build.
-const VERSION = '7f2d9bf6f957';
+const VERSION = 'ee7567f46055';
 const CACHE = 'selah-' + VERSION;
 const NETWORK_ONLY = /\/(api|media|ws)(\/|$)/;
 

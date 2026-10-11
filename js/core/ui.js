@@ -2,12 +2,35 @@
 import { h, clear } from './util.js';
 import { icon } from './icons.js';
 
+// ------------------------------------------------------------ motion
+// Small, calm UI motion for the operator screen only (never the congregation display).
+// Off when the device asks for reduced motion, in low-power mode, and during the first load.
+const reduceMQ = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+export function motionOK() {
+  const r = document.documentElement.classList;
+  return r.contains('booted') && !r.contains('lp') && !(reduceMQ && reduceMQ.matches);
+}
+/** Play a one-off CSS entrance (class `cls`) on el, then remove the class again. */
+export function enter(el, cls = 'enter', ms = 600) {
+  if (!el || !motionOK()) return el;
+  el.classList.remove(cls);
+  void el.offsetWidth; // restart the animation if it is already running
+  el.classList.add(cls);
+  clearTimeout(el._enterT);
+  el._enterT = setTimeout(() => el.classList.remove(cls), ms);
+  return el;
+}
+
 let toastHost;
 export function toast(msg, kind = '', ms = 3200) {
   if (!toastHost) { toastHost = h('div.toasts', { role: 'status', 'aria-live': 'polite' }); document.body.appendChild(toastHost); }
   const t = h('div.toast' + (kind ? '.' + kind : ''), msg);
   toastHost.appendChild(t);
-  setTimeout(() => t.remove(), ms);
+  setTimeout(() => {
+    if (!motionOK()) { t.remove(); return; }
+    t.classList.add('out'); // fade and drop away, then remove
+    setTimeout(() => t.remove(), 180);
+  }, ms);
   return t;
 }
 
@@ -54,7 +77,7 @@ const FOCUSABLE = 'button:not([disabled]),[href],input:not([disabled]):not([type
 /** modal({title, body: Node, actions:[{label, primary, danger, onclick -> false keeps open}], wide}) */
 export function modal({ title, body, actions = [], wide = false, onclose }) {
   const returnTo = openModal ? openModal.returnTo : document.activeElement;
-  closeModal();
+  closeModal(true);
   const back = h('div.modal-back', { onmousedown: (e) => { if (e.target === back) closeModal(); } });
   const foot = h('div.modal-f');
   actions.forEach((a) => {
@@ -84,10 +107,16 @@ export function modal({ title, body, actions = [], wide = false, onclose }) {
   if (f) setTimeout(() => f.focus(), 30);
   return m;
 }
-export function closeModal() {
+export function closeModal(replacing) {
   if (!openModal) return;
   const o = openModal; openModal = null;
   o.back.remove();
+  // The dialog itself goes at once (focus and screen readers stay simple); only the dim fades out.
+  if (replacing !== true && motionOK()) {
+    const dim = h('div.modal-dim', { 'aria-hidden': 'true' });
+    document.body.appendChild(dim);
+    setTimeout(() => dim.remove(), 200);
+  }
   if (o.onclose) o.onclose();
   // Give focus back to whatever opened the dialog (unless another dialog opened meanwhile).
   if (!openModal && o.returnTo && o.returnTo.isConnected && typeof o.returnTo.focus === 'function') {
@@ -134,6 +163,7 @@ export function menu(anchor, items) {
   let x = Math.min(r.left, innerWidth - mw - 8), y = r.bottom + 4;
   if (y + mh > innerHeight - 8) y = Math.max(8, r.top - mh - 4);
   m.style.left = Math.max(8, x) + 'px'; m.style.top = y + 'px';
+  m.style.transformOrigin = (y < r.top ? 'bottom ' : 'top ') + (x < r.left - 4 ? 'right' : 'left');
   setTimeout(() => document.addEventListener('pointerdown', outside, true), 0);
   function outside(e) { if (!m.contains(e.target)) closeMenu(); }
   // Keyboard: Esc closes, ↑/↓ move between items.

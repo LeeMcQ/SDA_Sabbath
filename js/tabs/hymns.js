@@ -2,7 +2,7 @@
 // present stanza by stanza (chorus repeated automatically).
 import { h, clear, esc, debounce, normalize, readText, download } from '../core/util.js';
 import { icon } from '../core/icons.js';
-import { btn, modal, seg, toggle, menu, toast, confirmBox, closeModal } from '../core/ui.js';
+import { btn, modal, seg, toggle, menu, toast, confirmBox, closeModal, enter } from '../core/ui.js';
 import { db } from '../core/db.js';
 import { fitsText, createStage } from '../core/render.js';
 
@@ -259,8 +259,10 @@ export default function create(ctx) {
     if (hymn.c) verseChips.appendChild(h('span.note', { style: { marginLeft: '6px' } }, S().chorusRepeat ? 'Chorus after each stanza' : 'Chorus once'));
   }
 
+  let shownKey = null;
   function renderCards() {
     clear(grid);
+    const fresh = cue.hymnKey !== shownKey; shownKey = cue.hymnKey;
     const isLive = live.cue && live.cue.tab === 'hymns' && live.cue.hymnKey === cue.hymnKey;
     cue.cards.forEach((c, i) => {
       const lab = c.p.kind === 'title' ? 'Title' : c.p.kind === 'chorus' ? 'Chorus' : 'Verse ' + c.p.n + (c.sub || '');
@@ -270,13 +272,17 @@ export default function create(ctx) {
         ondblclick: () => { stagedIndex = i; cue.index = i; live.take(cue); },
       }, h('span.lab', lab), c.lines.join('\n'));
       if (isLive && live.index === i) card.classList.add('live');
+      if (i < 10) card.style.setProperty('--i', i);
       grid.appendChild(card);
     });
+    if (fresh) enter(grid, 'stagger', 700); // a newly opened hymn: stanzas settle in one after another
   }
   const isLiveHymn = () => live.cue && live.cue.tab === 'hymns' && cue && live.cue.hymnKey === cue.hymnKey;
   function markCards() {
     Array.prototype.forEach.call(grid.children, (c, i) => {
-      c.setAttribute('aria-pressed', String(!!cue && i === cue.index));
+      const on = !!cue && i === cue.index;
+      if (on && c.getAttribute('aria-pressed') !== 'true') enter(c, 'pick'); // soft pulse on the newly picked stanza
+      c.setAttribute('aria-pressed', String(on));
       c.classList.toggle('live', isLiveHymn() && live.index === i);
     });
   }
