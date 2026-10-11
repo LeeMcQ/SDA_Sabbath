@@ -74,7 +74,10 @@ export async function renderFrame(layer, frame, opts = {}) {
     const el = textFrameEl(frame);
     layer.appendChild(el);
     const body = el.querySelector('.f-body');
-    fitBody(body, opts.minFont || 58, frame.variant === 'title' ? (opts.maxFont || 150) * 1.2 : opts.maxFont || 150);
+    const maxF = opts.maxFont || 150;
+    // Hymn lines never wrap (see stage.css), and sung text is capped a little lower (110 px at the
+    // default 150) so short stanzas don't look shouty.
+    fitBody(body, opts.minFont || 58, frame.variant === 'title' ? maxF * 1.2 : frame.variant === 'hymn' ? Math.round(maxF * 110 / 150) : maxF);
   } else if (k === 'image') {
     const box = document.createElement('div');
     box.className = 'f-image' + (frame.fit === 'cover' ? ' cover' : '');
@@ -157,7 +160,7 @@ export function createStage(host, opts = {}) {
       const st = el.style;
       st.setProperty('--d-fg', s.fg || '#fff'); st.setProperty('--d-bg', s.bg || '#000');
       st.setProperty('--d-accent', s.accent || '#f2cf7a');
-      st.setProperty('--d-pad', (s.pad || 80) + 'px'); st.setProperty('--d-align', s.align || 'center');
+      st.setProperty('--d-pad', (s.pad || 96) + 'px'); st.setProperty('--d-align', s.align || 'center');
       st.setProperty('--d-fade', (s.fade || 0) + 'ms'); st.setProperty('--d-dim', String(s.bgDim == null ? 0.45 : s.bgDim));
       if (s.weight === 'regular') st.setProperty('--d-weight', '400'); else st.removeProperty('--d-weight');
       el.classList.toggle('serif', s.font === 'serif');

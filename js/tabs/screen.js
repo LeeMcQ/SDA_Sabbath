@@ -1,8 +1,8 @@
-// PC view: see a live copy of the whole screen or one window inside Selah and present it.
+// PC view: see a live copy of the whole screen or one window inside SDA Sabbath and present it.
 // Freeze keeps the last picture on the projector while you get things ready privately.
 import { h, clear, append } from '../core/util.js';
 import { icon } from '../core/icons.js';
-import { seg, toggle, toast } from '../core/ui.js';
+import { seg, toggle, toast, emptyState } from '../core/ui.js';
 import { capture, stopStream, canCapture } from '../lib/capture.js';
 import { openPip, pipSupported } from '../pip.js';
 
@@ -26,9 +26,8 @@ export default function create(ctx) {
   function render() {
     clear(body); clear(actions);
     if (!canCapture()) {
-      body.appendChild(h('div.empty-state', icon('phone'),
-        h('p', 'This device cannot share its screen from a web app.'),
-        h('p.note', 'Android: use Quick Settings → Cast / Screen mirroring. iPhone or iPad: use Screen Mirroring (AirPlay). On a PC use Chrome or Edge.')));
+      body.appendChild(emptyState('phone', 'Screen sharing isn’t available here',
+        'This device cannot share its screen from a web app. Android: use Quick Settings → Cast / Screen mirroring. iPhone or iPad: use Screen Mirroring (AirPlay). On a PC use Chrome or Edge.'));
       return;
     }
     append(actions, [
@@ -36,12 +35,12 @@ export default function create(ctx) {
       h('button.btn', { type: 'button', onclick: () => start('window') }, icon('window'), 'One window'),
       h('button.btn', { type: 'button', onclick: () => start('browser') }, icon('tab'), 'Browser tab'),
       cap ? h('button.btn.danger', { type: 'button', onclick: () => stop() }, icon('stop'), 'Stop sharing') : null,
-      pipSupported() ? h('button.btn', { type: 'button', title: 'A small always-on-top Selah controller, so you can work in other programs', onclick: openPip }, icon('pip'), 'Mini controller') : null]);
+      pipSupported() ? h('button.btn', { type: 'button', title: 'A small always-on-top SDA Sabbath controller, so you can work in other programs', onclick: openPip }, icon('pip'), 'Mini controller') : null]);
     body.append(h('div.pad', { style: { paddingBottom: '8px' } }, actions,
       h('p.note', { style: { marginTop: '8px' } }, cap
         ? 'This is what the projector will show after Present. Work on the PC as normal; open the mini controller to keep Present, Next and Black on top of other programs.'
         : 'Pick what to share. Choosing “One window” (for example PowerPoint or a Bible app) keeps the rest of your desktop private.')),
-    cap ? prev : h('div.empty-state', icon('pc'), h('p', 'The live picture of your screen appears here.')));
+    cap ? prev : emptyState('pc', 'Nothing shared yet', 'The live picture of your screen appears here.'));
   }
 
   async function start(surface) {

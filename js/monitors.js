@@ -27,8 +27,10 @@ export function createMonitors(host) {
   const clearBtn = h('button.btn', { type: 'button', title: 'Clear the screen (Esc)', onclick: () => live.clear() }, icon('clear'), h('span', 'Clear'));
   const actions = h('div.mon-actions', blackBtn, logoBtn, clearBtn);
   const extra = h('div.mon-extra.note', '');
+  // Phones with nothing staged or live show this slim strip instead of two empty screens.
+  const strip = h('div.mon-strip', h('span.tally-dot.next'), h('span', 'Nothing on screen · pick something, then tap Present'));
 
-  host.append(
+  host.append(strip,
     h('section', h('div.mon-h', h('span.tally-dot.next'), h('span', 'Next'), nextTitle), nextScreen),
     h('section', h('div.mon-h', h('span.tally-dot.live'), h('span', 'Live'), liveTitle), liveScreen, frames),
     actions, extra,
@@ -73,7 +75,7 @@ export function createMonitors(host) {
     const labels = cue.labels || [];
     const max = Math.min(n, 60);
     for (let i = 0; i < max; i++) {
-      frames.appendChild(h('button' + (i === live.index ? '.cur' : ''), { type: 'button', title: 'Show ' + (labels[i] || i + 1), onclick: () => live.go(i) }, labels[i] || String(i + 1)));
+      frames.appendChild(h('button.frame-chip' + (i === live.index ? '.cur' : ''), { type: 'button', title: 'Show ' + (labels[i] || i + 1), onclick: () => live.go(i) }, labels[i] || String(i + 1)));
     }
   }
 
@@ -125,9 +127,21 @@ export function createMonitors(host) {
       (link.info.w ? '  (' + link.info.w + ' × ' + link.info.h + ')' : '');
   }
 
+  // "Same as Live": the Next monitor is showing what is already on screen.
+  const markSame = () => nextScreen.classList.toggle('same', live.sameAsLive());
+  // Logo without a logo set would look exactly like Black: say so instead.
+  const syncLogo = () => {
+    const has = live.hasLogo();
+    if (has) logoBtn.removeAttribute('aria-disabled'); else logoBtn.setAttribute('aria-disabled', 'true');
+    logoBtn.title = has ? 'Show logo (L)' : 'No logo yet: add a logo picture or church name in Settings → Screen';
+  };
   live.on('staged', renderNext);
+  live.on('staged', markSame);
   live.on('live', renderLive);
-  live.on('go', () => { liveStage.show(frameOf(live.cue, live.index)); renderFrames(); });
+  live.on('live', markSame);
+  live.on('go', () => { liveStage.show(frameOf(live.cue, live.index)); renderFrames(); markSame(); });
+  settings.on('change:display', syncLogo);
+  syncLogo();
   live.on('blank', updateBlank);
   live.on('style', applyStyle);
   link.on('hello', () => { setAspect(); updateExtra(); });

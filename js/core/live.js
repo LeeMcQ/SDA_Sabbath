@@ -135,8 +135,22 @@ live.prev = async () => {
   }
 };
 
+/** Is a logo picture or church name set? Without one, "Logo" would look exactly like "Black". */
+live.hasLogo = () => !!(settings.v.display.logo || (settings.v.display.logoText || '').trim());
+
+/** Is the staged item exactly what is on screen now (same item, same slide)? */
+live.sameAsLive = () => {
+  const s = live.staged, c = live.cue;
+  if (!s || !c || !s.id || s.id !== c.id) return false;
+  return frameCount(c) < 2 || (s.index || 0) === live.index;
+};
+
 /** mode: 'black' | 'logo' | null. Toggles when the same mode is chosen again. */
 live.setBlank = (mode) => {
+  if (mode === 'logo' && live.blank !== 'logo' && !live.hasLogo()) {
+    live.emit('notice', { code: 'nologo', text: 'No logo yet. Add a logo picture or your church name in Settings → Screen, then press Logo again.' });
+    return;
+  }
   if (mode && live.blank === mode) mode = null;
   live.blank = mode;
   link.send({ t: 'blank', mode });

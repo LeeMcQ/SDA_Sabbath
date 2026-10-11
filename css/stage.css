@@ -29,7 +29,7 @@
   --sw: 1920px; --sh: 1080px;
   --d-fg: #ffffff; --d-bg: #000000; --d-accent: #f2cf7a; --d-wj: #ff8f85;
   --d-font: "Hyperlegible", system-ui, sans-serif;
-  --d-pad: 80px; --d-align: center; --d-fade: 250ms; --d-weight: 700;
+  --d-pad: 96px; --d-pad-y: calc(var(--d-pad) * .75); --d-align: center; --d-fade: 250ms; --d-weight: 700;
   position: relative; width: var(--sw); height: var(--sh);
   overflow: hidden; background: var(--d-bg); color: var(--d-fg);
   font-family: var(--d-font); transform-origin: 0 0; contain: strict;
@@ -45,13 +45,15 @@
 .stage.cut .layer { transition: none; }
 
 /* Text frames (Bible, hymns, plain) */
-.f-text { position: absolute; inset: 0; display: flex; flex-direction: column; padding: var(--d-pad); }
+.f-text { position: absolute; inset: 0; display: flex; flex-direction: column; padding: var(--d-pad-y) var(--d-pad); } /* safe area: 96 px sides, 72 px top and bottom by default */
 .f-head { font-size: 40px; line-height: 1.2; opacity: .8; margin-bottom: 20px; text-align: var(--d-align); }
 .f-body { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .f-fit { max-width: 100%; line-height: 1.24; font-weight: var(--d-weight); text-align: var(--d-align); text-wrap: pretty; overflow-wrap: anywhere; }
-.f-foot { display: flex; justify-content: space-between; gap: 40px; font-size: 40px; line-height: 1.2; opacity: .82; margin-top: 28px; }
+.f-foot { display: flex; justify-content: space-between; gap: 40px; font-size: 48px; line-height: 1.2; opacity: .9; margin-top: 28px; }
 .f-foot:empty { display: none; }
-.f-foot .fl { flex: 1; text-align: left; }
+.f-foot .fl { flex: 1; text-align: left; font-weight: 700; } /* the reference is the important half */
+/* Plain (unslashed) zeros for the congregation: numerals in the footer and hymn number use the serif face. */
+.f-foot, .f-title .hn { font-family: "Selah Serif", Georgia, serif; }
 .f-foot .fr { text-align: right; white-space: nowrap; }
 .f-foot.center .fl { text-align: center; }
 .ref-top .f-foot { order: -1; margin: 0 0 28px; }
@@ -73,6 +75,12 @@
 .f-title .hn { display: block; font-size: .5em; font-weight: 400; color: var(--d-accent); margin-bottom: .25em; }
 .f-title .ha { display: block; font-size: .3em; font-weight: 400; opacity: .75; margin-top: .6em; }
 .f-hymn .f-fit { line-height: 1.3; }
+/* Each hymn line stays one line: fitBody shrinks the font until the longest line fits, so lines never
+   break mid-phrase. Only if even the minimum size is too wide do they wrap, with a hanging indent. */
+.f-hymn .f-fit { text-wrap: nowrap; white-space: nowrap; } /* (text-wrap is also a shorthand for the wrap mode, so both are set) */
+.f-hymn .f-fit .ln { display: block; }
+.f-hymn .f-body[data-fits="0"] .f-fit { text-wrap: wrap; white-space: normal; }
+.f-hymn .f-body[data-fits="0"] .f-fit .ln { padding-left: 1.1em; text-indent: -1.1em; }
 .f-hymn .chorus { font-style: italic; }
 .f-text.caps .f-fit { text-transform: uppercase; letter-spacing: .01em; }
 .f-text.is-chorus .f-fit { font-style: italic; }

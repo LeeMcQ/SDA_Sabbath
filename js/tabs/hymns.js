@@ -2,7 +2,7 @@
 // present stanza by stanza (chorus repeated automatically).
 import { h, clear, esc, debounce, normalize, readText, download } from '../core/util.js';
 import { icon } from '../core/icons.js';
-import { btn, modal, seg, toggle, menu, toast, confirmBox, closeModal, enter } from '../core/ui.js';
+import { btn, modal, seg, toggle, menu, toast, confirmBox, closeModal, enter, emptyState } from '../core/ui.js';
 import { db } from '../core/db.js';
 import { fitsText, createStage } from '../core/render.js';
 
@@ -91,7 +91,7 @@ export default function create(ctx) {
   const metaEl = h('span.note', '');
   const verseChips = h('div.row.wrap');
   const grid = h('div.stanza-grid');
-  const empty = h('div.empty-state', icon('hymn'), h('p', 'Type a hymn number (for example 73) or words from the hymn, then pick it from the list.'));
+  const empty = emptyState('hymn', 'Pick a hymn', 'Type a hymn number (for example 73) or words from the hymn, then pick it from the list.');
   const optsBtn = btn('settings', 'Hymn display options', () => optionsDialog(), { cls: 'sm' });
   const editBtn = btn('edit', 'Edit this hymn', () => hymn && editHymn(hymn), { cls: 'sm' });
   const moreBtn = btn('more', 'More', () => menu(moreBtn, [
@@ -153,7 +153,7 @@ export default function create(ctx) {
 
   function renderList() {
     clear(listEl);
-    if (!book) { listEl.appendChild(h('p.note.pad', 'No hymnbook installed. Use More → Import a hymnbook.')); return; }
+    if (!book) { listEl.appendChild(emptyState('hymn', 'No hymnbook installed', 'Use More (…) → Import a hymnbook.')); return; }
     const qq = q.value.trim();
     let list = book.hymns.filter((x) => matches(x, qq));
     if (/^\d+$/.test(qq)) list.sort((a, b) => (a.n === +qq ? -1 : b.n === +qq ? 1 : a.n - b.n));
@@ -163,7 +163,8 @@ export default function create(ctx) {
         h('span.num', String(x.n)), h('span.grow', h('div.trunc', x.t), h('div.note.trunc', x.v[0][0]))));
     });
     listEl.appendChild(frag);
-    if (!list.length) listEl.appendChild(h('p.note.pad', 'No hymn matches “' + qq + '”.'));
+    if (!list.length) listEl.appendChild(emptyState('search', 'No hymn matches “' + qq + '”', 'Try a number like 73 or a few words from the hymn.',
+      { label: 'Clear search', icon: 'x', onclick: () => { q.value = ''; renderList(); q.focus(); } }));
   }
 
   // ------------------------------------------------------------ slides
@@ -192,7 +193,7 @@ export default function create(ctx) {
     const frames = [], labels = [], cards = [];
     const textFrame = (lines, p, sub) => ({
       kind: 'text', variant: 'hymn', lines: true, cls: cls + (p.kind === 'chorus' ? ' is-chorus' : ''), refPos: s.refPos,
-      html: lines.map(esc).join('<br>'), foot: footL,
+      html: lines.map((l) => '<span class="ln">' + esc(l) + '</span>').join(''), foot: footL,
       footR: p.kind === 'chorus' ? 'Chorus' : 'Verse ' + p.n + (sub ? sub : '') + ' of ' + nVerses,
     });
     partsOf(hy).forEach((p) => {
@@ -240,7 +241,7 @@ export default function create(ctx) {
     empty.hidden = true;
     cue = buildCue(hymn);
     titleEl.textContent = hymn.n + '  ' + hymn.t;
-    metaEl.textContent = (hymn.a ? hymn.a + '. ' : '') + 'Sing stanzas: ';
+    metaEl.textContent = (hymn.a ? hymn.a + '. ' : '') + 'Sing stanzas:';
     renderChips();
     renderCards();
     ctx.setStaged('hymns', cue);
@@ -249,13 +250,14 @@ export default function create(ctx) {
   function renderChips() {
     clear(verseChips);
     const sel = chosen || new Set(hymn.v.map((_, i) => i));
-    hymn.v.forEach((_, i) => verseChips.appendChild(h('button.chip', { type: 'button', 'aria-pressed': String(sel.has(i)), title: 'Include stanza ' + (i + 1),
+    // Same chip as the stanza jump buttons; a check when the stanza is sung, struck out when skipped.
+    hymn.v.forEach((_, i) => verseChips.appendChild(h('button.frame-chip.pick', { type: 'button', 'aria-pressed': String(sel.has(i)), title: 'Sing stanza ' + (i + 1), 'aria-label': 'Sing stanza ' + (i + 1),
       onclick: () => {
         const s2 = new Set(sel);
         if (s2.has(i)) { if (s2.size > 1) s2.delete(i); } else s2.add(i);
         chosen = s2.size === hymn.v.length ? null : s2;
         stagedIndex = 0; restage(); syncLive();
-      } }, String(i + 1))));
+      } }, sel.has(i) ? icon('check') : null, String(i + 1))));
     if (hymn.c) verseChips.appendChild(h('span.note', { style: { marginLeft: '6px' } }, S().chorusRepeat ? 'Chorus after each stanza' : 'Chorus once'));
   }
 
@@ -270,7 +272,7 @@ export default function create(ctx) {
         type: 'button', 'aria-pressed': String(i === cue.index),
         onclick: () => { stagedIndex = i; cue.index = i; markCards(); ctx.setStaged('hymns', cue); if (isLiveHymn()) live.go(i); },
         ondblclick: () => { stagedIndex = i; cue.index = i; live.take(cue); },
-      }, h('span.lab', lab), c.lines.join('\n'));
+      }, h('span.lab', lab), c.lines.map((l) => h('span.ln', l)));
       if (isLive && live.index === i) card.classList.add('live');
       if (i < 10) card.style.setProperty('--i', i);
       grid.appendChild(card);
@@ -421,7 +423,7 @@ export default function create(ctx) {
         if (isCho(lab) && i !== firstCho) return; // one chorus button is enough (also when the chorus is split in two)
         if (/^\d+[b-f]$/.test(lab)) return; // second half of a long stanza: its first half's button is enough
         const name = lab === 'T' ? 'Title' : isCho(lab) ? 'Chorus' : 'Stanza ' + lab.replace(/a$/, '');
-        box.appendChild(h('button.btn.sm', { type: 'button', title: name, 'aria-label': name, onclick: () => {
+        box.appendChild(h('button.frame-chip', { type: 'button', title: name, 'aria-label': name, 'data-lab': lab, onclick: () => {
           if (isCho(lab)) {
             // the chorus that follows the current stanza (or the first one)
             let after = -1;
@@ -430,9 +432,19 @@ export default function create(ctx) {
           } else live.go(i);
         } }, isCho(lab) ? 'C' : lab.replace(/a$/, '')));
       });
+      ctlBox = box; markCtl();
       return box;
     },
   };
+  // The live stanza's jump button is filled red (same chip style as under the Live monitor).
+  let ctlBox = null;
+  function markCtl() {
+    if (!ctlBox || !ctlBox.isConnected || !live.cue || !live.cue.labels) return;
+    const cur = live.cue.labels[live.index] || '';
+    const base = (x) => (/^C[a-f]?$/.test(x) ? 'C' : x.replace(/[a-f]$/, ''));
+    ctlBox.querySelectorAll('.frame-chip').forEach((b) => b.classList.toggle('cur', base(b.dataset.lab) === base(cur)));
+  }
+  live.on('go', markCtl);
 
   const ready = loadBooks().then(() => renderList());
   return api;

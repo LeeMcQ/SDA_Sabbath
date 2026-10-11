@@ -2,7 +2,7 @@
 // press Present. Long passages are split into readable slides automatically.
 import { h, clear, esc, debounce } from '../core/util.js';
 import { icon } from '../core/icons.js';
-import { btn, modal, seg, toggle, menu, select, activatable, enter, motionOK } from '../core/ui.js';
+import { btn, modal, seg, toggle, menu, select, activatable, enter, motionOK, emptyState } from '../core/ui.js';
 import { EN, SHORT, parseRef, refText } from '../core/books.js';
 import { listTranslations, getInfo, versesFor, verseHtml, verseText, search as bibleSearch } from '../core/bibledata.js';
 import { fitsText } from '../core/render.js';
@@ -18,7 +18,7 @@ export default function create(ctx) {
   const refInput = h('input.field', { type: 'search', placeholder: 'John 3:16-18', style: { width: '200px' }, 'aria-label': 'Bible reference',
     onkeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); goRef(refInput.value, e.ctrlKey || e.metaKey); } } });
   const trSel = h('select.field', { 'aria-label': 'Translation', onchange: () => setTr(trSel.value) });
-  const parSel = h('select.field', { 'aria-label': 'Second translation (side by side)', title: 'Show a second translation next to the first', onchange: () => { settings.set('bible.parallel', parSel.value); restage(); } });
+  const parSel = h('select.field.hide-sm', { 'aria-label': 'Second translation (side by side)', title: 'Show a second translation next to the first', onchange: () => { settings.set('bible.parallel', parSel.value); restage(); } });
   const searchBtn = btn('search', 'Search the Bible', () => setMode(st.mode === 'search' ? 'browse' : 'search'), { cls: 'sm' });
   const optsBtn = btn('settings', 'Bible display options', () => optionsDialog(), { cls: 'sm' });
   const moreBtn = btn('more', 'More', () => menu(moreBtn, [
@@ -30,7 +30,7 @@ export default function create(ctx) {
   [['kjv', 'KJV'], ['web', 'WEB'], ['afr53', 'AFR']].forEach(([v, a]) => trSel.appendChild(h('option', { value: v }, a)));
   trSel.value = st.tr;
   parSel.appendChild(h('option', { value: '' }, 'No second'));
-  const toolbar = h('div.toolbar', h('h2', 'Bible'), refInput, trSel, h('span.faint', '+'), parSel, h('div.grow'), searchBtn, optsBtn, moreBtn);
+  const toolbar = h('div.toolbar', h('h2', 'Bible'), refInput, trSel, h('span.faint.hide-sm', { 'aria-hidden': 'true' }, '+'), parSel, h('div.grow'), searchBtn, optsBtn, moreBtn);
   const hist = h('div.bible-hist');
 
   // ------------------------------------------------------------ browse panes
@@ -377,7 +377,12 @@ export default function create(ctx) {
     const res = await bibleSearch(st.tr, q, { onProgress: (p) => { bar.style.width = Math.round(p * 100) + '%'; }, signal: my });
     if (my.aborted) return;
     sProg.hidden = true;
-    if (!res.length) { sResults.appendChild(h('div.empty-state', 'No verses contain all of those words in ' + info.abbr + '.')); return; }
+    if (!res.length) {
+      const other = trList.find((t) => t.id !== st.tr && (t.lang || 'en') === (info.lang || 'en')) || trList.find((t) => t.id !== st.tr);
+      sResults.appendChild(emptyState('search', 'No verses found', 'All the words must appear in ' + info.abbr + '. Try fewer words' + (other ? ' or another translation.' : '.'),
+        other ? { label: 'Search ' + other.abbr, onclick: async () => { await setTr(other.id); runSearch(); } } : null));
+      return;
+    }
     const words = q.toLowerCase().split(/\s+/).filter(Boolean).map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
     const re = new RegExp('(' + words.join('|') + ')', 'gi');
     // Highlight in the plain text and escape each piece, so a search for e.g. "quota" cannot
@@ -402,6 +407,10 @@ export default function create(ctx) {
     modal({
       title: 'Bible on screen',
       body: h('div.form',
+        // On phones the second translation lives here instead of the crowded toolbar.
+        ctx.isMobile() ? h('label', 'Second translation') : null,
+        ctx.isMobile() ? (() => { const x = select([['', 'None']].concat(trList.filter((t) => t.id !== st.tr).map((t) => [t.id, t.abbr + ' · ' + t.name])), S().parallel || '',
+          (v) => { settings.set('bible.parallel', v); parSel.value = v; restage(); }, 'field'); x.setAttribute('aria-label', 'Second translation'); return x; })() : null,
         h('label', 'Verses per slide'), seg([['auto', 'Auto'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4']], String(s.perSlide), set('perSlide')),
         h('label', 'Reference'), seg([['bottom', 'Bottom'], ['top', 'Top'], ['none', 'Hidden']], s.refPos, set('refPos')),
         h('label', 'Two translations'), seg([['cols', 'Side by side'], ['rows', 'Stacked']], s.parallelLayout, set('parallelLayout')),
@@ -456,7 +465,7 @@ export default function create(ctx) {
     st.tr = info.id;
     renderBooks(); bookGrid.removeAttribute('aria-busy'); renderChapters(); await renderVerses();
     renderHistory();
-  })().catch((e) => { clear(bookGrid); clear(verseList); el.appendChild(h('div.empty-state', icon('bible'), h('p', 'The Bibles could not be loaded: ' + e.message))); });
+  })().catch((e) => { clear(bookGrid); clear(verseList); el.appendChild(emptyState('bible', 'The Bibles could not be loaded', e.message)); });
 
   return api;
 }

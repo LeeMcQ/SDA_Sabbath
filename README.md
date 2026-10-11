@@ -1,11 +1,11 @@
-# Selah — offline church presenter for SDA media teams
+# SDA Sabbath — offline church presenter for SDA media teams
 
-Selah shows Bible passages, hymns, slides, videos, web pages and your PC screen on the projector
+SDA Sabbath shows Bible passages, hymns, slides, videos, web pages and your PC screen on the projector
 (the extended screen) while the operator prepares what comes next on the main screen. It is a
 Progressive Web App: install it once and it runs with **no internet**, on old PCs and 1–2 GB phones.
 
 ```
-┌ Selah ─ ● Display: Projector ─ [ Go to… John 3:16 / hymn 73 ] ───────── [▶ Present  F5 ] ┐
+┌ SDA Sabbath ─ ● Display: Projector ─ [ Go to… John 3:16 / hymn 73 ] ────── [▶ Present  F5 ] ┐
 │ Bible  │                                                         │ ○ Next  (green)          │
 │ Hymns  │   the selected tab's options for what goes on next      │ ● Live  (red)            │
 │ Slides │                                                         │ Black · Logo · Clear     │
@@ -27,8 +27,8 @@ Nothing reaches the projector until **Present** (F5 or Ctrl+Enter). Each tab kee
 | **Hymns** | Type the number or words. Title slide, one stanza per slide, chorus repeated automatically, choose which stanzas to sing (1, 2, 4). Jump to any stanza from the control bar. Edit or add hymns; import or export hymnbooks. |
 | **Slides** | PDF, PowerPoint (.pptx) and pictures. Converted once on import and kept offline. Speaker notes shown to the operator. Auto-advance loop for announcements. |
 | **Video** | VLC-style player: playlist with auto-next and repeat, speed 0.25×–4×, A-B repeat, loop, frame step, fade in/out, volume boost to 200 %, 10-band equaliser with presets, fit/fill/stretch, zoom, rotate, mirror, brightness/contrast/colour/hue, .srt/.vtt subtitles, snapshots. Music can play **in the background** while lyrics stay on screen. |
-| **Web** | **Mirror a tab** — the projector shows exactly that browser tab, without the mouse pointer (scroll/zoom it from Selah in Chrome). **Embed** — YouTube and embeddable sites load directly on the display. |
-| **PC view** | Share the whole screen, one window (e.g. PowerPoint or a Bible app) or a tab; see it live inside Selah. **Freeze** keeps the last picture up while you work privately. The **mini controller** floats on top of other programs. |
+| **Web** | **Mirror a tab** — the projector shows exactly that browser tab, without the mouse pointer (scroll/zoom it from SDA Sabbath in Chrome). **Embed** — YouTube and embeddable sites load directly on the display. |
+| **PC view** | Share the whole screen, one window (e.g. PowerPoint or a Bible app) or a tab; see it live inside SDA Sabbath. **Freeze** keeps the last picture up while you work privately. The **mini controller** floats on top of other programs. |
 | **Plan** | Prepare the order of service at home (Divine Service, Sabbath School and Vespers templates), export it, and step through it in church with **Next item**. |
 | **Settings** | Fonts (Atkinson Hyperlegible, serif), colours, background picture, logo, margins, text sizes, fade/cut, 4:3 projectors, light/dark theme, tabs left or right, low-power mode, backups, Bibles. |
 
@@ -60,21 +60,21 @@ The app is published from this repository to **https://leemcq.github.io/SDA_Sabb
 included GitHub Pages workflow (repository **Settings → Pages → Source: GitHub Actions**).
 
 On each church PC or phone, open that address in Chrome or Edge and choose **Install**. Every
-file (Bibles, hymns, fonts, PDF engine) downloads in one go; after that Selah works offline.
+file (Bibles, hymns, fonts, PDF engine) downloads in one go; after that SDA Sabbath works offline.
 
 ### 2. Projector setup (PC)
 
 1. Connect the projector as an **extended** display (Windows: Win+P → Extend).
 2. Press **Present** once. In Chrome/Edge, allow **Window management** when asked — from then on
    the display opens straight onto the projector.
-3. Click the projector screen once so videos may play with sound (not needed once Selah is installed).
+3. Click the projector screen once so videos may play with sound (not needed once SDA Sabbath is installed).
 
-### 3. The Selah companion (optional, recommended for the church PC)
+### 3. The SDA Sabbath companion (optional, recommended for the church PC)
 
 One small program (about 5 MB, no installer, no other software) that contains the whole app:
 
 - **Windows:** download `selah-windows-x64.exe` from the [Releases page](https://github.com/LeeMcQ/SDA_Sabbath/releases/latest) and double-click it.
-  Selah opens at `http://localhost:7777`. To add Start-menu and desktop shortcuts in one go:
+  SDA Sabbath opens at `http://localhost:7777`. To add Start-menu and desktop shortcuts in one go:
 
   ```powershell
   irm https://github.com/LeeMcQ/SDA_Sabbath/releases/latest/download/selah-windows-x64.exe -OutFile $env:TEMP\selah.exe; & $env:TEMP\selah.exe --install
@@ -88,7 +88,7 @@ What it adds:
 | **Phone remote** | Phones on the church Wi-Fi open `http://<pc>:7777/remote` (or scan the QR code in Settings → Displays) and enter the PIN. |
 | **TV or second PC as the screen** | Open `http://<pc>:7777/display` in the TV's browser. |
 | **Videos from the PC** | Files in `Videos\Selah` appear in the Video tab on every device, and stream with seeking. |
-| **Exact PowerPoint** | If LibreOffice is installed, .pptx files are converted to PDF so they look exactly as designed. Without it Selah uses its built-in renderer (text, pictures, shapes, backgrounds). |
+| **Exact PowerPoint** | If LibreOffice is installed, .pptx files are converted to PDF so they look exactly as designed. Without it SDA Sabbath uses its built-in renderer (text, pictures, shapes, backgrounds). |
 
 Options: `--port`, `--media <folder>`, `--pin <NNNN>`, `--no-browser`, `--install`. The PIN and folder
 are remembered in `%APPDATA%\Selah\companion.txt`. Windows asks once to allow network access — allow
@@ -99,7 +99,7 @@ it for private networks.
 Press **Present** and choose:
 - **This device** — full screen on the phone itself (HDMI adapter or screen mirroring).
 - **Cast** — Chromecast or a wireless display (Chrome on Android).
-- **Selah companion** — use the phone as a remote for the church PC or TV.
+- **SDA Sabbath companion** — use the phone as a remote for the church PC or TV.
 
 ## Bibles
 
@@ -117,7 +117,7 @@ publicly. Each church adds its own licensed copy:
 `data/hymns/sda-sample.json` holds sample hymns whose words are public domain, numbered as in the
 1985 SDA Hymnal. Replace or add hymnbooks with **Hymns → ⋯ → Import a hymnbook**:
 
-- JSON (Selah format):
+- JSON (SDA Sabbath format, formerly "Selah"):
   ```json
   { "id": "sda-en", "name": "SDA Hymnal", "short": "SDAH", "lang": "en",
     "hymns": [ { "n": 73, "t": "Holy, Holy, Holy", "a": "Reginald Heber",
@@ -179,4 +179,4 @@ tools/                       build.py, build_bibles.py
 - Sample hymn words: public domain.
 - Fonts: Atkinson Hyperlegible Next and Source Serif 4 (SIL Open Font License).
 - pdf.js (Apache 2.0), fflate (MIT), qrcode-generator (MIT).
-- Selah code: MIT.
+- SDA Sabbath code: MIT.

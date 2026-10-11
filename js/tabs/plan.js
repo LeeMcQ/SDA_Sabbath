@@ -2,7 +2,7 @@
 // Items point to Bible passages, hymns, slides, videos or web pages.
 import { h, clear, uid, readText, download } from '../core/util.js';
 import { icon } from '../core/icons.js';
-import { btn, menu, toast, promptBox, confirmBox, modal, activatable } from '../core/ui.js';
+import { btn, menu, toast, promptBox, confirmBox, modal, activatable, emptyState } from '../core/ui.js';
 import { db } from '../core/db.js';
 import { parseRef, refText, EN } from '../core/books.js';
 
@@ -30,9 +30,10 @@ export default function create(ctx) {
     { label: 'Delete this plan', icon: 'trash', onclick: deletePlan, disabled: !plan },
   ]), { cls: 'sm' });
   const nextBtn = h('button.btn.primary', { type: 'button', title: 'Select the next item in the plan', onclick: () => step(1) }, icon('next'), h('span', 'Next item'));
+  const prevBtn = btn('prev', 'Previous item', () => step(-1), { cls: 'sm' });
 
   const el = h('section',
-    h('div.toolbar', h('h2', 'Plan'), planSel, h('div.grow'), btn('prev', 'Previous item', () => step(-1), { cls: 'sm' }), nextBtn, moreBtn),
+    h('div.toolbar', h('h2', 'Plan'), planSel, h('div.grow'), prevBtn, nextBtn, moreBtn),
     h('div.toolbar', addInput, h('button.btn', { type: 'button', onclick: addFromText }, icon('plus'), 'Add')),
     h('div.scroll', { style: { flex: '1' } }, listEl));
 
@@ -78,13 +79,13 @@ export default function create(ctx) {
   }
   async function renamePlan() { const n = await promptBox('Rename plan', 'Name', plan.name); if (n) { plan.name = n; await save(); await load(); } }
   async function deletePlan() { if (await confirmBox('Delete plan?', 'Delete “' + plan.name + '”?', 'Delete', true)) { await db.del('plans', plan.id); plan = null; await load(); } }
-  function exportPlan() { download(new Blob([JSON.stringify(plan, null, 1)], { type: 'application/json' }), plan.name.replace(/[^\w-]+/g, '_') + '.selah-plan.json'); }
+  function exportPlan() { download(new Blob([JSON.stringify(plan, null, 1)], { type: 'application/json' }), plan.name.replace(/[^\w-]+/g, '_') + '.sda-sabbath-plan.json'); }
   function importPlan() {
     const inp = h('input', { type: 'file', accept: '.json' });
     inp.onchange = async () => {
       try {
         const p = JSON.parse(await readText(inp.files[0]));
-        if (!p.items) throw new Error('Not a Selah plan file.');
+        if (!p.items) throw new Error('Not an SDA Sabbath plan file.');
         p.id = uid(); p.updated = Date.now();
         await db.put('plans', p.id, p); await db.put('kv', 'plan-current', p.id); await load();
         toast('Plan imported. Slides and videos must also exist on this device.', 'ok', 5000);
@@ -100,9 +101,11 @@ export default function create(ctx) {
 
   function render() {
     clear(listEl);
+    // No plan yet: nothing to step through, so no Next / Previous item buttons.
+    nextBtn.hidden = prevBtn.hidden = planSel.hidden = !plan;
     if (!plan) {
-      listEl.appendChild(h('div.empty-state', icon('plan'), h('p', 'Prepare the order of service before Sabbath: Bible readings, hymns, slides and videos in the order you need them.'),
-        h('button.btn.primary', { type: 'button', onclick: newPlan }, icon('plus'), 'New plan')));
+      listEl.appendChild(emptyState('plan', 'No service plan yet', 'Prepare the order of service before Sabbath: Bible readings, hymns, slides and videos in the order you need them.',
+        { label: 'New plan', icon: 'plus', primary: true, onclick: newPlan }));
       return;
     }
     plan.items.forEach((it, i) => {

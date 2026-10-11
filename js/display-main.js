@@ -1,7 +1,7 @@
 // Boot for display.html. Works with three kinds of controller:
 //   1. the control window that opened us (postMessage + direct calls for screen-share streams)
 //   2. a phone/PC using the Presentation API (Chromecast / wireless displays)
-//   3. the Selah companion on the LAN (WebSocket), e.g. a smart-TV browser or second PC
+//   3. the SDA Sabbath companion on the LAN (WebSocket), e.g. a smart-TV browser or second PC
 import { createDisplay } from './display/display.js';
 import { createDecoder, createEncoder } from './core/wire.js';
 

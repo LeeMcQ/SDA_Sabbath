@@ -95,7 +95,7 @@ export default function create(ctx) {
         link.canCast() ? h('button.btn', { type: 'button', onclick: () => link.openCast().catch((e) => toast(e.message, 'err')) }, icon('cast'), 'Cast') : null,
         link.kind ? h('button.btn.danger', { type: 'button', onclick: () => { link.close(); rebuild(); } }, icon('x'), 'Close display') : null),
       screens,
-      h('p.note', 'Tip: in Chrome or Edge, allow “Window management” once and Selah opens the display straight onto the projector every time. Click the projector screen once at the start so videos may play with sound (not needed once Selah is installed).'));
+      h('p.note', 'Tip: in Chrome or Edge, allow “Window management” once and SDA Sabbath opens the display straight onto the projector every time. Click the projector screen once at the start so videos may play with sound (not needed once Selah is installed).'));
     // Phone remote via the companion
     const comp = ctx.companion;
     const rc = h('div.card', h('h3', 'Phone remote and network displays'));
@@ -109,7 +109,7 @@ export default function create(ctx) {
       }).catch(() => {});
       rc.append(h('div.row.wrap', qrBox, h('div.col', h('code', url), h('p.note', 'TV or second PC as the screen: open ' + (comp.urls && comp.urls[0] || location.origin) + '/display.html?via=ws&pin=' + (comp.pin || 'PIN')))));
     } else {
-      rc.append(h('p.note', 'Run the Selah companion on the church PC to control the screen from a phone, use a smart-TV browser as the screen, play videos straight from the PC’s Videos folder, and convert PowerPoint files exactly. Then open Selah from the address it shows.'));
+      rc.append(h('p.note', 'Run the SDA Sabbath companion on the church PC to control the screen from a phone, use a smart-TV browser as the screen, play videos straight from the PC’s Videos folder, and convert PowerPoint files exactly. Then open Selah from the address it shows.'));
     }
     box.append(rc);
   });
@@ -146,14 +146,14 @@ export default function create(ctx) {
       h('label', 'Next / Live monitors'), toggle('Show monitors', A.monitors !== false, (v) => settings.set('app.monitors', v)),
       h('label', 'Low-power mode'), seg([['auto', 'Automatic' + (A.lowPower == null ? (lpNow ? ' (on)' : ' (off)') : '')], ['on', 'On'], ['off', 'Off']], A.lowPower == null ? 'auto' : A.lowPower ? 'on' : 'off', (v) => settings.set('app.lowPower', v === 'auto' ? null : v === 'on')),
       h('label', ''), h('p.note', 'Low-power mode turns off fades and the live video thumbnail, renders slides at 1280 px and shares screens at 15 frames per second — for old PCs and 1–2 GB phones.'),
-      h('label', 'Install'), ctx.installPrompt ? h('button.btn', { type: 'button', onclick: async () => { await ctx.promptInstall(); rebuild(); } }, icon('download'), 'Install Selah') : h('span.note', window.matchMedia('(display-mode: standalone)').matches ? 'Installed.' : 'Use the browser menu → Install app / Add to Home screen.'),
+      h('label', 'Install'), ctx.installPrompt ? h('button.btn', { type: 'button', onclick: async () => { await ctx.promptInstall(); rebuild(); } }, icon('download'), 'Install SDA Sabbath') : h('span.note', window.matchMedia('(display-mode: standalone)').matches ? 'Installed.' : 'Use the browser menu → Install app / Add to Home screen.'),
       h('label', 'Offline'), cache,
-      h('label', 'Storage'), h('div.row.wrap', storage, h('button.btn.sm', { type: 'button', onclick: async () => { const ok = await persistStorage(); toast(ok ? 'Selah’s data is protected from automatic clean-up.' : 'The browser did not allow it yet — install Selah first.', ok ? 'ok' : ''); } }, 'Protect data')),
+      h('label', 'Storage'), h('div.row.wrap', storage, h('button.btn.sm', { type: 'button', onclick: async () => { const ok = await persistStorage(); toast(ok ? 'SDA Sabbath’s data is protected from automatic clean-up.' : 'The browser did not allow it yet — install Selah first.', ok ? 'ok' : ''); } }, 'Protect data')),
       h('label', 'Backup'), h('div.row.wrap',
         h('button.btn.sm', { type: 'button', onclick: exportBackup }, icon('download'), 'Export settings & plans'),
         h('button.btn.sm', { type: 'button', onclick: importBackup }, icon('upload'), 'Import')),
       h('label', 'Reset'), h('button.btn.sm.danger', { type: 'button', onclick: async () => { if (await confirmBox('Reset settings?', 'Return all settings to their defaults? Bibles, slides, hymns and plans stay.', 'Reset', true)) { settings.reset(); rebuild(); } } }, 'Reset settings'),
-      h('label', 'Version'), h('span.note', 'Selah ' + ctx.VERSION)));
+      h('label', 'Version'), h('span.note', 'SDA Sabbath ' + ctx.VERSION)));
     if (navigator.storage && navigator.storage.estimate) {
       const e = await navigator.storage.estimate();
       storage.textContent = fmtBytes(e.usage) + ' used of ' + fmtBytes(e.quota) + ' available';
@@ -168,15 +168,15 @@ export default function create(ctx) {
   });
 
   section('about', 'About', (box) => {
-    box.append(h('p', 'Selah — a free, offline church presenter made for Seventh-day Adventist media teams.'),
+    box.append(h('p', 'SDA Sabbath — a free, offline church presenter made for Seventh-day Adventist media teams.'),
       h('p.note', { style: { marginTop: '8px' } }, 'Bibles: KJV (public domain), World English Bible (public domain), Afrikaanse Bybel 1933/53. Fonts: Atkinson Hyperlegible Next and Source Serif 4 (SIL Open Font License). PDF rendering: pdf.js (Apache 2.0). ZIP reading: fflate (MIT). QR codes: qrcode-generator (MIT). Sample hymn words are in the public domain.'));
   });
 
   // How much of the app is stored for offline use (shown even when the download finished in an earlier visit).
   async function offlineStatus() {
     try {
-      if (!('serviceWorker' in navigator) || !window.isSecureContext) return 'Offline use needs https:// or the Selah companion.';
-      if (!navigator.serviceWorker.controller || !window.caches) return 'Not stored yet — keep this page open for a minute, or install Selah.';
+      if (!('serviceWorker' in navigator) || !window.isSecureContext) return 'Offline use needs https:// or the SDA Sabbath companion.';
+      if (!navigator.serviceWorker.controller || !window.caches) return 'Not stored yet — keep this page open for a minute, or install SDA Sabbath.';
       const man = await (await fetch('asset-manifest.json', { cache: 'no-store' })).json();
       const c = await caches.open('selah-' + man.version);
       const have = (await c.keys()).length;
@@ -186,14 +186,14 @@ export default function create(ctx) {
 
   async function exportBackup() {
     const data = { app: 'selah', version: 1, settings: settings.v, plans: await db.all('plans'), hymnbooks: await db.all('hymnbooks') };
-    download(new Blob([JSON.stringify(data)], { type: 'application/json' }), 'selah-backup.json');
+    download(new Blob([JSON.stringify(data)], { type: 'application/json' }), 'sda-sabbath-backup.json');
   }
   function importBackup() {
     const inp = h('input', { type: 'file', accept: '.json' });
     inp.onchange = async () => {
       try {
         const d = JSON.parse(await readText(inp.files[0]));
-        if (d.app !== 'selah') throw new Error('Not a Selah backup.');
+        if (d.app !== 'selah') throw new Error('Not an SDA Sabbath backup.');
         if (d.settings) { localStorage.setItem('selah.settings.v1', JSON.stringify(d.settings)); }
         for (const p of d.plans || []) await db.put('plans', p.id, p);
         for (const b of d.hymnbooks || []) await db.put('hymnbooks', b.id, b);

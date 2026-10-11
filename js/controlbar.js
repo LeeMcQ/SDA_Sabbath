@@ -36,9 +36,12 @@ export function createControlBar(el, getTab) {
       h('div.cb-end',
         btn('black', 'Black screen', () => live.setBlank('black'), { key: 'B', cls: 'hide-sm' + (live.blank === 'black' ? ' live-on' : '') }),
         btn('logo', 'Logo', () => live.setBlank('logo'), { key: 'L', cls: 'hide-sm' + (live.blank === 'logo' ? ' live-on' : '') }),
+
         btn('clear', 'Clear screen', () => live.clear(), { key: 'Esc' })),
       audioBox,
     );
+    const lb = el.querySelector('.cb-end .btn[aria-label="Logo"]');
+    if (lb && !live.hasLogo()) { lb.setAttribute('aria-disabled', 'true'); lb.title = 'No logo yet: add a logo picture or church name in Settings → Screen'; }
     updateCounter();
     renderAudio();
   }

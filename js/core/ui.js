@@ -188,6 +188,13 @@ export function closeMenu() {
   if (hadFocus && o.anchor && o.anchor.isConnected) { try { o.anchor.focus({ preventScroll: true }); } catch (e) { /* */ } }
 }
 
+/** One empty / no-results pattern everywhere: icon, short title, one muted line, at most one action.
+ *  emptyState('search', 'No hymn matches “x”', 'Try a number like 73.', {label, onclick, icon, primary}) */
+export function emptyState(ic, title, text, action, attrs) {
+  return h('div.empty-state', attrs || null, ic ? icon(ic) : null, h('p.es-t', title), text ? h('p.es-d', text) : null,
+    action ? h('button.btn' + (action.primary ? '.primary' : ''), { type: 'button', onclick: action.onclick }, action.icon ? icon(action.icon) : null, h('span', action.label)) : null);
+}
+
 /** Make a clickable non-button element (verse row, plan item) usable from the keyboard. */
 export function activatable(el, label) {
   el.tabIndex = 0;

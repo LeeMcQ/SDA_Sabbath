@@ -288,7 +288,7 @@ export function createDisplay(root, { post, self = false } = {}) {
     if (show && !hintEl) {
       hintEl = document.createElement('div');
       hintEl.className = 'disp-hint';
-      hintEl.innerHTML = '<b>Selah display</b><span>Click here once to fill this screen and allow sound.<br>Press F to toggle full screen.</span>';
+      hintEl.innerHTML = '<b>SDA Sabbath display</b><span>Click here once to fill this screen and allow sound.<br>Press F to toggle full screen.</span>';
       root.appendChild(hintEl);
     } else if (!show && hintEl) { hintEl.remove(); hintEl = null; }
   }
