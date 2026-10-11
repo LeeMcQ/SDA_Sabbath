@@ -104,6 +104,7 @@ function applyLayout() {
   document.documentElement.setAttribute('data-theme', a.theme || 'dark');
   appEl.classList.toggle('rail-right', a.railSide === 'right');
   appEl.classList.toggle('no-monitors', a.monitors === false);
+  document.documentElement.classList.toggle('no-mon', a.monitors === false);
   const meta = document.querySelector('meta[name=theme-color]');
   if (meta) meta.content = getComputedStyle(document.documentElement).getPropertyValue('--sunk').trim() || '#161c28';
 }
@@ -180,7 +181,7 @@ function displayMenu(anchor) {
   items.push({ label: 'Use this device as the screen', icon: 'phone', onclick: () => link.openSelf(createDisplay) });
   if (link.canCast()) items.push({ label: 'Cast to a TV or wireless display', icon: 'cast', onclick: () => link.openCast().catch((e) => ui.toast('Cast was cancelled or is not available: ' + e.message, 'err')) });
   items.push({ label: 'Selah companion on the network…', icon: 'link', onclick: companionDialog });
-  if (pipSupported()) items.push('-', { label: 'Mini controller (stays on top)', icon: 'pip', onclick: openPip });
+  if (pipSupported()) items.push('-', { label: 'Mini controller (stays on top)', icon: 'pip', onclick: () => openPip().catch((e) => ui.toast('The mini controller could not open: ' + e.message, 'err')) });
   if (link.kind) items.push('-', { label: 'Close display', icon: 'x', onclick: () => { link.close(); } });
   ui.menu(anchor, items);
 }
@@ -203,16 +204,19 @@ live.ensureDisplay = () => new Promise((resolve) => {
 const topIcons = $('#topIcons');
 const searchBtn = ui.btn('search', 'Go to (/)', () => quick.focus(), { cls: 'sm' });
 searchBtn.classList.add('show-sm');
-const installBtn = ui.btn('download', 'Install Selah on this device', async () => {
-  if (!ctx.installPrompt) return;
-  ctx.installPrompt.prompt();
-  await ctx.installPrompt.userChoice.catch(() => null);
-  ctx.installPrompt = null; installBtn.hidden = true;
-}, { cls: 'sm' });
+async function promptInstall() {
+  const p = ctx.installPrompt;
+  if (!p) return;
+  ctx.installPrompt = null; installBtn.hidden = true; // a prompt can only be shown once
+  try { p.prompt(); await p.userChoice; } catch (e) { /* dismissed */ }
+}
+ctx.promptInstall = promptInstall;
+const installBtn = ui.btn('download', 'Install Selah on this device', promptInstall, { cls: 'sm' });
 installBtn.hidden = true;
 const helpBtn = ui.btn('kbd', 'Keyboard shortcuts (?)', () => showHelp(), { cls: 'sm' });
 topIcons.append(searchBtn, installBtn, helpBtn);
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); ctx.installPrompt = e; installBtn.hidden = false; });
+window.addEventListener('appinstalled', () => { ctx.installPrompt = null; installBtn.hidden = true; ui.toast('Selah is installed.', 'ok'); });
 const mq = matchMedia('(max-width: 760px)');
 const syncSearch = () => { searchBtn.hidden = !mq.matches; helpBtn.hidden = mq.matches; };
 mq.addEventListener ? mq.addEventListener('change', syncSearch) : mq.addListener(syncSearch);
@@ -236,7 +240,7 @@ function showHelp() {
 
 function handleKey(e, remote) {
   const k = e.key;
-  if (!remote && ui.modalOpen() && k !== 'F5') return false;
+  if (!remote && ui.modalOpen() && k !== 'F5') { if (k === 'Escape') { ui.closeModal(); return true; } return false; }
   const typing = !remote && isTyping(e);
   const ctrl = e.ctrlKey || e.metaKey;
   if (k === 'F5' || (ctrl && k === 'Enter')) { doPresent(); return true; }
@@ -278,6 +282,9 @@ window.addEventListener('beforeunload', (e) => { if (live.cue && link.kind === '
 
 // ------------------------------------------------------------ companion (LAN) detection
 async function detectCompanion() {
+  // The companion only serves plain http on the church network, so an https site (GitHub Pages)
+  // or a file:// copy can never be it. Skipping the probe avoids a 404 in the console on every load.
+  if (location.protocol !== 'http:') return;
   try {
     const ctl = new AbortController();
     const t = setTimeout(() => ctl.abort(), 1200);

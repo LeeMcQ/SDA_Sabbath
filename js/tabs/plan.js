@@ -2,7 +2,7 @@
 // Items point to Bible passages, hymns, slides, videos or web pages.
 import { h, clear, uid, readText, download } from '../core/util.js';
 import { icon } from '../core/icons.js';
-import { btn, menu, toast, promptBox, confirmBox, modal } from '../core/ui.js';
+import { btn, menu, toast, promptBox, confirmBox, modal, activatable } from '../core/ui.js';
 import { db } from '../core/db.js';
 import { parseRef, refText, EN } from '../core/books.js';
 
@@ -115,6 +115,7 @@ export default function create(ctx) {
         btn('up', 'Move up', () => moveItem(i, -1), { cls: 'sm' }),
         btn('down', 'Move down', () => moveItem(i, 1), { cls: 'sm' }),
         btn('trash', 'Remove', () => { plan.items.splice(i, 1); if (cur >= plan.items.length) cur = plan.items.length - 1; save(); render(); }, { cls: 'sm' })));
+      activatable(row);
       listEl.appendChild(row);
     });
     if (!plan.items.length) listEl.appendChild(h('p.note.pad', 'Empty plan. Type above, or use “Add to plan” in the Bible, Hymns, Slides or Video tabs.'));
@@ -177,7 +178,11 @@ export default function create(ctx) {
       const item = Object.assign({ id: uid() }, ref);
       // Hymn labels: fill in the title when the hymnbook knows it.
       if (item.tab === 'hymns' && /^Hymn \d+$/.test(item.label)) {
-        try { const x = (await ctx.tab('hymns')).lookup(item.n)[0]; if (x) item.label = 'Hymn ' + x.n + ' — ' + x.t; } catch (e) { /* */ }
+        try {
+          const x = (await ctx.tab('hymns')).lookup(item.n)[0];
+          // Remember the hymnbook too, so the item still opens the same hymn if another book is chosen later.
+          if (x) { item.label = 'Hymn ' + x.n + ' — ' + x.t; if (!item.book) item.book = x.bookId; }
+        } catch (e) { /* */ }
       }
       const at = cur >= 0 ? cur + 1 : plan.items.length;
       plan.items.splice(at, 0, item);

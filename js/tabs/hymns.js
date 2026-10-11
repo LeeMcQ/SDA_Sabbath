@@ -159,7 +159,7 @@ export default function create(ctx) {
     if (/^\d+$/.test(qq)) list.sort((a, b) => (a.n === +qq ? -1 : b.n === +qq ? 1 : a.n - b.n));
     const frag = document.createDocumentFragment();
     list.slice(0, 400).forEach((x) => {
-      frag.appendChild(h('button', { type: 'button', 'aria-selected': String(hymn === x), onclick: () => selectHymn(x), ondblclick: () => { selectHymn(x); live.take(); } },
+      frag.appendChild(h('button', { type: 'button', 'aria-pressed': String(hymn === x), onclick: () => selectHymn(x), ondblclick: () => { selectHymn(x); live.take(); } },
         h('span.num', String(x.n)), h('span.grow', h('div.trunc', x.t), h('div.note.trunc', x.v[0][0]))));
     });
     listEl.appendChild(frag);
@@ -265,7 +265,7 @@ export default function create(ctx) {
     cue.cards.forEach((c, i) => {
       const lab = c.p.kind === 'title' ? 'Title' : c.p.kind === 'chorus' ? 'Chorus' : 'Verse ' + c.p.n + (c.sub || '');
       const card = h('button.stanza' + (c.p.kind === 'chorus' ? '.chorus' : ''), {
-        type: 'button', 'aria-selected': String(i === cue.index),
+        type: 'button', 'aria-pressed': String(i === cue.index),
         onclick: () => { stagedIndex = i; cue.index = i; markCards(); ctx.setStaged('hymns', cue); if (isLiveHymn()) live.go(i); },
         ondblclick: () => { stagedIndex = i; cue.index = i; live.take(cue); },
       }, h('span.lab', lab), c.lines.join('\n'));
@@ -276,7 +276,7 @@ export default function create(ctx) {
   const isLiveHymn = () => live.cue && live.cue.tab === 'hymns' && cue && live.cue.hymnKey === cue.hymnKey;
   function markCards() {
     Array.prototype.forEach.call(grid.children, (c, i) => {
-      c.setAttribute('aria-selected', String(cue && i === cue.index));
+      c.setAttribute('aria-pressed', String(!!cue && i === cue.index));
       c.classList.toggle('live', isLiveHymn() && live.index === i);
     });
   }
@@ -390,8 +390,13 @@ export default function create(ctx) {
     },
     async open({ n, book: bid, index = 0 }) {
       await ready;
-      if (bid && bid !== (book && book.id)) setBook(bid);
-      const x = book && book.hymns.find((y) => y.n === +n);
+      if (bid && bid !== (book && book.id) && books.some((b) => b.id === bid)) setBook(bid);
+      let x = book && book.hymns.find((y) => y.n === +n);
+      // Plan items made before a hymnbook was chosen (or after it was switched): use any book that has it.
+      if (!x && (!bid || !books.some((b) => b.id === bid))) {
+        const other = books.find((b) => b.hymns.some((y) => y.n === +n));
+        if (other) { setBook(other.id); x = book.hymns.find((y) => y.n === +n); }
+      }
       opening = true;
       await ctx.showTab('hymns');
       if (!x) { toast('Hymn ' + n + ' is not in ' + (book ? book.name : 'the hymnbook') + '.', 'err'); return null; }
@@ -403,14 +408,21 @@ export default function create(ctx) {
     controls(c) {
       // Jump straight to a stanza: T 1 C 2 C 3 …
       const box = h('div.row', { style: { flexWrap: 'nowrap', overflowX: 'auto' } });
-      (c.labels || []).forEach((lab, i) => {
-        if (lab === 'C' && i > 0 && c.labels.indexOf('C') !== i) return; // one chorus button is enough
-        box.appendChild(h('button.btn.sm', { type: 'button', title: lab === 'T' ? 'Title' : lab === 'C' ? 'Chorus' : 'Stanza ' + lab, onclick: () => {
-          if (lab === 'C') {
+      const labels = c.labels || [];
+      const isCho = (lab) => /^C[a-f]?$/.test(lab);
+      const firstCho = labels.findIndex(isCho);
+      labels.forEach((lab, i) => {
+        if (isCho(lab) && i !== firstCho) return; // one chorus button is enough (also when the chorus is split in two)
+        if (/^\d+[b-f]$/.test(lab)) return; // second half of a long stanza: its first half's button is enough
+        const name = lab === 'T' ? 'Title' : isCho(lab) ? 'Chorus' : 'Stanza ' + lab.replace(/a$/, '');
+        box.appendChild(h('button.btn.sm', { type: 'button', title: name, 'aria-label': name, onclick: () => {
+          if (isCho(lab)) {
             // the chorus that follows the current stanza (or the first one)
-            const after = c.labels.indexOf('C', live.index); live.go(after >= 0 ? after : i);
+            let after = -1;
+            for (let k = live.index; k < labels.length; k++) if (labels[k] === lab) { after = k; break; }
+            live.go(after >= 0 ? after : i);
           } else live.go(i);
-        } }, lab));
+        } }, isCho(lab) ? 'C' : lab.replace(/a$/, '')));
       });
       return box;
     },

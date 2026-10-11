@@ -2,9 +2,9 @@
 // press Present. Long passages are split into readable slides automatically.
 import { h, clear, esc, debounce } from '../core/util.js';
 import { icon } from '../core/icons.js';
-import { btn, modal, seg, toggle, menu, select } from '../core/ui.js';
+import { btn, modal, seg, toggle, menu, select, activatable } from '../core/ui.js';
 import { EN, SHORT, parseRef, refText } from '../core/books.js';
-import { listTranslations, getInfo, versesFor, verseHtml, search as bibleSearch } from '../core/bibledata.js';
+import { listTranslations, getInfo, versesFor, verseHtml, verseText, search as bibleSearch } from '../core/bibledata.js';
 import { fitsText } from '../core/render.js';
 import { importBibleDialog } from './bible-import.js';
 
@@ -26,6 +26,10 @@ export default function create(ctx) {
     { label: 'Add this passage to the service plan', icon: 'plan', onclick: addToPlan, disabled: !st.segs },
     { label: 'Clear history', icon: 'trash', onclick: () => { settings.set('bible.history', []); renderHistory(); } },
   ]), { cls: 'sm' });
+  // Placeholder options until the list loads, so the toolbar keeps its size (no layout jump on phones).
+  [['kjv', 'KJV'], ['web', 'WEB'], ['afr53', 'AFR']].forEach(([v, a]) => trSel.appendChild(h('option', { value: v }, a)));
+  trSel.value = st.tr;
+  parSel.appendChild(h('option', { value: '' }, 'No second'));
   const toolbar = h('div.toolbar', h('h2', 'Bible'), refInput, trSel, h('span.faint', '+'), parSel, h('div.grow'), searchBtn, optsBtn, moreBtn);
   const hist = h('div.bible-hist');
 
@@ -88,7 +92,7 @@ export default function create(ctx) {
     info.books.forEach((b, i) => {
       if (i === 39) bookGrid.appendChild(h('div.grp', 'New Testament'));
       if (!b[1]) return;
-      bookGrid.appendChild(h('button' + (i >= 39 ? '.nt' : ''), { type: 'button', title: b[0], 'aria-selected': String(st.book === i + 1),
+      bookGrid.appendChild(h('button' + (i >= 39 ? '.nt' : ''), { type: 'button', title: b[0], 'aria-pressed': String(st.book === i + 1),
         onclick: () => { st.book = i + 1; st.chapter = 1; renderBooks(); renderChapters(); setStep('chapters'); renderVerses(); } }, bookLabel(i)));
     });
     renderCrumbs();
@@ -99,7 +103,7 @@ export default function create(ctx) {
     const b = info.books[st.book - 1];
     chapHead.textContent = b[0];
     for (let c = 1; c <= b[1]; c++) {
-      chapGrid.appendChild(h('button', { type: 'button', 'aria-selected': String(st.chapter === c),
+      chapGrid.appendChild(h('button', { type: 'button', 'aria-label': b[0] + ' ' + c, 'aria-pressed': String(st.chapter === c),
         onclick: () => { st.chapter = c; renderChapters(); setStep('verses'); renderVerses(); } }, String(c)));
     }
     renderCrumbs();
@@ -115,6 +119,7 @@ export default function create(ctx) {
     const frag = document.createDocumentFragment();
     verses.forEach((v) => {
       const row = h('div.vr', { 'data-v': v.v, html: '<b>' + v.v + '</b><span>' + verseHtml(v.text, { redLetter: false, italics: S().italics }) + '</span>' });
+      activatable(row);
       row.addEventListener('click', (e) => clickVerse(v.v, e.shiftKey));
       row.addEventListener('dblclick', () => { selectVerses(book, [{ c1: chap, v1: v.v, c2: chap, v2: v.v }]).then(() => live.take()); });
       frag.appendChild(row);
@@ -142,6 +147,7 @@ export default function create(ctx) {
       const v = +r.getAttribute('data-v');
       const on = st.selBook === st.book && (st.segs || []).some((s) => inSeg(s, st.chapter, v));
       r.classList.toggle('sel', on);
+      r.setAttribute('aria-pressed', String(on));
     }
   }
   function markLive() {
@@ -188,6 +194,8 @@ export default function create(ctx) {
   const restage = debounce(() => { if (st.segs) selectVerses(st.selBook, st.segs, { reveal: false }); }, 50);
 
   async function goRef(text, present) {
+    await ready; // the Bibles may still be loading on a slow device
+    if (!info) return null;
     const r = parseRef(text);
     if (!r) { ctx.toast('Could not read “' + text + '”. Try “John 3:16” or “Ps 23”.', 'err'); return null; }
     if (!info.books[r.book - 1] || !info.books[r.book - 1][1]) { ctx.toast(info.abbr + ' has no ' + EN[r.book - 1] + '.', 'err'); return null; }
@@ -362,9 +370,13 @@ export default function create(ctx) {
     if (!res.length) { sResults.appendChild(h('div.empty-state', 'No verses contain all of those words in ' + info.abbr + '.')); return; }
     const words = q.toLowerCase().split(/\s+/).filter(Boolean).map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
     const re = new RegExp('(' + words.join('|') + ')', 'gi');
+    // Highlight in the plain text and escape each piece, so a search for e.g. "quota" cannot
+    // match inside an escaped character such as &quot; and break the verse.
+    const marked = (t) => verseText(t).split(re).map((part, i) => (i % 2 ? '<mark>' + esc(part) + '</mark>' : esc(part))).join('');
     res.forEach((r) => {
       const ref = info.names[r.b - 1] + ' ' + r.c + ':' + r.v;
-      const row = h('div.vr', { html: '<b style="min-width:auto;white-space:nowrap">' + esc(ref) + '</b><span>' + verseHtml(r.text, {}).replace(re, '<mark>$1</mark>') + '</span>' });
+      const row = h('div.vr', { html: '<b style="min-width:auto;white-space:nowrap">' + esc(ref) + '</b><span>' + marked(r.text) + '</span>' });
+      activatable(row);
       row.addEventListener('click', () => { setMode('browse'); selectVerses(r.b, [{ c1: r.c, v1: r.v, c2: r.c, v2: r.v }]); });
       sResults.appendChild(row);
     });
@@ -421,6 +433,7 @@ export default function create(ctx) {
   live.on('live', markLive);
   window.addEventListener('selah-bibles', () => { loadTranslations().then(() => { if (!trList.some((t) => t.id === st.tr) && trList[0]) setTr(trList[0].id); }); });
 
+  renderHistory(); // draw saved history straight away so the layout does not jump when the Bibles arrive
   const ready = (async () => {
     await loadTranslations();
     info = await getInfo(st.tr);

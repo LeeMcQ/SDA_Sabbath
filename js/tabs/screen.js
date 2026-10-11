@@ -50,8 +50,8 @@ export default function create(ctx) {
       cap = await capture({ surface, audio: settings.v.screen.audio });
       video.srcObject = cap.stream;
       cap.stream.getVideoTracks()[0].addEventListener('ended', () => stop());
-      status.textContent = 'Sharing: ' + (cap.label || surface);
-      const title = cap.label || { monitor: 'Whole screen', window: 'Window', browser: 'Browser tab' }[surface];
+      const title = cap.label || { monitor: 'Whole screen', window: 'Window', browser: 'Browser tab' }[cap.surface || surface] || 'Screen';
+      status.textContent = 'Sharing: ' + title;
       ctx.setStaged('screen', { id: 'screen:' + title, tab: 'screen', title, sub: 'PC view', stream: cap.stream, deck: { kind: 'stream', frame: { kind: 'stream', title, sub: 'PC view' } } });
       render();
     } catch (e) {

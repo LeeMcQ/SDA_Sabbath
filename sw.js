@@ -1,6 +1,6 @@
 // Selah service worker: installs the whole app (Bibles, hymns, fonts, pdf.js) in one go
 // so it runs with no internet. VERSION is rewritten by tools/build.py on every build.
-const VERSION = '612cc830f3f5';
+const VERSION = '7f2d9bf6f957';
 const CACHE = 'selah-' + VERSION;
 const NETWORK_ONLY = /\/(api|media|ws)(\/|$)/;
 
@@ -11,8 +11,11 @@ async function broadcast(msg) {
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
-    const man = await (await fetch('asset-manifest.json?v=' + VERSION, { cache: 'no-store' })).json();
+    const manRes = await fetch('asset-manifest.json?v=' + VERSION, { cache: 'no-store' });
     const cache = await caches.open(CACHE);
+    // Keep the file list too: the app reads it offline (offline status, optional licensed Bibles).
+    await cache.put('asset-manifest.json', manRes.clone());
+    const man = await manRes.json();
     const files = man.files;
     let done = 0;
     // Small batches keep memory and connections low on weak devices.

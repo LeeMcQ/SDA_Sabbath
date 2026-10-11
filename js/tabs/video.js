@@ -218,7 +218,7 @@ export default function create(ctx) {
   const card = (title, ...kids) => h('div.card', h('h3', title), ...kids);
   const slider = (label, min, max, step, val, fmt, on) => {
     const out = h('span.note', { style: { minWidth: '52px', textAlign: 'right' } }, fmt(val));
-    const r = h('input', { type: 'range', min, max, step, value: val, style: { flex: '1' }, oninput: () => { out.textContent = fmt(+r.value); on(+r.value); } });
+    const r = h('input', { type: 'range', min, max, step, value: val, 'aria-label': label, style: { flex: '1' }, oninput: () => { out.textContent = fmt(+r.value); r.setAttribute('aria-valuetext', fmt(+r.value)); on(+r.value); } });
     r.value = val;
     return h('div.row', h('span.note', { style: { minWidth: '86px' } }, label), r, out);
   };
@@ -226,7 +226,7 @@ export default function create(ctx) {
   function buildPanel() {
     clear(panel);
     // Playback
-    const rateSel = h('select.field', { onchange: () => { opts.rate = +rateSel.value; apply('rate', opts.rate); } },
+    const rateSel = h('select.field', { 'aria-label': 'Playback speed', onchange: () => { opts.rate = +rateSel.value; apply('rate', opts.rate); } },
       [0.25, 0.5, 0.75, 0.9, 1, 1.1, 1.25, 1.5, 2, 3, 4].map((r) => h('option', { value: r, selected: r === opts.rate }, r + '×')));
     const abNote = h('span.note', opts.ab ? fmtTime(opts.ab.a) + ' → ' + fmtTime(opts.ab.b) : 'off');
     const nowT = () => (isLiveVideo() && live.media ? live.media.time : prevVideo.currentTime || 0);
@@ -254,7 +254,7 @@ export default function create(ctx) {
       eqWrap.appendChild(h('label', r, lab));
       return r;
     });
-    const presetSel = h('select.field', { onchange: () => { const p = EQ_PRESETS[presetSel.value]; p.forEach((v, i) => { eqVals[i] = v; eqInputs[i].value = v; }); opts.eq = p.some((x) => x) ? p.slice() : null; apply('eq', opts.eq); } },
+    const presetSel = h('select.field', { 'aria-label': 'Equaliser preset', onchange: () => { const p = EQ_PRESETS[presetSel.value]; p.forEach((v, i) => { eqVals[i] = v; eqInputs[i].value = v; }); opts.eq = p.some((x) => x) ? p.slice() : null; apply('eq', opts.eq); } },
       Object.keys(EQ_PRESETS).map((k) => h('option', { value: k }, k)));
     panel.appendChild(card('Sound',
       slider('Volume', 0, 2, 0.05, opts.volume, (v) => Math.round(v * 100) + '%', (v) => { opts.volume = v; settings.set('video.volume', v); apply('volume', v); }),
@@ -277,7 +277,7 @@ export default function create(ctx) {
 
     // Subtitles & tools
     const subNote = h('span.note', opts.subs ? 'Subtitles loaded' : 'No subtitles');
-    const subInp = h('input', { type: 'file', accept: '.srt,.vtt', style: { display: 'none' }, onchange: async () => {
+    const subInp = h('input', { type: 'file', accept: '.srt,.vtt', 'aria-label': 'Subtitle file', style: { display: 'none' }, onchange: async () => {
       const file = subInp.files[0]; if (!file) return;
       opts.subs = { vtt: srtToVtt(await readText(file)), size: (opts.subs && opts.subs.size) || 100 };
       subNote.textContent = file.name; apply('subs', opts.subs);
@@ -344,7 +344,7 @@ export default function create(ctx) {
       seek.addEventListener('input', () => { dragging = true; tm.textContent = fmtTime(+seek.value) + ' / ' + fmtTime(+seek.max); });
       seek.addEventListener('change', () => { live.mediaCmd('seek', +seek.value); dragging = false; });
       const tm = h('span.tm', '0:00 / 0:00');
-      const vol = h('input', { type: 'range', min: 0, max: 2, step: 0.05, value: opts.volume, title: 'Volume', style: { width: '90px' }, oninput: () => { opts.volume = +vol.value; live.mediaCmd('volume', opts.volume); } });
+      const vol = h('input', { type: 'range', min: 0, max: 2, step: 0.05, value: opts.volume, title: 'Volume', 'aria-label': 'Volume', style: { width: '90px' }, oninput: () => { opts.volume = +vol.value; live.mediaCmd('volume', opts.volume); } });
       vol.value = opts.volume;
       const muteB = btn('vol', 'Mute', () => live.mediaCmd('mute', !(live.media && live.media.muted)), { cls: 'sm' });
       const loopB = btn('loop', 'Loop', () => { opts.loop = !(live.media && live.media.loop); live.mediaCmd('loop', opts.loop); }, { cls: 'sm' });

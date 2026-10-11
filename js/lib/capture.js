@@ -26,7 +26,15 @@ export async function capture({ surface = 'monitor', audio = false, cursor } = {
   const track = stream.getVideoTracks()[0];
   try { if (track && 'contentHint' in track) track.contentHint = surface === 'browser' ? 'detail' : 'motion'; } catch (e) { /* */ }
   const st = track && track.getSettings ? track.getSettings() : {};
-  return { stream, controller, label: track ? track.label : '', surface: st.displaySurface || surface };
+  return { stream, controller, label: friendlyLabel(track ? track.label : ''), surface: st.displaySurface || surface };
+}
+
+// Chrome names captured screens "screen:0:0" and windows "window:1234:0" — internal ids, not
+// something to show the operator. Keep real titles (tab and window names) and drop the ids.
+export function friendlyLabel(label) {
+  const l = String(label || '').trim();
+  if (!l || /^(screen|window|web-contents-media-stream):/i.test(l) || /^[\w-]+:-?\d+:-?\d+$/.test(l)) return '';
+  return l;
 }
 
 export function stopStream(stream) {

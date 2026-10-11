@@ -49,7 +49,7 @@ export default function create(ctx) {
 
   function renderLibrary() {
     clear(libList);
-    decks.forEach((d) => libList.appendChild(h('button', { type: 'button', 'aria-selected': String(deck && deck.id === d.id), onclick: () => selectDeck(d.id) },
+    decks.forEach((d) => libList.appendChild(h('button', { type: 'button', 'aria-pressed': String(!!deck && deck.id === d.id), onclick: () => selectDeck(d.id) },
       icon(d.type === 'pdf' ? 'slides' : d.type === 'pptx' ? 'present' : 'snapshot'),
       h('span.grow', h('div.trunc', d.name), h('div.note', d.count + (d.count === 1 ? ' slide' : ' slides') + ' · ' + d.type.toUpperCase())))));
     if (!decks.length) libList.appendChild(h('p.note.pad', 'No slides yet. Add a PDF, PowerPoint or pictures below.'));
@@ -82,13 +82,14 @@ export default function create(ctx) {
     clear(grid);
     if (io) { io.disconnect(); io = null; }
     notes.hidden = true;
+    head.hidden = !deck; deckMenuBtn.hidden = !deck;
     if (!deck) { head.textContent = ''; info.textContent = ''; grid.appendChild(h('div.empty-state', { style: { gridColumn: '1/-1' } }, icon('slides'), h('p', 'Pick a slide deck from the library, or add one.'))); return; }
     head.textContent = deck.name;
     info.textContent = deck.count + ' slides' + (deck.size ? ' · ' + fmtBytes(deck.size) : '');
     // Thumbnails for PowerPoint slides are drawn lazily as they scroll into view.
     if ('IntersectionObserver' in window) io = new IntersectionObserver((ents) => ents.forEach((e) => { if (e.isIntersecting) { drawThumb(e.target); io.unobserve(e.target); } }), { root: grid.parentNode, rootMargin: '200px' });
     frames.forEach((f, i) => {
-      const t = h('button.thumb', { type: 'button', 'aria-selected': String(i === stagedIndex), 'data-i': i, title: 'Slide ' + (i + 1) + ' — double-click to present',
+      const t = h('button.thumb', { type: 'button', 'aria-pressed': String(i === stagedIndex), 'data-i': i, title: 'Slide ' + (i + 1) + ' — double-click to present',
         onclick: () => { stageAt(i); if (isLiveDeck()) live.go(i); },
         ondblclick: () => { stageAt(i); live.take(); } });
       if (deck.type !== 'pptx' && thumbs[i]) { const u = URL.createObjectURL(thumbs[i]); urls.push(u); t.appendChild(h('img', { src: u, alt: '', loading: 'lazy' })); }
@@ -122,7 +123,7 @@ export default function create(ctx) {
       plan: { tab: 'slides', deck: deck.id, label: deck.name },
     };
     ctx.setStaged('slides', cue);
-    Array.prototype.forEach.call(grid.children, (c, k) => c.setAttribute && c.setAttribute('aria-selected', String(k === stagedIndex)));
+    Array.prototype.forEach.call(grid.children, (c, k) => c.setAttribute && c.classList.contains('thumb') && c.setAttribute('aria-pressed', String(k === stagedIndex)));
     const f = frames[stagedIndex];
     notes.hidden = !(f && f.notes);
     if (f && f.notes) notes.textContent = 'Speaker notes: ' + f.notes;
@@ -248,12 +249,12 @@ export default function create(ctx) {
     },
     controls(cue) {
       const secs = settings.v.slides.autoSec || 8;
-      const sel = h('select.field', { title: 'Seconds per slide', style: { height: '36px' }, onchange: () => { settings.set('slides.autoSec', +sel.value); if (autoT) { stopAuto(); start(); } } },
+      const sel = h('select.field', { title: 'Seconds per slide', 'aria-label': 'Seconds per slide', style: { height: '36px' }, onchange: () => { settings.set('slides.autoSec', +sel.value); if (autoT) { stopAuto(); start(); } } },
         [5, 8, 10, 15, 20, 30].map((s) => h('option', { value: s, selected: s === secs }, s + ' s')));
       const autoB = h('button.btn.sm', { type: 'button', 'aria-pressed': String(!!autoT), title: 'Advance automatically and loop (for announcements)',
         onclick: () => { if (autoT) stopAuto(); else start(); autoB.setAttribute('aria-pressed', String(!!autoT)); } }, icon('loop'), h('span', 'Auto'));
       function start() { cue.autoLoop = true; autoT = setInterval(() => live.next(), (settings.v.slides.autoSec || 8) * 1000); }
-      const go = h('input.field', { type: 'number', min: 1, max: cue.deck.frames.length, placeholder: '#', title: 'Go to slide number', style: { width: '64px', height: '36px' },
+      const go = h('input.field', { type: 'number', min: 1, max: cue.deck.frames.length, placeholder: '#', title: 'Go to slide number', 'aria-label': 'Go to slide number', style: { width: '64px', height: '36px' },
         onkeydown: (e) => { if (e.key === 'Enter') { live.go((+go.value || 1) - 1); go.value = ''; go.blur(); } } });
       return h('div.row', autoB, sel, h('span.hide-sm', go));
     },

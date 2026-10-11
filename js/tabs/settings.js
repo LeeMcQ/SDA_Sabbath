@@ -48,32 +48,32 @@ export default function create(ctx) {
         D()[key] ? h('button.btn.sm', { type: 'button', onclick: () => { const old = D()[key]; settings.set('display.' + key, null); db.del('files', old); rebuild(); } }, 'Remove') : null,
         h('span.note', label), inp);
     };
-    const color = (k) => { const c = h('input', { type: 'color', value: D()[k], style: { width: '56px', height: '34px', border: 0, background: 'none' }, oninput: () => setD(k)(c.value) }); c.value = D()[k]; return c; };
-    const range = (k, min, max, step, fmt) => {
+    const color = (k, label) => { const c = h('input', { type: 'color', value: D()[k], 'aria-label': label, style: { width: '56px', height: '34px', border: 0, background: 'none' }, oninput: () => setD(k)(c.value) }); c.value = D()[k]; return c; };
+    const range = (k, min, max, step, fmt, label) => {
       const out = h('span.note', fmt(D()[k]));
-      const r = h('input', { type: 'range', min, max, step, style: { flex: '1', maxWidth: '260px' }, oninput: () => { out.textContent = fmt(+r.value); }, onchange: () => setD(k)(+r.value) });
+      const r = h('input', { type: 'range', min, max, step, 'aria-label': label, style: { flex: '1', maxWidth: '260px' }, oninput: () => { out.textContent = fmt(+r.value); r.setAttribute('aria-valuetext', fmt(+r.value)); }, onchange: () => setD(k)(+r.value) });
       r.value = D()[k];
       return h('div.row', r, out);
     };
     box.append(prev, h('div.form',
       h('label', 'Font'), seg([['sans', 'Clear sans'], ['serif', 'Serif'], ['system', 'System']], D().font, setD('font')),
       h('label', 'Weight'), seg([['bold', 'Bold'], ['regular', 'Regular']], D().weight, setD('weight')),
-      h('label', 'Text colour'), color('fg'),
-      h('label', 'Verse-number colour'), color('accent'),
-      h('label', 'Background colour'), color('bg'),
+      h('label', 'Text colour'), color('fg', 'Text colour'),
+      h('label', 'Verse-number colour'), color('accent', 'Verse-number colour'),
+      h('label', 'Background colour'), color('bg', 'Background colour'),
       h('label', 'Background picture'), imgPick('bgImage', 'Shown behind Bible and hymn text'),
-      h('label', 'Darken picture'), range('bgDim', 0, 0.85, 0.05, (v) => Math.round(v * 100) + '%'),
+      h('label', 'Darken picture'), range('bgDim', 0, 0.85, 0.05, (v) => Math.round(v * 100) + '%', 'Darken picture'),
       h('label', 'Text shadow'), toggle('Outline text so it reads on pictures', D().shadow, setD('shadow')),
       h('label', 'Alignment'), seg([['center', 'Centre'], ['left', 'Left']], D().align, setD('align')),
-      h('label', 'Margin'), range('pad', 20, 200, 4, (v) => v + ' px'),
-      h('label', 'Smallest text'), range('minFont', 36, 110, 2, (v) => v + ' px'),
-      h('label', 'Largest text'), range('maxFont', 90, 240, 5, (v) => v + ' px'),
+      h('label', 'Margin'), range('pad', 20, 200, 4, (v) => v + ' px', 'Margin'),
+      h('label', 'Smallest text'), range('minFont', 36, 110, 2, (v) => v + ' px', 'Smallest text'),
+      h('label', 'Largest text'), range('maxFont', 90, 240, 5, (v) => v + ' px', 'Largest text'),
       h('label', 'Changing slides'), seg([['fade', 'Fade'], ['cut', 'Cut']], D().transition, setD('transition')),
-      h('label', 'Fade time'), range('fade', 100, 1000, 50, (v) => v + ' ms'),
+      h('label', 'Fade time'), range('fade', 100, 1000, 50, (v) => v + ' ms', 'Fade time'),
       h('label', 'Screen shape'), seg([['auto', 'Automatic'], ['16:9', '16:9'], ['16:10', '16:10'], ['4:3', '4:3']], D().aspect, setD('aspect')),
       h('label', 'Clear shows'), seg([['background', 'Background'], ['black', 'Black'], ['logo', 'Logo']], D().clearShows, setD('clearShows')),
       h('label', 'Logo picture'), imgPick('logo', 'Church logo for the Logo button'),
-      h('label', 'Logo text'), (() => { const i = h('input.field', { value: D().logoText || '', placeholder: 'e.g. Malmesbury SDA Church', onchange: () => setD('logoText')(i.value) }); return i; })(),
+      h('label', 'Logo text'), (() => { const i = h('input.field', { value: D().logoText || '', 'aria-label': 'Logo text', placeholder: 'e.g. Malmesbury SDA Church', onchange: () => setD('logoText')(i.value) }); return i; })(),
     ), h('p.note', { style: { marginTop: '10px' } }, 'Text always grows to fill the screen. “Smallest text” decides when a passage is split over more slides.'));
     setTimeout(redraw, 30);
   });
@@ -134,15 +134,19 @@ export default function create(ctx) {
     const A = settings.v.app;
     const lpNow = settings.lowPower();
     const storage = h('span.note', '…');
-    const cache = h('span.note', ctx.cacheProgress ? Math.round(ctx.cacheProgress.done / ctx.cacheProgress.total * 100) + '% downloaded' : '');
-    window.addEventListener('selah-cache', (e) => { cache.textContent = e.detail.done >= e.detail.total ? 'Everything is stored for offline use.' : 'Downloading for offline use: ' + e.detail.done + ' / ' + e.detail.total + ' files'; });
+    const cache = h('span.note', 'Checking…');
+    const onCache = (e) => { cache.textContent = e.detail.done >= e.detail.total ? 'Everything is stored for offline use.' : 'Downloading for offline use: ' + e.detail.done + ' / ' + e.detail.total + ' files'; };
+    window.addEventListener('selah-cache', onCache);
+    box._cleanup = () => window.removeEventListener('selah-cache', onCache);
+    if (ctx.cacheProgress) onCache({ detail: ctx.cacheProgress });
+    else offlineStatus().then((t) => { if (cache.textContent === 'Checking…') cache.textContent = t; });
     box.append(h('div.form',
       h('label', 'Colours'), seg([['dark', 'Dark'], ['light', 'Light'], ['auto', 'Follow device']], A.theme, (v) => settings.set('app.theme', v)),
       h('label', 'Tabs on the'), seg([['left', 'Left'], ['right', 'Right']], A.railSide, (v) => settings.set('app.railSide', v)),
       h('label', 'Next / Live monitors'), toggle('Show monitors', A.monitors !== false, (v) => settings.set('app.monitors', v)),
       h('label', 'Low-power mode'), seg([['auto', 'Automatic' + (A.lowPower == null ? (lpNow ? ' (on)' : ' (off)') : '')], ['on', 'On'], ['off', 'Off']], A.lowPower == null ? 'auto' : A.lowPower ? 'on' : 'off', (v) => settings.set('app.lowPower', v === 'auto' ? null : v === 'on')),
       h('label', ''), h('p.note', 'Low-power mode turns off fades and the live video thumbnail, renders slides at 1280 px and shares screens at 15 frames per second — for old PCs and 1–2 GB phones.'),
-      h('label', 'Install'), ctx.installPrompt ? h('button.btn', { type: 'button', onclick: () => ctx.installPrompt.prompt() }, icon('download'), 'Install Selah') : h('span.note', window.matchMedia('(display-mode: standalone)').matches ? 'Installed.' : 'Use the browser menu → Install app / Add to Home screen.'),
+      h('label', 'Install'), ctx.installPrompt ? h('button.btn', { type: 'button', onclick: async () => { await ctx.promptInstall(); rebuild(); } }, icon('download'), 'Install Selah') : h('span.note', window.matchMedia('(display-mode: standalone)').matches ? 'Installed.' : 'Use the browser menu → Install app / Add to Home screen.'),
       h('label', 'Offline'), cache,
       h('label', 'Storage'), h('div.row.wrap', storage, h('button.btn.sm', { type: 'button', onclick: async () => { const ok = await persistStorage(); toast(ok ? 'Selah’s data is protected from automatic clean-up.' : 'The browser did not allow it yet — install Selah first.', ok ? 'ok' : ''); } }, 'Protect data')),
       h('label', 'Backup'), h('div.row.wrap',
@@ -167,6 +171,18 @@ export default function create(ctx) {
     box.append(h('p', 'Selah — a free, offline church presenter made for Seventh-day Adventist media teams.'),
       h('p.note', { style: { marginTop: '8px' } }, 'Bibles: KJV (public domain), World English Bible (public domain), Afrikaanse Bybel 1933/53. Fonts: Atkinson Hyperlegible Next and Source Serif 4 (SIL Open Font License). PDF rendering: pdf.js (Apache 2.0). ZIP reading: fflate (MIT). QR codes: qrcode-generator (MIT). Sample hymn words are in the public domain.'));
   });
+
+  // How much of the app is stored for offline use (shown even when the download finished in an earlier visit).
+  async function offlineStatus() {
+    try {
+      if (!('serviceWorker' in navigator) || !window.isSecureContext) return 'Offline use needs https:// or the Selah companion.';
+      if (!navigator.serviceWorker.controller || !window.caches) return 'Not stored yet — keep this page open for a minute, or install Selah.';
+      const man = await (await fetch('asset-manifest.json', { cache: 'no-store' })).json();
+      const c = await caches.open('selah-' + man.version);
+      const have = (await c.keys()).length;
+      return have >= man.files.length ? 'Everything is stored for offline use (' + fmtBytes(man.bytes) + ').' : 'Stored for offline use: ' + have + ' / ' + man.files.length + ' files.';
+    } catch (e) { return navigator.serviceWorker && navigator.serviceWorker.controller ? 'Stored for offline use.' : ''; }
+  }
 
   async function exportBackup() {
     const data = { app: 'selah', version: 1, settings: settings.v, plans: await db.all('plans'), hymnbooks: await db.all('hymnbooks') };
