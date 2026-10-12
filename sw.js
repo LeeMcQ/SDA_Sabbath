@@ -1,6 +1,6 @@
 // SDA Sabbath service worker: installs the whole app (Bibles, hymns, fonts, pdf.js) in one go
 // so it runs with no internet. VERSION is rewritten by tools/build.py on every build.
-const VERSION = '8b01fcd4e7b0';
+const VERSION = 'f71d7ebc0f39';
 const CACHE = 'selah-' + VERSION; // prefix kept from the first name so old caches are found and removed
 const NETWORK_ONLY = /\/(api|media|ws)(\/|$)/;
 
@@ -10,6 +10,7 @@ async function broadcast(msg) {
 }
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil((async () => {
     const manRes = await fetch('asset-manifest.json?v=' + VERSION, { cache: 'no-store' });
     const cache = await caches.open(CACHE);

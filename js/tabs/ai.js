@@ -498,7 +498,7 @@ export default function create(ctx) {
         tab: 'ai',
         title: currentTemplate.name + ' (AI)',
         sub: 'Online banner',
-        deck: { kind: 'image', slides: [{ url, notes: '' }] },
+        deck: { kind: 'image', frames: [{ kind: 'image', src: url, fit: 'contain' }] },
       };
       ctx.setStaged('ai', cue);
       live.take(cue);

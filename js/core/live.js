@@ -122,6 +122,7 @@ live.take = async (cue) => {
     } else {
       // Cast and LAN cannot receive a live MediaStream. Pump JPEG frames instead.
       startStreamPump(cue.stream);
+      live.emit('notice', { code: 'stream-pump', text: 'Sharing via frame capture (Cast/LAN). Picture updates a few times a second.' });
     }
   } else {
     stopStreamPump();
