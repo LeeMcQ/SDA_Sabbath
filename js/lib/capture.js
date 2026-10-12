@@ -12,8 +12,9 @@ export async function capture({ surface = 'monitor', audio = false, cursor } = {
     video: {
       displaySurface: surface,
       cursor: cursor || settings.v.screen.cursor || 'never',
-      frameRate: { ideal: lp ? 15 : 30, max: lp ? 15 : 30 },
-      width: { max: 1920 }, height: { max: 1080 },
+      frameRate: { ideal: lp ? 12 : 24, max: lp ? 15 : 30 },
+      width: { ideal: lp ? 1280 : 1920, max: 1920 },
+      height: { ideal: lp ? 720 : 1080, max: 1080 },
     },
     audio: !!audio,
     selfBrowserSurface: 'exclude',

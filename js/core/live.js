@@ -62,18 +62,26 @@ live.stage = (cue) => {
 
 let streamPumpTimer = null;
 let streamPumpVideo = null;
+let streamPumpBusy = false;
+let streamPumpQuality = 0.78;
+let streamPumpMaxW = 1280;
+let streamPumpInterval = 200;
 
 function stopStreamPump() {
-  if (streamPumpTimer) { clearInterval(streamPumpTimer); streamPumpTimer = null; }
+  if (streamPumpTimer) { clearTimeout(streamPumpTimer); streamPumpTimer = null; }
   if (streamPumpVideo) {
     try { streamPumpVideo.srcObject = null; } catch (e) {}
     streamPumpVideo = null;
   }
+  streamPumpBusy = false;
 }
 
 function startStreamPump(stream) {
   stopStreamPump();
   if (!stream) return;
+  streamPumpQuality = 0.78;
+  streamPumpMaxW = 1280;
+  streamPumpInterval = 200;
   const video = document.createElement('video');
   video.muted = true;
   video.playsInline = true;
@@ -81,28 +89,48 @@ function startStreamPump(stream) {
   video.play().catch(() => {});
   streamPumpVideo = video;
   const canvas = document.createElement('canvas');
+
+  const schedule = (ms) => {
+    if (streamPumpTimer) clearTimeout(streamPumpTimer);
+    streamPumpTimer = setTimeout(sendFrame, ms);
+  };
+
   const sendFrame = () => {
-    if (!streamPumpVideo || streamPumpVideo.readyState < 2) return;
-    const w = streamPumpVideo.videoWidth || 1280;
-    const h = streamPumpVideo.videoHeight || 720;
-    canvas.width = Math.min(w, 1280);
-    canvas.height = Math.round(canvas.width * (h / w));
+    if (!streamPumpVideo || streamPumpVideo.readyState < 2) { schedule(streamPumpInterval); return; }
+    if (streamPumpBusy) { schedule(Math.max(streamPumpInterval, 100)); return; }
+    const vw = streamPumpVideo.videoWidth || 1280;
+    const vh = streamPumpVideo.videoHeight || 720;
+    const targetW = Math.min(vw, streamPumpMaxW);
+    canvas.width = targetW;
+    canvas.height = Math.round(targetW * (vh / vw));
     const c = canvas.getContext('2d');
-    try { c.drawImage(streamPumpVideo, 0, 0, canvas.width, canvas.height); } catch (e) { return; }
+    try { c.drawImage(streamPumpVideo, 0, 0, canvas.width, canvas.height); } catch (e) { schedule(streamPumpInterval); return; }
+    streamPumpBusy = true;
+    const t0 = performance.now();
     canvas.toBlob((blob) => {
-      if (!blob || !live.cue || live.cue.deck.kind !== 'stream') return;
-      // Send as a one-frame image deck so Cast/LAN displays can show it.
+      streamPumpBusy = false;
+      if (!blob || !live.cue || live.cue.deck.kind !== 'stream') { schedule(streamPumpInterval); return; }
+      const elapsed = performance.now() - t0;
+      // Adapt: slow sends → lower quality/size and slower rate; fast sends → raise them.
+      if (elapsed > 180 || blob.size > 180000) {
+        streamPumpQuality = Math.max(0.45, streamPumpQuality - 0.06);
+        streamPumpMaxW = Math.max(640, streamPumpMaxW - 80);
+        streamPumpInterval = Math.min(800, streamPumpInterval + 40);
+      } else if (elapsed < 60 && blob.size < 90000) {
+        streamPumpQuality = Math.min(0.88, streamPumpQuality + 0.03);
+        streamPumpMaxW = Math.min(1600, streamPumpMaxW + 40);
+        streamPumpInterval = Math.max(120, streamPumpInterval - 15);
+      }
       link.send({
         t: 'deck',
         deck: { kind: 'image', frames: [{ kind: 'image', src: blob, fit: 'contain' }] },
         index: 0,
         blank: null,
       });
-    }, 'image/jpeg', 0.72);
+      schedule(streamPumpInterval);
+    }, 'image/jpeg', streamPumpQuality);
   };
-  streamPumpTimer = setInterval(sendFrame, 250);
-  // First frame after a short delay so the video has data.
-  setTimeout(sendFrame, 400);
+  schedule(300);
 }
 
 /** Present the staged cue. Opens a display first if none is connected. */
