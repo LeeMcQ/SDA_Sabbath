@@ -133,6 +133,8 @@ export default function create(ctx) {
     },
   });
   BANNER_TEMPLATES.forEach((t) => templateSel.appendChild(h('option', { value: t.id }, t.name)));
+  const styleSel = h('select.field', { style: { marginTop: '6px' }, onchange: () => drawBanner() });
+  BANNER_STYLES.forEach((s) => styleSel.appendChild(h('option', { value: s.id }, s.name)));
 
   const fieldsWrap = h('div.col', { style: { gap: '8px', margin: '8px 0' } });
 
@@ -152,22 +154,20 @@ export default function create(ctx) {
     const w = canvas.width, hgt = canvas.height;
     const vals = fieldInputs.map((i) => i.value.trim() || ' ');
     const t = currentTemplate;
+    const style = (styleSel && styleSel.value) || 'classic';
 
-    // Background gradient based on template
+    const palettes = {
+      classic: ['#1a3a5c', '#0d1f33'],
+      warm: ['#5c3a1a', '#2a1a0d'],
+      cool: ['#1a4a5c', '#0d2a33'],
+      gold: ['#5c4a1a', '#2a220d'],
+      deep: ['#2c1a5c', '#140d2a'],
+      light: ['#e8e0d0', '#c9bfa8'],
+    };
+    const [c1, c2] = palettes[style] || palettes.classic;
     const g = ctx2.createLinearGradient(0, 0, w, hgt);
-    if (t.id === 'verse') {
-      g.addColorStop(0, '#1a3a32');
-      g.addColorStop(1, '#0d1f1a');
-    } else if (t.id === 'offering') {
-      g.addColorStop(0, '#3d2e1f');
-      g.addColorStop(1, '#1a120c');
-    } else if (t.id === 'closing') {
-      g.addColorStop(0, '#1e2a4a');
-      g.addColorStop(1, '#0c1220');
-    } else {
-      g.addColorStop(0, '#2c3e50');
-      g.addColorStop(1, '#1a252f');
-    }
+    g.addColorStop(0, c1);
+    g.addColorStop(1, c2);
     ctx2.fillStyle = g;
     ctx2.fillRect(0, 0, w, hgt);
 
@@ -178,46 +178,23 @@ export default function create(ctx) {
     ctx2.fillStyle = rg;
     ctx2.fillRect(0, 0, w, hgt);
 
-    ctx2.fillStyle = '#f5f0e6';
+    ctx2.fillStyle = style === 'light' ? '#2a2418' : '#f5f0e6';
     ctx2.textAlign = 'center';
     ctx2.textBaseline = 'middle';
 
-    if (t.id === 'welcome') {
-      ctx2.font = 'bold 92px system-ui, sans-serif';
-      ctx2.fillText(vals[0] || 'Welcome', w / 2, hgt * 0.38);
-      ctx2.font = '48px system-ui, sans-serif';
-      ctx2.fillStyle = '#d4cfc4';
-      ctx2.fillText(vals[1] || 'Sabbath Worship', w / 2, hgt * 0.52);
-      if (vals[2]) {
-        ctx2.font = '36px system-ui, sans-serif';
-        ctx2.fillText(vals[2], w / 2, hgt * 0.66);
-      }
-    } else if (t.id === 'verse') {
-      ctx2.font = 'italic 64px system-ui, serif';
-      wrapText(ctx2, vals[0], w / 2, hgt * 0.42, w * 0.8, 78);
-      ctx2.font = '42px system-ui, sans-serif';
-      ctx2.fillStyle = '#c9b99a';
-      ctx2.fillText(vals[1] || '', w / 2, hgt * 0.72);
-    } else if (t.id === 'event') {
-      ctx2.font = 'bold 80px system-ui, sans-serif';
-      ctx2.fillText(vals[0] || 'Event', w / 2, hgt * 0.4);
-      ctx2.font = '44px system-ui, sans-serif';
-      ctx2.fillStyle = '#d4cfc4';
-      ctx2.fillText(vals[1] || '', w / 2, hgt * 0.55);
-      ctx2.font = '36px system-ui, sans-serif';
-      ctx2.fillText(vals[2] || '', w / 2, hgt * 0.66);
-    } else if (t.id === 'offering') {
-      ctx2.font = 'bold 86px system-ui, sans-serif';
-      ctx2.fillText(vals[0] || 'Offering', w / 2, hgt * 0.4);
-      ctx2.font = '42px system-ui, sans-serif';
-      ctx2.fillStyle = '#e0d4c0';
-      wrapText(ctx2, vals[1], w / 2, hgt * 0.56, w * 0.75, 52);
-    } else {
-      ctx2.font = 'italic 58px system-ui, serif';
-      wrapText(ctx2, vals[0], w / 2, hgt * 0.42, w * 0.8, 70);
-      ctx2.font = '36px system-ui, sans-serif';
-      ctx2.fillStyle = '#c9b99a';
-      ctx2.fillText(vals[1] || '', w / 2, hgt * 0.68);
+    const accent = style === 'light' ? '#6b5a40' : '#d4cfc4';
+    const mainSize = vals[0] && vals[0].length > 40 ? 56 : 80;
+    ctx2.font = 'bold ' + mainSize + 'px system-ui, sans-serif';
+    wrapText(ctx2, vals[0] || t.name, w / 2, hgt * 0.36, w * 0.82, mainSize + 6);
+    if (vals[1]) {
+      ctx2.font = '40px system-ui, sans-serif';
+      ctx2.fillStyle = accent;
+      wrapText(ctx2, vals[1], w / 2, hgt * 0.54, w * 0.78, 48);
+    }
+    if (vals[2]) {
+      ctx2.font = '30px system-ui, sans-serif';
+      ctx2.fillStyle = accent;
+      ctx2.fillText(vals[2], w / 2, hgt * 0.7);
     }
 
     // Small footer
@@ -441,7 +418,7 @@ export default function create(ctx) {
     if (!key) { showToast('Add an API key in Settings → AI first.', 'err'); return; }
 
     const vals = fieldInputs.map((i) => i.value.trim()).filter(Boolean);
-    const prompt = currentTemplate.master + '. ' + vals.join('. ') + '. Beautiful, elegant, church-appropriate, high quality, soft lighting, suitable for a projector in a Seventh-day Adventist church. Peaceful, no violence, no adult content.';
+    const prompt = currentTemplate.master + '. ' + vals.join('. ') + '. Colour style: ' + ((styleSel && styleSel.value) || 'classic') + '. Beautiful, elegant, church-appropriate, high quality, soft lighting, suitable for a projector in a Seventh-day Adventist church. Peaceful, no violence, no adult content.';
     showToast('Generating image…');
     try {
       let url = null;
@@ -560,6 +537,8 @@ export default function create(ctx) {
         h('h3', { style: { margin: '0 0 6px' } }, 'AI Banner / Screensaver'),
         h('p.note', 'Choose a master style and edit the fields. Offline generates a clean banner immediately. Online (Settings → AI) creates a richer AI image.'),
         templateSel,
+        h('label.note', { style: { display: 'block', marginTop: '8px' } }, 'Colour style'),
+        styleSel,
         fieldsWrap,
         h('div.row', { style: { gap: '8px', marginTop: '6px', flexWrap: 'wrap' } },
           btn('reload', 'Preview (offline)', drawBanner),
