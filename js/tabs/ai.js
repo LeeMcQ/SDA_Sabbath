@@ -320,7 +320,7 @@ export default function create(ctx) {
     if (BLOCKED.test(prompt)) throw new Error('Topic not suitable for church use.');
 
     if (provider === 'openai') {
-      const m = model || 'gpt-4o-mini';
+      const m = model || 'gpt-5-mini';
       const r = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
@@ -355,7 +355,7 @@ export default function create(ctx) {
     }
 
     if (provider === 'xai') {
-      const m = model || 'grok-3';
+      const m = model || 'grok-4.7';
       const r = await fetch('https://api.x.ai/v1/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
@@ -374,7 +374,7 @@ export default function create(ctx) {
     }
 
     if (provider === 'together') {
-      const m = model || 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo';
+      const m = model || 'MiniMaxAI/MiniMax-M3';
       const r = await fetch('https://api.together.xyz/v1/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
@@ -412,7 +412,7 @@ export default function create(ctx) {
     }
 
     if (provider === 'anthropic') {
-      const m = model || 'claude-3-5-haiku-20241022';
+      const m = model || 'claude-haiku-5-5';
       const r = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -449,7 +449,7 @@ export default function create(ctx) {
         const r = await fetch('https://api.openai.com/v1/images/generations', {
           method: 'POST',
           headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: 'dall-e-3', prompt, n: 1, size: '1792x1024', quality: 'standard' }),
+          body: JSON.stringify({ model: 'gpt-image-2.5-flare', prompt, n: 1, size: '1792x1024' }),
         });
         if (!r.ok) throw new Error('OpenAI image ' + r.status);
         url = (await r.json()).data?.[0]?.url;
@@ -477,7 +477,7 @@ export default function create(ctx) {
         const r = await fetch('https://api.x.ai/v1/images/generations', {
           method: 'POST',
           headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: 'grok-2-image', prompt, n: 1 }),
+          body: JSON.stringify({ model: 'grok-imagine-image-2.0', prompt, n: 1 }),
         });
         if (!r.ok) throw new Error('Grok image ' + r.status);
         url = (await r.json()).data?.[0]?.url;
@@ -485,7 +485,7 @@ export default function create(ctx) {
         const r = await fetch('https://api.together.xyz/v1/images/generations', {
           method: 'POST',
           headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: 'black-forest-labs/FLUX.1-schnell', prompt, n: 1, width: 1792, height: 1024 }),
+          body: JSON.stringify({ model: 'black-forest-labs/FLUX.2-dev', prompt, n: 1, width: 1792, height: 1024 }),
         });
         if (!r.ok) throw new Error('Together image ' + r.status);
         url = (await r.json()).data?.[0]?.url;
@@ -493,7 +493,7 @@ export default function create(ctx) {
         const r = await fetch('https://openrouter.ai/api/v1/images/generations', {
           method: 'POST',
           headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json', 'HTTP-Referer': location.origin },
-          body: JSON.stringify({ model: 'black-forest-labs/flux-schnell', prompt }),
+          body: JSON.stringify({ model: 'black-forest-labs/flux.2-dev', prompt }),
         });
         if (!r.ok) throw new Error('OpenRouter image ' + r.status);
         url = (await r.json()).data?.[0]?.url;

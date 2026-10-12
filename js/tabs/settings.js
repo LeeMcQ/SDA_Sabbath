@@ -169,7 +169,7 @@ export default function create(ctx) {
         name: 'OpenAI',
         text: true, image: true,
         hint: 'Get a key at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>. Needs a paid account. Keys start with <strong>sk-</strong>.',
-        models: 'Text: gpt-4o-mini · Images: dall-e-3',
+        models: 'Text: gpt-5-mini · Images: gpt-image-2.5-flare',
       },
       google: {
         name: 'Google Gemini',
@@ -181,13 +181,13 @@ export default function create(ctx) {
         name: 'xAI Grok',
         text: true, image: true,
         hint: 'Get a key at <a href="https://console.x.ai" target="_blank" rel="noopener">console.x.ai</a>. Keys start with <strong>xai-</strong>.',
-        models: 'Text: grok-3 · Images: grok-2-image',
+        models: 'Text: grok-4.7 · Images: grok-imagine-image-2.0',
       },
       together: {
         name: 'Together AI',
         text: true, image: true,
         hint: 'Get a key at <a href="https://api.together.xyz/settings/api-keys" target="_blank" rel="noopener">api.together.xyz</a>. Free tier available. Keys start with <strong>tgp_</strong> or similar.',
-        models: 'Text: Llama · Images: Flux',
+        models: 'Text: MiniMax-M3 · Images: FLUX.2-dev',
       },
       openrouter: {
         name: 'OpenRouter',
@@ -199,7 +199,7 @@ export default function create(ctx) {
         name: 'Anthropic Claude',
         text: true, image: false,
         hint: 'Get a key at <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>. Text only (excellent research). Keys start with <strong>sk-ant-</strong>.',
-        models: 'Text: claude-3-5-haiku',
+        models: 'Text: claude-haiku-5-5',
       },
     };
 
