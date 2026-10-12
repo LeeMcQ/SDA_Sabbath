@@ -98,6 +98,7 @@ async function showTab(id) {
 // ------------------------------------------------------------ rail
 // On phones only five buttons fit comfortably: Bible, Hymns, Plan, Slides and More (the rest).
 const MORE_TABS = ['video', 'web', 'screen', 'tools', 'settings'];
+const MORE_MENU = ['ai', ...MORE_TABS];
 TABS.forEach((t, i) => {
   if (!t) { rail.appendChild(h('div.rail-gap')); return; }
   const b = h('button' + (MORE_TABS.includes(t.id) ? '.more-tab' : ''), { type: 'button', role: 'tab', 'aria-selected': 'false', 'data-tab': t.id, title: t.label + (i < 7 ? '  (Alt+' + (i + 1) + ')' : ''), onclick: () => showTab(t.id) },
@@ -106,7 +107,7 @@ TABS.forEach((t, i) => {
   rail.appendChild(b);
 });
 const moreBtn = h('button.rail-more', { type: 'button', 'aria-label': 'More tabs', 'aria-haspopup': 'menu', onclick: () => ui.menu(moreBtn,
-  MORE_TABS.map((id) => { const t = TABS.find((x) => x && x.id === id); return { label: t.label, icon: t.icon, hint: current === id ? 'Open' : '', onclick: () => showTab(id) }; })) },
+  MORE_MENU.map((id) => { const t = TABS.find((x) => x && x.id === id); return { label: t.label, icon: t.icon, hint: current === id ? 'Open' : '', onclick: () => showTab(id) }; })) },
 icon('grid'), h('span', 'More'));
 rail.parentNode.appendChild(moreBtn);
 live.on('live', (cue) => {
