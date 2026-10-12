@@ -1,6 +1,6 @@
 {
-"version": "ee7567f46055",
-"bytes": 14993011,
+"version": "26e46a1d51ae",
+"bytes": 14989687,
 "files": [
 "index.html",
 "display.html",
@@ -57,6 +57,8 @@
 "fonts/ss4-latin-ext-600-normal.woff2",
 "icons/apple-touch-icon.png",
 "icons/favicon-64.png",
+"icons/favicon.ico",
+"icons/favicon.svg",
 "icons/icon-192.png",
 "icons/icon-512.png",
 "icons/maskable-512.png",

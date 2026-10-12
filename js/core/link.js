@@ -2,7 +2,7 @@
 //   window  – a pop-up on the extended screen (PC). Fastest: direct object hand-over, no copies.
 //   self    – this device becomes the screen (phone/tablet on HDMI or screen mirroring)
 //   cast    – Presentation API (Chromecast / wireless display from Chrome)
-//   socket  – Selah companion on the LAN (TV browser or second PC shows display.html?via=ws)
+//   socket  – SDA Sabbath companion on the LAN (TV browser or second PC shows display.html?via=ws)
 import { emitter, h } from './util.js';
 import { createEncoder, createDecoder } from './wire.js';
 import { settings } from './settings.js';
@@ -129,10 +129,21 @@ link.openSelf = async (createDisplay) => {
   const onFs = () => { if (!document.fullscreenElement && link.kind === 'self') link.close(); };
   document.addEventListener('fullscreenchange', onFs);
   link.self.onFs = onFs;
-  // Swipe left/right on the screen to move through slides.
-  let sx = null;
-  wrap.addEventListener('touchstart', (e) => { sx = e.touches[0].clientX; }, { passive: true });
+  // Swipe left/right on the screen to move through slides. A long press (or two-finger tap) shows
+  // "Exit display" for a few seconds; otherwise it never appears on the hall screen.
+  let sx = null, sy = null, holdT = null, hideT = null;
+  const reveal = () => { wrap.classList.add('reveal'); clearTimeout(hideT); hideT = setTimeout(() => wrap.classList.remove('reveal'), 2500); };
+  wrap.addEventListener('touchstart', (e) => {
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+    clearTimeout(holdT);
+    if (e.touches.length >= 2) { reveal(); return; }
+    holdT = setTimeout(reveal, 650);
+  }, { passive: true });
+  wrap.addEventListener('touchmove', (e) => {
+    if (sx != null && (Math.abs(e.touches[0].clientX - sx) > 12 || Math.abs(e.touches[0].clientY - sy) > 12)) clearTimeout(holdT);
+  }, { passive: true });
   wrap.addEventListener('touchend', (e) => {
+    clearTimeout(holdT);
     if (sx == null) return;
     const dx = e.changedTouches[0].clientX - sx; sx = null;
     if (Math.abs(dx) > 50) link.emit('msg', { t: 'key', key: dx < 0 ? 'ArrowRight' : 'ArrowLeft' });

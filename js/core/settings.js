@@ -1,13 +1,13 @@
 // Settings: small, synchronous, stored in localStorage.
 import { emitter, lowPowerDevice } from './util.js';
 
-const KEY = 'selah.settings.v1';
+const KEY = 'selah.settings.v1'; // kept from the app's first name: existing settings carry over
 
 export const DEFAULTS = {
   app: { theme: 'dark', railSide: 'left', monitors: true, lowPower: null, lastTab: 'bible', clickerKeys: true },
   display: {
     font: 'sans', fg: '#ffffff', bg: '#000000', accent: '#f2cf7a', shadow: true, align: 'center',
-    pad: 80, minFont: 58, maxFont: 150, fade: 250, transition: 'fade', aspect: 'auto',
+    pad: 96, minFont: 58, maxFont: 150, fade: 250, transition: 'fade', aspect: 'auto',
     bgImage: null, bgDim: 0.45, logo: null, logoText: '', clearShows: 'background', weight: 'bold',
   },
   bible: {
@@ -33,8 +33,16 @@ function merge(base, over) {
 }
 
 function load() {
-  try { return merge(DEFAULTS, JSON.parse(localStorage.getItem(KEY) || '{}')); }
-  catch (e) { return merge(DEFAULTS, {}); }
+  let v;
+  try { v = merge(DEFAULTS, JSON.parse(localStorage.getItem(KEY) || '{}')); }
+  catch (e) { v = merge(DEFAULTS, {}); }
+  // v1.1: the projector margin default grew from 80 to 96 px (safe area for cropping projectors).
+  // Move people still on the old default along once; a margin they chose themselves is kept.
+  if (!v.app.rev || v.app.rev < 2) {
+    if (v.display.pad === 80) v.display.pad = 96;
+    v.app.rev = 2;
+  }
+  return v;
 }
 
 export const settings = emitter({ v: load() });

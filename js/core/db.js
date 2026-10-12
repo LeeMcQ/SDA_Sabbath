@@ -6,7 +6,7 @@
 //   hymnbooks imported / edited hymnbooks: id -> {id, name, lang, hymns}
 //   plans     service plans: id -> {id, name, items, updated}
 
-const NAME = 'selah';
+const NAME = 'selah'; // storage name kept from the app's first name, so existing plans and hymnbooks stay
 const VERSION = 1;
 const STORES = ['kv', 'files', 'renders', 'bibles', 'hymnbooks', 'plans'];
 let dbp = null;
@@ -21,7 +21,7 @@ function open() {
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
-    req.onblocked = () => reject(new Error('Database blocked — close other Selah tabs.'));
+    req.onblocked = () => reject(new Error('Database blocked — close other SDA Sabbath tabs.'));
   });
   return dbp;
 }

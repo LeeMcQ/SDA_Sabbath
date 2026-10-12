@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Prepare Selah for deployment.
+Prepare SDA Sabbath for deployment.
 
   python tools/build.py              # list every app file in asset-manifest.json and stamp sw.js
   python tools/build.py --bibles     # also rebuild data/bibles from ./sources (and ./licensed)
@@ -48,7 +48,7 @@ def main():
     src = open(sw, encoding='utf-8').read()
     src = re.sub(r"const VERSION = '[^']*';", "const VERSION = '%s';" % version, src, count=1)
     open(sw, 'w', encoding='utf-8', newline='\n').write(src)
-    print('Selah build %s: %d files, %.1f MB to cache offline' % (version, len(files), total / 1048576))
+    print('SDA Sabbath build %s: %d files, %.1f MB to cache offline' % (version, len(files), total / 1048576))
     # Pre-compressed copies for the companion (smaller .exe, faster loads over church Wi-Fi).
     import gzip, shutil
     emb = os.path.join(ROOT, 'companion', 'embed')

@@ -2,7 +2,7 @@
 // offline on this device, so presenting is instant and needs no internet.
 import { h, clear, uid, fmtBytes } from '../core/util.js';
 import { icon } from '../core/icons.js';
-import { btn, dropzone, menu, toast, confirmBox, promptBox, seg, modal } from '../core/ui.js';
+import { btn, dropzone, menu, toast, confirmBox, promptBox, seg, modal, emptyState } from '../core/ui.js';
 import { db } from '../core/db.js';
 import { createStage } from '../core/render.js';
 
@@ -52,7 +52,6 @@ export default function create(ctx) {
     decks.forEach((d) => libList.appendChild(h('button', { type: 'button', 'aria-pressed': String(!!deck && deck.id === d.id), onclick: () => selectDeck(d.id) },
       icon(d.type === 'pdf' ? 'slides' : d.type === 'pptx' ? 'present' : 'snapshot'),
       h('span.grow', h('div.trunc', d.name), h('div.note', d.count + (d.count === 1 ? ' slide' : ' slides') + ' · ' + d.type.toUpperCase())))));
-    if (!decks.length) libList.appendChild(h('p.note.pad', 'No slides yet. Add a PDF, PowerPoint or pictures below.'));
   }
 
   async function selectDeck(id) {
@@ -83,7 +82,7 @@ export default function create(ctx) {
     if (io) { io.disconnect(); io = null; }
     notes.hidden = true;
     head.hidden = !deck; deckMenuBtn.hidden = !deck;
-    if (!deck) { head.textContent = ''; info.textContent = ''; grid.appendChild(h('div.empty-state', { style: { gridColumn: '1/-1' } }, icon('slides'), h('p', 'Pick a slide deck from the library, or add one.'))); return; }
+    if (!deck) { head.textContent = ''; info.textContent = ''; grid.appendChild(emptyState('slides', decks.length ? 'No slide deck open' : 'No slides yet', decks.length ? 'Pick a deck from the library.' : 'Add a PDF, PowerPoint or pictures with the drop box in the library.', null, { style: { gridColumn: '1/-1' } })); return; }
     head.textContent = deck.name;
     info.textContent = deck.count + ' slides' + (deck.size ? ' · ' + fmtBytes(deck.size) : '');
     // Thumbnails for PowerPoint slides are drawn lazily as they scroll into view.

@@ -3,7 +3,7 @@
 //   • Embed — the page loads directly on the display (only for sites that allow it, e.g. YouTube).
 import { h, clear } from '../core/util.js';
 import { icon } from '../core/icons.js';
-import { btn, seg, toast } from '../core/ui.js';
+import { btn, seg, toast, emptyState } from '../core/ui.js';
 import { capture, stopStream, canCapture, attachSurfaceControl } from '../lib/capture.js';
 
 function youtubeEmbed(url) {
@@ -53,7 +53,7 @@ export default function create(ctx) {
           h('button.btn.primary', { type: 'button', onclick: chooseTab, disabled: !canCapture() }, icon('tab'), 'Choose tab'),
           cap ? h('button.btn.danger', { type: 'button', onclick: stop }, icon('stop'), 'Stop mirroring') : null,
           zoomRow),
-        cap ? capBox : h('div.empty-state', icon('tab'), h('p', 'The mirrored tab appears here.')));
+        cap ? capBox : emptyState('tab', 'No tab mirrored yet', 'The mirrored tab appears here.'));
       if (cap) stageStream();
     }
   }

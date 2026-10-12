@@ -46,7 +46,7 @@ export default function create(ctx) {
   const zone = dropzone('Drop videos or music here', 'video/*,audio/*,.mkv,.mov', (files) => addFiles(files));
 
   const el = h('section',
-    h('div.toolbar', h('h2', 'Video'), addBtn, linkBtn, pcBtn, h('div.grow'), repeatSeg,
+    h('div.toolbar.wrap-ok', h('h2', 'Video'), addBtn, linkBtn, pcBtn, h('div.grow'), repeatSeg,
       toggle('Play next automatically', settings.v.video.autoNext, (v) => settings.set('video.autoNext', v))),
     h('div.split.media-split',
       h('div.pane', h('div.pane-h', 'Playlist'), h('div.scroll', { style: { flex: '1' } }, listEl, h('div.pad', zone))),
@@ -92,7 +92,7 @@ export default function create(ctx) {
   }
 
   async function removeItem(it) {
-    if (!(await confirmBox('Remove from playlist?', '“' + it.name + '” will be removed from Selah' + (it.blob ? ' and its offline copy deleted' : '') + '. The original file is not touched.', 'Remove', true))) return;
+    if (!(await confirmBox('Remove from playlist?', '“' + it.name + '” will be removed from SDA Sabbath' + (it.blob ? ' and its offline copy deleted' : '') + '. The original file is not touched.', 'Remove', true))) return;
     if (session.has(it.id)) session.delete(it.id); else if (!it.remote) await db.del('files', it.id);
     items = items.filter((x) => x !== it);
     if (sel === it) { sel = null; ctx.setStaged('video', null); renderSelected(); }
@@ -118,7 +118,7 @@ export default function create(ctx) {
     try {
       const est = navigator.storage && navigator.storage.estimate ? await navigator.storage.estimate() : null;
       const free = est ? est.quota - est.usage : 0;
-      keep = free > total * 1.3 && (await confirmBox('Keep offline copies?', 'Save ' + fmtBytes(total) + ' inside Selah so these play next time without choosing them again? (Choose “No” to use them for this session only.)', 'Keep copies'));
+      keep = free > total * 1.3 && (await confirmBox('Keep offline copies?', 'Save ' + fmtBytes(total) + ' inside SDA Sabbath so these play next time without choosing them again? (Choose “No” to use them for this session only.)', 'Keep copies'));
     } catch (e) { keep = false; }
     for (const f of files) {
       if (!/^(video|audio)\//.test(f.type) && !/\.(mkv|mov|mp4|webm|mp3|m4a|wav|ogg|flac)$/i.test(f.name)) continue;
@@ -158,7 +158,7 @@ export default function create(ctx) {
     if (it.handle) {
       let p = await it.handle.queryPermission({ mode: 'read' });
       if (p !== 'granted' && interactive) p = await it.handle.requestPermission({ mode: 'read' });
-      if (p !== 'granted') throw new Error('Selah needs permission to open “' + it.name + '”. Click it again and allow access.');
+      if (p !== 'granted') throw new Error('SDA Sabbath needs permission to open “' + it.name + '”. Click it again and allow access.');
       return it.handle.getFile();
     }
     throw new Error('This file is no longer available. Add it again.');
