@@ -340,7 +340,7 @@ export default function create(ctx) {
     }
 
     if (provider === 'google') {
-      const m = model || 'gemini-2.5-flash';
+      const m = model || 'gemini-3.8-flash';
       const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent?key=' + key, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -393,7 +393,7 @@ export default function create(ctx) {
     }
 
     if (provider === 'openrouter') {
-      const m = model || 'google/gemini-2.5-flash';
+      const m = model || 'google/gemini-3.8-flash';
       const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json', 'HTTP-Referer': location.origin },
@@ -454,18 +454,25 @@ export default function create(ctx) {
         if (!r.ok) throw new Error('OpenAI image ' + r.status);
         url = (await r.json()).data?.[0]?.url;
       } else if (provider === 'google') {
-        const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=' + key, {
+        // Imagen is shut down. Use the current Gemini native image model.
+        const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-nano-banana-2.1:generateContent?key=' + key, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ instances: [{ prompt }], parameters: { sampleCount: 1, aspectRatio: '16:9' } }),
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt + ' Aspect ratio 16:9, suitable for a church projector.' }] }],
+            generationConfig: { responseModalities: ['IMAGE'] },
+          }),
         });
         if (!r.ok) {
           const errText = await r.text().catch(() => '');
-          throw new Error('Gemini image ' + r.status + (errText ? ': ' + errText.slice(0, 120) : ''));
+          throw new Error('Gemini image ' + r.status + (errText ? ': ' + errText.slice(0, 160) : ''));
         }
         const j = await r.json();
-        const b64 = j.predictions?.[0]?.bytesBase64Encoded;
-        if (b64) url = 'data:image/png;base64,' + b64;
+        const parts = j.candidates?.[0]?.content?.parts || [];
+        const imgPart = parts.find((p) => p.inlineData || p.inline_data);
+        const b64 = imgPart && (imgPart.inlineData?.data || imgPart.inline_data?.data);
+        const mime = imgPart && (imgPart.inlineData?.mimeType || imgPart.inline_data?.mime_type) || 'image/png';
+        if (b64) url = 'data:' + mime + ';base64,' + b64;
       } else if (provider === 'xai') {
         const r = await fetch('https://api.x.ai/v1/images/generations', {
           method: 'POST',
