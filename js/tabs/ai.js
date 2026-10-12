@@ -41,7 +41,7 @@ const BANNER_TEMPLATES = [
     fields: ['Blessing text', 'Reference', 'Church name'],
     defaults: ['The Lord bless you and keep you', 'Numbers 6:24', ''],
   },
-;
+];
 
 const BANNER_STYLES = [
   { id: 'classic', name: 'Classic' },
