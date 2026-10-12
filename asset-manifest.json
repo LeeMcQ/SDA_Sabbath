@@ -1,6 +1,6 @@
 {
-"version": "617eb452332e",
-"bytes": 15002907,
+"version": "4c51fdf64a4b",
+"bytes": 15017104,
 "files": [
 "index.html",
 "display.html",
@@ -30,6 +30,7 @@
 "js/lib/pdf.js",
 "js/lib/pptx.js",
 "js/lib/srt.js",
+"js/tabs/ai.js",
 "js/tabs/bible-import.js",
 "js/tabs/bible.js",
 "js/tabs/hymns.js",

@@ -195,3 +195,15 @@ The **Tools** tab (under More) adds:
 - Experimental live captions via browser speech recognition
 
 Children’s story templates were intentionally left out.
+
+## AI tab
+
+The **AI** tab (under More) adds two on-the-spot helpers:
+
+### Banner / Screensaver
+Choose from predefined master styles (Sabbath Welcome, Verse of the Day, Event, Offering, Closing). Edit a few fields and generate a full-screen banner. Fully offline.
+
+### Quick Research
+Type a topic (Sabbath, prayer, baptism, communion, second coming, creation, tithe). The app produces a short, easy-to-read, child-friendly summary on 1–2 slides. Inappropriate topics are blocked. You can also paste your own short summary.
+
+Both can be presented immediately to the projector.
