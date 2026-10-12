@@ -160,6 +160,24 @@ export default function create(ctx) {
     }
   });
 
+
+  // ------------------------------------------------------------ AI providers
+  section('ai', 'AI', (box) => {
+    const A = settings.v.ai || {};
+    const providerSel = h('select.field', { value: A.provider || 'openai', onchange: () => settings.set('ai.provider', providerSel.value) },
+      h('option', { value: 'openai' }, 'OpenAI (GPT + images)'),
+      h('option', { value: 'google' }, 'Google Gemini'),
+      h('option', { value: 'anthropic' }, 'Anthropic Claude'));
+    const keyInp = h('input.field', { type: 'password', value: A.apiKey || '', placeholder: 'Paste API key', style: { width: '100%' }, onchange: () => settings.set('ai.apiKey', keyInp.value.trim()) });
+    const modelInp = h('input.field', { value: A.model || '', placeholder: 'Optional model override', style: { width: '100%' }, onchange: () => settings.set('ai.model', modelInp.value.trim()) });
+    box.append(h('div.form',
+      h('label', 'Provider'), providerSel,
+      h('label', 'API key'), keyInp,
+      h('p.note', 'Stored only on this device. Needed for online banner images and AI research. Never share it.'),
+      h('label', 'Model (optional)'), modelInp,
+      h('p.note', 'Leave blank for a sensible default (OpenAI: gpt-4o-mini / dall-e-3, Google: gemini-2.0-flash, Claude: claude-3-5-haiku).')));
+  });
+
   // ------------------------------------------------------------ Coming next
   section('next', 'Live translation', (box) => {
     box.append(h('div.card', h('h3', h('span', icon('translate'), ' Live translation — coming later')),

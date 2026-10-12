@@ -19,6 +19,7 @@ export const DEFAULTS = {
   video: { volume: 1, autoNext: true, repeat: 'off', fit: 'contain' },
   screen: { cursor: 'never', audio: false },
   companion: { url: '', pin: '' },
+  ai: { provider: 'openai', apiKey: '', model: '' },
 };
 
 function merge(base, over) {

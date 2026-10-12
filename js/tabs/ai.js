@@ -310,23 +310,171 @@ export default function create(ctx) {
     }
   }
 
+
+  async function callLLM(prompt, system) {
+    const cfg = ctx.settings.v.ai || {};
+    const key = (cfg.apiKey || '').trim();
+    const provider = cfg.provider || 'openai';
+    const model = (cfg.model || '').trim();
+    if (!key) throw new Error('Add an API key in Settings → AI first.');
+    if (BLOCKED.test(prompt)) throw new Error('Topic not suitable for church use.');
+
+    if (provider === 'openai') {
+      const m = model || 'gpt-4o-mini';
+      const r = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: m,
+          messages: [
+            { role: 'system', content: system || 'You are a helpful assistant for a Seventh-day Adventist church. Keep answers short, clear, and suitable for all ages including children. Use simple language. Never include violence, adult content, or anything inappropriate for a church service.' },
+            { role: 'user', content: prompt },
+          ],
+          max_tokens: 600,
+          temperature: 0.4,
+        }),
+      });
+      if (!r.ok) throw new Error('OpenAI error ' + r.status);
+      const j = await r.json();
+      return j.choices?.[0]?.message?.content || '';
+    }
+
+    if (provider === 'google') {
+      const m = model || 'gemini-2.0-flash';
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent?key=' + key, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: (system ? system + '\n\n' : '') + prompt }] }],
+          generationConfig: { temperature: 0.4, maxOutputTokens: 600 },
+        }),
+      });
+      if (!r.ok) throw new Error('Gemini error ' + r.status);
+      const j = await r.json();
+      return j.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    }
+
+    if (provider === 'anthropic') {
+      const m = model || 'claude-3-5-haiku-20241022';
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: m,
+          max_tokens: 600,
+          system: system || 'You are a helpful assistant for a Seventh-day Adventist church. Keep answers short, clear, and suitable for all ages including children.',
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+      if (!r.ok) throw new Error('Claude error ' + r.status);
+      const j = await r.json();
+      return j.content?.[0]?.text || '';
+    }
+    throw new Error('Unknown provider');
+  }
+
+  async function generateOnlineBanner() {
+    const cfg = ctx.settings.v.ai || {};
+    const key = (cfg.apiKey || '').trim();
+    const provider = cfg.provider || 'openai';
+    if (!key) { showToast('Add an API key in Settings → AI first.', 'err'); return; }
+    if (provider !== 'openai') { showToast('Online images currently use OpenAI. Switch provider or use offline Generate.', 'err'); return; }
+
+    const vals = fieldInputs.map((i) => i.value.trim()).filter(Boolean);
+    const prompt = currentTemplate.master + '. ' + vals.join('. ') + '. Beautiful, elegant, church-appropriate, high quality, no text unless specified, soft lighting, suitable for a projector in a Seventh-day Adventist church. No people, no crosses if avoidable, peaceful.';
+    showToast('Generating image…');
+    try {
+      const r = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'dall-e-3',
+          prompt,
+          n: 1,
+          size: '1792x1024',
+          quality: 'standard',
+        }),
+      });
+      if (!r.ok) throw new Error('Image API ' + r.status);
+      const j = await r.json();
+      const url = j.data?.[0]?.url;
+      if (!url) throw new Error('No image returned');
+      const cue = {
+        tab: 'ai',
+        title: currentTemplate.name + ' (AI)',
+        sub: 'Online banner',
+        deck: { kind: 'image', slides: [{ url, notes: '' }] },
+      };
+      ctx.setStaged('ai', cue);
+      live.take(cue);
+      showToast('AI banner presented.', 'ok');
+    } catch (e) {
+      showToast(e.message, 'err');
+    }
+  }
+
+  async function doOnlineResearch() {
+    const q = researchInput.value.trim();
+    if (!q) return;
+    if (BLOCKED.test(q)) { showToast('Topic not suitable.', 'err'); return; }
+    showToast('Researching…');
+    try {
+      const text = await callLLM(
+        'Summarise the following topic for a Seventh-day Adventist church service. Use simple language suitable for children and adults. Maximum 2 short slides. Format as:\nSlide 1 title: ...\nSlide 1 text: ...\nSlide 2 title: ...\nSlide 2 text: ...\n\nTopic: ' + q,
+        'Keep it accurate, biblical where relevant, short, and completely appropriate for all ages. No controversy, no adult content.'
+      );
+      clear(researchOut);
+      const slides = [];
+      const blocks = text.split(/Slide \d+/i).filter(Boolean);
+      if (blocks.length) {
+        blocks.forEach((b) => {
+          const titleM = /title:\s*(.+)/i.exec(b);
+          const textM = /text:\s*([\s\S]+)/i.exec(b);
+          slides.push({ h: titleM ? titleM[1].trim() : '', t: textM ? textM[1].trim() : b.trim() });
+        });
+      } else {
+        slides.push({ h: q, t: text });
+      }
+      researchOut.append(
+        h('p.note', 'AI summary ready.'),
+        ...slides.map((s) => h('div.card', { style: { padding: '10px', border: '1px solid var(--line)', borderRadius: '8px', marginTop: '6px' } },
+          s.h ? h('strong', s.h) : null,
+          h('p', { style: { margin: '6px 0 0', whiteSpace: 'pre-wrap' } }, s.t))),
+        btn('present', 'Present AI summary', () => {
+          const cue = makeTextCue(q, slides);
+          ctx.setStaged('ai', cue);
+          live.take(cue);
+        })
+      );
+    } catch (e) {
+      showToast(e.message, 'err');
+    }
+  }
+
   const el = h('section',
     h('div.toolbar', h('h2', 'AI'), h('div.grow')),
     h('div.scroll', { style: { flex: '1', padding: '4px' } },
       h('div.card', { style: { marginBottom: '14px', padding: '12px', border: '1px solid var(--line)', borderRadius: '10px' } },
         h('h3', { style: { margin: '0 0 6px' } }, 'AI Banner / Screensaver'),
-        h('p.note', 'Choose a master style, edit the fields, then generate a full-screen banner. Works offline.'),
+        h('p.note', 'Choose a master style and edit the fields. Offline generates a clean banner immediately. Online (Settings → AI) creates a richer AI image.'),
         templateSel,
         fieldsWrap,
-        h('div.row', { style: { gap: '8px', marginTop: '6px' } },
-          btn('reload', 'Preview', drawBanner),
-          btn('present', 'Generate & Present', presentBanner)),
+        h('div.row', { style: { gap: '8px', marginTop: '6px', flexWrap: 'wrap' } },
+          btn('reload', 'Preview (offline)', drawBanner),
+          btn('present', 'Present offline', presentBanner),
+          btn('present', 'AI image (online)', generateOnlineBanner)),
         preview),
       h('div.card', { style: { padding: '12px', border: '1px solid var(--line)', borderRadius: '10px' } },
         h('h3', { style: { margin: '0 0 6px' } }, 'Quick Research'),
-        h('p.note', 'Short, easy-to-read summaries suitable for all ages. Content is limited to safe church topics.'),
+        h('p.note', 'Offline uses built-in safe summaries. Online uses your configured LLM for a fresh child-friendly summary.'),
         researchInput,
-        h('div.row', { style: { marginTop: '8px' } }, btn('search', 'Summarise', doResearch)),
+        h('div.row', { style: { marginTop: '8px', gap: '8px', flexWrap: 'wrap' } },
+          btn('search', 'Offline summary', doResearch),
+          btn('search', 'AI research (online)', doOnlineResearch)),
         researchOut)
     ));
 

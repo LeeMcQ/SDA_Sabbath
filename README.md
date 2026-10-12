@@ -207,3 +207,12 @@ Choose from predefined master styles (Sabbath Welcome, Verse of the Day, Event, 
 Type a topic (Sabbath, prayer, baptism, communion, second coming, creation, tithe). The app produces a short, easy-to-read, child-friendly summary on 1–2 slides. Inappropriate topics are blocked. You can also paste your own short summary.
 
 Both can be presented immediately to the projector.
+
+## Online AI
+
+In **Settings → AI** you can add an API key for OpenAI, Google Gemini, or Anthropic Claude.
+
+- **AI image (online)** — uses OpenAI DALL-E to generate a beautiful banner from the master prompt + your fields.
+- **AI research (online)** — asks the selected LLM for a short, child-safe summary on 1–2 slides.
+
+Keys stay on this device only. Offline modes still work without a key.
