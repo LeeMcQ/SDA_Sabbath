@@ -172,6 +172,17 @@ link.openCast = async () => {
   if (!link.canCast()) return false;
   link.close(true);
   const req = new PresentationRequest([new URL('display.html?via=cast', location.href).href]);
+  // On Android, check availability first so we fail fast with a useful message
+  // instead of hanging or saying "No screens found" with no context.
+  try {
+    const avail = await req.getAvailability();
+    if (!avail.value) {
+      throw new Error('No Cast screens found. Make sure the phone and the Cast device are on the same Wi-Fi, then try again. Or use “This device” and mirror the screen.');
+    }
+  } catch (e) {
+    if (/not supported|not available/i.test(e.message)) { /* older browsers may not support getAvailability */ }
+    else throw e;
+  }
   const conn = await req.start();
   castConn = conn;
   conn.binaryType = 'arraybuffer';
