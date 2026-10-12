@@ -59,9 +59,11 @@ export function createMonitors(host) {
   }
 
   const renderNext = debounce(() => {
-    const cue = live.staged;
-    nextTitle.textContent = cue ? cue.title + (cue.sub ? '  ' + cue.sub : '') : '';
-    const f = frameOf(cue, cue && cue.index);
+    const same = live.sameAsLive();
+    const cue = same ? live.cue : live.staged;
+    const idx = same ? live.index : (cue && cue.index);
+    nextTitle.textContent = cue ? (same ? 'Live: ' : '') + cue.title + (cue.sub ? '  ' + cue.sub : '') : '';
+    const f = frameOf(cue, idx);
     nextStage.show(f);
     setStream('next', nextScreen, cue && cue.deck.kind === 'stream' ? cue.stream : null);
     emptyText(nextScreen, cue ? '' : 'Pick something in a tab — it shows here before you present it.');
@@ -139,7 +141,8 @@ export function createMonitors(host) {
   live.on('staged', markSame);
   live.on('live', renderLive);
   live.on('live', markSame);
-  live.on('go', () => { liveStage.show(frameOf(live.cue, live.index)); renderFrames(); markSame(); });
+  live.on('live', renderNext);
+  live.on('go', () => { liveStage.show(frameOf(live.cue, live.index)); renderFrames(); markSame(); renderNext(); });
   settings.on('change:display', syncLogo);
   syncLogo();
   live.on('blank', updateBlank);

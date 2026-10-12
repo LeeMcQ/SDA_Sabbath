@@ -201,7 +201,6 @@ input[type=range] { accent-color: var(--next); }
 .screen { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: var(--r-sm); overflow: hidden; background: #000; border: 2px solid var(--line); }
 .screen.next { border-color: var(--next); }
 .screen.live { border-color: var(--live); }
-.screen.next.same::after { content: "Same as Live"; position: absolute; top: 6px; right: 6px; z-index: 3; font: 700 var(--fs-xs)/1 var(--font); padding: 4px 6px; border-radius: 4px; background: var(--live-strong); color: #fff; }
 .screen > .stage-host { position: absolute; inset: 0; }
 .screen video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
 .screen .screen-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #8a93a3; font-size: 13px; text-align: center; padding: 12px; }
@@ -472,6 +471,6 @@ input[type=range] { accent-color: var(--next); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
 
 /* Church logo in the top-right corner */
-.church-logo { width: 32px; height: 32px; border-radius: 8px; object-fit: contain; background: var(--panel); border: 1px solid var(--line); margin-left: 6px; }
+.church-logo { width: 36px; height: 36px; border-radius: 8px; object-fit: contain; background: var(--panel); border: 1px solid var(--line); margin-left: 6px; flex: none; }
 /* Hide any browser-injected cast button overlays that land in the page */
-google-cast-launcher, .cast-button, [aria-label*="Cast"], button[title*="Cast"] { display: none !important; }
+google-cast-launcher, .cast-button, [aria-label*="Cast"], button[title*="Cast"], .presentation-api-button { display: none !important; }

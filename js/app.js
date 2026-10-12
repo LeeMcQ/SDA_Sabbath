@@ -97,7 +97,7 @@ async function showTab(id) {
 
 // ------------------------------------------------------------ rail
 // On phones only five buttons fit comfortably: Bible, Hymns, Plan, Slides and More (the rest).
-const MORE_TABS = ['video', 'web', 'screen', 'tools', 'ai', 'settings'];
+const MORE_TABS = ['video', 'web', 'screen', 'tools', 'settings'];
 TABS.forEach((t, i) => {
   if (!t) { rail.appendChild(h('div.rail-gap')); return; }
   const b = h('button' + (MORE_TABS.includes(t.id) ? '.more-tab' : ''), { type: 'button', role: 'tab', 'aria-selected': 'false', 'data-tab': t.id, title: t.label + (i < 7 ? '  (Alt+' + (i + 1) + ')' : ''), onclick: () => showTab(t.id) },
