@@ -1,6 +1,6 @@
 {
-"version": "26e46a1d51ae",
-"bytes": 14989687,
+"version": "617eb452332e",
+"bytes": 15002907,
 "files": [
 "index.html",
 "display.html",
@@ -37,6 +37,7 @@
 "js/tabs/screen.js",
 "js/tabs/settings.js",
 "js/tabs/slides.js",
+"js/tabs/tools.js",
 "js/tabs/video.js",
 "js/tabs/web.js",
 "vendor/fflate-unzip.min.js",

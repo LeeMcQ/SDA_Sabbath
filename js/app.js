@@ -23,6 +23,7 @@ const TABS = [
   { id: 'web', label: 'Web', icon: 'web', load: () => import('./tabs/web.js') },
   { id: 'screen', label: 'PC view', icon: 'pc', load: () => import('./tabs/screen.js') },
   { id: 'plan', label: 'Plan', icon: 'plan', load: () => import('./tabs/plan.js') },
+  { id: 'tools', label: 'Tools', icon: 'grid', load: () => import('./tabs/tools.js') },
   null,
   { id: 'settings', label: 'Settings', icon: 'settings', load: () => import('./tabs/settings.js') },
 ];
@@ -95,7 +96,7 @@ async function showTab(id) {
 
 // ------------------------------------------------------------ rail
 // On phones only five buttons fit comfortably: Bible, Hymns, Plan, Slides and More (the rest).
-const MORE_TABS = ['video', 'web', 'screen', 'settings'];
+const MORE_TABS = ['video', 'web', 'screen', 'tools', 'settings'];
 TABS.forEach((t, i) => {
   if (!t) { rail.appendChild(h('div.rail-gap')); return; }
   const b = h('button' + (MORE_TABS.includes(t.id) ? '.more-tab' : ''), { type: 'button', role: 'tab', 'aria-selected': 'false', 'data-tab': t.id, title: t.label + (i < 7 ? '  (Alt+' + (i + 1) + ')' : ''), onclick: () => showTab(t.id) },

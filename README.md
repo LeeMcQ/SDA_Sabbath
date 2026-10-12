@@ -180,3 +180,18 @@ tools/                       build.py, build_bibles.py
 - Fonts: Atkinson Hyperlegible Next and Source Serif 4 (SIL Open Font License).
 - pdf.js (Apache 2.0), fflate (MIT), qrcode-generator (MIT).
 - SDA Sabbath code: MIT.
+
+## Service tools (new)
+
+The **Tools** tab (under More) adds:
+
+- Stage / confidence monitor window (current + next item + timer)
+- Lower-third / overlay window suitable for OBS browser source
+- Service timer and countdown presets (5/10/20 min)
+- Responsive readings
+- Communion / Ordinance of Humility step-through slides
+- Offering and tithe graphics
+- Streaming overlay window
+- Experimental live captions via browser speech recognition
+
+Children’s story templates were intentionally left out.
