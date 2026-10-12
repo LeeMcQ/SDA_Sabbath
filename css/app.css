@@ -353,7 +353,7 @@ input[type=range] { accent-color: var(--next); }
   .rail button { flex: 1 0 44px; padding: 6px 0; font-size: var(--fs-xs); }
   /* Five tabs on phones: Bible, Hymns, Plan, Slides and More (Video, Web, PC view, Settings). */
   .rail button[data-tab="plan"] { order: 3; } .rail button[data-tab="slides"] { order: 4; }
-  .rail button[data-tab="ai"] { order: 2; flex: 1 0 52px; }
+  .rail button[data-tab="ai"] { order: 2; flex: 1 0 56px; color: var(--next); font-weight: 800; }
   .rail button.more-tab { display: none; }
   .rail-nav .rail-more { display: flex; }
   .rail button svg.i { width: 22px; height: 22px; }

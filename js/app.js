@@ -79,7 +79,9 @@ async function showTab(id) {
   // While the Plan tab opens an item in another tab, stay on the Plan.
   if (ctx.hold && id !== ctx.hold) return getTab(id);
   if (current === id && tabs.has(id)) return tabs.get(id);
-  const api = await getTab(id);
+  let api;
+  try { api = await getTab(id); }
+  catch (e) { ui.toast('Could not open ' + id + ': ' + e.message, 'err', 6000); console.error(e); return null; }
   if (current && tabs.has(current)) { const prev = tabs.get(current); prev.el.hidden = true; if (prev.onHide) prev.onHide(); }
   const switching = !!current;
   current = id;
