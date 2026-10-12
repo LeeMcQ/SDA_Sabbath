@@ -59,6 +59,52 @@ live.stage = (cue) => {
   live.emit('staged', live.staged);
 };
 
+
+let streamPumpTimer = null;
+let streamPumpVideo = null;
+
+function stopStreamPump() {
+  if (streamPumpTimer) { clearInterval(streamPumpTimer); streamPumpTimer = null; }
+  if (streamPumpVideo) {
+    try { streamPumpVideo.srcObject = null; } catch (e) {}
+    streamPumpVideo = null;
+  }
+}
+
+function startStreamPump(stream) {
+  stopStreamPump();
+  if (!stream) return;
+  const video = document.createElement('video');
+  video.muted = true;
+  video.playsInline = true;
+  video.srcObject = stream;
+  video.play().catch(() => {});
+  streamPumpVideo = video;
+  const canvas = document.createElement('canvas');
+  const sendFrame = () => {
+    if (!streamPumpVideo || streamPumpVideo.readyState < 2) return;
+    const w = streamPumpVideo.videoWidth || 1280;
+    const h = streamPumpVideo.videoHeight || 720;
+    canvas.width = Math.min(w, 1280);
+    canvas.height = Math.round(canvas.width * (h / w));
+    const c = canvas.getContext('2d');
+    try { c.drawImage(streamPumpVideo, 0, 0, canvas.width, canvas.height); } catch (e) { return; }
+    canvas.toBlob((blob) => {
+      if (!blob || !live.cue || live.cue.deck.kind !== 'stream') return;
+      // Send as a one-frame image deck so Cast/LAN displays can show it.
+      link.send({
+        t: 'deck',
+        deck: { kind: 'image', frames: [{ kind: 'image', src: blob, fit: 'contain' }] },
+        index: 0,
+        blank: null,
+      });
+    }, 'image/jpeg', 0.72);
+  };
+  streamPumpTimer = setInterval(sendFrame, 250);
+  // First frame after a short delay so the video has data.
+  setTimeout(sendFrame, 400);
+}
+
 /** Present the staged cue. Opens a display first if none is connected. */
 live.take = async (cue) => {
   cue = cue || live.staged;
@@ -70,8 +116,15 @@ live.take = async (cue) => {
     if (!ok) return false;
   }
   if (cue.deck.kind === 'stream') {
-    if (!link.canStream()) { live.emit('notice', { code: 'stream', text: 'Screen sharing works with the display window or this-device mode, not with Cast or LAN displays.' }); return false; }
-    link.setStream(cue.stream);
+    if (link.canStream()) {
+      stopStreamPump();
+      link.setStream(cue.stream);
+    } else {
+      // Cast and LAN cannot receive a live MediaStream. Pump JPEG frames instead.
+      startStreamPump(cue.stream);
+    }
+  } else {
+    stopStreamPump();
   }
   if (pendingStyle || !live.style) await live.sendStyle();
   live.cue = cue;
@@ -159,6 +212,7 @@ live.setBlank = (mode) => {
 
 /** Remove the live item: the screen shows the background (or logo). */
 live.clear = () => {
+  stopStreamPump();
   const mode = settings.v.display.clearShows === 'logo' ? 'logo' : settings.v.display.clearShows === 'black' ? 'black' : null;
   link.send({ t: 'clear', mode });
   live.cue = null; live.index = 0; live.media = null; live.blank = mode;

@@ -175,7 +175,7 @@ export default function create(ctx) {
         name: 'Google Gemini',
         text: true, image: true,
         hint: 'Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. No credit card needed. Keys start with <strong>AIza</strong> or <strong>AQ.</strong>',
-        models: 'Text: gemini-2.0-flash · Images: imagen-3',
+        models: 'Text: gemini-2.5-flash · Images: imagen-4',
       },
       xai: {
         name: 'xAI Grok',

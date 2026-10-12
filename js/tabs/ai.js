@@ -1,7 +1,7 @@
 // AI tab: on-the-spot banner / screensaver generator and quick child-safe research summaries.
 // Banner generation is fully offline (canvas). Research uses a built-in safe knowledge base
 // for common topics and produces short, readable slides. Content is filtered for church use.
-import { h, clear } from '../core/util.js';
+import { h, clear, esc } from '../core/util.js';
 import { icon } from '../core/icons.js';
 import { btn, toast } from '../core/ui.js';
 
@@ -104,9 +104,10 @@ function makeTextCue(title, slides) {
     sub: 'AI',
     deck: {
       kind: 'text',
-      slides: slides.map((s) => ({
-        lines: (s.h ? s.h + '\n\n' : '') + s.t,
-        notes: '',
+      frames: slides.map((s) => ({
+        kind: 'text',
+        variant: 'plain',
+        html: (s.h ? '<div class="f-head">' + esc(s.h) + '</div>' : '') + '<div>' + esc(s.t).replace(/\n/g, '<br>') + '</div>',
       })),
     },
   };
@@ -244,15 +245,14 @@ export default function create(ctx) {
   function presentBanner() {
     drawBanner();
     canvas.toBlob((blob) => {
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
+      if (!blob) { showToast('Could not create banner image.', 'err'); return; }
       const cue = {
         tab: 'ai',
         title: currentTemplate.name,
         sub: 'Banner',
         deck: {
           kind: 'image',
-          slides: [{ url, notes: '' }],
+          frames: [{ kind: 'image', src: blob, fit: 'contain' }],
         },
       };
       ctx.setStaged('ai', cue);
@@ -340,7 +340,7 @@ export default function create(ctx) {
     }
 
     if (provider === 'google') {
-      const m = model || 'gemini-2.0-flash';
+      const m = model || 'gemini-2.5-flash';
       const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent?key=' + key, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -349,7 +349,7 @@ export default function create(ctx) {
           generationConfig: { temperature: 0.4, maxOutputTokens: 600 },
         }),
       });
-      if (!r.ok) throw new Error('Gemini error ' + r.status);
+      if (!r.ok) { const t = await r.text().catch(() => ''); throw new Error('Gemini error ' + r.status + (t ? ': ' + t.slice(0, 140) : '')); }
       const j = await r.json();
       return j.candidates?.[0]?.content?.parts?.[0]?.text || '';
     }
@@ -393,7 +393,7 @@ export default function create(ctx) {
     }
 
     if (provider === 'openrouter') {
-      const m = model || 'google/gemini-2.0-flash-001';
+      const m = model || 'google/gemini-2.5-flash';
       const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json', 'HTTP-Referer': location.origin },
@@ -454,12 +454,15 @@ export default function create(ctx) {
         if (!r.ok) throw new Error('OpenAI image ' + r.status);
         url = (await r.json()).data?.[0]?.url;
       } else if (provider === 'google') {
-        const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=' + key, {
+        const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=' + key, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ instances: [{ prompt }], parameters: { sampleCount: 1 } }),
+          body: JSON.stringify({ instances: [{ prompt }], parameters: { sampleCount: 1, aspectRatio: '16:9' } }),
         });
-        if (!r.ok) throw new Error('Gemini image ' + r.status);
+        if (!r.ok) {
+          const errText = await r.text().catch(() => '');
+          throw new Error('Gemini image ' + r.status + (errText ? ': ' + errText.slice(0, 120) : ''));
+        }
         const j = await r.json();
         const b64 = j.predictions?.[0]?.bytesBase64Encoded;
         if (b64) url = 'data:image/png;base64,' + b64;
