@@ -354,6 +354,63 @@ export default function create(ctx) {
       return j.candidates?.[0]?.content?.parts?.[0]?.text || '';
     }
 
+    if (provider === 'xai') {
+      const m = model || 'grok-3';
+      const r = await fetch('https://api.x.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: m,
+          messages: [
+            { role: 'system', content: system || 'You are a helpful assistant for a Seventh-day Adventist church. Keep answers short, clear, and suitable for all ages including children.' },
+            { role: 'user', content: prompt },
+          ],
+          max_tokens: 600,
+          temperature: 0.4,
+        }),
+      });
+      if (!r.ok) throw new Error('Grok error ' + r.status);
+      return (await r.json()).choices?.[0]?.message?.content || '';
+    }
+
+    if (provider === 'together') {
+      const m = model || 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo';
+      const r = await fetch('https://api.together.xyz/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: m,
+          messages: [
+            { role: 'system', content: system || 'You are a helpful assistant for a Seventh-day Adventist church. Keep answers short, clear, and suitable for all ages including children.' },
+            { role: 'user', content: prompt },
+          ],
+          max_tokens: 600,
+          temperature: 0.4,
+        }),
+      });
+      if (!r.ok) throw new Error('Together error ' + r.status);
+      return (await r.json()).choices?.[0]?.message?.content || '';
+    }
+
+    if (provider === 'openrouter') {
+      const m = model || 'google/gemini-2.0-flash-001';
+      const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json', 'HTTP-Referer': location.origin },
+        body: JSON.stringify({
+          model: m,
+          messages: [
+            { role: 'system', content: system || 'You are a helpful assistant for a Seventh-day Adventist church. Keep answers short, clear, and suitable for all ages including children.' },
+            { role: 'user', content: prompt },
+          ],
+          max_tokens: 600,
+          temperature: 0.4,
+        }),
+      });
+      if (!r.ok) throw new Error('OpenRouter error ' + r.status);
+      return (await r.json()).choices?.[0]?.message?.content || '';
+    }
+
     if (provider === 'anthropic') {
       const m = model || 'claude-3-5-haiku-20241022';
       const r = await fetch('https://api.anthropic.com/v1/messages', {
@@ -382,26 +439,57 @@ export default function create(ctx) {
     const key = (cfg.apiKey || '').trim();
     const provider = cfg.provider || 'openai';
     if (!key) { showToast('Add an API key in Settings → AI first.', 'err'); return; }
-    if (provider !== 'openai') { showToast('Online images currently use OpenAI. Switch provider or use offline Generate.', 'err'); return; }
 
     const vals = fieldInputs.map((i) => i.value.trim()).filter(Boolean);
-    const prompt = currentTemplate.master + '. ' + vals.join('. ') + '. Beautiful, elegant, church-appropriate, high quality, no text unless specified, soft lighting, suitable for a projector in a Seventh-day Adventist church. No people, no crosses if avoidable, peaceful.';
+    const prompt = currentTemplate.master + '. ' + vals.join('. ') + '. Beautiful, elegant, church-appropriate, high quality, soft lighting, suitable for a projector in a Seventh-day Adventist church. Peaceful, no violence, no adult content.';
     showToast('Generating image…');
     try {
-      const r = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'dall-e-3',
-          prompt,
-          n: 1,
-          size: '1792x1024',
-          quality: 'standard',
-        }),
-      });
-      if (!r.ok) throw new Error('Image API ' + r.status);
-      const j = await r.json();
-      const url = j.data?.[0]?.url;
+      let url = null;
+      if (provider === 'openai') {
+        const r = await fetch('https://api.openai.com/v1/images/generations', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: 'dall-e-3', prompt, n: 1, size: '1792x1024', quality: 'standard' }),
+        });
+        if (!r.ok) throw new Error('OpenAI image ' + r.status);
+        url = (await r.json()).data?.[0]?.url;
+      } else if (provider === 'google') {
+        const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=' + key, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ instances: [{ prompt }], parameters: { sampleCount: 1 } }),
+        });
+        if (!r.ok) throw new Error('Gemini image ' + r.status);
+        const j = await r.json();
+        const b64 = j.predictions?.[0]?.bytesBase64Encoded;
+        if (b64) url = 'data:image/png;base64,' + b64;
+      } else if (provider === 'xai') {
+        const r = await fetch('https://api.x.ai/v1/images/generations', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: 'grok-2-image', prompt, n: 1 }),
+        });
+        if (!r.ok) throw new Error('Grok image ' + r.status);
+        url = (await r.json()).data?.[0]?.url;
+      } else if (provider === 'together') {
+        const r = await fetch('https://api.together.xyz/v1/images/generations', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: 'black-forest-labs/FLUX.1-schnell', prompt, n: 1, width: 1792, height: 1024 }),
+        });
+        if (!r.ok) throw new Error('Together image ' + r.status);
+        url = (await r.json()).data?.[0]?.url;
+      } else if (provider === 'openrouter') {
+        const r = await fetch('https://openrouter.ai/api/v1/images/generations', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json', 'HTTP-Referer': location.origin },
+          body: JSON.stringify({ model: 'black-forest-labs/flux-schnell', prompt }),
+        });
+        if (!r.ok) throw new Error('OpenRouter image ' + r.status);
+        url = (await r.json()).data?.[0]?.url;
+      } else {
+        throw new Error('This provider does not support images. Use OpenAI, Gemini, Grok, Together, or OpenRouter.');
+      }
       if (!url) throw new Error('No image returned');
       const cue = {
         tab: 'ai',

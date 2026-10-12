@@ -164,18 +164,93 @@ export default function create(ctx) {
   // ------------------------------------------------------------ AI providers
   section('ai', 'AI', (box) => {
     const A = settings.v.ai || {};
-    const providerSel = h('select.field', { value: A.provider || 'openai', onchange: () => settings.set('ai.provider', providerSel.value) },
-      h('option', { value: 'openai' }, 'OpenAI (GPT + images)'),
-      h('option', { value: 'google' }, 'Google Gemini'),
-      h('option', { value: 'anthropic' }, 'Anthropic Claude'));
-    const keyInp = h('input.field', { type: 'password', value: A.apiKey || '', placeholder: 'Paste API key', style: { width: '100%' }, onchange: () => settings.set('ai.apiKey', keyInp.value.trim()) });
-    const modelInp = h('input.field', { value: A.model || '', placeholder: 'Optional model override', style: { width: '100%' }, onchange: () => settings.set('ai.model', modelInp.value.trim()) });
+    const PROVIDERS = {
+      openai: {
+        name: 'OpenAI',
+        text: true, image: true,
+        hint: 'Get a key at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>. Needs a paid account. Keys start with <strong>sk-</strong>.',
+        models: 'Text: gpt-4o-mini · Images: dall-e-3',
+      },
+      google: {
+        name: 'Google Gemini',
+        text: true, image: true,
+        hint: 'Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. No credit card needed. Keys start with <strong>AIza</strong> or <strong>AQ.</strong>',
+        models: 'Text: gemini-2.0-flash · Images: imagen-3',
+      },
+      xai: {
+        name: 'xAI Grok',
+        text: true, image: true,
+        hint: 'Get a key at <a href="https://console.x.ai" target="_blank" rel="noopener">console.x.ai</a>. Keys start with <strong>xai-</strong>.',
+        models: 'Text: grok-3 · Images: grok-2-image',
+      },
+      together: {
+        name: 'Together AI',
+        text: true, image: true,
+        hint: 'Get a key at <a href="https://api.together.xyz/settings/api-keys" target="_blank" rel="noopener">api.together.xyz</a>. Free tier available. Keys start with <strong>tgp_</strong> or similar.',
+        models: 'Text: Llama · Images: Flux',
+      },
+      openrouter: {
+        name: 'OpenRouter',
+        text: true, image: true,
+        hint: 'Get a key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>. One key for many models. Keys start with <strong>sk-or-</strong>.',
+        models: 'Text + image models via one key',
+      },
+      anthropic: {
+        name: 'Anthropic Claude',
+        text: true, image: false,
+        hint: 'Get a key at <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>. Text only (excellent research). Keys start with <strong>sk-ant-</strong>.',
+        models: 'Text: claude-3-5-haiku',
+      },
+    };
+
+    const providerSel = h('select.field', {
+      value: A.provider || 'openai',
+      onchange: () => { settings.set('ai.provider', providerSel.value); updateHint(); },
+    });
+    Object.keys(PROVIDERS).forEach((id) => {
+      const p = PROVIDERS[id];
+      const label = p.name + (p.image ? ' · text + images' : ' · text only');
+      providerSel.appendChild(h('option', { value: id }, label));
+    });
+
+    const keyInp = h('input.field', {
+      type: 'password',
+      value: A.apiKey || '',
+      placeholder: 'Paste API key',
+      style: { width: '100%' },
+      onchange: () => settings.set('ai.apiKey', keyInp.value.trim()),
+    });
+    const showBtn = h('button.btn.sm', { type: 'button', onclick: () => {
+      keyInp.type = keyInp.type === 'password' ? 'text' : 'password';
+      showBtn.textContent = keyInp.type === 'password' ? 'Show' : 'Hide';
+    } }, 'Show');
+
+    const hintEl = h('div.note', { style: { marginTop: '6px', lineHeight: '1.45' } });
+    const modelEl = h('p.note', { style: { marginTop: '4px' } });
+
+    function updateHint() {
+      const p = PROVIDERS[providerSel.value] || PROVIDERS.openai;
+      hintEl.innerHTML = p.hint;
+      modelEl.textContent = p.models;
+    }
+    updateHint();
+
+    const modelInp = h('input.field', {
+      value: A.model || '',
+      placeholder: 'Optional model override',
+      style: { width: '100%' },
+      onchange: () => settings.set('ai.model', modelInp.value.trim()),
+    });
+
     box.append(h('div.form',
       h('label', 'Provider'), providerSel,
-      h('label', 'API key'), keyInp,
-      h('p.note', 'Stored only on this device. Needed for online banner images and AI research. Never share it.'),
+      hintEl,
+      modelEl,
+      h('label', 'API key'),
+      h('div.row', { style: { gap: '8px', alignItems: 'center' } }, keyInp, showBtn),
+      h('p.note', 'Stored only on this device. Never share it.'),
       h('label', 'Model (optional)'), modelInp,
-      h('p.note', 'Leave blank for a sensible default (OpenAI: gpt-4o-mini / dall-e-3, Google: gemini-2.0-flash, Claude: claude-3-5-haiku).')));
+      h('p.note', 'Leave blank to use the recommended default for the selected provider.')));
   });
 
   // ------------------------------------------------------------ Coming next

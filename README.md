@@ -216,3 +216,16 @@ In **Settings → AI** you can add an API key for OpenAI, Google Gemini, or Anth
 - **AI research (online)** — asks the selected LLM for a short, child-safe summary on 1–2 slides.
 
 Keys stay on this device only. Offline modes still work without a key.
+
+## AI provider selection
+
+Settings → AI now has a dropdown of providers that support text and images:
+
+- OpenAI (text + DALL-E)
+- Google Gemini (text + Imagen)
+- xAI Grok (text + images)
+- Together AI (text + Flux)
+- OpenRouter (many models)
+- Anthropic Claude (text only, excellent research)
+
+Selecting a provider shows instructions and a link to get a key. The key stays on this device.
