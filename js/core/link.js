@@ -177,7 +177,7 @@ link.openCast = async () => {
   try {
     const avail = await req.getAvailability();
     if (!avail.value) {
-      throw new Error('No Cast screens found. Make sure the phone and the Cast device are on the same Wi-Fi, then try again. Or use “This device” and mirror the screen.');
+      throw new Error('No Chromecast found. For LG Smart View / Miracast, use This device then mirror the screen.');
     }
   } catch (e) {
     if (/not supported|not available/i.test(e.message)) { /* older browsers may not support getAvailability */ }

@@ -220,9 +220,9 @@ function displayMenu(anchor) {
   items.push({ label: 'Use this device as the screen', icon: 'phone', onclick: () => link.openSelf(createDisplay) });
   if (link.canCast()) items.push({ label: 'Cast to a TV or wireless display', icon: 'cast', onclick: () => link.openCast().catch((e) => {
     const msg = /no screens|not available|cancelled/i.test(e.message)
-      ? 'No Cast screen found. On a phone, use “This device” and mirror the screen, or connect to the church PC companion.'
+      ? 'Cast needs a Chromecast. Your LG TV uses Smart View (Miracast). Tap “Use this device as the screen”, then open Smart View and pick the TV.'
       : 'Cast failed: ' + e.message;
-    ui.toast(msg, 'err', 7000);
+    ui.toast(msg, 'err', 8000);
   }) });
   items.push({ label: 'SDA Sabbath companion on the network…', icon: 'link', onclick: companionDialog });
   if (pipSupported()) items.push('-', { label: 'Mini controller (stays on top)', icon: 'pip', onclick: () => openPip().catch((e) => ui.toast('The mini controller could not open: ' + e.message, 'err')) });
@@ -238,7 +238,7 @@ live.ensureDisplay = () => new Promise((resolve) => {
     icon(ic), h('div.grow', h('div', { style: { fontWeight: 700 } }, title), h('div.note', desc)));
   const list = h('div.list',
     opt('phone', 'This device', 'Full screen here. Use with an HDMI adapter or screen mirroring.', () => link.openSelf(createDisplay)),
-    link.canCast() ? opt('cast', 'Cast', 'Chromecast or wireless display. On Android this often needs a Cast device on the same Wi-Fi.', () => link.openCast()) : null,
+    link.canCast() ? opt('cast', 'Cast', 'Chromecast only. For LG Smart View / Miracast, use This device then mirror.', () => link.openCast()) : null,
     opt('link', 'SDA Sabbath companion', 'Control a PC or TV on the church network from this phone.', companionDialog),
     innerWidth > 700 ? opt('present', 'Display window', 'A separate window you can move to a projector.', () => link.openWindow()) : null);
   ui.modal({ title: 'Where should SDA Sabbath present?', body: list, onclose: () => { if (!done) resolve(false); } });
