@@ -470,3 +470,8 @@ input[type=range] { accent-color: var(--next); }
 }
 @media (max-width: 760px) { .split { overflow-x: hidden; } } /* sideways pane slides never add a scrollbar */
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+
+/* Church logo in the top-right corner */
+.church-logo { width: 32px; height: 32px; border-radius: 8px; object-fit: contain; background: var(--panel); border: 1px solid var(--line); margin-left: 6px; }
+/* Hide any browser-injected cast button overlays that land in the page */
+google-cast-launcher, .cast-button, [aria-label*="Cast"], button[title*="Cast"] { display: none !important; }

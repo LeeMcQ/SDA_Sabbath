@@ -154,6 +154,19 @@ link.openSelf = async (createDisplay) => {
 };
 
 // ------------------------------------------------------------ Cast / wireless display
+let keepAliveTimer = null;
+function startKeepAlive() {
+  stopKeepAlive();
+  keepAliveTimer = setInterval(() => {
+    if ((link.kind === 'cast' || link.kind === 'socket') && sendImpl) {
+      try { sendImpl({ t: 'ping' }); } catch (e) { /* ignore */ }
+    }
+  }, 12000); // every 12s so Chromecast and LAN sessions do not idle-timeout
+}
+function stopKeepAlive() {
+  if (keepAliveTimer) { clearInterval(keepAliveTimer); keepAliveTimer = null; }
+}
+
 link.canCast = () => typeof window.PresentationRequest === 'function';
 link.openCast = async () => {
   if (!link.canCast()) return false;
@@ -168,8 +181,8 @@ link.openCast = async () => {
   conn.onclose = conn.onterminate = () => { if (castConn === conn) { castConn = null; sendImpl = null; setState(null, false, ''); } };
   sendImpl = (m) => castEnc(m);
   setState('cast', conn.state === 'connected', 'Cast display');
-  conn.onconnect = () => { setState('cast', true); sendImpl({ t: 'hello?' }); };
-  if (conn.state === 'connected') sendImpl({ t: 'hello?' });
+  conn.onconnect = () => { setState('cast', true); sendImpl({ t: 'hello?' }); startKeepAlive(); };
+  if (conn.state === 'connected') { sendImpl({ t: 'hello?' }); startKeepAlive(); }
   return true;
 };
 
@@ -188,7 +201,7 @@ link.connectSocket = (base, pin, room = 'main') => {
       wait = 1000;
       wsEnc = createEncoder((s) => ws.send(s), (b) => ws.send(b));
       sendImpl = (m) => wsEnc && wsEnc(m);
-      setState('socket', true, 'LAN display (' + u.host + ')');
+      setState('socket', true, 'LAN display (' + u.host + ')'); startKeepAlive();
       sendImpl({ t: 'hello?' });
       link.emit('reconnected');
     };
@@ -216,6 +229,7 @@ link.close = (silent) => {
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   }
   if (kind === 'cast' && castConn) { try { castConn.terminate(); } catch (e) { /* */ } castConn = null; }
+  stopKeepAlive();
   if (kind === 'socket' && ws) { link.kind = null; try { ws.close(); } catch (e) { /* */ } ws = null; }
   link.win = null;
   sendImpl = null;

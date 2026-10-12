@@ -253,6 +253,20 @@ const installBtn = ui.btn('download', 'Install SDA Sabbath on this device', prom
 installBtn.hidden = true;
 const helpBtn = ui.btn('kbd', 'Keyboard shortcuts (?)', () => showHelp(), { cls: 'sm' });
 topIcons.append(searchBtn, installBtn, helpBtn);
+
+// Church logo in the top-right corner (replaces any browser cast icon visually).
+const churchLogo = h('img.church-logo', { alt: 'Church logo', src: 'icons/favicon.svg' });
+topIcons.appendChild(churchLogo);
+async function refreshChurchLogo() {
+  const id = settings.v.display.logo;
+  if (!id) { churchLogo.src = 'icons/favicon.svg'; return; }
+  try {
+    const rec = await db.get('files', id);
+    if (rec && rec.blob) churchLogo.src = URL.createObjectURL(rec.blob);
+  } catch (e) { churchLogo.src = 'icons/favicon.svg'; }
+}
+refreshChurchLogo();
+settings.on('change:display', refreshChurchLogo);
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); ctx.installPrompt = e; installBtn.hidden = false; ui.enter(installBtn, 'pop'); });
 window.addEventListener('appinstalled', () => { ctx.installPrompt = null; installBtn.hidden = true; ui.toast('SDA Sabbath is installed.', 'ok'); });
 const mq = matchMedia('(max-width: 760px)');
