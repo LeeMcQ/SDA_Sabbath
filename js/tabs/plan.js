@@ -44,6 +44,8 @@ export default function create(ctx) {
     { label: 'Export (to use on another device)', icon: 'download', onclick: exportPlan, disabled: !plan },
     { label: 'Import a plan…', icon: 'upload', onclick: importPlan },
     { label: 'Mark all as not done', icon: 'reload', onclick: () => { if (plan) { plan.items.forEach((i) => { i.done = false; }); save(); render(); } } },
+    { label: 'Duplicate this plan', icon: 'plus', onclick: duplicatePlan, disabled: !plan },
+    { label: plan && plan.autoAdvance ? 'Auto-advance: on' : 'Auto-advance: off', icon: 'next', onclick: toggleAuto, disabled: !plan },
     { label: 'Delete this plan', icon: 'trash', onclick: deletePlan, disabled: !plan },
   ]), { cls: 'sm' });
   const nextBtn = h('button.btn.primary', { type: 'button', title: 'Select the next item in the plan', onclick: () => step(1) }, icon('next'), h('span', 'Next item'));
@@ -96,6 +98,21 @@ export default function create(ctx) {
   }
   async function renamePlan() { const n = await promptBox('Rename plan', 'Name', plan.name); if (n) { plan.name = n; await save(); await load(); } }
   async function deletePlan() { if (await confirmBox('Delete plan?', 'Delete “' + plan.name + '”?', 'Delete', true)) { await db.del('plans', plan.id); plan = null; await load(); } }
+  async function duplicatePlan() {
+    if (!plan) return;
+    const copy = JSON.parse(JSON.stringify(plan));
+    copy.id = uid(); copy.name = plan.name + ' (copy)';
+    copy.items.forEach((i) => { i.done = false; i.id = uid(); });
+    copy.updated = Date.now();
+    await db.put('plans', copy.id, copy); await db.put('kv', 'plan-current', copy.id); await load();
+    toast('Plan duplicated.', 'ok');
+  }
+  function toggleAuto() {
+    if (!plan) return;
+    plan.autoAdvance = !plan.autoAdvance;
+    save(); render();
+    toast(plan.autoAdvance ? 'Auto-advance on.' : 'Auto-advance off.', 'ok');
+  }
   function exportPlan() { download(new Blob([JSON.stringify(plan, null, 1)], { type: 'application/json' }), plan.name.replace(/[^\w-]+/g, '_') + '.sda-sabbath-plan.json'); }
   function importPlan() {
     const inp = h('input', { type: 'file', accept: '.json' });
@@ -129,9 +146,13 @@ export default function create(ctx) {
       const row = h('div.plan-item' + (i === cur ? '.cur' : '') + (it.done ? '.done' : ''), {
         onclick: () => select(i), ondblclick: () => select(i).then((c) => c && live.take(c)) },
       h('span.pi-n', it.heading ? '' : String(plan.items.slice(0, i + 1).filter((x) => !x.heading).length)),
-      h('div', { style: { minWidth: 0 } }, h('div.pi-t.trunc', { style: it.heading ? { color: 'var(--muted)' } : null }, it.heading ? h('span', icon('info'), ' ', it.label) : it.label), sub(it) ? h('div.pi-s', sub(it)) : null),
+      h('div', { style: { minWidth: 0 } },
+        h('div.pi-t.trunc', { style: it.heading ? { color: 'var(--muted)' } : null }, it.heading ? h('span', icon('info'), ' ', it.label) : it.label),
+        sub(it) ? h('div.pi-s', sub(it)) : null,
+        it.role ? h('div.pi-s', { style: { color: 'var(--next)' } }, it.role) : null),
       h('div.row', { onclick: (e) => e.stopPropagation() },
-        it.heading ? null : btn('present', 'Present now', () => select(i).then((c) => c && live.take(c)), { cls: 'sm' }),
+        it.heading ? null : btn('present', 'Present now', () => select(i).then((c) => { if (c) { live.take(c); if (plan.autoAdvance) setTimeout(() => step(1), 400); } }), { cls: 'sm' }),
+        btn('edit', 'Role', () => { const r = prompt('Role (e.g. Elder, Deacon, Speaker)', it.role || ''); if (r != null) { it.role = r.trim(); save(); render(); } }, { cls: 'sm' }),
         btn('up', 'Move up', () => moveItem(i, -1), { cls: 'sm' }),
         btn('down', 'Move down', () => moveItem(i, 1), { cls: 'sm' }),
         btn('trash', 'Remove', () => { plan.items.splice(i, 1); if (cur >= plan.items.length) cur = plan.items.length - 1; save(); render(); }, { cls: 'sm' })));
