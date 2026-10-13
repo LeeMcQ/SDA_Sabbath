@@ -8,9 +8,10 @@
  },
  {
   "id": "sda-online",
-  "name": "SDA Hymnal (online music)",
+  "name": "SDA Hymnal (full, offline)",
   "short": "SDAH",
   "lang": "en",
-  "file": "sda-online.json"
+  "file": "sda-online.json",
+  "note": "All 698 hymns with lyrics offline. Music links open the source page."
  }
 ]
