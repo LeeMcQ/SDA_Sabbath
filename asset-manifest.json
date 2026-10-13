@@ -1,6 +1,6 @@
 {
-"version": "600a60d7af7a",
-"bytes": 15758997,
+"version": "1174d0c079d3",
+"bytes": 15749705,
 "files": [
 "index.html",
 "display.html",
@@ -267,7 +267,6 @@
 "data/bibles/web/66.json",
 "data/bibles/web/info.json",
 "data/hymns/index.json",
-"data/hymns/sda-online.json",
-"data/hymns/sda-sample.json"
+"data/hymns/sda-online.json"
 ]
 }
