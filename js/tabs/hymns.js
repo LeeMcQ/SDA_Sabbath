@@ -239,6 +239,13 @@ export default function create(ctx) {
   function restage() {
     if (!hymn) { titleEl.textContent = ''; metaEl.textContent = ''; clear(grid); clear(verseChips); empty.hidden = false; return; }
     empty.hidden = true;
+    // Show music link if present
+    const musicBtn = document.getElementById('hymnMusicBtn');
+    if (musicBtn) musicBtn.remove();
+    if (hymn.music) {
+      const btn = h('a', { id: 'hymnMusicBtn', href: hymn.music, target: '_blank', rel: 'noopener', class: 'btn sm', style: { marginLeft: '8px' } }, 'Play music');
+      titleEl.parentNode.insertBefore(btn, titleEl.nextSibling);
+    }
     cue = buildCue(hymn);
     titleEl.textContent = hymn.n + '  ' + hymn.t;
     metaEl.textContent = (hymn.a ? hymn.a + '. ' : '') + 'Sing stanzas:';

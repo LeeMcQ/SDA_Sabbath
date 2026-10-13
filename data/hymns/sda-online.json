@@ -1,0 +1,8409 @@
+{
+ "id": "sda-online",
+ "name": "SDA Hymnal (online music)",
+ "short": "SDAH",
+ "lang": "en",
+ "note": "Hymn numbers with links to music on sdahymnals.com. Lyrics can be added or imported.",
+ "hymns": [
+  {
+   "n": 1,
+   "t": "Hymn 1",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=1"
+  },
+  {
+   "n": 2,
+   "t": "Hymn 2",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=2"
+  },
+  {
+   "n": 3,
+   "t": "Hymn 3",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=3"
+  },
+  {
+   "n": 4,
+   "t": "Hymn 4",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=4"
+  },
+  {
+   "n": 5,
+   "t": "Hymn 5",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=5"
+  },
+  {
+   "n": 6,
+   "t": "Hymn 6",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=6"
+  },
+  {
+   "n": 7,
+   "t": "Hymn 7",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=7"
+  },
+  {
+   "n": 8,
+   "t": "Hymn 8",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=8"
+  },
+  {
+   "n": 9,
+   "t": "Hymn 9",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=9"
+  },
+  {
+   "n": 10,
+   "t": "Hymn 10",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=10"
+  },
+  {
+   "n": 11,
+   "t": "Hymn 11",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=11"
+  },
+  {
+   "n": 12,
+   "t": "Hymn 12",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=12"
+  },
+  {
+   "n": 13,
+   "t": "Hymn 13",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=13"
+  },
+  {
+   "n": 14,
+   "t": "Hymn 14",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=14"
+  },
+  {
+   "n": 15,
+   "t": "Hymn 15",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=15"
+  },
+  {
+   "n": 16,
+   "t": "Hymn 16",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=16"
+  },
+  {
+   "n": 17,
+   "t": "Hymn 17",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=17"
+  },
+  {
+   "n": 18,
+   "t": "Hymn 18",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=18"
+  },
+  {
+   "n": 19,
+   "t": "Hymn 19",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=19"
+  },
+  {
+   "n": 20,
+   "t": "Hymn 20",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=20"
+  },
+  {
+   "n": 21,
+   "t": "Hymn 21",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=21"
+  },
+  {
+   "n": 22,
+   "t": "Hymn 22",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=22"
+  },
+  {
+   "n": 23,
+   "t": "Hymn 23",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=23"
+  },
+  {
+   "n": 24,
+   "t": "Hymn 24",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=24"
+  },
+  {
+   "n": 25,
+   "t": "Hymn 25",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=25"
+  },
+  {
+   "n": 26,
+   "t": "Hymn 26",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=26"
+  },
+  {
+   "n": 27,
+   "t": "Hymn 27",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=27"
+  },
+  {
+   "n": 28,
+   "t": "Hymn 28",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=28"
+  },
+  {
+   "n": 29,
+   "t": "Hymn 29",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=29"
+  },
+  {
+   "n": 30,
+   "t": "Hymn 30",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=30"
+  },
+  {
+   "n": 31,
+   "t": "Hymn 31",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=31"
+  },
+  {
+   "n": 32,
+   "t": "Hymn 32",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=32"
+  },
+  {
+   "n": 33,
+   "t": "Hymn 33",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=33"
+  },
+  {
+   "n": 34,
+   "t": "Hymn 34",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=34"
+  },
+  {
+   "n": 35,
+   "t": "Hymn 35",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=35"
+  },
+  {
+   "n": 36,
+   "t": "Hymn 36",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=36"
+  },
+  {
+   "n": 37,
+   "t": "Hymn 37",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=37"
+  },
+  {
+   "n": 38,
+   "t": "Hymn 38",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=38"
+  },
+  {
+   "n": 39,
+   "t": "Hymn 39",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=39"
+  },
+  {
+   "n": 40,
+   "t": "Hymn 40",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=40"
+  },
+  {
+   "n": 41,
+   "t": "Hymn 41",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=41"
+  },
+  {
+   "n": 42,
+   "t": "Hymn 42",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=42"
+  },
+  {
+   "n": 43,
+   "t": "Hymn 43",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=43"
+  },
+  {
+   "n": 44,
+   "t": "Hymn 44",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=44"
+  },
+  {
+   "n": 45,
+   "t": "Hymn 45",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=45"
+  },
+  {
+   "n": 46,
+   "t": "Hymn 46",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=46"
+  },
+  {
+   "n": 47,
+   "t": "Hymn 47",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=47"
+  },
+  {
+   "n": 48,
+   "t": "Hymn 48",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=48"
+  },
+  {
+   "n": 49,
+   "t": "Hymn 49",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=49"
+  },
+  {
+   "n": 50,
+   "t": "Hymn 50",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=50"
+  },
+  {
+   "n": 51,
+   "t": "Hymn 51",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=51"
+  },
+  {
+   "n": 52,
+   "t": "Hymn 52",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=52"
+  },
+  {
+   "n": 53,
+   "t": "Hymn 53",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=53"
+  },
+  {
+   "n": 54,
+   "t": "Hymn 54",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=54"
+  },
+  {
+   "n": 55,
+   "t": "Hymn 55",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=55"
+  },
+  {
+   "n": 56,
+   "t": "Hymn 56",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=56"
+  },
+  {
+   "n": 57,
+   "t": "Hymn 57",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=57"
+  },
+  {
+   "n": 58,
+   "t": "Hymn 58",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=58"
+  },
+  {
+   "n": 59,
+   "t": "Hymn 59",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=59"
+  },
+  {
+   "n": 60,
+   "t": "Hymn 60",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=60"
+  },
+  {
+   "n": 61,
+   "t": "Hymn 61",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=61"
+  },
+  {
+   "n": 62,
+   "t": "Hymn 62",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=62"
+  },
+  {
+   "n": 63,
+   "t": "Hymn 63",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=63"
+  },
+  {
+   "n": 64,
+   "t": "Hymn 64",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=64"
+  },
+  {
+   "n": 65,
+   "t": "Hymn 65",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=65"
+  },
+  {
+   "n": 66,
+   "t": "Hymn 66",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=66"
+  },
+  {
+   "n": 67,
+   "t": "Hymn 67",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=67"
+  },
+  {
+   "n": 68,
+   "t": "Hymn 68",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=68"
+  },
+  {
+   "n": 69,
+   "t": "Hymn 69",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=69"
+  },
+  {
+   "n": 70,
+   "t": "Hymn 70",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=70"
+  },
+  {
+   "n": 71,
+   "t": "Hymn 71",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=71"
+  },
+  {
+   "n": 72,
+   "t": "Hymn 72",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=72"
+  },
+  {
+   "n": 73,
+   "t": "Hymn 73",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=73"
+  },
+  {
+   "n": 74,
+   "t": "Hymn 74",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=74"
+  },
+  {
+   "n": 75,
+   "t": "Hymn 75",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=75"
+  },
+  {
+   "n": 76,
+   "t": "Hymn 76",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=76"
+  },
+  {
+   "n": 77,
+   "t": "Hymn 77",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=77"
+  },
+  {
+   "n": 78,
+   "t": "Hymn 78",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=78"
+  },
+  {
+   "n": 79,
+   "t": "Hymn 79",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=79"
+  },
+  {
+   "n": 80,
+   "t": "Hymn 80",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=80"
+  },
+  {
+   "n": 81,
+   "t": "Hymn 81",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=81"
+  },
+  {
+   "n": 82,
+   "t": "Hymn 82",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=82"
+  },
+  {
+   "n": 83,
+   "t": "Hymn 83",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=83"
+  },
+  {
+   "n": 84,
+   "t": "Hymn 84",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=84"
+  },
+  {
+   "n": 85,
+   "t": "Hymn 85",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=85"
+  },
+  {
+   "n": 86,
+   "t": "Hymn 86",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=86"
+  },
+  {
+   "n": 87,
+   "t": "Hymn 87",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=87"
+  },
+  {
+   "n": 88,
+   "t": "Hymn 88",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=88"
+  },
+  {
+   "n": 89,
+   "t": "Hymn 89",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=89"
+  },
+  {
+   "n": 90,
+   "t": "Hymn 90",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=90"
+  },
+  {
+   "n": 91,
+   "t": "Hymn 91",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=91"
+  },
+  {
+   "n": 92,
+   "t": "Hymn 92",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=92"
+  },
+  {
+   "n": 93,
+   "t": "Hymn 93",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=93"
+  },
+  {
+   "n": 94,
+   "t": "Hymn 94",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=94"
+  },
+  {
+   "n": 95,
+   "t": "Hymn 95",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=95"
+  },
+  {
+   "n": 96,
+   "t": "Hymn 96",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=96"
+  },
+  {
+   "n": 97,
+   "t": "Hymn 97",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=97"
+  },
+  {
+   "n": 98,
+   "t": "Hymn 98",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=98"
+  },
+  {
+   "n": 99,
+   "t": "Hymn 99",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=99"
+  },
+  {
+   "n": 100,
+   "t": "Hymn 100",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=100"
+  },
+  {
+   "n": 101,
+   "t": "Hymn 101",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=101"
+  },
+  {
+   "n": 102,
+   "t": "Hymn 102",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=102"
+  },
+  {
+   "n": 103,
+   "t": "Hymn 103",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=103"
+  },
+  {
+   "n": 104,
+   "t": "Hymn 104",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=104"
+  },
+  {
+   "n": 105,
+   "t": "Hymn 105",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=105"
+  },
+  {
+   "n": 106,
+   "t": "Hymn 106",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=106"
+  },
+  {
+   "n": 107,
+   "t": "Hymn 107",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=107"
+  },
+  {
+   "n": 108,
+   "t": "Hymn 108",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=108"
+  },
+  {
+   "n": 109,
+   "t": "Hymn 109",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=109"
+  },
+  {
+   "n": 110,
+   "t": "Hymn 110",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=110"
+  },
+  {
+   "n": 111,
+   "t": "Hymn 111",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=111"
+  },
+  {
+   "n": 112,
+   "t": "Hymn 112",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=112"
+  },
+  {
+   "n": 113,
+   "t": "Hymn 113",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=113"
+  },
+  {
+   "n": 114,
+   "t": "Hymn 114",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=114"
+  },
+  {
+   "n": 115,
+   "t": "Hymn 115",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=115"
+  },
+  {
+   "n": 116,
+   "t": "Hymn 116",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=116"
+  },
+  {
+   "n": 117,
+   "t": "Hymn 117",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=117"
+  },
+  {
+   "n": 118,
+   "t": "Hymn 118",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=118"
+  },
+  {
+   "n": 119,
+   "t": "Hymn 119",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=119"
+  },
+  {
+   "n": 120,
+   "t": "Hymn 120",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=120"
+  },
+  {
+   "n": 121,
+   "t": "Hymn 121",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=121"
+  },
+  {
+   "n": 122,
+   "t": "Hymn 122",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=122"
+  },
+  {
+   "n": 123,
+   "t": "Hymn 123",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=123"
+  },
+  {
+   "n": 124,
+   "t": "Hymn 124",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=124"
+  },
+  {
+   "n": 125,
+   "t": "Hymn 125",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=125"
+  },
+  {
+   "n": 126,
+   "t": "Hymn 126",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=126"
+  },
+  {
+   "n": 127,
+   "t": "Hymn 127",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=127"
+  },
+  {
+   "n": 128,
+   "t": "Hymn 128",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=128"
+  },
+  {
+   "n": 129,
+   "t": "Hymn 129",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=129"
+  },
+  {
+   "n": 130,
+   "t": "Hymn 130",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=130"
+  },
+  {
+   "n": 131,
+   "t": "Hymn 131",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=131"
+  },
+  {
+   "n": 132,
+   "t": "Hymn 132",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=132"
+  },
+  {
+   "n": 133,
+   "t": "Hymn 133",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=133"
+  },
+  {
+   "n": 134,
+   "t": "Hymn 134",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=134"
+  },
+  {
+   "n": 135,
+   "t": "Hymn 135",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=135"
+  },
+  {
+   "n": 136,
+   "t": "Hymn 136",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=136"
+  },
+  {
+   "n": 137,
+   "t": "Hymn 137",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=137"
+  },
+  {
+   "n": 138,
+   "t": "Hymn 138",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=138"
+  },
+  {
+   "n": 139,
+   "t": "Hymn 139",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=139"
+  },
+  {
+   "n": 140,
+   "t": "Hymn 140",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=140"
+  },
+  {
+   "n": 141,
+   "t": "Hymn 141",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=141"
+  },
+  {
+   "n": 142,
+   "t": "Hymn 142",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=142"
+  },
+  {
+   "n": 143,
+   "t": "Hymn 143",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=143"
+  },
+  {
+   "n": 144,
+   "t": "Hymn 144",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=144"
+  },
+  {
+   "n": 145,
+   "t": "Hymn 145",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=145"
+  },
+  {
+   "n": 146,
+   "t": "Hymn 146",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=146"
+  },
+  {
+   "n": 147,
+   "t": "Hymn 147",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=147"
+  },
+  {
+   "n": 148,
+   "t": "Hymn 148",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=148"
+  },
+  {
+   "n": 149,
+   "t": "Hymn 149",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=149"
+  },
+  {
+   "n": 150,
+   "t": "Hymn 150",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=150"
+  },
+  {
+   "n": 151,
+   "t": "Hymn 151",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=151"
+  },
+  {
+   "n": 152,
+   "t": "Hymn 152",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=152"
+  },
+  {
+   "n": 153,
+   "t": "Hymn 153",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=153"
+  },
+  {
+   "n": 154,
+   "t": "Hymn 154",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=154"
+  },
+  {
+   "n": 155,
+   "t": "Hymn 155",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=155"
+  },
+  {
+   "n": 156,
+   "t": "Hymn 156",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=156"
+  },
+  {
+   "n": 157,
+   "t": "Hymn 157",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=157"
+  },
+  {
+   "n": 158,
+   "t": "Hymn 158",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=158"
+  },
+  {
+   "n": 159,
+   "t": "Hymn 159",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=159"
+  },
+  {
+   "n": 160,
+   "t": "Hymn 160",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=160"
+  },
+  {
+   "n": 161,
+   "t": "Hymn 161",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=161"
+  },
+  {
+   "n": 162,
+   "t": "Hymn 162",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=162"
+  },
+  {
+   "n": 163,
+   "t": "Hymn 163",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=163"
+  },
+  {
+   "n": 164,
+   "t": "Hymn 164",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=164"
+  },
+  {
+   "n": 165,
+   "t": "Hymn 165",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=165"
+  },
+  {
+   "n": 166,
+   "t": "Hymn 166",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=166"
+  },
+  {
+   "n": 167,
+   "t": "Hymn 167",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=167"
+  },
+  {
+   "n": 168,
+   "t": "Hymn 168",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=168"
+  },
+  {
+   "n": 169,
+   "t": "Hymn 169",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=169"
+  },
+  {
+   "n": 170,
+   "t": "Hymn 170",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=170"
+  },
+  {
+   "n": 171,
+   "t": "Hymn 171",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=171"
+  },
+  {
+   "n": 172,
+   "t": "Hymn 172",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=172"
+  },
+  {
+   "n": 173,
+   "t": "Hymn 173",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=173"
+  },
+  {
+   "n": 174,
+   "t": "Hymn 174",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=174"
+  },
+  {
+   "n": 175,
+   "t": "Hymn 175",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=175"
+  },
+  {
+   "n": 176,
+   "t": "Hymn 176",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=176"
+  },
+  {
+   "n": 177,
+   "t": "Hymn 177",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=177"
+  },
+  {
+   "n": 178,
+   "t": "Hymn 178",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=178"
+  },
+  {
+   "n": 179,
+   "t": "Hymn 179",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=179"
+  },
+  {
+   "n": 180,
+   "t": "Hymn 180",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=180"
+  },
+  {
+   "n": 181,
+   "t": "Hymn 181",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=181"
+  },
+  {
+   "n": 182,
+   "t": "Hymn 182",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=182"
+  },
+  {
+   "n": 183,
+   "t": "Hymn 183",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=183"
+  },
+  {
+   "n": 184,
+   "t": "Hymn 184",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=184"
+  },
+  {
+   "n": 185,
+   "t": "Hymn 185",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=185"
+  },
+  {
+   "n": 186,
+   "t": "Hymn 186",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=186"
+  },
+  {
+   "n": 187,
+   "t": "Hymn 187",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=187"
+  },
+  {
+   "n": 188,
+   "t": "Hymn 188",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=188"
+  },
+  {
+   "n": 189,
+   "t": "Hymn 189",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=189"
+  },
+  {
+   "n": 190,
+   "t": "Hymn 190",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=190"
+  },
+  {
+   "n": 191,
+   "t": "Hymn 191",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=191"
+  },
+  {
+   "n": 192,
+   "t": "Hymn 192",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=192"
+  },
+  {
+   "n": 193,
+   "t": "Hymn 193",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=193"
+  },
+  {
+   "n": 194,
+   "t": "Hymn 194",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=194"
+  },
+  {
+   "n": 195,
+   "t": "Hymn 195",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=195"
+  },
+  {
+   "n": 196,
+   "t": "Hymn 196",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=196"
+  },
+  {
+   "n": 197,
+   "t": "Hymn 197",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=197"
+  },
+  {
+   "n": 198,
+   "t": "Hymn 198",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=198"
+  },
+  {
+   "n": 199,
+   "t": "Hymn 199",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=199"
+  },
+  {
+   "n": 200,
+   "t": "Hymn 200",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=200"
+  },
+  {
+   "n": 201,
+   "t": "Hymn 201",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=201"
+  },
+  {
+   "n": 202,
+   "t": "Hymn 202",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=202"
+  },
+  {
+   "n": 203,
+   "t": "Hymn 203",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=203"
+  },
+  {
+   "n": 204,
+   "t": "Hymn 204",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=204"
+  },
+  {
+   "n": 205,
+   "t": "Hymn 205",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=205"
+  },
+  {
+   "n": 206,
+   "t": "Hymn 206",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=206"
+  },
+  {
+   "n": 207,
+   "t": "Hymn 207",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=207"
+  },
+  {
+   "n": 208,
+   "t": "Hymn 208",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=208"
+  },
+  {
+   "n": 209,
+   "t": "Hymn 209",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=209"
+  },
+  {
+   "n": 210,
+   "t": "Hymn 210",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=210"
+  },
+  {
+   "n": 211,
+   "t": "Hymn 211",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=211"
+  },
+  {
+   "n": 212,
+   "t": "Hymn 212",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=212"
+  },
+  {
+   "n": 213,
+   "t": "Hymn 213",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=213"
+  },
+  {
+   "n": 214,
+   "t": "Hymn 214",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=214"
+  },
+  {
+   "n": 215,
+   "t": "Hymn 215",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=215"
+  },
+  {
+   "n": 216,
+   "t": "Hymn 216",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=216"
+  },
+  {
+   "n": 217,
+   "t": "Hymn 217",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=217"
+  },
+  {
+   "n": 218,
+   "t": "Hymn 218",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=218"
+  },
+  {
+   "n": 219,
+   "t": "Hymn 219",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=219"
+  },
+  {
+   "n": 220,
+   "t": "Hymn 220",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=220"
+  },
+  {
+   "n": 221,
+   "t": "Hymn 221",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=221"
+  },
+  {
+   "n": 222,
+   "t": "Hymn 222",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=222"
+  },
+  {
+   "n": 223,
+   "t": "Hymn 223",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=223"
+  },
+  {
+   "n": 224,
+   "t": "Hymn 224",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=224"
+  },
+  {
+   "n": 225,
+   "t": "Hymn 225",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=225"
+  },
+  {
+   "n": 226,
+   "t": "Hymn 226",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=226"
+  },
+  {
+   "n": 227,
+   "t": "Hymn 227",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=227"
+  },
+  {
+   "n": 228,
+   "t": "Hymn 228",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=228"
+  },
+  {
+   "n": 229,
+   "t": "Hymn 229",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=229"
+  },
+  {
+   "n": 230,
+   "t": "Hymn 230",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=230"
+  },
+  {
+   "n": 231,
+   "t": "Hymn 231",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=231"
+  },
+  {
+   "n": 232,
+   "t": "Hymn 232",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=232"
+  },
+  {
+   "n": 233,
+   "t": "Hymn 233",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=233"
+  },
+  {
+   "n": 234,
+   "t": "Hymn 234",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=234"
+  },
+  {
+   "n": 235,
+   "t": "Hymn 235",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=235"
+  },
+  {
+   "n": 236,
+   "t": "Hymn 236",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=236"
+  },
+  {
+   "n": 237,
+   "t": "Hymn 237",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=237"
+  },
+  {
+   "n": 238,
+   "t": "Hymn 238",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=238"
+  },
+  {
+   "n": 239,
+   "t": "Hymn 239",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=239"
+  },
+  {
+   "n": 240,
+   "t": "Hymn 240",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=240"
+  },
+  {
+   "n": 241,
+   "t": "Hymn 241",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=241"
+  },
+  {
+   "n": 242,
+   "t": "Hymn 242",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=242"
+  },
+  {
+   "n": 243,
+   "t": "Hymn 243",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=243"
+  },
+  {
+   "n": 244,
+   "t": "Hymn 244",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=244"
+  },
+  {
+   "n": 245,
+   "t": "Hymn 245",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=245"
+  },
+  {
+   "n": 246,
+   "t": "Hymn 246",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=246"
+  },
+  {
+   "n": 247,
+   "t": "Hymn 247",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=247"
+  },
+  {
+   "n": 248,
+   "t": "Hymn 248",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=248"
+  },
+  {
+   "n": 249,
+   "t": "Hymn 249",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=249"
+  },
+  {
+   "n": 250,
+   "t": "Hymn 250",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=250"
+  },
+  {
+   "n": 251,
+   "t": "Hymn 251",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=251"
+  },
+  {
+   "n": 252,
+   "t": "Hymn 252",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=252"
+  },
+  {
+   "n": 253,
+   "t": "Hymn 253",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=253"
+  },
+  {
+   "n": 254,
+   "t": "Hymn 254",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=254"
+  },
+  {
+   "n": 255,
+   "t": "Hymn 255",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=255"
+  },
+  {
+   "n": 256,
+   "t": "Hymn 256",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=256"
+  },
+  {
+   "n": 257,
+   "t": "Hymn 257",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=257"
+  },
+  {
+   "n": 258,
+   "t": "Hymn 258",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=258"
+  },
+  {
+   "n": 259,
+   "t": "Hymn 259",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=259"
+  },
+  {
+   "n": 260,
+   "t": "Hymn 260",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=260"
+  },
+  {
+   "n": 261,
+   "t": "Hymn 261",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=261"
+  },
+  {
+   "n": 262,
+   "t": "Hymn 262",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=262"
+  },
+  {
+   "n": 263,
+   "t": "Hymn 263",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=263"
+  },
+  {
+   "n": 264,
+   "t": "Hymn 264",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=264"
+  },
+  {
+   "n": 265,
+   "t": "Hymn 265",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=265"
+  },
+  {
+   "n": 266,
+   "t": "Hymn 266",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=266"
+  },
+  {
+   "n": 267,
+   "t": "Hymn 267",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=267"
+  },
+  {
+   "n": 268,
+   "t": "Hymn 268",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=268"
+  },
+  {
+   "n": 269,
+   "t": "Hymn 269",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=269"
+  },
+  {
+   "n": 270,
+   "t": "Hymn 270",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=270"
+  },
+  {
+   "n": 271,
+   "t": "Hymn 271",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=271"
+  },
+  {
+   "n": 272,
+   "t": "Hymn 272",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=272"
+  },
+  {
+   "n": 273,
+   "t": "Hymn 273",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=273"
+  },
+  {
+   "n": 274,
+   "t": "Hymn 274",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=274"
+  },
+  {
+   "n": 275,
+   "t": "Hymn 275",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=275"
+  },
+  {
+   "n": 276,
+   "t": "Hymn 276",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=276"
+  },
+  {
+   "n": 277,
+   "t": "Hymn 277",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=277"
+  },
+  {
+   "n": 278,
+   "t": "Hymn 278",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=278"
+  },
+  {
+   "n": 279,
+   "t": "Hymn 279",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=279"
+  },
+  {
+   "n": 280,
+   "t": "Hymn 280",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=280"
+  },
+  {
+   "n": 281,
+   "t": "Hymn 281",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=281"
+  },
+  {
+   "n": 282,
+   "t": "Hymn 282",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=282"
+  },
+  {
+   "n": 283,
+   "t": "Hymn 283",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=283"
+  },
+  {
+   "n": 284,
+   "t": "Hymn 284",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=284"
+  },
+  {
+   "n": 285,
+   "t": "Hymn 285",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=285"
+  },
+  {
+   "n": 286,
+   "t": "Hymn 286",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=286"
+  },
+  {
+   "n": 287,
+   "t": "Hymn 287",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=287"
+  },
+  {
+   "n": 288,
+   "t": "Hymn 288",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=288"
+  },
+  {
+   "n": 289,
+   "t": "Hymn 289",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=289"
+  },
+  {
+   "n": 290,
+   "t": "Hymn 290",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=290"
+  },
+  {
+   "n": 291,
+   "t": "Hymn 291",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=291"
+  },
+  {
+   "n": 292,
+   "t": "Hymn 292",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=292"
+  },
+  {
+   "n": 293,
+   "t": "Hymn 293",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=293"
+  },
+  {
+   "n": 294,
+   "t": "Hymn 294",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=294"
+  },
+  {
+   "n": 295,
+   "t": "Hymn 295",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=295"
+  },
+  {
+   "n": 296,
+   "t": "Hymn 296",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=296"
+  },
+  {
+   "n": 297,
+   "t": "Hymn 297",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=297"
+  },
+  {
+   "n": 298,
+   "t": "Hymn 298",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=298"
+  },
+  {
+   "n": 299,
+   "t": "Hymn 299",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=299"
+  },
+  {
+   "n": 300,
+   "t": "Hymn 300",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=300"
+  },
+  {
+   "n": 301,
+   "t": "Hymn 301",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=301"
+  },
+  {
+   "n": 302,
+   "t": "Hymn 302",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=302"
+  },
+  {
+   "n": 303,
+   "t": "Hymn 303",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=303"
+  },
+  {
+   "n": 304,
+   "t": "Hymn 304",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=304"
+  },
+  {
+   "n": 305,
+   "t": "Hymn 305",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=305"
+  },
+  {
+   "n": 306,
+   "t": "Hymn 306",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=306"
+  },
+  {
+   "n": 307,
+   "t": "Hymn 307",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=307"
+  },
+  {
+   "n": 308,
+   "t": "Hymn 308",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=308"
+  },
+  {
+   "n": 309,
+   "t": "Hymn 309",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=309"
+  },
+  {
+   "n": 310,
+   "t": "Hymn 310",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=310"
+  },
+  {
+   "n": 311,
+   "t": "Hymn 311",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=311"
+  },
+  {
+   "n": 312,
+   "t": "Hymn 312",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=312"
+  },
+  {
+   "n": 313,
+   "t": "Hymn 313",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=313"
+  },
+  {
+   "n": 314,
+   "t": "Hymn 314",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=314"
+  },
+  {
+   "n": 315,
+   "t": "Hymn 315",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=315"
+  },
+  {
+   "n": 316,
+   "t": "Hymn 316",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=316"
+  },
+  {
+   "n": 317,
+   "t": "Hymn 317",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=317"
+  },
+  {
+   "n": 318,
+   "t": "Hymn 318",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=318"
+  },
+  {
+   "n": 319,
+   "t": "Hymn 319",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=319"
+  },
+  {
+   "n": 320,
+   "t": "Hymn 320",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=320"
+  },
+  {
+   "n": 321,
+   "t": "Hymn 321",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=321"
+  },
+  {
+   "n": 322,
+   "t": "Hymn 322",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=322"
+  },
+  {
+   "n": 323,
+   "t": "Hymn 323",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=323"
+  },
+  {
+   "n": 324,
+   "t": "Hymn 324",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=324"
+  },
+  {
+   "n": 325,
+   "t": "Hymn 325",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=325"
+  },
+  {
+   "n": 326,
+   "t": "Hymn 326",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=326"
+  },
+  {
+   "n": 327,
+   "t": "Hymn 327",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=327"
+  },
+  {
+   "n": 328,
+   "t": "Hymn 328",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=328"
+  },
+  {
+   "n": 329,
+   "t": "Hymn 329",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=329"
+  },
+  {
+   "n": 330,
+   "t": "Hymn 330",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=330"
+  },
+  {
+   "n": 331,
+   "t": "Hymn 331",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=331"
+  },
+  {
+   "n": 332,
+   "t": "Hymn 332",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=332"
+  },
+  {
+   "n": 333,
+   "t": "Hymn 333",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=333"
+  },
+  {
+   "n": 334,
+   "t": "Hymn 334",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=334"
+  },
+  {
+   "n": 335,
+   "t": "Hymn 335",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=335"
+  },
+  {
+   "n": 336,
+   "t": "Hymn 336",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=336"
+  },
+  {
+   "n": 337,
+   "t": "Hymn 337",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=337"
+  },
+  {
+   "n": 338,
+   "t": "Hymn 338",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=338"
+  },
+  {
+   "n": 339,
+   "t": "Hymn 339",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=339"
+  },
+  {
+   "n": 340,
+   "t": "Hymn 340",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=340"
+  },
+  {
+   "n": 341,
+   "t": "Hymn 341",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=341"
+  },
+  {
+   "n": 342,
+   "t": "Hymn 342",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=342"
+  },
+  {
+   "n": 343,
+   "t": "Hymn 343",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=343"
+  },
+  {
+   "n": 344,
+   "t": "Hymn 344",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=344"
+  },
+  {
+   "n": 345,
+   "t": "Hymn 345",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=345"
+  },
+  {
+   "n": 346,
+   "t": "Hymn 346",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=346"
+  },
+  {
+   "n": 347,
+   "t": "Hymn 347",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=347"
+  },
+  {
+   "n": 348,
+   "t": "Hymn 348",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=348"
+  },
+  {
+   "n": 349,
+   "t": "Hymn 349",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=349"
+  },
+  {
+   "n": 350,
+   "t": "Hymn 350",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=350"
+  },
+  {
+   "n": 351,
+   "t": "Hymn 351",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=351"
+  },
+  {
+   "n": 352,
+   "t": "Hymn 352",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=352"
+  },
+  {
+   "n": 353,
+   "t": "Hymn 353",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=353"
+  },
+  {
+   "n": 354,
+   "t": "Hymn 354",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=354"
+  },
+  {
+   "n": 355,
+   "t": "Hymn 355",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=355"
+  },
+  {
+   "n": 356,
+   "t": "Hymn 356",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=356"
+  },
+  {
+   "n": 357,
+   "t": "Hymn 357",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=357"
+  },
+  {
+   "n": 358,
+   "t": "Hymn 358",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=358"
+  },
+  {
+   "n": 359,
+   "t": "Hymn 359",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=359"
+  },
+  {
+   "n": 360,
+   "t": "Hymn 360",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=360"
+  },
+  {
+   "n": 361,
+   "t": "Hymn 361",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=361"
+  },
+  {
+   "n": 362,
+   "t": "Hymn 362",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=362"
+  },
+  {
+   "n": 363,
+   "t": "Hymn 363",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=363"
+  },
+  {
+   "n": 364,
+   "t": "Hymn 364",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=364"
+  },
+  {
+   "n": 365,
+   "t": "Hymn 365",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=365"
+  },
+  {
+   "n": 366,
+   "t": "Hymn 366",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=366"
+  },
+  {
+   "n": 367,
+   "t": "Hymn 367",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=367"
+  },
+  {
+   "n": 368,
+   "t": "Hymn 368",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=368"
+  },
+  {
+   "n": 369,
+   "t": "Hymn 369",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=369"
+  },
+  {
+   "n": 370,
+   "t": "Hymn 370",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=370"
+  },
+  {
+   "n": 371,
+   "t": "Hymn 371",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=371"
+  },
+  {
+   "n": 372,
+   "t": "Hymn 372",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=372"
+  },
+  {
+   "n": 373,
+   "t": "Hymn 373",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=373"
+  },
+  {
+   "n": 374,
+   "t": "Hymn 374",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=374"
+  },
+  {
+   "n": 375,
+   "t": "Hymn 375",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=375"
+  },
+  {
+   "n": 376,
+   "t": "Hymn 376",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=376"
+  },
+  {
+   "n": 377,
+   "t": "Hymn 377",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=377"
+  },
+  {
+   "n": 378,
+   "t": "Hymn 378",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=378"
+  },
+  {
+   "n": 379,
+   "t": "Hymn 379",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=379"
+  },
+  {
+   "n": 380,
+   "t": "Hymn 380",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=380"
+  },
+  {
+   "n": 381,
+   "t": "Hymn 381",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=381"
+  },
+  {
+   "n": 382,
+   "t": "Hymn 382",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=382"
+  },
+  {
+   "n": 383,
+   "t": "Hymn 383",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=383"
+  },
+  {
+   "n": 384,
+   "t": "Hymn 384",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=384"
+  },
+  {
+   "n": 385,
+   "t": "Hymn 385",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=385"
+  },
+  {
+   "n": 386,
+   "t": "Hymn 386",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=386"
+  },
+  {
+   "n": 387,
+   "t": "Hymn 387",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=387"
+  },
+  {
+   "n": 388,
+   "t": "Hymn 388",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=388"
+  },
+  {
+   "n": 389,
+   "t": "Hymn 389",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=389"
+  },
+  {
+   "n": 390,
+   "t": "Hymn 390",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=390"
+  },
+  {
+   "n": 391,
+   "t": "Hymn 391",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=391"
+  },
+  {
+   "n": 392,
+   "t": "Hymn 392",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=392"
+  },
+  {
+   "n": 393,
+   "t": "Hymn 393",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=393"
+  },
+  {
+   "n": 394,
+   "t": "Hymn 394",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=394"
+  },
+  {
+   "n": 395,
+   "t": "Hymn 395",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=395"
+  },
+  {
+   "n": 396,
+   "t": "Hymn 396",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=396"
+  },
+  {
+   "n": 397,
+   "t": "Hymn 397",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=397"
+  },
+  {
+   "n": 398,
+   "t": "Hymn 398",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=398"
+  },
+  {
+   "n": 399,
+   "t": "Hymn 399",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=399"
+  },
+  {
+   "n": 400,
+   "t": "Hymn 400",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=400"
+  },
+  {
+   "n": 401,
+   "t": "Hymn 401",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=401"
+  },
+  {
+   "n": 402,
+   "t": "Hymn 402",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=402"
+  },
+  {
+   "n": 403,
+   "t": "Hymn 403",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=403"
+  },
+  {
+   "n": 404,
+   "t": "Hymn 404",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=404"
+  },
+  {
+   "n": 405,
+   "t": "Hymn 405",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=405"
+  },
+  {
+   "n": 406,
+   "t": "Hymn 406",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=406"
+  },
+  {
+   "n": 407,
+   "t": "Hymn 407",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=407"
+  },
+  {
+   "n": 408,
+   "t": "Hymn 408",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=408"
+  },
+  {
+   "n": 409,
+   "t": "Hymn 409",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=409"
+  },
+  {
+   "n": 410,
+   "t": "Hymn 410",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=410"
+  },
+  {
+   "n": 411,
+   "t": "Hymn 411",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=411"
+  },
+  {
+   "n": 412,
+   "t": "Hymn 412",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=412"
+  },
+  {
+   "n": 413,
+   "t": "Hymn 413",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=413"
+  },
+  {
+   "n": 414,
+   "t": "Hymn 414",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=414"
+  },
+  {
+   "n": 415,
+   "t": "Hymn 415",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=415"
+  },
+  {
+   "n": 416,
+   "t": "Hymn 416",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=416"
+  },
+  {
+   "n": 417,
+   "t": "Hymn 417",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=417"
+  },
+  {
+   "n": 418,
+   "t": "Hymn 418",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=418"
+  },
+  {
+   "n": 419,
+   "t": "Hymn 419",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=419"
+  },
+  {
+   "n": 420,
+   "t": "Hymn 420",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=420"
+  },
+  {
+   "n": 421,
+   "t": "Hymn 421",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=421"
+  },
+  {
+   "n": 422,
+   "t": "Hymn 422",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=422"
+  },
+  {
+   "n": 423,
+   "t": "Hymn 423",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=423"
+  },
+  {
+   "n": 424,
+   "t": "Hymn 424",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=424"
+  },
+  {
+   "n": 425,
+   "t": "Hymn 425",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=425"
+  },
+  {
+   "n": 426,
+   "t": "Hymn 426",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=426"
+  },
+  {
+   "n": 427,
+   "t": "Hymn 427",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=427"
+  },
+  {
+   "n": 428,
+   "t": "Hymn 428",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=428"
+  },
+  {
+   "n": 429,
+   "t": "Hymn 429",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=429"
+  },
+  {
+   "n": 430,
+   "t": "Hymn 430",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=430"
+  },
+  {
+   "n": 431,
+   "t": "Hymn 431",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=431"
+  },
+  {
+   "n": 432,
+   "t": "Hymn 432",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=432"
+  },
+  {
+   "n": 433,
+   "t": "Hymn 433",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=433"
+  },
+  {
+   "n": 434,
+   "t": "Hymn 434",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=434"
+  },
+  {
+   "n": 435,
+   "t": "Hymn 435",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=435"
+  },
+  {
+   "n": 436,
+   "t": "Hymn 436",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=436"
+  },
+  {
+   "n": 437,
+   "t": "Hymn 437",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=437"
+  },
+  {
+   "n": 438,
+   "t": "Hymn 438",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=438"
+  },
+  {
+   "n": 439,
+   "t": "Hymn 439",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=439"
+  },
+  {
+   "n": 440,
+   "t": "Hymn 440",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=440"
+  },
+  {
+   "n": 441,
+   "t": "Hymn 441",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=441"
+  },
+  {
+   "n": 442,
+   "t": "Hymn 442",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=442"
+  },
+  {
+   "n": 443,
+   "t": "Hymn 443",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=443"
+  },
+  {
+   "n": 444,
+   "t": "Hymn 444",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=444"
+  },
+  {
+   "n": 445,
+   "t": "Hymn 445",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=445"
+  },
+  {
+   "n": 446,
+   "t": "Hymn 446",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=446"
+  },
+  {
+   "n": 447,
+   "t": "Hymn 447",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=447"
+  },
+  {
+   "n": 448,
+   "t": "Hymn 448",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=448"
+  },
+  {
+   "n": 449,
+   "t": "Hymn 449",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=449"
+  },
+  {
+   "n": 450,
+   "t": "Hymn 450",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=450"
+  },
+  {
+   "n": 451,
+   "t": "Hymn 451",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=451"
+  },
+  {
+   "n": 452,
+   "t": "Hymn 452",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=452"
+  },
+  {
+   "n": 453,
+   "t": "Hymn 453",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=453"
+  },
+  {
+   "n": 454,
+   "t": "Hymn 454",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=454"
+  },
+  {
+   "n": 455,
+   "t": "Hymn 455",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=455"
+  },
+  {
+   "n": 456,
+   "t": "Hymn 456",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=456"
+  },
+  {
+   "n": 457,
+   "t": "Hymn 457",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=457"
+  },
+  {
+   "n": 458,
+   "t": "Hymn 458",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=458"
+  },
+  {
+   "n": 459,
+   "t": "Hymn 459",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=459"
+  },
+  {
+   "n": 460,
+   "t": "Hymn 460",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=460"
+  },
+  {
+   "n": 461,
+   "t": "Hymn 461",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=461"
+  },
+  {
+   "n": 462,
+   "t": "Hymn 462",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=462"
+  },
+  {
+   "n": 463,
+   "t": "Hymn 463",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=463"
+  },
+  {
+   "n": 464,
+   "t": "Hymn 464",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=464"
+  },
+  {
+   "n": 465,
+   "t": "Hymn 465",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=465"
+  },
+  {
+   "n": 466,
+   "t": "Hymn 466",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=466"
+  },
+  {
+   "n": 467,
+   "t": "Hymn 467",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=467"
+  },
+  {
+   "n": 468,
+   "t": "Hymn 468",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=468"
+  },
+  {
+   "n": 469,
+   "t": "Hymn 469",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=469"
+  },
+  {
+   "n": 470,
+   "t": "Hymn 470",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=470"
+  },
+  {
+   "n": 471,
+   "t": "Hymn 471",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=471"
+  },
+  {
+   "n": 472,
+   "t": "Hymn 472",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=472"
+  },
+  {
+   "n": 473,
+   "t": "Hymn 473",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=473"
+  },
+  {
+   "n": 474,
+   "t": "Hymn 474",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=474"
+  },
+  {
+   "n": 475,
+   "t": "Hymn 475",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=475"
+  },
+  {
+   "n": 476,
+   "t": "Hymn 476",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=476"
+  },
+  {
+   "n": 477,
+   "t": "Hymn 477",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=477"
+  },
+  {
+   "n": 478,
+   "t": "Hymn 478",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=478"
+  },
+  {
+   "n": 479,
+   "t": "Hymn 479",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=479"
+  },
+  {
+   "n": 480,
+   "t": "Hymn 480",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=480"
+  },
+  {
+   "n": 481,
+   "t": "Hymn 481",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=481"
+  },
+  {
+   "n": 482,
+   "t": "Hymn 482",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=482"
+  },
+  {
+   "n": 483,
+   "t": "Hymn 483",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=483"
+  },
+  {
+   "n": 484,
+   "t": "Hymn 484",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=484"
+  },
+  {
+   "n": 485,
+   "t": "Hymn 485",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=485"
+  },
+  {
+   "n": 486,
+   "t": "Hymn 486",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=486"
+  },
+  {
+   "n": 487,
+   "t": "Hymn 487",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=487"
+  },
+  {
+   "n": 488,
+   "t": "Hymn 488",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=488"
+  },
+  {
+   "n": 489,
+   "t": "Hymn 489",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=489"
+  },
+  {
+   "n": 490,
+   "t": "Hymn 490",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=490"
+  },
+  {
+   "n": 491,
+   "t": "Hymn 491",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=491"
+  },
+  {
+   "n": 492,
+   "t": "Hymn 492",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=492"
+  },
+  {
+   "n": 493,
+   "t": "Hymn 493",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=493"
+  },
+  {
+   "n": 494,
+   "t": "Hymn 494",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=494"
+  },
+  {
+   "n": 495,
+   "t": "Hymn 495",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=495"
+  },
+  {
+   "n": 496,
+   "t": "Hymn 496",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=496"
+  },
+  {
+   "n": 497,
+   "t": "Hymn 497",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=497"
+  },
+  {
+   "n": 498,
+   "t": "Hymn 498",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=498"
+  },
+  {
+   "n": 499,
+   "t": "Hymn 499",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=499"
+  },
+  {
+   "n": 500,
+   "t": "Hymn 500",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=500"
+  },
+  {
+   "n": 501,
+   "t": "Hymn 501",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=501"
+  },
+  {
+   "n": 502,
+   "t": "Hymn 502",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=502"
+  },
+  {
+   "n": 503,
+   "t": "Hymn 503",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=503"
+  },
+  {
+   "n": 504,
+   "t": "Hymn 504",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=504"
+  },
+  {
+   "n": 505,
+   "t": "Hymn 505",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=505"
+  },
+  {
+   "n": 506,
+   "t": "Hymn 506",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=506"
+  },
+  {
+   "n": 507,
+   "t": "Hymn 507",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=507"
+  },
+  {
+   "n": 508,
+   "t": "Hymn 508",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=508"
+  },
+  {
+   "n": 509,
+   "t": "Hymn 509",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=509"
+  },
+  {
+   "n": 510,
+   "t": "Hymn 510",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=510"
+  },
+  {
+   "n": 511,
+   "t": "Hymn 511",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=511"
+  },
+  {
+   "n": 512,
+   "t": "Hymn 512",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=512"
+  },
+  {
+   "n": 513,
+   "t": "Hymn 513",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=513"
+  },
+  {
+   "n": 514,
+   "t": "Hymn 514",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=514"
+  },
+  {
+   "n": 515,
+   "t": "Hymn 515",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=515"
+  },
+  {
+   "n": 516,
+   "t": "Hymn 516",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=516"
+  },
+  {
+   "n": 517,
+   "t": "Hymn 517",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=517"
+  },
+  {
+   "n": 518,
+   "t": "Hymn 518",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=518"
+  },
+  {
+   "n": 519,
+   "t": "Hymn 519",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=519"
+  },
+  {
+   "n": 520,
+   "t": "Hymn 520",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=520"
+  },
+  {
+   "n": 521,
+   "t": "Hymn 521",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=521"
+  },
+  {
+   "n": 522,
+   "t": "Hymn 522",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=522"
+  },
+  {
+   "n": 523,
+   "t": "Hymn 523",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=523"
+  },
+  {
+   "n": 524,
+   "t": "Hymn 524",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=524"
+  },
+  {
+   "n": 525,
+   "t": "Hymn 525",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=525"
+  },
+  {
+   "n": 526,
+   "t": "Hymn 526",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=526"
+  },
+  {
+   "n": 527,
+   "t": "Hymn 527",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=527"
+  },
+  {
+   "n": 528,
+   "t": "Hymn 528",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=528"
+  },
+  {
+   "n": 529,
+   "t": "Hymn 529",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=529"
+  },
+  {
+   "n": 530,
+   "t": "Hymn 530",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=530"
+  },
+  {
+   "n": 531,
+   "t": "Hymn 531",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=531"
+  },
+  {
+   "n": 532,
+   "t": "Hymn 532",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=532"
+  },
+  {
+   "n": 533,
+   "t": "Hymn 533",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=533"
+  },
+  {
+   "n": 534,
+   "t": "Hymn 534",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=534"
+  },
+  {
+   "n": 535,
+   "t": "Hymn 535",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=535"
+  },
+  {
+   "n": 536,
+   "t": "Hymn 536",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=536"
+  },
+  {
+   "n": 537,
+   "t": "Hymn 537",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=537"
+  },
+  {
+   "n": 538,
+   "t": "Hymn 538",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=538"
+  },
+  {
+   "n": 539,
+   "t": "Hymn 539",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=539"
+  },
+  {
+   "n": 540,
+   "t": "Hymn 540",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=540"
+  },
+  {
+   "n": 541,
+   "t": "Hymn 541",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=541"
+  },
+  {
+   "n": 542,
+   "t": "Hymn 542",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=542"
+  },
+  {
+   "n": 543,
+   "t": "Hymn 543",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=543"
+  },
+  {
+   "n": 544,
+   "t": "Hymn 544",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=544"
+  },
+  {
+   "n": 545,
+   "t": "Hymn 545",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=545"
+  },
+  {
+   "n": 546,
+   "t": "Hymn 546",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=546"
+  },
+  {
+   "n": 547,
+   "t": "Hymn 547",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=547"
+  },
+  {
+   "n": 548,
+   "t": "Hymn 548",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=548"
+  },
+  {
+   "n": 549,
+   "t": "Hymn 549",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=549"
+  },
+  {
+   "n": 550,
+   "t": "Hymn 550",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=550"
+  },
+  {
+   "n": 551,
+   "t": "Hymn 551",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=551"
+  },
+  {
+   "n": 552,
+   "t": "Hymn 552",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=552"
+  },
+  {
+   "n": 553,
+   "t": "Hymn 553",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=553"
+  },
+  {
+   "n": 554,
+   "t": "Hymn 554",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=554"
+  },
+  {
+   "n": 555,
+   "t": "Hymn 555",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=555"
+  },
+  {
+   "n": 556,
+   "t": "Hymn 556",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=556"
+  },
+  {
+   "n": 557,
+   "t": "Hymn 557",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=557"
+  },
+  {
+   "n": 558,
+   "t": "Hymn 558",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=558"
+  },
+  {
+   "n": 559,
+   "t": "Hymn 559",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=559"
+  },
+  {
+   "n": 560,
+   "t": "Hymn 560",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=560"
+  },
+  {
+   "n": 561,
+   "t": "Hymn 561",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=561"
+  },
+  {
+   "n": 562,
+   "t": "Hymn 562",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=562"
+  },
+  {
+   "n": 563,
+   "t": "Hymn 563",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=563"
+  },
+  {
+   "n": 564,
+   "t": "Hymn 564",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=564"
+  },
+  {
+   "n": 565,
+   "t": "Hymn 565",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=565"
+  },
+  {
+   "n": 566,
+   "t": "Hymn 566",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=566"
+  },
+  {
+   "n": 567,
+   "t": "Hymn 567",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=567"
+  },
+  {
+   "n": 568,
+   "t": "Hymn 568",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=568"
+  },
+  {
+   "n": 569,
+   "t": "Hymn 569",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=569"
+  },
+  {
+   "n": 570,
+   "t": "Hymn 570",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=570"
+  },
+  {
+   "n": 571,
+   "t": "Hymn 571",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=571"
+  },
+  {
+   "n": 572,
+   "t": "Hymn 572",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=572"
+  },
+  {
+   "n": 573,
+   "t": "Hymn 573",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=573"
+  },
+  {
+   "n": 574,
+   "t": "Hymn 574",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=574"
+  },
+  {
+   "n": 575,
+   "t": "Hymn 575",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=575"
+  },
+  {
+   "n": 576,
+   "t": "Hymn 576",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=576"
+  },
+  {
+   "n": 577,
+   "t": "Hymn 577",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=577"
+  },
+  {
+   "n": 578,
+   "t": "Hymn 578",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=578"
+  },
+  {
+   "n": 579,
+   "t": "Hymn 579",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=579"
+  },
+  {
+   "n": 580,
+   "t": "Hymn 580",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=580"
+  },
+  {
+   "n": 581,
+   "t": "Hymn 581",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=581"
+  },
+  {
+   "n": 582,
+   "t": "Hymn 582",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=582"
+  },
+  {
+   "n": 583,
+   "t": "Hymn 583",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=583"
+  },
+  {
+   "n": 584,
+   "t": "Hymn 584",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=584"
+  },
+  {
+   "n": 585,
+   "t": "Hymn 585",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=585"
+  },
+  {
+   "n": 586,
+   "t": "Hymn 586",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=586"
+  },
+  {
+   "n": 587,
+   "t": "Hymn 587",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=587"
+  },
+  {
+   "n": 588,
+   "t": "Hymn 588",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=588"
+  },
+  {
+   "n": 589,
+   "t": "Hymn 589",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=589"
+  },
+  {
+   "n": 590,
+   "t": "Hymn 590",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=590"
+  },
+  {
+   "n": 591,
+   "t": "Hymn 591",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=591"
+  },
+  {
+   "n": 592,
+   "t": "Hymn 592",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=592"
+  },
+  {
+   "n": 593,
+   "t": "Hymn 593",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=593"
+  },
+  {
+   "n": 594,
+   "t": "Hymn 594",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=594"
+  },
+  {
+   "n": 595,
+   "t": "Hymn 595",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=595"
+  },
+  {
+   "n": 596,
+   "t": "Hymn 596",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=596"
+  },
+  {
+   "n": 597,
+   "t": "Hymn 597",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=597"
+  },
+  {
+   "n": 598,
+   "t": "Hymn 598",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=598"
+  },
+  {
+   "n": 599,
+   "t": "Hymn 599",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=599"
+  },
+  {
+   "n": 600,
+   "t": "Hymn 600",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=600"
+  },
+  {
+   "n": 601,
+   "t": "Hymn 601",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=601"
+  },
+  {
+   "n": 602,
+   "t": "Hymn 602",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=602"
+  },
+  {
+   "n": 603,
+   "t": "Hymn 603",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=603"
+  },
+  {
+   "n": 604,
+   "t": "Hymn 604",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=604"
+  },
+  {
+   "n": 605,
+   "t": "Hymn 605",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=605"
+  },
+  {
+   "n": 606,
+   "t": "Hymn 606",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=606"
+  },
+  {
+   "n": 607,
+   "t": "Hymn 607",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=607"
+  },
+  {
+   "n": 608,
+   "t": "Hymn 608",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=608"
+  },
+  {
+   "n": 609,
+   "t": "Hymn 609",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=609"
+  },
+  {
+   "n": 610,
+   "t": "Hymn 610",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=610"
+  },
+  {
+   "n": 611,
+   "t": "Hymn 611",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=611"
+  },
+  {
+   "n": 612,
+   "t": "Hymn 612",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=612"
+  },
+  {
+   "n": 613,
+   "t": "Hymn 613",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=613"
+  },
+  {
+   "n": 614,
+   "t": "Hymn 614",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=614"
+  },
+  {
+   "n": 615,
+   "t": "Hymn 615",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=615"
+  },
+  {
+   "n": 616,
+   "t": "Hymn 616",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=616"
+  },
+  {
+   "n": 617,
+   "t": "Hymn 617",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=617"
+  },
+  {
+   "n": 618,
+   "t": "Hymn 618",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=618"
+  },
+  {
+   "n": 619,
+   "t": "Hymn 619",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=619"
+  },
+  {
+   "n": 620,
+   "t": "Hymn 620",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=620"
+  },
+  {
+   "n": 621,
+   "t": "Hymn 621",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=621"
+  },
+  {
+   "n": 622,
+   "t": "Hymn 622",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=622"
+  },
+  {
+   "n": 623,
+   "t": "Hymn 623",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=623"
+  },
+  {
+   "n": 624,
+   "t": "Hymn 624",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=624"
+  },
+  {
+   "n": 625,
+   "t": "Hymn 625",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=625"
+  },
+  {
+   "n": 626,
+   "t": "Hymn 626",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=626"
+  },
+  {
+   "n": 627,
+   "t": "Hymn 627",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=627"
+  },
+  {
+   "n": 628,
+   "t": "Hymn 628",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=628"
+  },
+  {
+   "n": 629,
+   "t": "Hymn 629",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=629"
+  },
+  {
+   "n": 630,
+   "t": "Hymn 630",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=630"
+  },
+  {
+   "n": 631,
+   "t": "Hymn 631",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=631"
+  },
+  {
+   "n": 632,
+   "t": "Hymn 632",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=632"
+  },
+  {
+   "n": 633,
+   "t": "Hymn 633",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=633"
+  },
+  {
+   "n": 634,
+   "t": "Hymn 634",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=634"
+  },
+  {
+   "n": 635,
+   "t": "Hymn 635",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=635"
+  },
+  {
+   "n": 636,
+   "t": "Hymn 636",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=636"
+  },
+  {
+   "n": 637,
+   "t": "Hymn 637",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=637"
+  },
+  {
+   "n": 638,
+   "t": "Hymn 638",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=638"
+  },
+  {
+   "n": 639,
+   "t": "Hymn 639",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=639"
+  },
+  {
+   "n": 640,
+   "t": "Hymn 640",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=640"
+  },
+  {
+   "n": 641,
+   "t": "Hymn 641",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=641"
+  },
+  {
+   "n": 642,
+   "t": "Hymn 642",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=642"
+  },
+  {
+   "n": 643,
+   "t": "Hymn 643",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=643"
+  },
+  {
+   "n": 644,
+   "t": "Hymn 644",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=644"
+  },
+  {
+   "n": 645,
+   "t": "Hymn 645",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=645"
+  },
+  {
+   "n": 646,
+   "t": "Hymn 646",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=646"
+  },
+  {
+   "n": 647,
+   "t": "Hymn 647",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=647"
+  },
+  {
+   "n": 648,
+   "t": "Hymn 648",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=648"
+  },
+  {
+   "n": 649,
+   "t": "Hymn 649",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=649"
+  },
+  {
+   "n": 650,
+   "t": "Hymn 650",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=650"
+  },
+  {
+   "n": 651,
+   "t": "Hymn 651",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=651"
+  },
+  {
+   "n": 652,
+   "t": "Hymn 652",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=652"
+  },
+  {
+   "n": 653,
+   "t": "Hymn 653",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=653"
+  },
+  {
+   "n": 654,
+   "t": "Hymn 654",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=654"
+  },
+  {
+   "n": 655,
+   "t": "Hymn 655",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=655"
+  },
+  {
+   "n": 656,
+   "t": "Hymn 656",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=656"
+  },
+  {
+   "n": 657,
+   "t": "Hymn 657",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=657"
+  },
+  {
+   "n": 658,
+   "t": "Hymn 658",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=658"
+  },
+  {
+   "n": 659,
+   "t": "Hymn 659",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=659"
+  },
+  {
+   "n": 660,
+   "t": "Hymn 660",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=660"
+  },
+  {
+   "n": 661,
+   "t": "Hymn 661",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=661"
+  },
+  {
+   "n": 662,
+   "t": "Hymn 662",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=662"
+  },
+  {
+   "n": 663,
+   "t": "Hymn 663",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=663"
+  },
+  {
+   "n": 664,
+   "t": "Hymn 664",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=664"
+  },
+  {
+   "n": 665,
+   "t": "Hymn 665",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=665"
+  },
+  {
+   "n": 666,
+   "t": "Hymn 666",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=666"
+  },
+  {
+   "n": 667,
+   "t": "Hymn 667",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=667"
+  },
+  {
+   "n": 668,
+   "t": "Hymn 668",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=668"
+  },
+  {
+   "n": 669,
+   "t": "Hymn 669",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=669"
+  },
+  {
+   "n": 670,
+   "t": "Hymn 670",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=670"
+  },
+  {
+   "n": 671,
+   "t": "Hymn 671",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=671"
+  },
+  {
+   "n": 672,
+   "t": "Hymn 672",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=672"
+  },
+  {
+   "n": 673,
+   "t": "Hymn 673",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=673"
+  },
+  {
+   "n": 674,
+   "t": "Hymn 674",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=674"
+  },
+  {
+   "n": 675,
+   "t": "Hymn 675",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=675"
+  },
+  {
+   "n": 676,
+   "t": "Hymn 676",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=676"
+  },
+  {
+   "n": 677,
+   "t": "Hymn 677",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=677"
+  },
+  {
+   "n": 678,
+   "t": "Hymn 678",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=678"
+  },
+  {
+   "n": 679,
+   "t": "Hymn 679",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=679"
+  },
+  {
+   "n": 680,
+   "t": "Hymn 680",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=680"
+  },
+  {
+   "n": 681,
+   "t": "Hymn 681",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=681"
+  },
+  {
+   "n": 682,
+   "t": "Hymn 682",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=682"
+  },
+  {
+   "n": 683,
+   "t": "Hymn 683",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=683"
+  },
+  {
+   "n": 684,
+   "t": "Hymn 684",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=684"
+  },
+  {
+   "n": 685,
+   "t": "Hymn 685",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=685"
+  },
+  {
+   "n": 686,
+   "t": "Hymn 686",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=686"
+  },
+  {
+   "n": 687,
+   "t": "Hymn 687",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=687"
+  },
+  {
+   "n": 688,
+   "t": "Hymn 688",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=688"
+  },
+  {
+   "n": 689,
+   "t": "Hymn 689",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=689"
+  },
+  {
+   "n": 690,
+   "t": "Hymn 690",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=690"
+  },
+  {
+   "n": 691,
+   "t": "Hymn 691",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=691"
+  },
+  {
+   "n": 692,
+   "t": "Hymn 692",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=692"
+  },
+  {
+   "n": 693,
+   "t": "Hymn 693",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=693"
+  },
+  {
+   "n": 694,
+   "t": "Hymn 694",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=694"
+  },
+  {
+   "n": 695,
+   "t": "Hymn 695",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=695"
+  },
+  {
+   "n": 696,
+   "t": "Hymn 696",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=696"
+  },
+  {
+   "n": 697,
+   "t": "Hymn 697",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=697"
+  },
+  {
+   "n": 698,
+   "t": "Hymn 698",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=698"
+  },
+  {
+   "n": 699,
+   "t": "Hymn 699",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=699"
+  },
+  {
+   "n": 700,
+   "t": "Hymn 700",
+   "a": "",
+   "v": [
+    [
+     "(Lyrics available on sdahymnals.com)",
+     "Open the music link below to hear the hymn."
+    ]
+   ],
+   "music": "https://sdahymnals.com/Hymnal/?s=700"
+  }
+ ]
+}

@@ -5,5 +5,12 @@
   "short": "SDAH",
   "lang": "en",
   "file": "sda-sample.json"
+ },
+ {
+  "id": "sda-online",
+  "name": "SDA Hymnal (online music)",
+  "short": "SDAH",
+  "lang": "en",
+  "file": "sda-online.json"
  }
 ]
