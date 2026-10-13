@@ -7,7 +7,24 @@ import { db } from '../core/db.js';
 import { parseRef, refText, EN } from '../core/books.js';
 
 const TEMPLATES = {
-  'Divine Service': ['Prelude', 'Introit / call to worship', 'Doxology|hymn:694', 'Invocation', 'Hymn of praise', 'Scripture reading', "Children's story", 'Offering', 'Pastoral prayer', 'Special music', 'Sermon', 'Hymn of response', 'Benediction'],
+  'Divine Service': [
+    'Reading of the 4th Commandment',
+    'Sabbath Day hymn',
+    'Praise My Soul',
+    'Opening Prayer',
+    'Scripture Reading',
+    'Scripture from the Bible',
+    'Opening Hymn',
+    'Pastoral Prayer',
+    'Tithes & Offering',
+    "Children's Story",
+    'Special Item',
+    'Welcome & Introduction to Speaker',
+    'Sermon',
+    'Closing Hymn',
+    'Dismiss Us Lord',
+    'Closing Prayer',
+  ],
   'Sabbath School': ['Song service', 'Opening hymn', 'Opening prayer', 'Mission story', 'Lesson study', 'Closing hymn', 'Closing prayer'],
   'Vespers / AY': ['Song service', 'Opening hymn', 'Prayer', 'Scripture', 'Programme', 'Closing hymn', 'Prayer'],
   'Empty plan': [],
