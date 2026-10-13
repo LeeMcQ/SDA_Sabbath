@@ -50,7 +50,21 @@ const BANNER_STYLES = [
   { id: 'gold', name: 'Gold' },
   { id: 'deep', name: 'Deep' },
   { id: 'light', name: 'Light' },
+  { id: 'sunset', name: 'Sunset' },
+  { id: 'nature', name: 'Nature' },
+  { id: 'scripture', name: 'Scripture only' },
+  { id: 'texture', name: 'Soft texture' },
 ];
+
+const HISTORY_KEY = 'selah-ai-history';
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch (e) { return []; }
+}
+function saveHistory(item) {
+  const list = loadHistory();
+  list.unshift(item);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, 12)));
+}
 
 const SAFE_TOPICS = {
   sabbath: {
@@ -144,6 +158,8 @@ export default function create(ctx) {
   BANNER_TEMPLATES.forEach((t) => templateSel.appendChild(h('option', { value: t.id }, t.name)));
   const styleSel = h('select.field', { style: { marginTop: '6px' }, onchange: () => drawBanner() });
   BANNER_STYLES.forEach((s) => styleSel.appendChild(h('option', { value: s.id }, s.name)));
+  const accentInput = h('input', { type: 'color', value: '#d4cfc4', style: { width: '48px', height: '32px', border: '0', background: 'transparent' }, onchange: () => drawBanner() });
+  const historyList = h('div', { style: { marginTop: '10px' } });
 
   const fieldsWrap = h('div.col', { style: { gap: '8px', margin: '8px 0' } });
 
@@ -172,6 +188,10 @@ export default function create(ctx) {
       gold: ['#5c4a1a', '#2a220d'],
       deep: ['#2c1a5c', '#140d2a'],
       light: ['#e8e0d0', '#c9bfa8'],
+      sunset: ['#c45c26', '#4a2a12'],
+      nature: ['#2d5a3d', '#0f2a1a'],
+      scripture: ['#1c1c1c', '#0a0a0a'],
+      texture: ['#3a3a4a', '#1a1a24'],
     };
     const [c1, c2] = palettes[style] || palettes.classic;
     const g = ctx2.createLinearGradient(0, 0, w, hgt);
@@ -191,7 +211,7 @@ export default function create(ctx) {
     ctx2.textAlign = 'center';
     ctx2.textBaseline = 'middle';
 
-    const accent = style === 'light' ? '#6b5a40' : '#d4cfc4';
+    const accent = (accentInput && accentInput.value) || (style === 'light' ? '#6b5a40' : '#d4cfc4');
     const mainSize = vals[0] && vals[0].length > 40 ? 56 : 80;
     ctx2.font = 'bold ' + mainSize + 'px system-ui, sans-serif';
     wrapText(ctx2, vals[0] || t.name, w / 2, hgt * 0.36, w * 0.82, mainSize + 6);
@@ -226,6 +246,76 @@ export default function create(ctx) {
     if (line) lines.push(line.trim());
     const startY = y - ((lines.length - 1) * lineHeight) / 2;
     lines.forEach((ln, i) => ctx2.fillText(ln, x, startY + i * lineHeight));
+  }
+
+  function saveCurrent() {
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        saveHistory({ type: 'banner', title: currentTemplate.name, style: styleSel.value, data: reader.result, ts: Date.now() });
+        showToast('Saved to history.', 'ok');
+        renderHistory();
+      };
+      reader.readAsDataURL(blob);
+    }, 'image/jpeg', 0.85);
+  }
+
+  function makeMultiDeck() {
+    const frames = [];
+    const themes = ['welcome', 'verse', 'offering'];
+    themes.forEach((id) => {
+      const t = BANNER_TEMPLATES.find((x) => x.id === id);
+      if (!t) return;
+      const c = document.createElement('canvas');
+      c.width = 1920; c.height = 1080;
+      const ctx2 = c.getContext('2d');
+      const style = styleSel.value || 'classic';
+      const palettes = { classic: ['#1a3a5c', '#0d1f33'], warm: ['#5c3a1a', '#2a1a0d'], cool: ['#1a4a5c', '#0d2a33'], gold: ['#5c4a1a', '#2a220d'], deep: ['#2c1a5c', '#140d2a'], light: ['#e8e0d0', '#c9bfa8'], sunset: ['#c45c26', '#4a2a12'], nature: ['#2d5a3d', '#0f2a1a'], scripture: ['#1c1c1c', '#0a0a0a'], texture: ['#3a3a4a', '#1a1a24'] };
+      const [c1, c2] = palettes[style] || palettes.classic;
+      const g = ctx2.createLinearGradient(0, 0, c.width, c.height);
+      g.addColorStop(0, c1); g.addColorStop(1, c2);
+      ctx2.fillStyle = g; ctx2.fillRect(0, 0, c.width, c.height);
+      ctx2.fillStyle = style === 'light' ? '#2a2418' : '#f5f0e6';
+      ctx2.textAlign = 'center'; ctx2.textBaseline = 'middle';
+      ctx2.font = 'bold 72px system-ui, sans-serif';
+      ctx2.fillText(t.defaults[0] || t.name, c.width / 2, c.height * 0.4);
+      ctx2.font = '36px system-ui, sans-serif';
+      ctx2.fillStyle = accentInput.value || '#d4cfc4';
+      ctx2.fillText(t.defaults[1] || '', c.width / 2, c.height * 0.55);
+      frames.push(new Promise((res) => c.toBlob((b) => res({ kind: 'image', src: b, fit: 'contain' }), 'image/jpeg', 0.85)));
+    });
+    return Promise.all(frames);
+  }
+
+  function presentMulti() {
+    makeMultiDeck().then((frames) => {
+      const cue = { tab: 'ai', title: 'Service pack', sub: '3 slides', deck: { kind: 'image', frames } };
+      ctx.setStaged('ai', cue);
+      live.take(cue);
+      showToast('3-slide pack presented.', 'ok');
+    });
+  }
+
+  function renderHistory() {
+    clear(historyList);
+    const list = loadHistory();
+    if (!list.length) { historyList.append(h('p.note', 'No recent generations yet.')); return; }
+    list.forEach((it) => {
+      const row = h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid var(--line)' } },
+        it.data ? h('img', { src: it.data, style: { width: '64px', height: '36px', objectFit: 'cover', borderRadius: '4px' } }) : null,
+        h('span.grow', it.title + ' · ' + new Date(it.ts).toLocaleTimeString()),
+        btn('present', 'Present', () => {
+          if (it.data) {
+            fetch(it.data).then((r) => r.blob()).then((blob) => {
+              const cue = { tab: 'ai', title: it.title, sub: 'Saved', deck: { kind: 'image', frames: [{ kind: 'image', src: blob, fit: 'contain' }] } };
+              ctx.setStaged('ai', cue); live.take(cue);
+            });
+          }
+        })
+      );
+      historyList.append(row);
+    });
   }
 
   function presentBanner() {
@@ -549,11 +639,17 @@ export default function create(ctx) {
         h('label.note', { style: { display: 'block', marginTop: '8px' } }, 'Colour style'),
         styleSel,
         fieldsWrap,
+        h('div.row', { style: { gap: '8px', alignItems: 'center', marginTop: '6px' } },
+          h('label.note', 'Accent'), accentInput),
         h('div.row', { style: { gap: '8px', marginTop: '6px', flexWrap: 'wrap' } },
           btn('reload', 'Preview (offline)', drawBanner),
           btn('present', 'Present offline', presentBanner),
+          btn('present', '3-slide pack', presentMulti),
+          btn('save', 'Save', saveCurrent),
           btn('present', 'AI image (online)', generateOnlineBanner)),
-        preview),
+        preview,
+        h('h4', { style: { margin: '12px 0 4px' } }, 'Recent'),
+        historyList),
       h('div.card', { style: { padding: '12px', border: '1px solid var(--line)', borderRadius: '10px' } },
         h('h3', { style: { margin: '0 0 6px' } }, 'Quick Research'),
         h('p.note', 'Offline uses built-in safe summaries. Online uses your configured LLM for a fresh child-friendly summary.'),
@@ -566,6 +662,7 @@ export default function create(ctx) {
 
   // Initial preview
   setTimeout(drawBanner, 50);
+  renderHistory();
 
   return { el, open() { return null; } };
 }
