@@ -153,6 +153,9 @@ export default function create(ctx) {
       h('label', 'Backup'), h('div.row.wrap',
         h('button.btn.sm', { type: 'button', onclick: exportBackup }, icon('download'), 'Export settings & plans'),
         h('button.btn.sm', { type: 'button', onclick: importBackup }, icon('upload'), 'Import')),
+      h('label', 'Update'), h('div.row.wrap',
+        h('button.btn.sm', { type: 'button', onclick: hardUpdate }, icon('reload'), 'Update & refresh'),
+        h('span.note', 'Clears the app cache and reloads the latest version.')),
       h('label', 'Reset'), h('button.btn.sm.danger', { type: 'button', onclick: async () => { if (await confirmBox('Reset settings?', 'Return all settings to their defaults? Bibles, slides, hymns and plans stay.', 'Reset', true)) { settings.reset(); rebuild(); } } }, 'Reset settings'),
       h('label', 'Version'), h('span.note', 'SDA Sabbath ' + ctx.VERSION)));
     if (navigator.storage && navigator.storage.estimate) {
@@ -274,6 +277,25 @@ export default function create(ctx) {
   });
 
   // How much of the app is stored for offline use (shown even when the download finished in an earlier visit).
+  async function hardUpdate() {
+    if (!(await confirmBox('Update app?', 'This clears the offline cache and reloads the latest version from the server. Your plans, hymns and settings stay on this device.', 'Update', true))) return;
+    toast('Updating…', '', 3000);
+    try {
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+      if (window.caches) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+    } catch (e) { console.warn('update', e); }
+    // Cache-busting reload
+    const u = new URL(location.href);
+    u.searchParams.set('v', Date.now());
+    location.replace(u.href);
+  }
+
   async function offlineStatus() {
     try {
       if (!('serviceWorker' in navigator) || !window.isSecureContext) return 'Offline use needs https:// or the SDA Sabbath companion.';
