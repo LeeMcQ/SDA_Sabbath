@@ -2,7 +2,7 @@
 // Items point to Bible passages, hymns, slides, videos or web pages.
 import { h, clear, uid, readText, download } from '../core/util.js';
 import { icon } from '../core/icons.js';
-import { btn, menu, toast, promptBox, confirmBox, modal, activatable, emptyState } from '../core/ui.js';
+import { btn, menu, toast, promptBox, confirmBox, modal, closeModal, activatable, emptyState } from '../core/ui.js';
 import { db } from '../core/db.js';
 import { parseRef, refText, EN } from '../core/books.js';
 
@@ -241,7 +241,7 @@ export default function create(ctx) {
     refresh();
 
     function pick(ref) {
-      close();
+      closeModal();
       if (target) {
         // Keep the original part name if it was a plain heading, otherwise use the new label.
         const keepName = target.heading || !target.tab || target.tab === 'note';
@@ -275,10 +275,14 @@ export default function create(ctx) {
       }
     }
 
-    const close = modal(title, body, [
-      { label: 'Link', primary: true, onclick: doAdd },
-      { label: 'Cancel', onclick: () => close() },
-    ]);
+    modal({
+      title,
+      body,
+      actions: [
+        { label: 'Link', primary: true, onclick: doAdd },
+        { label: 'Cancel' },
+      ],
+    });
   }
 
   async function addFromText() {
