@@ -5,6 +5,7 @@ import { icon } from '../core/icons.js';
 import { btn, menu, toast, promptBox, confirmBox, modal, closeModal, activatable, emptyState } from '../core/ui.js';
 import { db } from '../core/db.js';
 import { parseRef, refText, EN } from '../core/books.js';
+import { listTranslations, getInfo, versesFor } from '../core/bibledata.js';
 
 const TEMPLATES = {
   'Divine Service': [
@@ -198,10 +199,11 @@ export default function create(ctx) {
     const next = plan.items[i];
     if (d > 0) {
       const label = next.label || 'next item';
-      const ok = await confirmBox('Next item?', 'Go to “' + label + '”?', 'Next', false);
+      const ok = await confirmBox('Next item?', 'Go to “' + label + '” and present it?', 'Next', false);
       if (!ok) return;
     }
-    select(i);
+    const c = await select(i);
+    if (c) live.take(c);
   }
 
   async function linkMedia(replaceIndex) {
@@ -222,9 +224,11 @@ export default function create(ctx) {
     async function refresh() {
       clear(list);
       const k = kindSel.value;
-      input.placeholder = k === 'bible' ? 'e.g. John 3:16 or Psalm 23' : k === 'hymns' ? 'Hymn number (e.g. 73)' : k === 'web' ? 'https://…' : 'Filter…';
+      input.placeholder = k === 'bible' ? 'Or type John 3:16' : k === 'hymns' ? 'Hymn number (e.g. 73)' : k === 'web' ? 'https://…' : 'Filter…';
       input.hidden = k === 'slides' || k === 'video';
-      if (k === 'slides') {
+      if (k === 'bible') {
+        await showBiblePicker();
+      } else if (k === 'slides') {
         const files = (await db.all('files')).filter((f) => f.kind === 'deck').sort((a, b) => (b.added || 0) - (a.added || 0));
         if (!files.length) list.appendChild(h('p.note', 'No slide decks yet. Add some in the Slides tab first.'));
         files.forEach((f) => list.appendChild(h('button', { type: 'button', onclick: () => pick({ tab: 'slides', deck: f.id, label: f.name }) },
@@ -238,9 +242,48 @@ export default function create(ctx) {
         list.appendChild(h('p.note', 'Paste a full https:// link above and press Link.'));
       } else if (k === 'hymns') {
         list.appendChild(h('p.note', 'Type a hymn number above and press Link. The title will be filled in automatically.'));
-      } else {
-        list.appendChild(h('p.note', 'Type a Bible reference above and press Link.'));
       }
+    }
+
+    async function showBiblePicker() {
+      const trs = await listTranslations();
+      const primary = ctx.settings.v.bible.primary;
+      const info = await getInfo(primary);
+      if (!info) { list.appendChild(h('p.note', 'No Bible loaded.')); return; }
+      let book = 43, chapter = 1;
+      const bookSel = h('select.field', { style: { marginBottom: '6px' } });
+      info.books.forEach((b, i) => {
+        if (!b[1]) return;
+        bookSel.appendChild(h('option', { value: i + 1, selected: i + 1 === book }, b[0]));
+      });
+      const chapGrid = h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '4px', margin: '6px 0', maxHeight: '120px', overflow: 'auto' } });
+      const verseList = h('div', { style: { maxHeight: '160px', overflow: 'auto' } });
+      list.append(bookSel, chapGrid, verseList);
+
+      function renderChapters() {
+        clear(chapGrid);
+        const b = info.books[book - 1];
+        for (let c = 1; c <= b[1]; c++) {
+          chapGrid.appendChild(h('button.chip', { type: 'button', 'aria-pressed': String(c === chapter),
+            onclick: () => { chapter = c; renderChapters(); renderVerses(); } }, String(c)));
+        }
+      }
+      async function renderVerses() {
+        clear(verseList);
+        verseList.appendChild(h('p.note', 'Loading…'));
+        const verses = await versesFor(primary, book, [{ c1: chapter, v1: null, c2: chapter, v2: null }]);
+        clear(verseList);
+        if (!verses.length) { verseList.appendChild(h('p.note', 'No verses.')); return; }
+        verses.forEach((v) => {
+          const label = info.names[book - 1] + ' ' + chapter + ':' + v.v;
+          verseList.appendChild(h('button', { type: 'button', style: { display: 'block', width: '100%', textAlign: 'left', marginBottom: '2px' },
+            onclick: () => pick({ tab: 'bible', ref: label, tr: primary, label }) },
+            h('b', v.v + ' '), v.text.replace(/[‹›]/g, '').slice(0, 80)));
+        });
+      }
+      bookSel.onchange = () => { book = +bookSel.value; chapter = 1; renderChapters(); renderVerses(); };
+      renderChapters();
+      renderVerses();
     }
     kindSel.onchange = refresh;
     input.onkeydown = (e) => { if (e.key === 'Enter') doAdd(); };
