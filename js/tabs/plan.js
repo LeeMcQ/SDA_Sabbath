@@ -53,7 +53,7 @@ export default function create(ctx) {
 
   const el = h('section',
     h('div.toolbar', h('h2', 'Plan'), planSel, h('div.grow'), prevBtn, nextBtn, moreBtn),
-    h('div.toolbar', addInput, h('button.btn', { type: 'button', onclick: addFromText }, icon('plus'), 'Add')),
+    h('div.toolbar', addInput, h('button.btn', { type: 'button', onclick: addFromText }, icon('plus'), 'Add'), h('button.btn', { type: 'button', onclick: () => linkMedia() }, icon('link'), 'Link')),
     h('div.scroll', { style: { flex: '1' } }, listEl));
 
   async function load() {
@@ -153,13 +153,14 @@ export default function create(ctx) {
       h('div.row', { onclick: (e) => e.stopPropagation() },
         it.heading ? null : btn('present', 'Present now', () => select(i).then((c) => { if (c) { live.take(c); if (plan.autoAdvance) setTimeout(() => step(1), 400); } }), { cls: 'sm' }),
         btn('edit', 'Role', () => { const r = prompt('Role (e.g. Elder, Deacon, Speaker)', it.role || ''); if (r != null) { it.role = r.trim(); save(); render(); } }, { cls: 'sm' }),
+        btn('link', 'Link media', () => linkMedia(i), { cls: 'sm' }),
         btn('up', 'Move up', () => moveItem(i, -1), { cls: 'sm' }),
         btn('down', 'Move down', () => moveItem(i, 1), { cls: 'sm' }),
         btn('trash', 'Remove', () => { plan.items.splice(i, 1); if (cur >= plan.items.length) cur = plan.items.length - 1; save(); render(); }, { cls: 'sm' })));
       activatable(row);
       listEl.appendChild(row);
     });
-    if (!plan.items.length) listEl.appendChild(h('p.note.pad', 'Empty plan. Type above, or use “Add to plan” in the Bible, Hymns, Slides or Video tabs.'));
+    if (!plan.items.length) listEl.appendChild(h('p.note.pad', 'Empty plan. Type above, use Link to attach Bible verses, hymns, slides, videos or web pages, or use “Add to plan” in the other tabs.'));
   }
 
   function moveItem(i, d) {
@@ -195,6 +196,78 @@ export default function create(ctx) {
     do { i += d; } while (plan.items[i] && plan.items[i].heading);
     if (i < 0 || i >= plan.items.length) { toast(d > 0 ? 'End of the plan.' : 'Start of the plan.'); return; }
     select(i);
+  }
+
+  async function linkMedia(replaceIndex) {
+    if (!plan) { toast('Create a plan first.'); return; }
+    const body = h('div.col', { style: { gap: '12px', minWidth: '280px' } });
+    const kindSel = h('select.field', {},
+      h('option', { value: 'bible' }, 'Bible verse'),
+      h('option', { value: 'hymns' }, 'Hymn'),
+      h('option', { value: 'slides' }, 'Slides'),
+      h('option', { value: 'video' }, 'Video'),
+      h('option', { value: 'web' }, 'Web page / link'));
+    const input = h('input.field', { placeholder: 'John 3:16  or  hymn number' });
+    const list = h('div.list', { style: { maxHeight: '240px', overflow: 'auto' } });
+    body.append(h('label.muted', 'Link'), kindSel, input, list);
+
+    async function refresh() {
+      clear(list);
+      const k = kindSel.value;
+      input.placeholder = k === 'bible' ? 'e.g. John 3:16' : k === 'hymns' ? 'Hymn number or words' : k === 'web' ? 'https://…' : 'Filter…';
+      input.hidden = k === 'slides' || k === 'video';
+      if (k === 'slides') {
+        const files = (await db.all('files')).filter((f) => f.kind === 'deck');
+        if (!files.length) list.appendChild(h('p.note', 'No slide decks yet. Add some in the Slides tab.'));
+        files.forEach((f) => list.appendChild(h('button', { type: 'button', onclick: () => pick({ tab: 'slides', deck: f.id, label: f.name }) },
+          icon('slides'), h('span.grow', f.name), h('span.note', f.count + ' slides'))));
+      } else if (k === 'video') {
+        const files = (await db.all('files')).filter((f) => f.kind === 'media');
+        if (!files.length) list.appendChild(h('p.note', 'No videos yet. Add some in the Video tab.'));
+        files.forEach((f) => list.appendChild(h('button', { type: 'button', onclick: () => pick({ tab: 'video', item: f.id, label: f.name }) },
+          icon('video'), h('span.grow', f.name))));
+      } else if (k === 'web') {
+        list.appendChild(h('p.note', 'Paste a full https:// link and press Add.'));
+      } else {
+        list.appendChild(h('p.note', 'Type a reference and press Add.'));
+      }
+    }
+    kindSel.onchange = refresh;
+    input.onkeydown = (e) => { if (e.key === 'Enter') doAdd(); };
+    refresh();
+
+    function pick(ref) {
+      close();
+      if (replaceIndex != null && plan.items[replaceIndex]) {
+        Object.assign(plan.items[replaceIndex], ref);
+        plan.items[replaceIndex].heading = false;
+        save(); render();
+        toast('Linked.', 'ok');
+      } else {
+        api.addItem(ref);
+      }
+    }
+    function doAdd() {
+      const k = kindSel.value;
+      const v = input.value.trim();
+      if (k === 'bible') {
+        const r = parseRef(v);
+        if (!r) { toast('Could not understand that Bible reference.', 'err'); return; }
+        pick({ tab: 'bible', ref: refText(EN, r.book, r.segs), tr: ctx.settings.v.bible.primary, label: refText(EN, r.book, r.segs) });
+      } else if (k === 'hymns') {
+        const n = parseInt(v, 10);
+        if (!n) { toast('Enter a hymn number.', 'err'); return; }
+        pick({ tab: 'hymns', n, label: 'Hymn ' + n });
+      } else if (k === 'web') {
+        if (!/^https?:\/\//i.test(v)) { toast('Enter a full https:// link.', 'err'); return; }
+        pick({ tab: 'web', url: v, label: v.replace(/^https?:\/\//, '').slice(0, 48) });
+      }
+    }
+
+    const close = modal('Link to plan', body, [
+      { label: 'Add', primary: true, onclick: doAdd },
+      { label: 'Cancel', onclick: () => close() },
+    ]);
   }
 
   async function addFromText() {
