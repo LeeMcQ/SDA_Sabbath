@@ -190,11 +190,17 @@ export default function create(ctx) {
     return c;
   }
 
-  function step(d) {
+  async function step(d) {
     if (!plan) return;
     let i = cur;
     do { i += d; } while (plan.items[i] && plan.items[i].heading);
     if (i < 0 || i >= plan.items.length) { toast(d > 0 ? 'End of the plan.' : 'Start of the plan.'); return; }
+    const next = plan.items[i];
+    if (d > 0) {
+      const label = next.label || 'next item';
+      const ok = await confirmBox('Next item?', 'Go to “' + label + '”?', 'Next', false);
+      if (!ok) return;
+    }
     select(i);
   }
 
