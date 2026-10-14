@@ -1,4 +1,4 @@
-// AI tab: on-the-spot banner / screensaver generator and quick child-safe research summaries.
+// Banner tab: on-the-spot banner / screensaver generator and quick child-safe research summaries.
 // Banner generation is fully offline (canvas). Research uses a built-in safe knowledge base
 // for common topics and produces short, readable slides. Content is filtered for church use.
 import { h, clear, esc } from '../core/util.js';

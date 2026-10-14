@@ -24,7 +24,7 @@ const TABS = [
   { id: 'screen', label: 'PC view', icon: 'pc', load: () => import('./tabs/screen.js') },
   { id: 'plan', label: 'Plan', icon: 'plan', load: () => import('./tabs/plan.js') },
   { id: 'tools', label: 'Tools', icon: 'grid', load: () => import('./tabs/tools.js') },
-  { id: 'ai', label: 'AI', icon: 'search', load: () => import('./tabs/ai.js') },
+  { id: 'ai', label: 'Banner', icon: 'search', load: () => import('./tabs/ai.js') },
   null,
   { id: 'settings', label: 'Settings', icon: 'settings', load: () => import('./tabs/settings.js') },
 ];
