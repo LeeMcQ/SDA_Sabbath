@@ -205,7 +205,8 @@ input[type=range] { accent-color: var(--next); }
 .screen video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
 .screen .screen-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #8a93a3; font-size: 13px; text-align: center; padding: 12px; }
 .mon-strip { display: none; }
-.mon-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.mon-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.mon-actions > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mon-actions .btn { height: 40px; }
 .mon-frames { display: flex; gap: 4px; flex-wrap: wrap; }
 .frame-chip, .mon-frames button { display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 30px; height: 30px; padding: 0 6px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--panel); color: var(--text); font-size: var(--fs-sm); font-weight: 700; flex: none; }
@@ -330,6 +331,16 @@ input[type=range] { accent-color: var(--next); }
   .present { min-width: 220px; }
   .quick { flex-basis: 160px; }
 }
+/* Tablets / 1024 px church PCs: columns may shrink instead of sliding under the Present column. */
+@media (max-width: 1100px) and (min-width: 761px) {
+  .bible-split { grid-template-columns: minmax(0, 1fr) minmax(0, .7fr) minmax(0, 1.5fr); }
+  .hymn-split { grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); }
+  .lib-split, .media-split { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
+}
+@media (max-width: 900px) and (min-width: 761px) {
+  :root { --mon-w: 230px; --rail-w: 72px; }
+  .book-grid { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
+}
 
 /* ---------- Phone ---------- */
 @media (max-width: 760px) {
@@ -353,7 +364,7 @@ input[type=range] { accent-color: var(--next); }
   .rail button { flex: 1 0 44px; padding: 6px 0; font-size: var(--fs-xs); }
   /* Five tabs on phones: Bible, Hymns, Plan, Slides and More (Video, Web, PC view, Settings). */
   .rail button[data-tab="plan"] { order: 3; } .rail button[data-tab="slides"] { order: 4; }
-  .rail button[data-tab="ai"] { order: 2; flex: 1 0 56px; color: var(--next); font-weight: 800; }
+  .rail button[data-tab="ai"] { order: 2; flex: 1 0 56px; }
   .rail button.more-tab { display: none; }
   .rail-nav .rail-more { display: flex; }
   .rail button svg.i { width: 22px; height: 22px; }
@@ -475,3 +486,11 @@ input[type=range] { accent-color: var(--next); }
 .church-logo { width: 36px; height: 36px; border-radius: 8px; object-fit: contain; background: var(--panel); border: 1px solid var(--line); margin-left: 6px; flex: none; }
 /* Hide any browser-injected cast button overlays that land in the page */
 google-cast-launcher, .cast-button, [aria-label*="Cast"], button[title*="Cast"], .presentation-api-button { display: none !important; }
+
+/* ---------- Accessibility additions (2026-10 audit) ---------- */
+.skip-link { position: absolute; left: 8px; top: -60px; z-index: 1000; padding: 10px 14px; border-radius: 8px; background: var(--focus); color: #000; font-weight: 700; text-decoration: none; }
+.skip-link:focus { top: 8px; }
+.work:focus { outline: none; }
+.field.quiet-focus:focus-visible, .toolbar .field.quiet-focus:focus-visible, .pane-h .field.quiet-focus:focus-visible { outline: none; box-shadow: none; }
+/* Small controls: at least 24 px targets (WCAG 2.2 AA 2.5.8). */
+.btn.sm, .chip, input[type=checkbox], input[type=radio] { min-height: 24px; min-width: 24px; }

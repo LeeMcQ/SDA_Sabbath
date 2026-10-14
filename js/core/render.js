@@ -8,6 +8,21 @@
 import { isBlob, esc } from './util.js';
 
 export const STAGE_W = 1920;
+
+/** Defence in depth for imported slide HTML: drop active elements, event handlers and non-http(s)/data URLs. */
+const BAD_TAGS = 'script,iframe,object,embed,link,meta,base,form,frame,frameset,svg,math,template';
+export function sanitizeSlideHtml(html) {
+  const t = document.createElement('template');
+  t.innerHTML = String(html || '');
+  t.content.querySelectorAll(BAD_TAGS).forEach((n) => n.remove());
+  t.content.querySelectorAll('*').forEach((n) => {
+    for (const a of Array.from(n.attributes)) {
+      const name = a.name.toLowerCase(), v = a.value.trim().toLowerCase();
+      if (name.startsWith('on') || ((name === 'src' || name === 'href' || name === 'xlink:href') && !/^(https?:|data:image\/|blob:|#|$)/.test(v)) || (name === 'style' && /url\s*\(\s*['"]?\s*javascript:|expression\s*\(/.test(v))) n.removeAttribute(a.name);
+    }
+  });
+  return t.innerHTML;
+}
 export const stageHeight = (aspect) => Math.round(STAGE_W / (aspect > 0.3 ? aspect : 16 / 9));
 
 function urlFor(src, bag) {
@@ -96,7 +111,7 @@ export async function renderFrame(layer, frame, opts = {}) {
     box.style.width = w + 'px'; box.style.height = hgt + 'px';
     box.style.transform = 'translate(' + (sw - w * sc) / 2 + 'px,' + (sh - hgt * sc) / 2 + 'px) scale(' + sc + ')';
     if (frame.bg) box.style.background = frame.bg;
-    box.innerHTML = frame.html || '';
+    box.innerHTML = sanitizeSlideHtml(frame.html);
     const assets = frame.assets || [];
     box.querySelectorAll('[data-a]').forEach((n) => { n.src = urlFor(assets[+n.getAttribute('data-a')], urls); });
     box.querySelectorAll('[data-abg]').forEach((n) => {

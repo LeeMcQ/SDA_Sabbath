@@ -17,6 +17,8 @@ export default function create(ctx) {
   // ------------------------------------------------------------ toolbar
   const refInput = h('input.field', { type: 'search', placeholder: 'John 3:16-18', style: { width: '200px' }, 'aria-label': 'Bible reference',
     onkeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); goRef(refInput.value, e.ctrlKey || e.metaKey); } } });
+  // Focus that we set ourselves stays quiet until the operator types or clicks.
+  ['keydown', 'pointerdown', 'blur'].forEach((ev) => refInput.addEventListener(ev, () => refInput.classList.remove('quiet-focus')));
   const trSel = h('select.field', { 'aria-label': 'Translation', onchange: () => setTr(trSel.value) });
   const parSel = h('select.field.hide-sm', { 'aria-label': 'Second translation (side by side)', title: 'Show a second translation next to the first', onchange: () => { settings.set('bible.parallel', parSel.value); restage(); } });
   const searchBtn = btn('search', 'Search the Bible', () => setMode(st.mode === 'search' ? 'browse' : 'search'), { cls: 'sm' });
@@ -435,7 +437,7 @@ export default function create(ctx) {
       setMode('browse');
       return goRef(ref);
     },
-    onShow() { if (!st.segs && !noFocus && !ctx.isMobile()) setTimeout(() => refInput.focus(), 50); noFocus = false; },
+    onShow() { if (!st.segs && !noFocus && !ctx.isMobile()) setTimeout(() => { refInput.classList.add('quiet-focus'); refInput.focus(); }, 50); noFocus = false; },
     controls(cue) {
       if (trList.length < 2) return null;
       const box = h('div.row.hide-sm');

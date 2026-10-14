@@ -2,6 +2,7 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' data: blob: https://api.openai.com https://generativelanguage.googleapis.com https://api.x.ai https://api.together.xyz https://openrouter.ai https://api.anthropic.com ws: wss:; frame-src 'self' https: blob:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#161c28">
 <meta name="description" content="SDA Sabbath — offline church presenter for Seventh-day Adventist media teams: Bible, hymns, slides, video, web and screen sharing on a second screen.">
@@ -19,16 +20,10 @@
 <link rel="preload" href="fonts/ahn-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/stage.css">
 <link rel="stylesheet" href="css/app.css">
-<script>
-  // Apply theme before first paint to avoid a flash.
-  try { var s = JSON.parse(localStorage.getItem('selah.settings.v1') || '{}'); var a = s.app || {};
-    document.documentElement.setAttribute('data-theme', a.theme || 'dark');
-    if (a.monitors === false) document.documentElement.classList.add('no-mon'); } catch (e) {}
-  // Nothing is staged or live at start: phones show the slim monitor strip from the first paint (no jump).
-  document.documentElement.classList.add('mon-idle');
-</script>
+<script src="js/theme-init.js"></script>
 </head>
 <body class="app" id="app">
+<a class="skip-link" href="#work">Skip to main content</a>
 <header class="topbar">
   <h1 class="brand"><img src="icons/favicon.svg" alt="" width="30" height="30"><span>SDA Sabbath</span></h1>
   <button class="disp-btn" id="dispBtn" type="button" title="Choose where to present"><span class="dot"></span><span class="lbl">No display</span><span class="lbl-s" aria-hidden="true">No display</span></button>
@@ -46,7 +41,7 @@
   </button>
 </header>
 <nav class="rail-nav" aria-label="Media"><div class="rail" id="rail" role="tablist" aria-label="Media"></div></nav>
-<main class="work" id="work"></main>
+<main class="work" id="work" tabindex="-1"></main>
 <aside class="monitors" id="monitors" aria-label="Next and live"></aside>
 <footer class="ctrlbar" id="ctrlbar" hidden></footer>
 <noscript><p style="padding:24px">SDA Sabbath needs JavaScript turned on.</p></noscript>

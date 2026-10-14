@@ -46,6 +46,38 @@ function load() {
   return v;
 }
 
+/**
+ * Validate settings coming from an imported backup: only known sections, values must match the
+ * default's type, unknown keys may only be short primitives. The AI key is never imported.
+ */
+export function sanitizeImportedSettings(raw) {
+  function walk(base, over, depth) {
+    const out = {};
+    if (!over || typeof over !== 'object' || Array.isArray(over) || depth > 4) return out;
+    for (const k of Object.keys(over)) {
+      if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+      const b = base ? base[k] : undefined, v = over[k];
+      if (b && typeof b === 'object' && !Array.isArray(b)) { out[k] = walk(b, v, depth + 1); continue; }
+      if (Array.isArray(b)) { if (Array.isArray(v)) out[k] = v.filter((x) => x == null || ['string', 'number', 'boolean', 'object'].includes(typeof x)).slice(0, 200); continue; }
+      if (b === null || b === undefined) { if (v === null || (typeof v === 'string' && v.length <= 200) || typeof v === 'number' || typeof v === 'boolean') out[k] = v; continue; }
+      if (typeof v === typeof b && (typeof v !== 'string' || v.length <= 2000)) out[k] = v;
+    }
+    return out;
+  }
+  const out = walk(DEFAULTS, raw, 0);
+  if (out.ai) delete out.ai.apiKey;
+  if (out.companion && out.companion.url && !/^(https?|wss?):\/\//i.test(out.companion.url)) out.companion.url = '';
+  for (const c of ['fg', 'bg', 'accent']) if (out.display && out.display[c] != null && !/^#[0-9a-f]{3,8}$/i.test(out.display[c])) delete out.display[c];
+  return out;
+}
+
+/** Settings for a backup file: never includes the AI key. */
+export function exportableSettings(v) {
+  const o = JSON.parse(JSON.stringify(v));
+  if (o.ai) o.ai.apiKey = '';
+  return o;
+}
+
 export const settings = emitter({ v: load() });
 
 settings.get = (path) => path.split('.').reduce((o, k) => (o == null ? o : o[k]), settings.v);

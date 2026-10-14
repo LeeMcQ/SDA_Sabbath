@@ -57,6 +57,28 @@ const BANNER_STYLES = [
 ];
 
 const HISTORY_KEY = 'selah-ai-history';
+/** Error from an AI provider's HTTP reply, worded for a media volunteer. */
+function aiHttpError(label, status, detail) {
+  let msg;
+  if (status === 401 || status === 403) msg = label.split(' ')[0] + ' refused the API key. Check or replace it in Settings → AI.';
+  else if (status === 429) msg = label.split(' ')[0] + ' says the key is out of credit or over its rate limit. Try again later or check billing.';
+  else if (status === 400 || status === 404) msg = label + ' ' + status + ': the request or model name was not accepted.' + (detail ? ' ' + String(detail).slice(0, 140) : '');
+  else if (status >= 500) msg = label.split(' ')[0] + ' is having problems (' + status + '). Try again in a minute.';
+  else msg = label + ' ' + status + (detail ? ': ' + String(detail).slice(0, 140) : '');
+  const e = new Error(msg); e.status = status; return e;
+}
+
+/** Turn a thrown error into a clear message. Browsers report a refused key as a network/CORS failure. */
+function friendlyAiError(e) {
+  const m = (e && e.message) || String(e);
+  if (e instanceof TypeError || /failed to fetch|networkerror|load failed|cors/i.test(m)) {
+    return navigator.onLine === false
+      ? 'No internet connection. Online AI needs internet; the offline buttons still work.'
+      : 'Could not reach the AI provider. This usually means the API key is wrong or expired (the provider then blocks the request), or the network is down. Check the key in Settings → AI.';
+  }
+  return m;
+}
+
 function loadHistory() {
   try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch (e) { return []; }
 }
@@ -149,16 +171,16 @@ export default function create(ctx) {
   canvas.style.height = 'auto';
   canvas.style.display = 'block';
 
-  const templateSel = h('select.field', {
+  const templateSel = h('select.field', { 'aria-label': 'Banner master style',
     onchange: () => {
       currentTemplate = BANNER_TEMPLATES.find((t) => t.id === templateSel.value) || BANNER_TEMPLATES[0];
       renderFields();
     },
   });
   BANNER_TEMPLATES.forEach((t) => templateSel.appendChild(h('option', { value: t.id }, t.name)));
-  const styleSel = h('select.field', { style: { marginTop: '6px' }, onchange: () => drawBanner() });
+  const styleSel = h('select.field', { 'aria-label': 'Colour style', style: { marginTop: '6px' }, onchange: () => drawBanner() });
   BANNER_STYLES.forEach((s) => styleSel.appendChild(h('option', { value: s.id }, s.name)));
-  const accentInput = h('input', { type: 'color', value: '#d4cfc4', style: { width: '48px', height: '32px', border: '0', background: 'transparent' }, onchange: () => drawBanner() });
+  const accentInput = h('input', { type: 'color', 'aria-label': 'Accent colour', title: 'Accent colour', value: '#d4cfc4', style: { width: '48px', height: '32px', border: '0', background: 'transparent' }, onchange: () => drawBanner() });
   const historyList = h('div', { style: { marginTop: '10px' } });
 
   const fieldsWrap = h('div.col', { style: { gap: '8px', margin: '8px 0' } });
@@ -410,22 +432,22 @@ export default function create(ctx) {
           temperature: 0.4,
         }),
       });
-      if (!r.ok) throw new Error('OpenAI error ' + r.status);
+      if (!r.ok) throw aiHttpError('OpenAI error', r.status);
       const j = await r.json();
       return j.choices?.[0]?.message?.content || '';
     }
 
     if (provider === 'google') {
       const m = model || 'gemini-3.8-flash';
-      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent?key=' + key, {
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
         body: JSON.stringify({
           contents: [{ parts: [{ text: (system ? system + '\n\n' : '') + prompt }] }],
           generationConfig: { temperature: 0.4, maxOutputTokens: 600 },
         }),
       });
-      if (!r.ok) { const t = await r.text().catch(() => ''); throw new Error('Gemini error ' + r.status + (t ? ': ' + t.slice(0, 140) : '')); }
+      if (!r.ok) { const t = await r.text().catch(() => ''); throw aiHttpError('Gemini error', r.status, t); }
       const j = await r.json();
       return j.candidates?.[0]?.content?.parts?.[0]?.text || '';
     }
@@ -445,7 +467,7 @@ export default function create(ctx) {
           temperature: 0.4,
         }),
       });
-      if (!r.ok) throw new Error('Grok error ' + r.status);
+      if (!r.ok) throw aiHttpError('Grok error', r.status);
       return (await r.json()).choices?.[0]?.message?.content || '';
     }
 
@@ -464,7 +486,7 @@ export default function create(ctx) {
           temperature: 0.4,
         }),
       });
-      if (!r.ok) throw new Error('Together error ' + r.status);
+      if (!r.ok) throw aiHttpError('Together error', r.status);
       return (await r.json()).choices?.[0]?.message?.content || '';
     }
 
@@ -483,7 +505,7 @@ export default function create(ctx) {
           temperature: 0.4,
         }),
       });
-      if (!r.ok) throw new Error('OpenRouter error ' + r.status);
+      if (!r.ok) throw aiHttpError('OpenRouter error', r.status);
       return (await r.json()).choices?.[0]?.message?.content || '';
     }
 
@@ -495,6 +517,8 @@ export default function create(ctx) {
           'x-api-key': key,
           'anthropic-version': '2023-06-01',
           'content-type': 'application/json',
+          // Required by Anthropic for calls made straight from a browser with the user's own key.
+          'anthropic-dangerous-direct-browser-access': 'true',
         },
         body: JSON.stringify({
           model: m,
@@ -503,7 +527,7 @@ export default function create(ctx) {
           messages: [{ role: 'user', content: prompt }],
         }),
       });
-      if (!r.ok) throw new Error('Claude error ' + r.status);
+      if (!r.ok) throw aiHttpError('Claude error', r.status);
       const j = await r.json();
       return j.content?.[0]?.text || '';
     }
@@ -527,13 +551,13 @@ export default function create(ctx) {
           headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
           body: JSON.stringify({ model: 'gpt-image-2.5-flare', prompt, n: 1, size: '1792x1024' }),
         });
-        if (!r.ok) throw new Error('OpenAI image ' + r.status);
+        if (!r.ok) throw aiHttpError('OpenAI image', r.status);
         url = (await r.json()).data?.[0]?.url;
       } else if (provider === 'google') {
         // Imagen is shut down. Use the current Gemini native image model.
-        const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-nano-banana-2.1:generateContent?key=' + key, {
+        const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-nano-banana-2.1:generateContent', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt + ' Aspect ratio 16:9, suitable for a church projector.' }] }],
             generationConfig: { responseModalities: ['IMAGE'] },
@@ -541,7 +565,7 @@ export default function create(ctx) {
         });
         if (!r.ok) {
           const errText = await r.text().catch(() => '');
-          throw new Error('Gemini image ' + r.status + (errText ? ': ' + errText.slice(0, 160) : ''));
+          throw aiHttpError('Gemini image', r.status, errText);
         }
         const j = await r.json();
         const parts = j.candidates?.[0]?.content?.parts || [];
@@ -555,7 +579,7 @@ export default function create(ctx) {
           headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
           body: JSON.stringify({ model: 'grok-imagine-image-2.0', prompt, n: 1 }),
         });
-        if (!r.ok) throw new Error('Grok image ' + r.status);
+        if (!r.ok) throw aiHttpError('Grok image', r.status);
         url = (await r.json()).data?.[0]?.url;
       } else if (provider === 'together') {
         const r = await fetch('https://api.together.xyz/v1/images/generations', {
@@ -563,7 +587,7 @@ export default function create(ctx) {
           headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
           body: JSON.stringify({ model: 'black-forest-labs/FLUX.2-dev', prompt, n: 1, width: 1792, height: 1024 }),
         });
-        if (!r.ok) throw new Error('Together image ' + r.status);
+        if (!r.ok) throw aiHttpError('Together image', r.status);
         url = (await r.json()).data?.[0]?.url;
       } else if (provider === 'openrouter') {
         const r = await fetch('https://openrouter.ai/api/v1/images/generations', {
@@ -571,11 +595,12 @@ export default function create(ctx) {
           headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json', 'HTTP-Referer': location.origin },
           body: JSON.stringify({ model: 'black-forest-labs/flux.2-dev', prompt }),
         });
-        if (!r.ok) throw new Error('OpenRouter image ' + r.status);
+        if (!r.ok) throw aiHttpError('OpenRouter image', r.status);
         url = (await r.json()).data?.[0]?.url;
       } else {
         throw new Error('This provider does not support images. Use OpenAI, Gemini, Grok, Together, or OpenRouter.');
       }
+      if (url && !/^(https:|data:image\/)/i.test(url)) url = null;
       if (!url) throw new Error('No image returned');
       const cue = {
         tab: 'ai',
@@ -587,7 +612,7 @@ export default function create(ctx) {
       live.take(cue);
       showToast('AI banner presented.', 'ok');
     } catch (e) {
-      showToast(e.message, 'err');
+      showToast(friendlyAiError(e), 'err');
     }
   }
 
@@ -625,7 +650,7 @@ export default function create(ctx) {
         })
       );
     } catch (e) {
-      showToast(e.message, 'err');
+      showToast(friendlyAiError(e), 'err');
     }
   }
 
