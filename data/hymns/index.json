@@ -1,10 +1,18 @@
 [
- {
-  "id": "sda-online",
-  "name": "SDA Hymnal (full, offline)",
-  "short": "SDAH",
-  "lang": "en",
-  "file": "sda-online.json",
-  "note": "All 698 hymns with lyrics offline. Music links open the source page."
- }
+  {
+    "id": "sda-online",
+    "name": "SDA Hymnal (full, offline)",
+    "short": "SDAH",
+    "lang": "en",
+    "file": "sda-online.json",
+    "note": "All 698 hymns with lyrics offline. Music links open the source page."
+  },
+  {
+    "id": "afrikaans-sda",
+    "name": "Advent Lofliedere (Afrikaans, offline)",
+    "short": "AL",
+    "lang": "af",
+    "file": "afrikaans.json",
+    "note": "All 481 Afrikaans hymns with lyrics offline. Play music opens the source page."
+  }
 ]
