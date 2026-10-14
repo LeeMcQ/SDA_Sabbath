@@ -1,7 +1,7 @@
 // Web tab: show a web page on the screen. Two ways:
 //   • Mirror a browser tab — an exact copy of what you see, without the mouse pointer.
 //   • Embed — the page loads directly on the display (only for sites that allow it, e.g. YouTube).
-import { h, clear } from '../core/util.js';
+import { h, clear, safeHttpUrl } from '../core/util.js';
 import { icon } from '../core/icons.js';
 import { btn, seg, toast, emptyState } from '../core/ui.js';
 import { capture, stopStream, canCapture, attachSurfaceControl } from '../lib/capture.js';
@@ -13,7 +13,8 @@ function youtubeEmbed(url) {
 function normaliseUrl(u) {
   u = (u || '').trim();
   if (!u) return '';
-  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(u)) return u;
+  // Only http(s) pages may load: javascript:, data:, file: etc. are refused.
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(u) || /^\s*(javascript|data|vbscript|file|blob|about):/i.test(u)) return safeHttpUrl(u);
   if (/^[\w-]+(\.[\w-]+)+(:\d+)?(\/.*)?$/.test(u)) return 'https://' + u;
   return 'https://www.google.com/search?q=' + encodeURIComponent(u);
 }
@@ -60,7 +61,7 @@ export default function create(ctx) {
 
   function go() {
     const u = normaliseUrl(url.value);
-    if (!u) return;
+    if (!u) { if (url.value.trim()) toast('Only http:// or https:// web addresses can be opened.', 'err'); return; }
     url.value = u;
     if (mode === 'embed') { frame.src = youtubeEmbed(u) || u; stageEmbed(); }
     else openWindow();

@@ -36,7 +36,7 @@ export default function create(ctx) {
 
   const timerDisplay = h('div', { style: { fontSize: '2.2rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' } }, '00:00');
   const lowerText = h('input.field', { placeholder: 'Lower third text (e.g. John 3:16 or Hymn 73)', style: { width: '100%' } });
-  const lowerKind = h('select.field', { style: { width: '140px' } },
+  const lowerKind = h('select.field', { 'aria-label': 'Lower third type', style: { width: '140px' } },
     h('option', { value: 'scripture' }, 'Scripture'),
     h('option', { value: 'hymn' }, 'Hymn'),
     h('option', { value: 'speaker' }, 'Speaker'),

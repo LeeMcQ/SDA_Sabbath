@@ -29,6 +29,17 @@ export function lyricsText(hy) {
 }
 
 /** Accepts our format, the Liedboek format [{number,title,lyrics}] or {songs:[...]}. */
+/** Safeguard: hymn text is plain text, so turn any HTML entities left in data (&#8217; &amp; …) into characters. */
+const NAMED = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00a0', rsquo: '\u2019', lsquo: '\u2018', rdquo: '\u201d', ldquo: '\u201c', mdash: '\u2014', ndash: '\u2013', hellip: '\u2026' };
+export function decodeEntities(s) {
+  if (typeof s !== 'string' || s.indexOf('&') < 0) return s;
+  return s.replace(/&(#\d+|#x[0-9a-f]+|[a-z]+);/gi, (m, e) => {
+    if (e[0] === '#') { const cp = e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : +e.slice(1); return cp > 0 && cp < 0x110000 ? String.fromCodePoint(cp) : m; }
+    return Object.prototype.hasOwnProperty.call(NAMED, e.toLowerCase()) ? NAMED[e.toLowerCase()] : m;
+  });
+}
+const decodeDeep = (x) => (typeof x === 'string' ? decodeEntities(x) : Array.isArray(x) ? x.map(decodeDeep) : x);
+
 function normaliseBook(j, fallbackName) {
   let hymns = [];
   const list = Array.isArray(j) ? j : j.hymns || j.songs || [];
@@ -39,7 +50,8 @@ function normaliseBook(j, fallbackName) {
       hymns.push({ n: +(x.number || x.n || x.no), t: x.title || x.t || '', a: x.author || '', v: p.v, c: p.c });
     }
   });
-  hymns = hymns.filter((x) => x.n && x.v && x.v.length).sort((a, b) => a.n - b.n);
+  hymns = hymns.filter((x) => x.n && x.v && x.v.length).sort((a, b) => a.n - b.n)
+    .map((x) => Object.assign(x, { t: decodeEntities(x.t || ''), a: decodeEntities(x.a || ''), v: decodeDeep(x.v), c: x.c ? decodeDeep(x.c) : null }));
   return { id: j.id || 'book-' + Date.now().toString(36), name: j.name || fallbackName || 'Imported hymns', short: j.short || '', lang: j.lang || 'en', hymns };
 }
 

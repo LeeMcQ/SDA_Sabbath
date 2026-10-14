@@ -24,7 +24,11 @@ export function enter(el, cls = 'enter', ms = 600) {
 let toastHost;
 export function toast(msg, kind = '', ms = 3200) {
   if (!toastHost) { toastHost = h('div.toasts', { role: 'status', 'aria-live': 'polite' }); document.body.appendChild(toastHost); }
+  // Same message already showing: keep one toast, just restart its timer.
+  const text = typeof msg === 'string' ? msg : (msg && msg.textContent) || '';
+  for (const old of Array.from(toastHost.children)) if (old.dataset.msg === text && !old.classList.contains('out')) old.remove();
   const t = h('div.toast' + (kind ? '.' + kind : ''), msg);
+  t.dataset.msg = text;
   toastHost.appendChild(t);
   setTimeout(() => {
     if (!motionOK()) { t.remove(); return; }

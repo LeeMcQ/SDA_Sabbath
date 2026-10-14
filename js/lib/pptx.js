@@ -13,6 +13,12 @@ const kids = (el, ns, name) => (el ? Array.prototype.filter.call(el.children, (c
 const kid = (el, ns, name) => kids(el, ns, name)[0] || null;
 const desc = (el, ns, name) => (el ? el.getElementsByTagNameNS(ns, name)[0] || null : null);
 const num = (v, d = 0) => (v == null || v === '' ? d : +v);
+const HEX6 = /^[0-9A-Fa-f]{6}$/;
+const hex = (v, dflt) => (v && HEX6.test(v) ? '#' + v : dflt);
+const PRESET_COLOURS = new Set(['black', 'white', 'red', 'green', 'blue', 'yellow', 'cyan', 'magenta', 'gray', 'grey', 'silver', 'maroon', 'olive', 'lime', 'aqua', 'teal', 'navy', 'fuchsia', 'purple', 'orange', 'brown', 'pink', 'gold', 'darkBlue', 'darkRed', 'darkGreen', 'darkGray', 'darkGrey', 'lightGray', 'lightGrey', 'ltGray', 'dkGray']);
+const safeColour = (c) => (typeof c === 'string' && /^(#[0-9A-Fa-f]{3,8}|rgba?\([0-9.,\s]+\)|[A-Za-z]{3,20})$/.test(c) ? c : null);
+/** Font family names: letters, digits, spaces and a few safe punctuation marks only. */
+const safeFont = (f) => String(f || '').replace(/[^\p{L}\p{N} _.-]/gu, '').slice(0, 64) || 'sans-serif';
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', bmp: 'image/bmp', svg: 'image/svg+xml', webp: 'image/webp', tif: 'image/tiff', tiff: 'image/tiff', emf: 'image/emf', wmf: 'image/wmf' };
 
@@ -54,25 +60,25 @@ export async function parsePptx(blob) {
     const cs = desc(theme, A, 'clrScheme');
     if (cs) Array.prototype.forEach.call(cs.children, (c) => {
       const s = desc(c, A, 'srgbClr'), sys = desc(c, A, 'sysClr');
-      scheme[c.localName] = '#' + (s ? s.getAttribute('val') : sys ? sys.getAttribute('lastClr') || '000000' : '000000');
+      scheme[c.localName] = s ? hex(s.getAttribute('val'), '#000000') : sys ? hex(sys.getAttribute('lastClr'), '#000000') : '#000000';
     });
   }
   Object.assign(scheme, { tx1: scheme.dk1 || '#000', bg1: scheme.lt1 || '#fff', tx2: scheme.dk2 || '#1f497d', bg2: scheme.lt2 || '#eee' });
   const minorFont = theme && desc(desc(theme, A, 'minorFont'), A, 'latin');
   const majorFont = theme && desc(desc(theme, A, 'majorFont'), A, 'latin');
-  const fontBody = minorFont ? minorFont.getAttribute('typeface') : 'Calibri';
-  const fontHead = majorFont ? majorFont.getAttribute('typeface') : fontBody;
+  const fontBody = safeFont(minorFont ? minorFont.getAttribute('typeface') : 'Calibri');
+  const fontHead = majorFont ? safeFont(majorFont.getAttribute('typeface')) : fontBody;
 
   function color(el) {
     if (!el) return null;
     let c = null, node = null;
     for (const ch of el.children) {
-      if (ch.localName === 'srgbClr') { c = '#' + ch.getAttribute('val'); node = ch; break; }
+      if (ch.localName === 'srgbClr') { c = hex(ch.getAttribute('val'), null); node = ch; break; }
       if (ch.localName === 'schemeClr') { c = scheme[ch.getAttribute('val')] || null; node = ch; break; }
-      if (ch.localName === 'sysClr') { c = '#' + (ch.getAttribute('lastClr') || '000000'); node = ch; break; }
-      if (ch.localName === 'prstClr') { c = ch.getAttribute('val'); node = ch; break; }
+      if (ch.localName === 'sysClr') { c = hex(ch.getAttribute('lastClr') || '000000', null); node = ch; break; }
+      if (ch.localName === 'prstClr') { { const v = ch.getAttribute('val'); c = PRESET_COLOURS.has(v) ? v : null; } node = ch; break; }
     }
-    if (!c || !node) return c;
+    if (!c || !node) return safeColour(c);
     // lumMod / lumOff / alpha (approximation)
     const mod = desc(node, A, 'lumMod'), off = desc(node, A, 'lumOff'), al = desc(node, A, 'alpha');
     const tint = desc(node, A, 'tint'), shade = desc(node, A, 'shade');
@@ -82,9 +88,9 @@ export async function parsePptx(blob) {
       const t = tint ? num(tint.getAttribute('val')) / 100000 : 1, sh = shade ? num(shade.getAttribute('val')) / 100000 : 1;
       [r, g, b] = [r, g, b].map((x) => Math.max(0, Math.min(255, Math.round((x * t + 255 * (1 - t)) * sh * m + 255 * o))));
       const a = al ? num(al.getAttribute('val')) / 100000 : 1;
-      return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+      return 'rgba(' + r + ',' + g + ',' + b + ',' + (Number.isFinite(a) ? a : 1) + ')';
     }
-    return c;
+    return safeColour(c);
   }
 
   // Default text styles from the master
@@ -201,7 +207,7 @@ export async function parsePptx(blob) {
         if (rPr && rPr.getAttribute('u') && rPr.getAttribute('u') !== 'none') css += 'text-decoration:underline;';
         if (c) css += 'color:' + c + ';';
         const latin = rPr && kid(rPr, A, 'latin');
-        if (latin && latin.getAttribute('typeface') && !/^\+/.test(latin.getAttribute('typeface'))) css += "font-family:'" + latin.getAttribute('typeface').replace(/'/g, '') + "'," + (d.font || 'sans-serif') + ';';
+        if (latin && latin.getAttribute('typeface') && !/^\+/.test(latin.getAttribute('typeface'))) css += "font-family:'" + safeFont(latin.getAttribute('typeface')) + "'," + (d.font || 'sans-serif') + ';';
         runs += '<span style="' + css + '">' + esc(t ? t.textContent : '') + '</span>';
       });
       if (!runs) {

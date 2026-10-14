@@ -1,6 +1,6 @@
 {
-"version": "1174d0c079d3",
-"bytes": 15749705,
+"version": "f6c0448d2a7a",
+"bytes": 16315658,
 "files": [
 "index.html",
 "display.html",
@@ -13,6 +13,7 @@
 "js/monitors.js",
 "js/pip.js",
 "js/quick.js",
+"js/theme-init.js",
 "js/core/audio.js",
 "js/core/bibledata.js",
 "js/core/books.js",
@@ -266,6 +267,7 @@
 "data/bibles/web/65.json",
 "data/bibles/web/66.json",
 "data/bibles/web/info.json",
+"data/hymns/afrikaans.json",
 "data/hymns/index.json",
 "data/hymns/sda-online.json"
 ]

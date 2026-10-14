@@ -1,5 +1,5 @@
 // Settings: how the screen looks, displays, Bibles, the app itself, and what's coming next.
-import { h, clear, uid, fmtBytes, download, readText } from '../core/util.js';
+import { h, clear, uid, fmtBytes, download, readText, scrubUrls } from '../core/util.js';
 import { icon } from '../core/icons.js';
 import { btn, seg, toggle, toast, confirmBox, select } from '../core/ui.js';
 import { db, persistStorage } from '../core/db.js';
@@ -7,6 +7,7 @@ import { createStage } from '../core/render.js';
 import { listTranslations, deleteImported, resetCaches } from '../core/bibledata.js';
 import { importBibleDialog } from './bible-import.js';
 import { listScreens } from '../core/link.js';
+import { sanitizeImportedSettings, exportableSettings } from '../core/settings.js';
 
 export default function create(ctx) {
   const { settings, live, link } = ctx;
@@ -198,12 +199,13 @@ export default function create(ctx) {
       anthropic: {
         name: 'Anthropic Claude',
         text: true, image: false,
-        hint: 'Get a key at <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>. Text only (excellent research). Keys start with <strong>sk-ant-</strong>.',
+        hint: 'Get a key at <a href="https://platform.claude.com/" target="_blank" rel="noopener noreferrer">platform.claude.com</a>. Text only (excellent research). Keys start with <strong>sk-ant-</strong>.',
         models: 'Text: claude-haiku-5-5',
       },
     };
 
     const providerSel = h('select.field', {
+      id: 'aiProvider', 'aria-label': 'AI provider',
       value: A.provider || 'openai',
       onchange: () => { settings.set('ai.provider', providerSel.value); updateHint(); },
     });
@@ -214,7 +216,7 @@ export default function create(ctx) {
     });
 
     const keyInp = h('input.field', {
-      type: 'password',
+      type: 'password', id: 'aiKey', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'AI API key',
       value: A.apiKey || '',
       placeholder: 'Paste API key',
       style: { width: '100%' },
@@ -224,6 +226,11 @@ export default function create(ctx) {
       keyInp.type = keyInp.type === 'password' ? 'text' : 'password';
       showBtn.textContent = keyInp.type === 'password' ? 'Show' : 'Hide';
     } }, 'Show');
+    const removeBtn = h('button.btn.sm', { type: 'button', 'aria-label': 'Remove API key from this device', onclick: () => {
+      keyInp.value = ''; keyInp.type = 'password'; showBtn.textContent = 'Show';
+      settings.set('ai.apiKey', '');
+      toast('API key removed from this device.', 'ok');
+    } }, 'Remove key');
 
     const hintEl = h('div.note', { style: { marginTop: '6px', lineHeight: '1.45' } });
     const modelEl = h('p.note', { style: { marginTop: '4px' } });
@@ -237,19 +244,20 @@ export default function create(ctx) {
 
     const modelInp = h('input.field', {
       value: A.model || '',
-      placeholder: 'Optional model override',
+      placeholder: 'Optional model override', id: 'aiModel', 'aria-label': 'AI model (optional)',
       style: { width: '100%' },
       onchange: () => settings.set('ai.model', modelInp.value.trim()),
     });
 
     box.append(h('div.form',
-      h('label', 'Provider'), providerSel,
+      h('label', { for: 'aiProvider' }, 'Provider'), providerSel,
       hintEl,
       modelEl,
-      h('label', 'API key'),
-      h('div.row', { style: { gap: '8px', alignItems: 'center' } }, keyInp, showBtn),
-      h('p.note', 'Stored only on this device. Never share it.'),
-      h('label', 'Model (optional)'), modelInp,
+      h('label', { for: 'aiKey' }, 'API key'),
+      h('div.row', { style: { gap: '8px', alignItems: 'center' } }, keyInp, showBtn, removeBtn),
+      h('p.note', 'Stored only in this browser on this device, and never included in backups. On a shared church computer anyone using this browser can use the key: press "Remove key" after the service, and set a spending limit with your provider.'),
+      h('p.note', 'Privacy (POPIA): when you use an online AI button, the topic or banner text you typed is sent directly to the provider chosen above and handled under their terms. Do not type names, contact details or other personal information. The offline buttons send nothing.'),
+      h('label', { for: 'aiModel' }, 'Model (optional)'), modelInp,
       h('p.note', 'Leave blank to use the recommended default for the selected provider.')));
   });
 
@@ -278,7 +286,7 @@ export default function create(ctx) {
   }
 
   async function exportBackup() {
-    const data = { app: 'selah', version: 1, settings: settings.v, plans: await db.all('plans'), hymnbooks: await db.all('hymnbooks') };
+    const data = { app: 'selah', version: 1, settings: exportableSettings(settings.v), plans: await db.all('plans'), hymnbooks: await db.all('hymnbooks') };
     download(new Blob([JSON.stringify(data)], { type: 'application/json' }), 'sda-sabbath-backup.json');
   }
   function importBackup() {
@@ -287,9 +295,16 @@ export default function create(ctx) {
       try {
         const d = JSON.parse(await readText(inp.files[0]));
         if (d.app !== 'selah') throw new Error('Not an SDA Sabbath backup.');
-        if (d.settings) { localStorage.setItem('selah.settings.v1', JSON.stringify(d.settings)); }
-        for (const p of d.plans || []) await db.put('plans', p.id, p);
-        for (const b of d.hymnbooks || []) await db.put('hymnbooks', b.id, b);
+        if (!d || typeof d !== 'object' || d.app !== 'selah') throw new Error('Not an SDA Sabbath backup.');
+        if (d.settings && typeof d.settings === 'object') {
+          // keep this device's AI key; never take one from a file
+          const clean = sanitizeImportedSettings(d.settings);
+          clean.ai = Object.assign({}, clean.ai || {}, { apiKey: (settings.v.ai && settings.v.ai.apiKey) || '' });
+          localStorage.setItem('selah.settings.v1', JSON.stringify(clean));
+        }
+        const okId = (x) => x && typeof x === 'object' && (typeof x.id === 'string' || typeof x.id === 'number');
+        for (const p of (Array.isArray(d.plans) ? d.plans : []).filter(okId)) await db.put('plans', p.id, scrubUrls(p));
+        for (const b of (Array.isArray(d.hymnbooks) ? d.hymnbooks : []).filter(okId)) await db.put('hymnbooks', b.id, scrubUrls(b));
         toast('Backup restored. Reloading…', 'ok'); setTimeout(() => location.reload(), 800);
       } catch (e) { toast(e.message, 'err'); }
     };

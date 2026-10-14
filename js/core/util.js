@@ -133,3 +133,22 @@ export function readText(file) {
 }
 
 export const normalize = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+/** Returns the URL if it is absolute http(s), else ''. Blocks javascript:, data:, file: and friends. */
+export function safeHttpUrl(u) {
+  try { const x = new URL(String(u || '').trim()); return x.protocol === 'http:' || x.protocol === 'https:' ? x.href : ''; } catch (e) { return ''; }
+}
+
+/** Deep copy of imported JSON where every string under a "url"/"href"/"src" key must be http(s). */
+export function scrubUrls(v, depth = 0) {
+  if (depth > 20 || v == null) return v;
+  if (Array.isArray(v)) return v.map((x) => scrubUrls(x, depth + 1));
+  if (typeof v !== 'object') return v;
+  const out = {};
+  for (const k of Object.keys(v)) {
+    if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+    const x = v[k];
+    out[k] = (/^(url|href|src|link|music)$/i.test(k) && typeof x === 'string') ? safeHttpUrl(x) : scrubUrls(x, depth + 1);
+  }
+  return out;
+}

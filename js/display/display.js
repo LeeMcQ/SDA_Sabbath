@@ -1,7 +1,7 @@
 // The output display. Mounted by display.html (projector window / Cast / LAN screen)
 // and by the in-app "this device" mode. It only renders what the control sends.
 import { createStage } from '../core/render.js';
-import { isBlob, throttle } from '../core/util.js';
+import { isBlob, throttle, safeHttpUrl } from '../core/util.js';
 
 const EQ_FREQS = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
 
@@ -200,7 +200,7 @@ export function createDisplay(root, { post, self = false } = {}) {
     layer.appendChild(box);
     if (frame.kind === 'web') {
       const fr = document.createElement('iframe');
-      fr.src = frame.url;
+      fr.src = safeHttpUrl(frame.url) || 'about:blank';
       fr.allow = 'autoplay; fullscreen; encrypted-media';
       fr.referrerPolicy = 'no-referrer';
       box.appendChild(fr);
