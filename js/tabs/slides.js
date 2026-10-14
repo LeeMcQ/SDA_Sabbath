@@ -1,5 +1,6 @@
-// Slides tab: PDF, PowerPoint and pictures. Files are converted once on import and kept
-// offline on this device, so presenting is instant and needs no internet.
+// Slides tab: PDF, PowerPoint, pictures, and links (Google Slides, etc.).
+// Local files are converted once and kept offline. Links can be imported as PDF
+// (when publicly shared) or presented live from the web.
 import { h, clear, uid, fmtBytes } from '../core/util.js';
 import { icon } from '../core/icons.js';
 import { btn, dropzone, menu, toast, confirmBox, promptBox, seg, modal, emptyState } from '../core/ui.js';
@@ -24,6 +25,7 @@ export default function create(ctx) {
   const notes = h('div.note.pad', { hidden: true, style: { whiteSpace: 'pre-wrap', borderTop: '1px solid var(--line)' } });
   const zone = dropzone('Drop PDF, PowerPoint (.pptx) or pictures here, or tap to choose', '.pdf,.pptx,image/*', (files) => importFiles(files));
   const addBtn = btn('plus', 'Add files', () => zone.querySelector('input').click(), { cls: 'sm', label: 'Add' });
+  const linkBtn = btn('link', 'Add from link', () => addFromLink(), { cls: 'sm', label: 'Link' });
   const deckMenuBtn = btn('more', 'Deck options', () => deck && menu(deckMenuBtn, [
     { label: 'Rename', icon: 'edit', onclick: renameDeck },
     { label: 'Add to the service plan', icon: 'plan', onclick: addToPlan },
@@ -32,7 +34,7 @@ export default function create(ctx) {
   const fitSeg = seg([['contain', 'Fit'], ['cover', 'Fill']], settings.v.slides.fit, (v) => { settings.set('slides.fit', v); if (deck) stageAt(stagedIndex); });
 
   const el = h('section',
-    h('div.toolbar', h('h2', 'Slides'), addBtn, h('div.grow'), fitSeg),
+    h('div.toolbar', h('h2', 'Slides'), addBtn, linkBtn, h('div.grow'), fitSeg),
     prog,
     h('div.split.lib-split',
       h('div.pane', h('div.pane-h', 'Library'), h('div.scroll', { style: { flex: '1' } }, libList, h('div.pad', zone))),
@@ -50,7 +52,7 @@ export default function create(ctx) {
   function renderLibrary() {
     clear(libList);
     decks.forEach((d) => libList.appendChild(h('button', { type: 'button', 'aria-pressed': String(!!deck && deck.id === d.id), onclick: () => selectDeck(d.id) },
-      icon(d.type === 'pdf' ? 'slides' : d.type === 'pptx' ? 'present' : 'snapshot'),
+      icon(d.type === 'pdf' ? 'slides' : d.type === 'pptx' ? 'present' : d.type === 'web' ? 'web' : 'snapshot'),
       h('span.grow', h('div.trunc', d.name), h('div.note', d.count + (d.count === 1 ? ' slide' : ' slides') + ' · ' + d.type.toUpperCase())))));
   }
 
@@ -64,6 +66,8 @@ export default function create(ctx) {
     if (deck.type === 'pptx') {
       const rec = await db.get('renders', deck.id + '/frames');
       frames = rec ? rec.frames : [];
+    } else if (deck.type === 'web') {
+      frames = [{ kind: 'web', url: deck.url, title: deck.name }];
     } else {
       frames = []; thumbs = [];
       for (let i = 0; i < deck.count; i++) {
@@ -82,7 +86,7 @@ export default function create(ctx) {
     if (io) { io.disconnect(); io = null; }
     notes.hidden = true;
     head.hidden = !deck; deckMenuBtn.hidden = !deck;
-    if (!deck) { head.textContent = ''; info.textContent = ''; grid.appendChild(emptyState('slides', decks.length ? 'No slide deck open' : 'No slides yet', decks.length ? 'Pick a deck from the library.' : 'Add a PDF, PowerPoint or pictures with the drop box in the library.', null, { style: { gridColumn: '1/-1' } })); return; }
+    if (!deck) { head.textContent = ''; info.textContent = ''; grid.appendChild(emptyState('slides', decks.length ? 'No slide deck open' : 'No slides yet', decks.length ? 'Pick a deck from the library.' : 'Add a PDF, PowerPoint, pictures, or a Google Slides / web link.', null, { style: { gridColumn: '1/-1' } })); return; }
     head.textContent = deck.name;
     info.textContent = deck.count + ' slides' + (deck.size ? ' · ' + fmtBytes(deck.size) : '');
     // Thumbnails for PowerPoint slides are drawn lazily as they scroll into view.
@@ -117,7 +121,7 @@ export default function create(ctx) {
     const fr = frames.map((f) => (f.kind === 'image' ? Object.assign({}, f, { fit }) : f));
     const cue = {
       id: 'slides:' + deck.id, tab: 'slides', title: deck.name, sub: deck.type.toUpperCase(),
-      deck: { kind: deck.type === 'pptx' ? 'html' : 'image', frames: fr }, index: stagedIndex, deckId: deck.id,
+      deck: { kind: deck.type === 'pptx' ? 'html' : deck.type === 'web' ? 'web' : 'image', frames: fr }, index: stagedIndex, deckId: deck.id,
       labels: fr.map((_, k) => String(k + 1)),
       plan: { tab: 'slides', deck: deck.id, label: deck.name },
     };
@@ -214,6 +218,57 @@ export default function create(ctx) {
       await db.put('renders', id + '/' + i, { full: r.full, thumb: r.thumb });
     }
     await db.put('files', id, { id, kind: 'deck', type: 'images', name, count: files.length, size, added: Date.now() });
+    deck = { id };
+  }
+
+  // ------------------------------------------------------------ links (Google Slides, etc.)
+  function googleSlidesId(url) {
+    const m = String(url || '').match(/\/presentation\/d\/([a-zA-Z0-9_-]+)/) || String(url || '').match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    return m ? m[1] : null;
+  }
+
+  async function addFromLink() {
+    const raw = await promptBox('Add slides from a link', 'Paste a Google Slides, PowerPoint Online, or other slides link', '');
+    if (!raw) return;
+    const url = raw.trim();
+    if (!/^https?:\/\//i.test(url)) { toast('That does not look like a web link.', 'err'); return; }
+    await importFromLink(url);
+    showProgress(null);
+    const newId = deck && deck.id;
+    await loadLibrary();
+    if (newId) await selectDeck(newId);
+  }
+
+  async function importFromLink(url) {
+    const id = uid();
+    const gid = googleSlidesId(url);
+    if (gid) {
+      // Try public PDF export first (works when the deck is shared “Anyone with the link”).
+      const pdfUrl = 'https://docs.google.com/presentation/d/' + gid + '/export/pdf';
+      showProgress('Trying Google Slides PDF export…', 0.2);
+      try {
+        const r = await fetch(pdfUrl, { mode: 'cors' });
+        if (r.ok) {
+          const blob = await r.blob();
+          if (blob.type === 'application/pdf' || blob.size > 1000) {
+            const file = new File([blob], 'Google Slides.pdf', { type: 'application/pdf' });
+            await importPdf(file, 'Google Slides');
+            toast('Google Slides imported as offline PDF.', 'ok');
+            return;
+          }
+        }
+      } catch (e) { console.warn('gs-pdf', e); }
+      // Fallback: present live via the published/embed view.
+      const embed = 'https://docs.google.com/presentation/d/' + gid + '/embed?start=false&loop=false&delayms=3000';
+      await db.put('files', id, { id, kind: 'deck', type: 'web', name: 'Google Slides', count: 1, url: embed, added: Date.now() });
+      toast('Google Slides added as a live link. Share the deck as “Anyone with the link” for offline PDF import.', 'ok', 8000);
+      deck = { id };
+      return;
+    }
+    // Generic link — present as a web page.
+    const name = (await promptBox('Name this link', 'Short name for the library', url.replace(/^https?:\/\//, '').slice(0, 40))) || 'Web slides';
+    await db.put('files', id, { id, kind: 'deck', type: 'web', name, count: 1, url, added: Date.now() });
+    toast('Link added. It will open when you present (needs internet).', 'ok');
     deck = { id };
   }
 
