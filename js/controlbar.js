@@ -4,16 +4,19 @@ import { icon } from './core/icons.js';
 import { btn } from './core/ui.js';
 import { live, frameCount } from './core/live.js';
 import { bgAudio } from './core/audio.js';
+import { music } from './core/hymnmusic.js';
 
 export function createControlBar(el, getTab) {
   const counter = h('span.cb-sub', '');
   const audioBox = h('div.audio-mini', { hidden: true });
+  const musicBox = h('div.audio-mini.music-mini', { hidden: true });
+  const shown = () => !!live.cue || bgAudio.active || music.isPlaying();
   let typeBox = h('div.cb-type');
   let renderedFor = null;
 
   async function render() {
     const cue = live.cue;
-    el.hidden = !cue && !bgAudio.active;
+    el.hidden = !shown();
     document.documentElement.style.setProperty('--bar-on', el.hidden ? '0' : '1');
     if (renderedFor === cue && el.childNodes.length) { updateCounter(); return; }
     renderedFor = cue;
@@ -38,12 +41,36 @@ export function createControlBar(el, getTab) {
         btn('logo', 'Logo', () => live.setBlank('logo'), { key: 'L', cls: 'hide-sm' + (live.blank === 'logo' ? ' live-on' : '') }),
 
         btn('clear', 'Clear screen', () => live.clear(), { key: 'Esc' })),
+      musicBox,
       audioBox,
     );
     const lb = el.querySelector('.cb-end .btn[aria-label="Logo"]');
     if (lb && !live.hasLogo()) { lb.setAttribute('aria-disabled', 'true'); lb.title = 'No logo yet: add a logo picture or church name in Settings → Screen'; }
     updateCounter();
     renderAudio();
+    renderMusic(true);
+  }
+
+  // Hymn music mini-player: visible whenever music plays, whatever is on screen.
+  let mUi = null;
+  function renderMusic(rebuild) {
+    const st = music.state || {};
+    musicBox.hidden = !st.playing;
+    if (!st.playing) { clear(musicBox); mUi = null; return; }
+    if (!mUi || rebuild) {
+      clear(musicBox);
+      const playB = btn('pause', 'Pause / continue the music (M)', () => { music.unlock(); music.toggle(); }, { cls: 'sm' });
+      const ttl = h('span.cb-sub.trunc', { style: { maxWidth: '170px' } }, '');
+      const tm = h('span.tm.cb-sub', '');
+      musicBox.append(icon('music'), ttl, playB, tm,
+        btn('fade', 'Fade out the music', () => music.fade(3000), { cls: 'sm' }),
+        btn('stop', 'Stop the music', () => music.stop(), { cls: 'sm' }));
+      mUi = { playB, ttl, tm, paused: null };
+    }
+    const sec = st.section != null && st.sections && st.sections[st.section] ? st.sections[st.section].label : '';
+    mUi.ttl.textContent = (st.title || 'Hymn') + (sec ? ' · ' + sec : '');
+    mUi.tm.textContent = st.loading ? 'loading…' : fmtTime(st.time) + ' / ' + fmtTime(st.dur);
+    if (mUi.paused !== !!st.paused) { mUi.paused = !!st.paused; mUi.playB.replaceChildren(icon(st.paused ? 'play' : 'pause')); }
   }
 
   function updateCounter() {
@@ -83,7 +110,8 @@ export function createControlBar(el, getTab) {
   live.on('live', render);
   live.on('go', updateCounter);
   live.on('blank', updateCounter);
-  bgAudio.on('state', (st) => { if (el.hidden !== (!live.cue && !bgAudio.active)) { renderedFor = undefined; render(); } else renderAudio(st); });
+  music.on('state', () => { if (el.hidden !== !shown()) { renderedFor = undefined; render(); } else renderMusic(false); });
+  bgAudio.on('state', (st) => { if (el.hidden !== !shown()) { renderedFor = undefined; render(); } else renderAudio(st); });
   render();
   return { render };
 }

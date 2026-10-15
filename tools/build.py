@@ -36,14 +36,18 @@ def main():
     files = collect()
     h = hashlib.sha256()
     total = 0
+    hashes = {}
     for f in files:
         with open(os.path.join(ROOT, f), 'rb') as fh:
             b = fh.read()
         total += len(b)
         h.update(f.encode()); h.update(b)
+        # Per-file hash: on an update the service worker reuses unchanged files from the
+        # previous version instead of downloading everything (the music library alone is 18 MB).
+        hashes[f] = hashlib.sha256(b).hexdigest()[:16]
     version = h.hexdigest()[:12]
     with open(os.path.join(ROOT, 'asset-manifest.json'), 'w') as fh:
-        json.dump({'version': version, 'bytes': total, 'files': files}, fh, indent=0)
+        json.dump({'version': version, 'bytes': total, 'files': files, 'hashes': hashes}, fh, indent=0)
     sw = os.path.join(ROOT, 'sw.js')
     src = open(sw, encoding='utf-8').read()
     src = re.sub(r"const VERSION = '[^']*';", "const VERSION = '%s';" % version, src, count=1)

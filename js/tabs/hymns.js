@@ -5,6 +5,8 @@ import { icon } from '../core/icons.js';
 import { btn, modal, seg, toggle, menu, toast, confirmBox, closeModal, enter, emptyState } from '../core/ui.js';
 import { db } from '../core/db.js';
 import { fitsText, createStage } from '../core/render.js';
+import { music, INSTRUMENTS } from '../core/hymnmusic.js';
+import { fmtTime } from '../core/util.js';
 
 const CHORUS_RE = /^(chorus|refrain|koor|refrein|ikhorasi|c)\s*[:.]?\s*$/i;
 
@@ -105,6 +107,9 @@ export default function create(ctx) {
   const grid = h('div.stanza-grid');
   const empty = emptyState('hymn', 'Pick a hymn', 'Type a hymn number (for example 73) or words from the hymn, then pick it from the list.');
   const optsBtn = btn('settings', 'Hymn display options', () => optionsDialog(), { cls: 'sm' });
+  const musicBar = h('div.music-bar', { hidden: true });
+  let musicSet = null;     // hymn numbers with music in the current book
+  let musicEntry = null;   // music index entry of the selected hymn
   const editBtn = btn('edit', 'Edit this hymn', () => hymn && editHymn(hymn), { cls: 'sm' });
   const moreBtn = btn('more', 'More', () => menu(moreBtn, [
     { label: 'New hymn', icon: 'plus', onclick: () => editHymn(null) },
@@ -118,7 +123,7 @@ export default function create(ctx) {
     h('div.toolbar', h('h2', 'Hymns'), bookSel, h('div.grow'), optsBtn, moreBtn),
     h('div.split.hymn-split',
       h('div.pane', h('div.pane-h', q, padBtn), keypad, h('div.scroll', { style: { flex: '1' } }, listEl)),
-      h('div.pane', h('div.pane-h', titleEl, editBtn), h('div', { style: { padding: '8px 12px 0' } }, metaEl, verseChips), h('div.scroll', { style: { flex: '1' } }, grid, empty))));
+      h('div.pane', h('div.pane-h', titleEl, editBtn), musicBar, h('div', { style: { padding: '8px 12px 0' } }, metaEl, verseChips), h('div.scroll', { style: { flex: '1' } }, grid, empty))));
 
   // ------------------------------------------------------------ data
   async function loadBooks() {
@@ -151,7 +156,15 @@ export default function create(ctx) {
   function setBook(id) {
     book = books.find((b) => b.id === id) || null;
     if (book) { bookSel.value = book.id; settings.set('hymns.book', book.id); }
+    musicSet = null;
     renderList();
+    const bid = book && book.id;
+    music.hasBook(bid).then(async (has) => {
+      if (!has || !book || book.id !== bid) return;
+      const set = new Set();
+      for (const x of book.hymns) if (await music.entry(bid, x.n)) set.add(x.n);
+      if (book && book.id === bid) { musicSet = set; renderList(); }
+    });
   }
 
   function matches(hy, qq) {
@@ -172,7 +185,8 @@ export default function create(ctx) {
     const frag = document.createDocumentFragment();
     list.slice(0, 400).forEach((x) => {
       frag.appendChild(h('button', { type: 'button', 'aria-pressed': String(hymn === x), onclick: () => selectHymn(x), ondblclick: () => { selectHymn(x); live.take(); } },
-        h('span.num', String(x.n)), h('span.grow', h('div.trunc', x.t), h('div.note.trunc', x.v[0][0]))));
+        h('span.num', String(x.n)), h('span.grow', h('div.trunc', x.t), h('div.note.trunc', x.v[0][0])),
+        musicSet && musicSet.has(x.n) ? h('span.has-music', { title: 'Music available offline' }, icon('music')) : null));
     });
     listEl.appendChild(frag);
     if (!list.length) listEl.appendChild(emptyState('search', 'No hymn matches “' + qq + '”', 'Try a number like 73 or a few words from the hymn.',
@@ -249,21 +263,15 @@ export default function create(ctx) {
   }
 
   function restage() {
-    if (!hymn) { titleEl.textContent = ''; metaEl.textContent = ''; clear(grid); clear(verseChips); empty.hidden = false; return; }
+    if (!hymn) { titleEl.textContent = ''; metaEl.textContent = ''; clear(grid); clear(verseChips); empty.hidden = false; musicBar.hidden = true; return; }
     empty.hidden = true;
-    // Show music link if present
-    const musicBtn = document.getElementById('hymnMusicBtn');
-    if (musicBtn) musicBtn.remove();
-    if (hymn.music) {
-      const btn = h('a', { id: 'hymnMusicBtn', href: hymn.music, target: '_blank', rel: 'noopener', class: 'btn sm', style: { marginLeft: '8px' } }, 'Play music');
-      titleEl.parentNode.insertBefore(btn, titleEl.nextSibling);
-    }
     cue = buildCue(hymn);
     titleEl.textContent = hymn.n + '  ' + hymn.t;
     metaEl.textContent = (hymn.a ? hymn.a + '. ' : '') + 'Sing stanzas:';
     renderChips();
     renderCards();
     ctx.setStaged('hymns', cue);
+    renderMusic();
   }
 
   function renderChips() {
@@ -315,18 +323,33 @@ export default function create(ctx) {
   live.on('live', markCards);
 
   // ------------------------------------------------------------ options / editing / import
+  function slider(min, max, step, value, fmt, onchange) {
+    const out = h('span.note', { style: { minWidth: '44px', textAlign: 'right' } }, fmt(value));
+    const r = h('input', { type: 'range', min, max, step, style: { flex: '1', maxWidth: '240px' }, oninput: () => { out.textContent = fmt(+r.value); }, onchange: () => onchange(+r.value) });
+    r.value = value;
+    return h('div.row', r, out);
+  }
+
   function optionsDialog() {
     const s = S();
     const set = (k) => (v) => { settings.set('hymns.' + k, v); if (hymn) { restage(); syncLive(); } };
     modal({
-      title: 'Hymns on screen',
+      title: 'Hymn options',
       body: h('div.form',
         h('label', 'Title slide'), toggle('Start with the number and title', s.titleSlide, set('titleSlide')),
         h('label', 'Chorus'), toggle('Repeat the chorus after every stanza', s.chorusRepeat, set('chorusRepeat')),
         h('label', 'Hymn number'), toggle('Show the number on screen', s.showNumber, set('showNumber')),
         h('label', 'Capitals'), toggle('Show words in capitals', s.caps, set('caps')),
         h('label', 'Lines per slide'), seg([['0', 'Auto'], ['2', '2'], ['3', '3'], ['4', '4'], ['6', '6']], String(s.maxLines || 0), (v) => set('maxLines')(+v)),
-        h('label', 'Hymn title line'), seg([['bottom', 'Bottom'], ['top', 'Top'], ['none', 'Hidden']], s.refPos, set('refPos'))),
+        h('label', 'Hymn title line'), seg([['bottom', 'Bottom'], ['top', 'Top'], ['none', 'Hidden']], s.refPos, set('refPos')),
+        h('h3', { style: { gridColumn: '1 / -1', marginTop: '10px' } }, 'Music'),
+        h('label', 'Volume'), slider(0, 2, 0.05, s.musicVolume == null ? 1.3 : s.musicVolume, (v) => Math.round(v / 1.3 * 100) + '%', (v) => music.setVolume(v)),
+        h('label', 'Reverb'), slider(0, 127, 1, s.musicReverb == null ? 59 : s.musicReverb, (v) => String(v), (v) => { settings.set('hymns.musicReverb', v); music.applyEffects(); }),
+        h('label', 'Chorus effect'), slider(0, 127, 1, s.musicChorus == null ? 43 : s.musicChorus, (v) => String(v), (v) => { settings.set('hymns.musicChorus', v); music.applyEffects(); }),
+        h('label', ''), h('p.note', 'Reverb 59 and chorus 43 are the levels GeneralUser GS’s author recommends for Falcosoft MIDI Player. ',
+          h('button.btn.sm', { type: 'button', onclick: () => { settings.set('hymns.musicReverb', 59); settings.set('hymns.musicChorus', 43); music.applyEffects(); closeModal(); optionsDialog(); } }, 'Use recommended')),
+        h('label', 'Music plays on'), seg([['auto', 'Automatic'], ['here', 'This device'], ['display', 'The display']], s.musicOutput || 'auto', (v) => settings.set('hymns.musicOutput', v)),
+        h('label', ''), h('p.note', 'Automatic: on this device, except when this phone controls the church PC through the companion — then the PC plays it.')),
       actions: [{ label: 'Done', primary: true }],
     });
   }
@@ -400,6 +423,96 @@ export default function create(ctx) {
 
   async function addToPlan() { if (cue) (await ctx.tab('plan')).addItem(cue.plan); }
 
+  // ------------------------------------------------------------ music (offline MIDI accompaniment)
+  const sungStanzas = () => (chosen ? Array.from(chosen).sort((a, b) => a - b) : hymn.v.map((_, i) => i));
+  const playingThis = () => music.isPlaying() && cue && music.hymnKey === cue.hymnKey;
+  let musicStatus = '';
+
+  async function startMusic(present) {
+    if (!hymn || !cue) return;
+    music.unlock(); // must happen inside the click
+    if (present) await live.take(cue);
+    musicStatus = 'Starting…'; renderMusic();
+    try {
+      await music.play({ book: book.id, hy: hymn, sung: sungStanzas(), cards: cue.cards, hymnKey: cue.hymnKey, title: hymn.n + '  ' + hymn.t });
+      musicStatus = '';
+    } catch (e) { musicStatus = ''; toast('Could not play the music: ' + e.message, 'err', 6000); }
+    renderMusic();
+  }
+
+  const setM = (k, v) => settings.set('hymns.' + k, v);
+  function stepper(label, value, fmt, onMinus, onPlus, title) {
+    return h('div.stepper', { title },
+      h('span.note', label),
+      h('button.btn.sm.icon', { type: 'button', 'aria-label': label + ' down', onclick: onMinus }, icon('minus')),
+      h('span.val', fmt(value)),
+      h('button.btn.sm.icon', { type: 'button', 'aria-label': label + ' up', onclick: onPlus }, icon('plus')));
+  }
+
+  async function renderMusic() {
+    if (!hymn || !book) { musicBar.hidden = true; return; }
+    const key = cue && cue.hymnKey;
+    const entry = await music.entry(book.id, hymn.n);
+    if (!cue || cue.hymnKey !== key) return; // another hymn was picked meanwhile
+    musicEntry = entry;
+    clear(musicBar);
+    if (!entry) { musicBar.hidden = true; return; }
+    musicBar.hidden = false;
+    const m = S();
+    const st = music.state || {};
+    const mine = playingThis();
+    const playBtn = mine
+      ? h('button.btn.sm.primary', { type: 'button', title: 'Pause / continue the music (M)', onclick: () => { music.unlock(); music.toggle(); } }, icon(st.paused ? 'play' : 'pause'), h('span', st.paused ? 'Continue' : 'Pause'))
+      : h('button.btn.sm.primary', { type: 'button', title: 'Play the music for the stanzas being sung (M)', onclick: () => startMusic(false) }, icon('play'), h('span', 'Play music'));
+    const row1 = h('div.row.wrap', playBtn);
+    if (mine) {
+      row1.append(btn('fade', 'Fade out', () => music.fade(3000), { cls: 'sm fade-btn', label: 'Fade' }), btn('stop', 'Stop the music', () => music.stop(), { cls: 'sm' }));
+    } else {
+      row1.append(h('button.btn.sm', { type: 'button', title: 'Show the words and start the music together', onclick: () => startMusic(true) }, icon('present'), h('span', 'Present & play')));
+    }
+    const sung = sungStanzas().length;
+    const info = musicStatus || (mine
+      ? (st.loading ? 'Preparing instruments…' : (st.section != null && st.sections[st.section] ? st.sections[st.section].label + '   ' : '') + fmtTime(st.time) + ' / ' + fmtTime(st.dur))
+      : '♪ ' + (entry.tune || 'Tune') + (entry.ok ? ' · ' + (m.musicIntro !== false ? 'intro + ' : '') + sung + (sung === 1 ? ' stanza' : ' stanzas') : ' · plays as recorded') + (entry.ok && entry.v.length < sung ? ' (verse music repeated)' : ''));
+    musicInfo = h('span.note.music-info.trunc', info);
+    row1.append(musicInfo);
+    musicSig = sigOf();
+    musicBar.append(row1);
+    // Jump to a part while it plays: Intro 1 2 3 …
+    if (mine && st.sections && st.sections.length > 1) {
+      const jumps = h('div.row.wrap.music-jumps');
+      st.sections.forEach((sec, i) => jumps.appendChild(h('button.frame-chip' + (st.section === i ? '.cur' : ''), { type: 'button', title: 'Go to ' + sec.label, onclick: () => music.seek(i) }, sec.label === 'Intro' ? 'Intro' : sec.label.replace('Verse ', ''))));
+      musicBar.append(jumps);
+    }
+    const instSel = h('select.field.sm', { 'aria-label': 'Instrument', title: 'Instrument', onchange: () => { setM('musicInstrument', instSel.value); if (mine) startMusic(false); } },
+      Object.keys(INSTRUMENTS).map((k) => h('option', { value: k, selected: k === (m.musicInstrument || 'arranged') }, INSTRUMENTS[k].label)));
+    const tempo = m.musicTempo || 100, keyS = m.musicKey || 0;
+    musicBar.append(h('div.row.wrap.music-opts',
+      h('button.chip', { type: 'button', 'aria-pressed': String(m.musicIntro !== false), title: 'Play the introduction before the first stanza', disabled: !entry.ok,
+        onclick: () => { setM('musicIntro', m.musicIntro === false); renderMusic(); } }, 'Play intro'),
+      h('button.chip', { type: 'button', 'aria-pressed': String(m.musicFollow !== false), title: 'When the hymn is live, the words change with the music', disabled: !entry.ok,
+        onclick: () => { setM('musicFollow', m.musicFollow === false); renderMusic(); } }, 'Words follow music'),
+      stepper('Tempo', tempo, (v) => v + '%', () => { const v = Math.max(60, tempo - 5); setM('musicTempo', v); music.setRate(v / 100); renderMusic(); },
+        () => { const v = Math.min(140, tempo + 5); setM('musicTempo', v); music.setRate(v / 100); renderMusic(); }, 'Speed of the music'),
+      stepper('Key', keyS, (v) => (v > 0 ? '+' : '') + v, () => { const v = Math.max(-6, keyS - 1); setM('musicKey', v); music.setKey(v); renderMusic(); },
+        () => { const v = Math.min(6, keyS + 1); setM('musicKey', v); music.setKey(v); renderMusic(); }, 'Raise or lower the key in semitones'),
+      instSel));
+  }
+  let musicInfo = null, musicSig = '';
+  const sigOf = () => { const st = music.state || {}; return [playingThis(), !!st.paused, !!st.loading, (st.sections || []).length, st.section].join('|'); };
+  music.on('state', (st) => {
+    if (el.hidden || !hymn) return;
+    if (sigOf() !== musicSig || !musicInfo) { renderMusic(); return; }
+    // Just the clock: rebuilding the bar four times a second would close open menus.
+    if (playingThis() && !musicStatus) musicInfo.textContent = (st.section != null && st.sections[st.section] ? st.sections[st.section].label + '   ' : '') + fmtTime(st.time) + ' / ' + fmtTime(st.dur);
+  });
+  music.on('progress', (msg) => { musicStatus = msg; if (!el.hidden) renderMusic(); });
+  // Words follow the music: the arrangement carries markers where each slide begins.
+  music.on('slide', ({ key, slide }) => {
+    if (S().musicFollow === false) return;
+    if (live.cue && live.cue.tab === 'hymns' && live.cue.hymnKey === key && slide < live.count()) live.go(slide);
+  });
+
   // ------------------------------------------------------------ public API
   const api = {
     el,
@@ -431,7 +544,19 @@ export default function create(ctx) {
       selectHymn(x, { index });
       return cue;
     },
-    onShow() { if (!hymn && !opening && !ctx.isMobile()) setTimeout(() => q.focus(), 50); opening = false; },
+    onShow() { if (!hymn && !opening && !ctx.isMobile()) setTimeout(() => q.focus(), 50); opening = false; if (hymn) renderMusic(); },
+    /** M key: pause/continue the music, or start it for the live (or selected) hymn. */
+    async musicKey() {
+      music.unlock();
+      if (music.isPlaying()) { music.toggle(); return; }
+      if (live.cue && live.cue.tab === 'hymns' && (!cue || live.cue.hymnKey !== cue.hymnKey)) {
+        const [bid, n] = live.cue.hymnKey.split(':');
+        await api.open({ n: +n, book: bid });
+      }
+      if (hymn && musicEntry) startMusic(false);
+    },
+    musicFor(c) { return c && c.tab === 'hymns' && !!(musicSet && book && c.hymnKey && c.hymnKey.startsWith(book.id + ':') && musicSet.has(+c.hymnKey.split(':')[1])); },
+    startMusicFor(c) { if (cue && c && cue.hymnKey === c.hymnKey) startMusic(false); },
     controls(c) {
       // Jump straight to a stanza: T 1 C 2 C 3 …
       const box = h('div.row', { style: { flexWrap: 'nowrap', overflowX: 'auto' } });
@@ -452,6 +577,11 @@ export default function create(ctx) {
         } }, isCho(lab) ? 'C' : lab.replace(/a$/, '')));
       });
       ctlBox = box; markCtl();
+      // Live hymn with offline music: start it from the control bar too.
+      if (api.musicFor(c) && !(music.isPlaying() && music.hymnKey === c.hymnKey)) {
+        return h('div.row', { style: { flexWrap: 'nowrap', minWidth: 0 } }, box,
+          h('button.btn.sm', { type: 'button', title: 'Play the music for this hymn (M)', onclick: () => api.musicKey() }, icon('music'), h('span.hide-sm', 'Music')));
+      }
       return box;
     },
   };

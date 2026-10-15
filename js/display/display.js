@@ -274,9 +274,40 @@ export function createDisplay(root, { post, self = false } = {}) {
       case 'clear': deck = null; lastFrame = null; teardownVideo(); stage.show(null); stage.setBlank(msg.mode || null); break;
       case 'media': mediaCmd(msg.op, msg.v); break;
       case 'caption': stage.setCaption(msg.text || ''); break;
+      case 'music': musicCmd(msg); break;
       case 'hello?': sayHello(); break;
       case 'ping': post({ t: 'pong' }); break;
     }
+  }
+
+  // ---------------------------------------------------------------- hymn music (phone remote → church PC)
+  // When a phone controls this display through the companion, hymn music plays here so it comes
+  // out of the PC's speakers. The engine loads only the first time music is requested.
+  let musicEng = null, musicEngP = null;
+  function getMusic() {
+    if (!musicEngP) {
+      musicEngP = import('../core/musicengine.js').then(({ MusicEngine }) => {
+        musicEng = new MusicEngine();
+        musicEng.on('state', (st) => post({ t: 'music-state', s: st }));
+        musicEng.on('slide', (slide) => post({ t: 'music-slide', slide }));
+        musicEng.on('ended', () => post({ t: 'music-ended' }));
+        return musicEng;
+      });
+    }
+    return musicEngP;
+  }
+  async function musicCmd(msg) {
+    try {
+      const eng = await getMusic();
+      if (msg.op === 'play') {
+        try { eng.unlock(); } catch (e) { /* reported below */ }
+        await eng.play(msg.req);
+        if (eng.ctx && eng.ctx.state !== 'running') {
+          hint(true);
+          post({ t: 'notice', code: 'autoplay', text: 'The display needs one click before it may play sound. Click the projector screen once, then press Play again.' });
+        }
+      } else eng.command(msg.op, msg.v);
+    } catch (e) { post({ t: 'music-error', text: e.message || String(e) }); }
   }
 
   function sayHello() { post({ t: 'hello', w: root.clientWidth || innerWidth, h: root.clientHeight || innerHeight, self }); }
@@ -298,6 +329,7 @@ export function createDisplay(root, { post, self = false } = {}) {
 
   return {
     stage, handle, hint, sayHello,
+    unlockAudio() { if (musicEng) try { musicEng.unlock(); } catch (e) { /* */ } },
     setStream(s) { stream = s || null; if (deck && deck.kind === 'stream') { lastFrame = null; showCurrent(); } },
     get video() { return video; },
     get mediaEl() { const l = stage.frontLayer(); return l && l.querySelector('video'); },

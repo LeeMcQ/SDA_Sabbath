@@ -291,7 +291,7 @@ function showHelp() {
     ['F5  or  Ctrl+Enter', 'Present what is selected (Next → Live)'],
     ['→  ↓  Page Down  Space', 'Next verse / slide / stanza'],
     ['←  ↑  Page Up', 'Previous'], ['Home  End', 'First / last'],
-    ['B  or  .', 'Black screen (press again to return)'], ['L', 'Show logo'], ['Esc  or  C', 'Clear the screen'],
+    ['B  or  .', 'Black screen (press again to return)'], ['L', 'Show logo'], ['Esc  or  C', 'Clear the screen'], ['M', 'Hymn music: play / pause'],
     ['/  or  Ctrl+K', 'Go to a Bible reference or hymn number'], ['Alt+1 … Alt+7', 'Switch tabs'],
     ['Space (video live)', 'Play / pause'], ['F (on the display)', 'Toggle full screen'],
   ];
@@ -318,6 +318,7 @@ function handleKey(e, remote) {
     case 'b': case 'B': case '.': live.setBlank('black'); return true;
     case 'l': case 'L': live.setBlank('logo'); return true;
     case 'Escape': case 'c': case 'C': live.clear(); return true;
+    case 'm': case 'M': getTab('hymns').then((t) => t.musicKey && t.musicKey()); return true;
     case '?': showHelp(); return true;
   }
   return false;

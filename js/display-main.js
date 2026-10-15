@@ -84,7 +84,7 @@ async function goFull() {
 }
 function toggleFull() { if (isFull()) (document.exitFullscreen || document.webkitExitFullscreen).call(document); else goFull(); }
 
-root.addEventListener('click', () => { if (!isFull()) goFull(); disp.hint(false); });
+root.addEventListener('click', () => { if (!isFull()) goFull(); disp.hint(false); disp.unlockAudio(); });
 root.addEventListener('dblclick', toggleFull);
 document.addEventListener('fullscreenchange', () => disp.hint(false));
 
