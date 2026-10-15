@@ -22,5 +22,13 @@
     "lang": "af",
     "file": "afrikaans.json",
     "note": "All 481 Afrikaans hymns with lyrics offline. Play music opens the source page."
+  },
+  {
+    "id": "choruses",
+    "name": "Praise Choruses (offline)",
+    "short": "CHR",
+    "lang": "en",
+    "file": "choruses.json",
+    "note": "Short praise and worship choruses (not part of the main hymnals). Lyrics for offline use."
   }
 ]

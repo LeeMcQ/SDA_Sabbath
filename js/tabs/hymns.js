@@ -112,6 +112,7 @@ export default function create(ctx) {
   let musicEntry = null;   // music index entry of the selected hymn
   const editBtn = btn('edit', 'Edit this hymn', () => hymn && editHymn(hymn), { cls: 'sm' });
   const moreBtn = btn('more', 'More', () => menu(moreBtn, [
+    { label: 'Find lyrics online', icon: 'search', onclick: () => findLyrics() },
     { label: 'New hymn', icon: 'plus', onclick: () => editHymn(null) },
     { label: 'Import a hymnbook…', icon: 'upload', onclick: importBook },
     { label: 'Export this hymnbook', icon: 'download', onclick: exportBook },
@@ -422,6 +423,72 @@ export default function create(ctx) {
   }
 
   async function addToPlan() { if (cue) (await ctx.tab('plan')).addItem(cue.plan); }
+
+  // ------------------------------------------------------------ online lyrics
+  function findLyrics() {
+    const titleIn = h('input.field', { placeholder: 'Title or first line of hymn / chorus', value: q.value.trim() });
+    const results = h('div.col', { style: { gap: '8px', marginTop: '10px', maxHeight: '55vh', overflow: 'auto' } });
+    const status = h('p.note', '');
+
+    function addSourceLinks(qy) {
+      const sources = [
+        { name: 'Hymnary.org', url: 'https://hymnary.org/search?qu=' + encodeURIComponent(qy) },
+        { name: 'Hymnal.net', url: 'https://www.hymnal.net/en/search/all/all/' + encodeURIComponent(qy) },
+        { name: 'SDA Hymnals', url: 'https://sdahymnals.com/?s=' + encodeURIComponent(qy) },
+        { name: 'Open Hymnal', url: 'https://openhymnal.org/search.html?q=' + encodeURIComponent(qy) },
+        { name: 'Hymnary (text)', url: 'https://hymnary.org/text/' + encodeURIComponent(qy.toLowerCase().replace(/\s+/g, '_')) },
+      ];
+      const box = h('div.col', { style: { gap: '6px' } });
+      sources.forEach((s) => {
+        box.appendChild(h('a.btn', { href: s.url, target: '_blank', rel: 'noopener noreferrer' }, s.name + ' ↗'));
+      });
+      return box;
+    }
+
+    async function search() {
+      const qy = titleIn.value.trim();
+      if (!qy) { status.textContent = 'Type a title or first line first.'; return; }
+      status.textContent = 'Looking up sources…';
+      clear(results);
+      results.appendChild(h('p.note', 'Open any source below, copy the lyrics, then paste them in the box and click Add. They will be stored in the same format as the choruses.'));
+      results.appendChild(addSourceLinks(qy));
+      const paste = h('textarea.field', {
+        rows: 12,
+        placeholder: 'Paste lyrics here…\n\nStanza 1 line 1\nStanza 1 line 2\n\nChorus:\nChorus line 1\nChorus line 2\n\nStanza 2 line 1…'
+      });
+      results.appendChild(h('label', 'Paste lyrics'));
+      results.appendChild(paste);
+      results.appendChild(h('button.btn.primary', { type: 'button', onclick: () => importPasted(qy, paste.value) }, 'Add to current book'));
+      status.textContent = 'Sources ready. Copy lyrics from any link above, paste, then Add.';
+    }
+
+    function importPasted(title, text) {
+      if (!book) { toast('Select a hymnbook first (or create one).', 'err'); return; }
+      const p = parseLyrics(text);
+      if (!p.v.length) { toast('Could not parse any stanzas. Use blank lines between stanzas and “Chorus:” for the refrain.', 'err'); return; }
+      const num = Math.max(0, ...book.hymns.map((x) => x.n)) + 1;
+      const nh = { n: num, t: title || 'Untitled', a: '', v: p.v, c: p.c };
+      book.hymns.push(nh);
+      book.hymns.sort((a, b) => a.n - b.n);
+      saveBookEdit(nh, true).then(() => {
+        toast('Added “' + nh.t + '” (# ' + num + ') to ' + book.name, 'ok');
+        selectHymn(nh);
+        // close modal if possible
+        const m = document.querySelector('.modal');
+        if (m && m.close) m.close();
+      });
+    }
+
+    modal({
+      title: 'Find lyrics online', wide: true,
+      body: h('div.col',
+        h('p.note', 'Search public sources for any hymn or chorus. Copy the lyrics and paste them to add offline in the same format as the choruses.'),
+        h('div.row', titleIn, h('button.btn', { type: 'button', onclick: search }, 'Search')),
+        status, results),
+      actions: [{ label: 'Close' }],
+    });
+    titleIn.focus();
+  }
 
   // ------------------------------------------------------------ music (offline MIDI accompaniment)
   const sungStanzas = () => (chosen ? Array.from(chosen).sort((a, b) => a - b) : hymn.v.map((_, i) => i));
