@@ -1,6 +1,6 @@
 {
-"version": "8d2c703d3093",
-"bytes": 36749656,
+"version": "46cc61ffcf46",
+"bytes": 36749907,
 "files": [
 "index.html",
 "display.html",
@@ -553,7 +553,7 @@
 "data/bibles/web/info.json": "82f668ae11593d76",
 "data/hymns/afrikaans.json": "dc4bf6056c1ff485",
 "data/hymns/church-1941.json": "33f8773d0195dfd6",
-"data/hymns/index.json": "5573c77e4cdede19",
+"data/hymns/index.json": "284e54672ee9df2c",
 "data/hymns/sda-online.json": "0b106084464cc699",
 "data/music/hymnal.sf2": "cef698782e44666c",
 "data/music/index.json": "063885ef50ab977a",

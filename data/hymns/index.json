@@ -14,5 +14,13 @@
     "lang": "en",
     "file": "church-1941.json",
     "note": "All 703 hymns of the 1941 SDA Church Hymnal with lyrics offline."
+  },
+  {
+    "id": "afrikaans-sda",
+    "name": "Advent Lofliedere (Afrikaans, offline)",
+    "short": "AL",
+    "lang": "af",
+    "file": "afrikaans.json",
+    "note": "All 481 Afrikaans hymns with lyrics offline. Play music opens the source page."
   }
 ]
