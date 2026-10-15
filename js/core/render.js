@@ -4,8 +4,11 @@
 //   {kind:'text', variant:'bible'|'hymn'|'title'|'plain', html, cols?:[{html,ref}], colLayout?, head?, foot?, footR?, lines?}
 //   {kind:'image', src: Blob|url, fit?:'contain'|'cover'}
 //   {kind:'html',  html, assets:[Blob], w, h, bg?}           (PowerPoint slides rendered as HTML)
+//   {kind:'banner', ...}                                      (welcome, verse, countdown … see bannerframe.js)
 //   {kind:'video'|'stream'|'web', ...}                        (owner supplies a media hook)
+// Any frame may carry clock:{at, label} for a small "Service starts in 4:32" corner.
 import { isBlob, esc } from './util.js';
+import { bannerEl, clockEl } from './bannerframe.js';
 
 export const STAGE_W = 1920;
 
@@ -120,6 +123,13 @@ export async function renderFrame(layer, frame, opts = {}) {
     });
     layer.appendChild(box);
     await decodeImgs(box);
+  } else if (k === 'banner') {
+    const b = bannerEl(frame, (src) => urlFor(src, urls));
+    layer.appendChild(b.el);
+    const body = b.el.querySelector('.f-body');
+    if (body) fitBody(body, 44, b.maxF);
+    if (b.stop) mediaCleanup = b.stop;
+    await decodeImgs(b.el);
   } else if (opts.media && !opts.placeholderOnly && (k === 'video' || k === 'stream' || k === 'web')) {
     mediaCleanup = (await opts.media(layer, frame)) || null;
   } else {
@@ -133,7 +143,13 @@ export async function renderFrame(layer, frame, opts = {}) {
     ph.insertAdjacentHTML('beforeend', '<div>' + esc(frame.title || label) + '</div>' + (frame.sub ? '<small>' + esc(frame.sub) + '</small>' : ''));
     layer.appendChild(ph);
   }
-  return () => { urls.forEach((u) => URL.revokeObjectURL(u)); if (mediaCleanup) try { mediaCleanup(); } catch (e) { /* */ } };
+  let clockStop = null;
+  if (frame.clock && frame.clock.at > Date.now()) { const c = clockEl(frame.clock); layer.appendChild(c.el); clockStop = c.stop; }
+  return () => {
+    urls.forEach((u) => URL.revokeObjectURL(u));
+    if (mediaCleanup) try { mediaCleanup(); } catch (e) { /* */ }
+    if (clockStop) clockStop();
+  };
 }
 
 /**

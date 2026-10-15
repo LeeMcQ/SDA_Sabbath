@@ -94,6 +94,50 @@
 .f-html .sp p { margin: 0; }
 .f-html .sp img { width: 100%; height: 100%; display: block; object-fit: fill; }
 
+/* Banners (welcome, verse, announcement, offering, countdown …): live text over a palette or picture */
+.f-banner { position: absolute; inset: 0; overflow: hidden; color: var(--b-fg, #fff); font-family: var(--d-font); }
+.f-banner.serif { font-family: "Selah Serif", Georgia, serif; }
+.f-banner .fb-bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+.f-banner .fb-dim { position: absolute; inset: 0; }
+.f-banner.has-img.dark .fb-in { text-shadow: 0 3px 14px rgba(0,0,0,.55), 0 0 2px rgba(0,0,0,.6); }
+.f-banner.pos-low.has-img .fb-dim { -webkit-mask-image: linear-gradient(to top, #000 0, #000 45%, rgba(0,0,0,.35) 100%); mask-image: linear-gradient(to top, #000 0, #000 45%, rgba(0,0,0,.35) 100%); }
+.f-banner .fb-in { position: absolute; inset: 0; display: flex; flex-direction: column; padding: var(--d-pad-y) var(--d-pad); }
+.fb-top { display: flex; align-items: center; justify-content: center; gap: 28px; min-height: 0; margin-bottom: 18px; }
+.fb-logo { max-height: 128px; max-width: 360px; object-fit: contain; }
+.fb-kicker { font-size: 52px; line-height: 1.2; font-weight: 700; color: var(--b-accent); letter-spacing: .01em; text-align: center; }
+.f-banner .f-body { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.f-banner .f-fit { max-width: 100%; text-align: center; text-wrap: balance; overflow-wrap: anywhere; line-height: 1.15; }
+.fb-title { font-weight: 700; }
+.f-banner.serif .fb-title { font-weight: 600; }
+.fb-text { font-size: .5em; font-weight: 400; line-height: 1.32; margin-top: .55em; opacity: .95; }
+.f-fit.only-text .fb-text { font-size: 1em; font-weight: 600; margin-top: 0; }
+.fb-foot { display: flex; align-items: flex-end; justify-content: center; gap: 40px; margin-top: 22px; min-height: 0; }
+.fb-footline { flex: 1 1 auto; font-size: 46px; line-height: 1.25; color: var(--b-accent); text-align: center; font-weight: 700; }
+.f-banner.has-qr .fb-in { padding-right: calc(var(--d-pad) + 380px); }
+.fb-qr { position: absolute; right: var(--d-pad); top: 50%; transform: translateY(-50%); width: 340px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-shadow: none; }
+.fb-qr img { width: 300px; height: 300px; image-rendering: pixelated; background: #fff; padding: 20px; border-radius: 18px; box-sizing: content-box; }
+.fb-qr span { font-size: 34px; line-height: 1.2; font-weight: 700; text-align: center; color: var(--b-fg); }
+.fb-mark { position: absolute; right: 28px; bottom: 18px; font-size: 22px; opacity: .45; }
+/* Positions */
+.f-banner.pos-left .fb-top { justify-content: flex-start; }
+.f-banner.pos-left .fb-kicker, .f-banner.pos-left .f-fit, .f-banner.pos-left .fb-footline { text-align: left; }
+.f-banner.pos-left .f-body { justify-content: flex-start; padding-right: 22%; }
+.f-banner.pos-low .f-body { align-items: flex-end; }
+.f-banner.pos-low .fb-in { padding-top: calc(var(--d-pad-y) * 1.4); }
+/* Verse banners: calmer weight, reference in the accent colour */
+.f-banner.tpl-verse .fb-title { font-weight: 400; line-height: 1.28; }
+.f-banner.tpl-verse.serif .fb-title { font-style: italic; }
+/* Countdown */
+.fb-count-wrap { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 0; text-align: center; }
+.fb-count { font-size: 300px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.01em; font-family: "Selah Serif", Georgia, serif; }
+.fb-count.done { font-size: 170px; font-family: inherit; }
+.fb-count-k { font-size: 68px; margin-bottom: 26px; }
+.fb-count-wrap .fb-text { font-size: 56px; margin-top: 40px; max-width: 80%; }
+/* Corner clock on any slide (pre-service loop) */
+.f-clock { position: absolute; right: 40px; bottom: 34px; z-index: 5; padding: 12px 26px; border-radius: 999px; background: rgba(0,0,0,.62); color: #fff; font-size: 44px; line-height: 1.1; font-family: var(--d-font); }
+.f-clock b { font-variant-numeric: tabular-nums; font-family: "Selah Serif", Georgia, serif; }
+.f-clock .l { opacity: .85; }
+
 /* Video, stream, web */
 .f-media { position: absolute; inset: 0; background: #000; }
 .f-media video, .f-media iframe, .f-media canvas { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; object-fit: contain; background: #000; }

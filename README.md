@@ -30,7 +30,8 @@ Nothing reaches the projector until **Present** (F5 or Ctrl+Enter). Each tab kee
 | **Web** | **Mirror a tab** — the projector shows exactly that browser tab, without the mouse pointer (scroll/zoom it from SDA Sabbath in Chrome). **Embed** — YouTube and embeddable sites load directly on the display. |
 | **PC view** | Share the whole screen, one window (e.g. PowerPoint or a Bible app) or a tab; see it live inside SDA Sabbath. **Freeze** keeps the last picture up while you work privately. The **mini controller** floats on top of other programs. |
 | **Plan** | Prepare the order of service at home (Divine Service, Sabbath School and Vespers templates), export it, and step through it in church with **Next item**. |
-| **Settings** | Fonts (Atkinson Hyperlegible, serif), colours, background picture, logo, margins, text sizes, fade/cut, 4:3 projectors, light/dark theme, tabs left or right, low-power mode, backups, Bibles. |
+| **Banners** | Welcome, verse, announcement, offering (with giving QR code), countdown and Sabbath-sunset banners drawn live on the display; a self-running pre-service loop; key verses for the 28 Fundamental Beliefs and sermon topics. See [Banners](#banners). |
+| **Settings** | Fonts (Atkinson Hyperlegible, serif), colours, background picture, logo, margins, text sizes, fade/cut, 4:3 projectors, light/dark theme, tabs left or right, low-power mode, backups, Bibles, church details, online AI. |
 
 **Live translation** (sermon → captions in another language) is planned; the caption line is already
 built into the display.
@@ -201,6 +202,11 @@ companion/                   Rust companion (std only); build.rs embeds the app
 data/music/                  hymn MIDI pack, verse index, GeneralUser GS subset (hymnal.sf2)
 js/core/musicengine.js       SoundFont player (SpessaSynth), arrangement of intro + sung stanzas
 js/core/hymnmusic.js         music controller: this device, or the PC display when used as a remote
+js/core/bannerframe.js       banner slides on the display (palettes, countdown, corner clock)
+js/core/church.js            church details, Sabbath date and offline sunset times
+js/core/ai.js                optional online AI (text, background pictures, model lists)
+js/tabs/ai.js                Banners tab (make, saved, pre-service loop, topics)
+data/topics/topics.json      key verses for the 28 Fundamental Beliefs and sermon topics
 js/lib/smf.js                MIDI file reader/writer and section joining
 vendor/spessasynth/          SpessaSynth (Apache 2.0)
 tools/                       build.py, build_bibles.py, build_hymn_music.py, build_hymn_soundfont.mjs
@@ -218,7 +224,7 @@ tools/                       build.py, build_bibles.py, build_hymn_music.py, bui
 - Hymn MIDI files: supplied by the church for its own services.
 - SDA Sabbath code: MIT.
 
-## Service tools (new)
+## Service tools
 
 The **Tools** tab (under More) adds:
 
@@ -227,42 +233,50 @@ The **Tools** tab (under More) adds:
 - Service timer and countdown presets (5/10/20 min)
 - Responsive readings
 - Communion / Ordinance of Humility step-through slides
-- Offering and tithe graphics
 - Streaming overlay window
 - Experimental live captions via browser speech recognition
 
-Children’s story templates were intentionally left out.
+Offering banners (verse + giving QR code) are in **Banners**. Children’s story templates were intentionally left out.
 
-## AI tab
+## Banners
 
-The **AI** tab (under More) adds two on-the-spot helpers:
+Like every other tab, nothing in **Banners** reaches the projector until **Present**: buttons say **Set as Next**.
 
-### Banner / Screensaver
-Choose from predefined master styles (Sabbath Welcome, Verse of the Day, Event, Offering, Closing). Edit a few fields and generate a full-screen banner. Fully offline.
+- **Make** — Welcome, Bible verse, Announcement, Tithe & offering, Countdown, Sabbath sunset, Closing blessing,
+  Blank and Picture banners. Banners are drawn live on the display like Bible verses, so the text is sharp, fills
+  the screen and fits 4:3 projectors too. The preview updates as you type.
+  - **Filled in for you** from **Church details** (Settings → Church): church name, the coming Sabbath’s date,
+    the sunset time (“Sabbath begins at sunset: 18:58”, worked out offline from the church’s location), the
+    service time for the countdown and a **QR code for online giving** (https links only).
+  - **Bible verse banners** take a reference (e.g. `Ps 23:1-3`) and fill in the text from any installed Bible.
+  - **Look**: eight colour palettes chosen for readable contrast, patterns, text position, sans or serif, your
+    logo, and **your own photos** as backgrounds (darkened automatically so text stays readable).
+  - **Countdown** counts down to the service time on the display itself and shows “Welcome” at zero.
+- **Saved** — your banners, kept in the app’s database (works offline): Set as Next, Edit, Rename, Duplicate,
+  Delete, Add to plan, Add to loop. Banners made with the old Banner tab are moved here automatically.
+- **Pre-service loop** — banners and announcement slide decks take turns every 5–30 seconds, with an optional
+  “Service starts in 4:32” clock in the corner; when it is time, the loop can switch to your Welcome banner. The
+  loop runs **on the display itself**, so it keeps going if the phone or PC that started it goes to sleep.
+  Pause / resume from the bottom bar; Next / Previous move by hand.
+- **Topics** — key Bible verses for the **28 Fundamental Beliefs** and about 40 sermon topics (prayer, hope, grace,
+  health, children, mothers, Christmas, Easter …), shown from the Bible you choose (KJV, WEB, Afrikaans, or an
+  imported NIV / Xhosa). Search in English or Afrikaans (“wederkoms”, “gebed”), type a reference, or any words to
+  search the Bible. **Set all as Next** puts every verse on slides; **Banner** turns one verse into a banner;
+  topics can be added to the service plan.
 
-### Quick Research
-Type a topic (Sabbath, prayer, baptism, communion, second coming, creation, tithe). The app produces a short, easy-to-read, child-friendly summary on 1–2 slides. Inappropriate topics are blocked. You can also paste your own short summary.
+Service plans can link banners, the pre-service loop and topic verses (Plan → Link media → Banner or loop).
 
-Both can be presented immediately to the projector.
+## Online AI (optional)
 
-## Online AI
+In **Settings → AI** choose a provider (OpenAI, Google Gemini, xAI Grok, Together AI, OpenRouter or Anthropic
+Claude — text only), paste your key and press **Test key**: it shows the models your key can use and lets you
+choose a text and a picture model (or leave both on Automatic). If a model is retired, SDA Sabbath picks a
+current one by itself and remembers it.
 
-In **Settings → AI** you can add an API key for OpenAI, Google Gemini, or Anthropic Claude.
+- **AI picture (online)** in Banners → Make makes a **background picture without text**; the banner words stay
+  sharp on top. The picture is saved on the device, so it works offline afterwards.
+- **AI summary (online)** in Banners → Topics writes 2–3 short slides into edit boxes. Every Bible reference is
+  checked against the installed Bible (✓ with the verse text, or a warning when it does not exist) and words
+  worth a second look are pointed out. Nothing is shown until you press Set as Next and then Present.
 
-- **AI image (online)** — uses OpenAI DALL-E to generate a beautiful banner from the master prompt + your fields.
-- **AI research (online)** — asks the selected LLM for a short, child-safe summary on 1–2 slides.
-
-Keys stay on this device only. Offline modes still work without a key.
-
-## AI provider selection
-
-Settings → AI now has a dropdown of providers that support text and images:
-
-- OpenAI (text + DALL-E)
-- Google Gemini (text + Imagen)
-- xAI Grok (text + images)
-- Together AI (text + Flux)
-- OpenRouter (many models)
-- Anthropic Claude (text only, excellent research)
-
-Selecting a provider shows instructions and a link to get a key. The key stays on this device.
+Keys stay on this device only and are never included in backups. Everything else works without a key or internet.

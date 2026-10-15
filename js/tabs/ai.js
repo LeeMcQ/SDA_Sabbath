@@ -1,693 +1,964 @@
-// Banner tab: on-the-spot banner / screensaver generator and quick child-safe research summaries.
-// Banner generation is fully offline (canvas). Research uses a built-in safe knowledge base
-// for common topics and produces short, readable slides. Content is filtered for church use.
-import { h, clear, esc } from '../core/util.js';
+// Banners: welcome, Bible-verse, announcement, offering, countdown and sunset banners, drawn live on the
+// display (sharp at any size, any projector shape); a pre-service loop that runs on the display by itself;
+// and Topics: key Bible verses for the 28 Fundamental Beliefs and common sermon topics, from the installed
+// Bibles. Nothing here reaches the screen until Present. Online AI (optional) makes background pictures
+// and short summaries that are always shown for checking first.
+// (The tab id stays 'ai' so existing settings and service plans keep working.)
+import { h, clear, uid, debounce, esc, normalize } from '../core/util.js';
 import { icon } from '../core/icons.js';
-import { btn, toast } from '../core/ui.js';
+import { btn, seg, toast, modal, closeModal, confirmBox, promptBox, menu, emptyState, activatable } from '../core/ui.js';
+import { db } from '../core/db.js';
+import { createStage } from '../core/render.js';
+import { PALETTES, DECOS } from '../core/bannerframe.js';
+import { church, hasLocation, sabbathSunsetLine, sabbathDateLine, nextTime, safeGivingUrl } from '../core/church.js';
+import { listTranslations, getInfo, versesFor, verseText, search as bibleSearch } from '../core/bibledata.js';
+import { parseRef, refText, SHORT } from '../core/books.js';
+import * as ai from '../core/ai.js';
+import { churchForm } from './church-form.js';
 
-const BANNER_TEMPLATES = [
-  {
-    id: 'welcome',
-    name: 'Sabbath Welcome',
-    master: 'Peaceful Sabbath morning welcome banner with soft light, open Bible, and warm tones',
-    fields: ['Church name', 'Welcome message', 'Date'],
-    defaults: ['Malmesbury SDA', 'Welcome to Sabbath Worship', ''],
-  },
-  {
-    id: 'verse',
-    name: 'Verse of the Day',
-    master: 'Elegant scripture banner with large verse text and soft background',
-    fields: ['Verse text', 'Reference', 'Theme colour'],
-    defaults: ['Remember the sabbath day, to keep it holy.', 'Exodus 20:8', '#2c5f4e'],
-  },
-  {
-    id: 'event',
-    name: 'Event / Announcement',
-    master: 'Clean event banner with clear title, date and location',
-    fields: ['Event title', 'When', 'Where / details'],
-    defaults: ['Family Week of Prayer', 'This Sabbath', 'Main sanctuary'],
-  },
-  {
-    id: 'offering',
-    name: 'Offering Invitation',
-    master: 'Gentle offering banner with giving theme',
-    fields: ['Heading', 'Verse or note', 'Church name'],
-    defaults: ['Offering', 'God loves a cheerful giver', ''],
-  },
-  {
-    id: 'closing',
-    name: 'Closing / Benediction',
-    master: 'Calm closing banner with blessing text',
-    fields: ['Blessing text', 'Reference', 'Church name'],
-    defaults: ['The Lord bless you and keep you', 'Numbers 6:24', ''],
-  },
-];
-
-const BANNER_STYLES = [
-  { id: 'classic', name: 'Classic' },
-  { id: 'warm', name: 'Warm' },
-  { id: 'cool', name: 'Cool' },
-  { id: 'gold', name: 'Gold' },
-  { id: 'deep', name: 'Deep' },
-  { id: 'light', name: 'Light' },
-  { id: 'sunset', name: 'Sunset' },
-  { id: 'nature', name: 'Nature' },
-  { id: 'scripture', name: 'Scripture only' },
-  { id: 'texture', name: 'Soft texture' },
-];
-
-const HISTORY_KEY = 'selah-ai-history';
-/** Error from an AI provider's HTTP reply, worded for a media volunteer. */
-function aiHttpError(label, status, detail) {
-  let msg;
-  if (status === 401 || status === 403) msg = label.split(' ')[0] + ' refused the API key. Check or replace it in Settings → AI.';
-  else if (status === 429) msg = label.split(' ')[0] + ' says the key is out of credit or over its rate limit. Try again later or check billing.';
-  else if (status === 400 || status === 404) msg = label + ' ' + status + ': the request or model name was not accepted.' + (detail ? ' ' + String(detail).slice(0, 140) : '');
-  else if (status >= 500) msg = label.split(' ')[0] + ' is having problems (' + status + '). Try again in a minute.';
-  else msg = label + ' ' + status + (detail ? ': ' + String(detail).slice(0, 140) : '');
-  const e = new Error(msg); e.status = status; return e;
-}
-
-/** Turn a thrown error into a clear message. Browsers report a refused key as a network/CORS failure. */
-function friendlyAiError(e) {
-  const m = (e && e.message) || String(e);
-  if (e instanceof TypeError || /failed to fetch|networkerror|load failed|cors/i.test(m)) {
-    return navigator.onLine === false
-      ? 'No internet connection. Online AI needs internet; the offline buttons still work.'
-      : 'Could not reach the AI provider. This usually means the API key is wrong or expired (the provider then blocks the request), or the network is down. Check the key in Settings → AI.';
-  }
-  return m;
-}
-
-function loadHistory() {
-  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch (e) { return []; }
-}
-function saveHistory(item) {
-  const list = loadHistory();
-  list.unshift(item);
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, 12)));
-}
-
-const SAFE_TOPICS = {
-  sabbath: {
-    title: 'The Sabbath',
-    slides: [
-      { h: 'What is the Sabbath?', t: 'The Sabbath is the seventh day of the week. God rested on this day after creating the world and blessed it.\n\nIt is a gift of rest and worship for everyone.' },
-      { h: 'Why we keep it', t: 'Jesus said the Sabbath was made for people. We rest from everyday work, spend time with God and family, and remember that He is our Creator.\n\nExodus 20:8–11 · Mark 2:27' },
-    ],
-  },
-  creation: {
-    title: 'Creation',
-    slides: [
-      { h: 'In the beginning', t: 'God made the heavens, the earth, the sea, and everything in them in six days. On the seventh day He rested.\n\nEverything He made was good.' },
-      { h: 'Why it matters', t: 'We are not an accident. God made us with love and purpose. The Sabbath reminds us of His creative power every week.\n\nGenesis 1–2' },
-    ],
-  },
-  secondcoming: {
-    title: 'Jesus is Coming Again',
-    slides: [
-      { h: 'The promise', t: 'Jesus promised He would come back. He will come in the clouds with great glory so that everyone can see Him.\n\nJohn 14:1–3 · Acts 1:11' },
-      { h: 'How we wait', t: 'We wait with hope, not fear. We love others, share the good news, and keep our hearts ready by trusting Jesus every day.' },
-    ],
-  },
-  prayer: {
-    title: 'Prayer',
-    slides: [
-      { h: 'Talking with God', t: 'Prayer is talking to God as a friend. We can thank Him, ask for help, and pray for others.\n\nHe always listens.' },
-      { h: 'A simple way', t: '1. Thank God for something.\n2. Tell Him what is on your heart.\n3. Ask for help for yourself and others.\n4. End in Jesus’ name.\n\n1 Thessalonians 5:17' },
-    ],
-  },
-  baptism: {
-    title: 'Baptism',
-    slides: [
-      { h: 'What is baptism?', t: 'Baptism is a special way of showing that we belong to Jesus. A person is lowered into water and raised again.\n\nIt pictures dying to the old life and rising to a new one with Jesus.' },
-      { h: 'Who can be baptised?', t: 'Anyone who believes in Jesus and wants to follow Him can be baptised. It is a joyful public step of faith.\n\nMatthew 28:19 · Acts 2:38' },
-    ],
-  },
-  communion: {
-    title: 'The Lord’s Supper',
-    slides: [
-      { h: 'Remembering Jesus', t: 'Before the cross, Jesus shared bread and grape juice with His disciples. He asked us to do this to remember Him.\n\nThe bread reminds us of His body. The cup reminds us of His blood.' },
-      { h: 'The Ordinance of Humility', t: 'Jesus also washed His disciples’ feet. In many SDA churches we do the same before communion as a symbol of love and service.\n\nJohn 13 · 1 Corinthians 11:23–26' },
-    ],
-  },
-  tithing: {
-    title: 'Tithe and Offerings',
-    slides: [
-      { h: 'Returning to God', t: 'A tithe is one tenth of what we receive. Many people also give offerings as a thank-you gift to God.\n\nIt is a way of trusting Him and supporting His work.' },
-      { h: 'A cheerful heart', t: 'God loves a cheerful giver. We give because He first gave to us, not because we are forced.\n\nMalachi 3:10 · 2 Corinthians 9:7' },
-    ],
-  },
+// ------------------------------------------------------------ templates
+const TPL = {
+  welcome: { name: 'Welcome', fields: ['kicker', 'title', 'text', 'foot'], x: { logo: true, date: true }, s: { pal: 'navy', deco: 'glow' },
+    d: (c) => ({ kicker: c.name, title: 'Happy Sabbath', text: 'Welcome to our worship service. We are glad you are here!' }),
+    mood: 'Warm early-morning light over a peaceful green valley' },
+  verse: { name: 'Bible verse', fields: ['ref', 'title', 'kicker'], x: {}, s: { pal: 'black', deco: 'none', font: 'serif' },
+    d: () => ({ ref: 'Exodus 20:8' }), mood: 'A quiet, softly lit nature scene' },
+  announce: { name: 'Announcement', fields: ['kicker', 'title', 'text', 'foot'], x: {}, s: { pal: 'slate', deco: 'waves' },
+    d: () => ({ kicker: 'Announcement', title: 'Family Week of Prayer', text: 'Every evening at 19:00', foot: 'Main sanctuary · Everyone welcome' }),
+    mood: 'Bright, friendly, softly blurred light' },
+  offering: { name: 'Tithe & offering', fields: ['kicker', 'title', 'text', 'foot'], x: { qr: true }, s: { pal: 'earth', deco: 'glow' },
+    d: (c) => ({ kicker: c.name, title: 'Tithes & Offerings', text: '“God loveth a cheerful giver.”\n2 Corinthians 9:7' }),
+    presets: ['2 Cor 9:7', 'Mal 3:10', 'Prov 3:9', 'Luke 6:38', '1 Chr 29:14'], mood: 'A golden wheat field in late afternoon sun' },
+  countdown: { name: 'Countdown', fields: ['kicker', 'at', 'done', 'text', 'foot'], x: {}, s: { pal: 'navy', deco: 'rays' },
+    d: (c) => ({ kicker: 'Our service starts in', at: c.service, done: 'Welcome', text: 'Please take your seats and silence your phones.', foot: c.name }),
+    mood: 'A calm sky at dawn with soft clouds' },
+  sunset: { name: 'Sabbath sunset', fields: ['kicker', 'title', 'text', 'foot'], x: { sunset: true }, s: { pal: 'sunset', deco: 'rays' },
+    d: (c) => ({ kicker: c.name, title: 'Welcome the Sabbath', text: 'Come, let us worship together as the sun sets.' }),
+    mood: 'A peaceful sunset over gentle hills' },
+  closing: { name: 'Closing blessing', fields: ['title', 'text', 'foot'], x: {}, s: { pal: 'plum', deco: 'glow' },
+    d: (c) => ({ title: 'The Lord bless thee, and keep thee', text: 'Numbers 6:24', foot: (c.name ? c.name + ' · ' : '') + 'Go in peace' }),
+    mood: 'An evening sky with soft golden clouds' },
+  blank: { name: 'Blank', fields: ['kicker', 'title', 'text', 'foot'], x: {}, s: { pal: 'navy', deco: 'none' }, d: () => ({}), mood: 'A peaceful nature scene' },
+  picture: { name: 'Picture', fields: ['title', 'text'], x: {}, s: { pal: 'navy', deco: 'none' }, d: () => ({}), mood: 'A peaceful nature scene' },
 };
+const FIELD = {
+  kicker: { label: 'Top line', ph: 'Church name or a short heading' },
+  title: { label: 'Heading', ph: 'The main words', multi: 2 },
+  text: { label: 'Message', ph: 'Optional', multi: 3 },
+  foot: { label: 'Bottom line', ph: 'Optional: place, time or contact' },
+  ref: { label: 'Bible reference' },
+  at: { label: 'Service starts at' },
+  done: { label: 'At zero show', ph: 'Welcome' },
+};
+const EXTRAS = [
+  ['logo', 'Logo', 'Your church logo from Settings → Screen'],
+  ['date', 'Date', 'The coming Sabbath’s date'],
+  ['sunset', 'Sunset time', 'When Sabbath begins or ends, worked out offline'],
+  ['qr', 'Giving QR code', 'The giving link from Church details'],
+  ['mark', '“SDA Sabbath” mark', 'A small app name in the corner'],
+];
+const POS = [['center', 'Centre'], ['left', 'Left'], ['low', 'Low']];
 
-const BLOCKED = /\b(violence|weapon|drug|sex|adult|horror|occult|hate|kill|murder)\b/i;
-
-function makeTextCue(title, slides) {
-  return {
-    tab: 'ai',
-    title,
-    sub: 'AI',
-    deck: {
-      kind: 'text',
-      frames: slides.map((s) => ({
-        kind: 'text',
-        variant: 'plain',
-        html: (s.h ? '<div class="f-head">' + esc(s.h) + '</div>' : '') + '<div>' + esc(s.t).replace(/\n/g, '<br>') + '</div>',
-      })),
-    },
-  };
+function newBanner(tpl = 'welcome', extra) {
+  const t = TPL[tpl] || TPL.welcome;
+  const c = church();
+  return Object.assign({ id: null, name: '', tpl, f: Object.assign({}, t.d(c)), x: Object.assign({}, t.x),
+    s: Object.assign({ pal: 'navy', deco: 'none', pos: 'center', font: 'sans', img: null, dim: null }, t.s) }, extra || {});
 }
+const clone = (o) => JSON.parse(JSON.stringify(o));
+const sig = (b) => JSON.stringify([b.name, b.tpl, b.f, b.x, b.s]);
+const short = (s, n = 48) => { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
+const nameOf = (b) => b.name || short((TPL[b.tpl] || TPL.blank).name + (b.f.title || b.f.kicker ? ': ' + (b.f.title || b.f.kicker) : ''), 60);
 
 export default function create(ctx) {
-  const { live, toast: showToast } = ctx;
-  let currentTemplate = BANNER_TEMPLATES[0];
-  const fieldInputs = [];
-  const canvas = document.createElement('canvas');
-  canvas.width = 1920;
-  canvas.height = 1080;
-  const preview = h('div', { style: { marginTop: '8px', borderRadius: '8px', overflow: 'hidden', maxWidth: '100%', background: '#111' } });
-  preview.appendChild(canvas);
-  canvas.style.width = '100%';
-  canvas.style.height = 'auto';
-  canvas.style.display = 'block';
+  const { live, settings, link } = ctx;
+  let lib = [];             // saved banners
+  let loop = { items: [], secs: 8, count: true, at: '', end: '' };
+  let cur = newBanner();    // banner in the editor
+  let savedSig = null;      // sig(cur) when it was last saved (null = never)
+  let view = 'make';
+  let topics = null;
 
-  const templateSel = h('select.field', { 'aria-label': 'Banner master style',
-    onchange: () => {
-      currentTemplate = BANNER_TEMPLATES.find((t) => t.id === templateSel.value) || BANNER_TEMPLATES[0];
-      renderFields();
-    },
-  });
-  BANNER_TEMPLATES.forEach((t) => templateSel.appendChild(h('option', { value: t.id }, t.name)));
-  const styleSel = h('select.field', { 'aria-label': 'Colour style', style: { marginTop: '6px' }, onchange: () => drawBanner() });
-  BANNER_STYLES.forEach((s) => styleSel.appendChild(h('option', { value: s.id }, s.name)));
-  const accentInput = h('input', { type: 'color', 'aria-label': 'Accent colour', title: 'Accent colour', value: '#d4cfc4', style: { width: '48px', height: '32px', border: '0', background: 'transparent' }, onchange: () => drawBanner() });
-  const historyList = h('div', { style: { marginTop: '10px' } });
+  // ------------------------------------------------------------ storage
+  const saveLib = () => db.put('kv', 'banners', lib);
+  const saveLoop = () => db.put('kv', 'banner-loop', loop);
+  const saveDraft = debounce(() => db.put('kv', 'banner-draft', { cur, savedSig }).catch(() => {}), 500);
 
-  const fieldsWrap = h('div.col', { style: { gap: '8px', margin: '8px 0' } });
-
-  function renderFields() {
-    clear(fieldsWrap);
-    fieldInputs.length = 0;
-    currentTemplate.fields.forEach((label, i) => {
-      const inp = h('input.field', { placeholder: label, value: currentTemplate.defaults[i] || '', style: { width: '100%' } });
-      fieldInputs.push(inp);
-      fieldsWrap.append(h('label.muted', label), inp);
-    });
+  async function load() {
+    lib = (await db.get('kv', 'banners').catch(() => null)) || [];
+    loop = Object.assign(loop, (await db.get('kv', 'banner-loop').catch(() => null)) || {});
+    const d = await db.get('kv', 'banner-draft').catch(() => null);
+    if (d && d.cur && TPL[d.cur.tpl]) { cur = d.cur; savedSig = d.savedSig || null; }
+    await migrateOldHistory();
   }
-  renderFields();
-
-  function drawBanner() {
-    const ctx2 = canvas.getContext('2d');
-    const w = canvas.width, hgt = canvas.height;
-    const vals = fieldInputs.map((i) => i.value.trim() || ' ');
-    const t = currentTemplate;
-    const style = (styleSel && styleSel.value) || 'classic';
-
-    const palettes = {
-      classic: ['#1a3a5c', '#0d1f33'],
-      warm: ['#5c3a1a', '#2a1a0d'],
-      cool: ['#1a4a5c', '#0d2a33'],
-      gold: ['#5c4a1a', '#2a220d'],
-      deep: ['#2c1a5c', '#140d2a'],
-      light: ['#e8e0d0', '#c9bfa8'],
-      sunset: ['#c45c26', '#4a2a12'],
-      nature: ['#2d5a3d', '#0f2a1a'],
-      scripture: ['#1c1c1c', '#0a0a0a'],
-      texture: ['#3a3a4a', '#1a1a24'],
-    };
-    const [c1, c2] = palettes[style] || palettes.classic;
-    const g = ctx2.createLinearGradient(0, 0, w, hgt);
-    g.addColorStop(0, c1);
-    g.addColorStop(1, c2);
-    ctx2.fillStyle = g;
-    ctx2.fillRect(0, 0, w, hgt);
-
-    // Soft light circle
-    const rg = ctx2.createRadialGradient(w * 0.5, hgt * 0.4, 50, w * 0.5, hgt * 0.4, 700);
-    rg.addColorStop(0, 'rgba(255,255,255,0.08)');
-    rg.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx2.fillStyle = rg;
-    ctx2.fillRect(0, 0, w, hgt);
-
-    ctx2.fillStyle = style === 'light' ? '#2a2418' : '#f5f0e6';
-    ctx2.textAlign = 'center';
-    ctx2.textBaseline = 'middle';
-
-    const accent = (accentInput && accentInput.value) || (style === 'light' ? '#6b5a40' : '#d4cfc4');
-    const mainSize = vals[0] && vals[0].length > 40 ? 56 : 80;
-    ctx2.font = 'bold ' + mainSize + 'px system-ui, sans-serif';
-    wrapText(ctx2, vals[0] || t.name, w / 2, hgt * 0.36, w * 0.82, mainSize + 6);
-    if (vals[1]) {
-      ctx2.font = '40px system-ui, sans-serif';
-      ctx2.fillStyle = accent;
-      wrapText(ctx2, vals[1], w / 2, hgt * 0.54, w * 0.78, 48);
+  // Banners saved by the old Banner tab were pictures in browser storage (about 5 MB, easily full).
+  // Move them into the app's database once, as Picture banners.
+  async function migrateOldHistory() {
+    let old;
+    try { old = JSON.parse(localStorage.getItem('selah-ai-history') || 'null'); } catch (e) { old = null; }
+    if (!Array.isArray(old) || !old.length) return;
+    for (const it of old.slice().reverse()) {
+      if (!it || typeof it.data !== 'string' || !/^data:image\//.test(it.data)) continue;
+      try {
+        const blob = await (await fetch(it.data)).blob();
+        const id = await storePicture(blob, (it.title || 'Banner') + '.jpg', { dim: 0 });
+        lib.unshift(Object.assign(newBanner('picture'), { id: 'b-' + uid(), name: (it.title || 'Banner') + ' (earlier)', s: { pal: 'navy', deco: 'none', pos: 'center', font: 'sans', img: id, dim: 0 }, created: it.ts || Date.now(), updated: it.ts || Date.now() }));
+      } catch (e) { /* skip a broken entry */ }
     }
-    if (vals[2]) {
-      ctx2.font = '30px system-ui, sans-serif';
-      ctx2.fillStyle = accent;
-      ctx2.fillText(vals[2], w / 2, hgt * 0.7);
+    await saveLib();
+    try { localStorage.removeItem('selah-ai-history'); } catch (e) { /* */ }
+  }
+
+  // ------------------------------------------------------------ pictures
+  const blobCache = new Map();
+  async function fileBlob(id) {
+    if (!id) return null;
+    if (blobCache.has(id)) return blobCache.get(id);
+    const r = await db.get('files', id).catch(() => null);
+    const b = (r && r.blob) || null;
+    blobCache.set(id, b);
+    return b;
+  }
+  /** Store a background picture (scaled to at most 2560 px, JPEG) with a thumbnail and its brightness. */
+  async function storePicture(blob, name, opts = {}) {
+    const bmp = await createImageBitmap(blob);
+    const sc = Math.min(1, 2560 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(bmp.width * sc); c.height = Math.round(bmp.height * sc);
+    const g = c.getContext('2d');
+    g.drawImage(bmp, 0, 0, c.width, c.height);
+    const full = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.86));
+    const t = document.createElement('canvas');
+    t.width = 192; t.height = 108;
+    const tg = t.getContext('2d');
+    const k = Math.max(192 / bmp.width, 108 / bmp.height);
+    tg.drawImage(bmp, (192 - bmp.width * k) / 2, (108 - bmp.height * k) / 2, bmp.width * k, bmp.height * k);
+    const thumb = await new Promise((r) => t.toBlob(r, 'image/jpeg', 0.8));
+    // Average brightness decides how much the picture is darkened under white text.
+    const px = tg.getImageData(0, 0, 192, 108).data;
+    let sum = 0;
+    for (let i = 0; i < px.length; i += 4) sum += 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2];
+    const lum = sum / (px.length / 4) / 255;
+    if (bmp.close) bmp.close();
+    c.width = c.height = 0;
+    const id = 'bbg-' + uid();
+    await db.put('files', id, { id, kind: 'banner-bg', name: name || 'Picture', type: 'image/jpeg', size: full.size, blob: full, thumb, added: Date.now(), meta: { lum } });
+    blobCache.set(id, full);
+    return id;
+  }
+  const autoDim = (lum) => Math.round(Math.max(0.25, Math.min(0.7, 0.2 + 0.55 * (lum == null ? 0.5 : lum))) * 100) / 100;
+
+  // ------------------------------------------------------------ frames and cues
+  let qrCache = { url: '', data: '' };
+  async function qrData(url) {
+    if (qrCache.url === url) return qrCache.data;
+    const m = await import('../../vendor/qrcode.min.js');
+    const q = m.default(0, 'M'); q.addData(url); q.make();
+    qrCache = { url, data: q.createDataURL(8, 0) };
+    return qrCache.data;
+  }
+  async function logoBlob() {
+    const st = live.style || (await live.buildStyle());
+    return (st && st.logoBlob) || null;
+  }
+  /** The display frame for a banner (pictures, logo and QR code resolved). */
+  async function frameOf(b, now = new Date()) {
+    const c = church(), f = b.f || {}, x = b.x || {}, s = b.s || {};
+    const fr = { kind: 'banner', tpl: b.tpl, pal: s.pal || 'navy', deco: s.deco || 'none', pos: s.pos || 'center', font: s.font || 'sans',
+      kicker: f.kicker || '', title: f.title || '', text: f.text || '', mark: !!x.mark };
+    const foot = [b.tpl === 'verse' ? f.refLabel || f.ref : f.foot, x.date ? sabbathDateLine(now) : '', x.sunset ? sabbathSunsetLine(now) : '']
+      .map((t) => (t || '').trim()).filter(Boolean);
+    fr.foot = foot.join('  ·  ');
+    if (b.tpl === 'countdown') {
+      const at = nextTime(f.at || c.service, now);
+      fr.title = ''; fr.countdown = { at: at ? at.getTime() : Date.now(), done: f.done || 'Welcome' };
     }
-
-    // Small footer
-    ctx2.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx2.font = '24px system-ui, sans-serif';
-    ctx2.fillText('SDA Sabbath', w / 2, hgt - 40);
+    if (s.img) { const im = await fileBlob(s.img); if (im) { fr.img = im; fr.dim = s.dim == null ? 0.45 : s.dim; } }
+    if (x.logo) { const lg = await logoBlob(); if (lg) fr.logo = lg; }
+    const gu = x.qr ? safeGivingUrl(c.givingUrl) : '';
+    if (gu) { try { fr.qr = await qrData(gu); fr.qrLabel = c.givingLabel; } catch (e) { /* no QR */ } }
+    return fr;
+  }
+  const cueId = (b) => 'banner:' + (b.id || 'draft');
+  function bannerCue(b, frame) {
+    return { id: cueId(b), tab: 'ai', title: nameOf(b), sub: 'Banner', deck: { kind: 'banner', frames: [frame] }, index: 0, labels: [TPL[b.tpl].name],
+      plan: b.id ? { tab: 'ai', banner: b.id, label: 'Banner: ' + nameOf(b) } : null };
   }
 
-  function wrapText(ctx2, text, x, y, maxWidth, lineHeight) {
-    const words = (text || '').split(' ');
-    let line = '';
-    const lines = [];
-    for (const word of words) {
-      const test = line + word + ' ';
-      if (ctx2.measureText(test).width > maxWidth && line) {
-        lines.push(line.trim());
-        line = word + ' ';
-      } else line = test;
+  // ------------------------------------------------------------ layout
+  const viewSeg = h('div.seg.bn-views', { role: 'tablist' });
+  const VIEWS = [['make', 'Make'], ['library', 'Saved'], ['loop', 'Loop', 'Pre-service '], ['topics', 'Topics']];
+  function renderViewSeg() {
+    clear(viewSeg);
+    VIEWS.forEach(([v, label, pre]) => viewSeg.appendChild(h('button', { type: 'button', role: 'tab', 'aria-selected': String(v === view), 'aria-pressed': String(v === view),
+      onclick: () => setView(v) }, pre ? [h('span.hide-sm', pre + label.toLowerCase()), h('span.bn-sm', label)] : label, v === 'library' && lib.length ? ' (' + lib.length + ')' : '')));
+  }
+  const churchBtn = h('button.btn.sm', { type: 'button', title: 'Church name, town, location, service time and giving link', onclick: () => churchDialog() }, icon('pin'), h('span.hide-sm', 'Church details'));
+  const views = { make: h('div.bn-view'), library: h('div.bn-view.scroll.pad'), loop: h('div.bn-view.scroll.pad'), topics: h('div.bn-view') };
+  const el = h('section.banners',
+    h('div.toolbar', h('h2', 'Banners'), viewSeg, h('div.grow'), churchBtn),
+    views.make, views.library, views.loop, views.topics);
+
+  function setView(v) {
+    view = v;
+    renderViewSeg();
+    Object.keys(views).forEach((k) => { views[k].hidden = k !== v; });
+    if (v === 'make') { refreshPreview(); }
+    if (v === 'library') renderLibrary();
+    if (v === 'loop') renderLoop();
+    if (v === 'topics') renderTopics();
+  }
+
+  function churchDialog() {
+    modal({ title: 'Your church', body: h('div', h('p.note', { style: { marginBottom: '10px' } }, 'Banners use these details. They are also in Settings → Church. Nothing here leaves this device.'),
+      churchForm(settings, () => { schedule(); })), actions: [{ label: 'Done', primary: true }], wide: true });
+  }
+
+  // ============================================================ MAKE
+  const host = h('div.stage-host');
+  const screen = h('div.screen.bn-screen', host);
+  const stage = createStage(host, { placeholderOnly: true });
+  const nameInp = h('input.field', { placeholder: 'Name (for the Saved list)', 'aria-label': 'Banner name', style: { flex: '1 1 160px', minWidth: '0' },
+    oninput: () => { cur.name = nameInp.value; changed(false); } });
+  const saveBtn = h('button.btn', { type: 'button', onclick: () => saveCurrent(true) }, icon('save'), h('span', 'Save'));
+  const nextBtn = h('button.btn.primary', { type: 'button', title: 'Put this banner on the green Next screen. Press Present (F5) to show it.', onclick: () => setNext() }, icon('next'), h('span', 'Set as Next'));
+  const editorScroll = h('div.scroll.pad.bn-editor');
+  const previewPane = h('div.pane.bn-preview-pane',
+    h('div.bn-preview-in',
+      screen,
+      h('div.row.wrap.bn-actions', nextBtn, saveBtn,
+        h('button.btn', { type: 'button', title: 'Add to the current service plan', onclick: () => addCurToPlan() }, icon('plan'), h('span', 'Add to plan')),
+        h('button.btn', { type: 'button', title: 'Add to the pre-service loop', onclick: () => addCurToLoop() }, icon('loop'), h('span', 'Add to loop'))),
+      h('div.row', nameInp,
+        h('button.btn.sm', { type: 'button', title: 'Start a new banner', onclick: () => startNew() }, icon('plus'), h('span', 'New'))),
+      h('p.note', 'Set as Next puts the banner on the green Next screen; Present (F5) shows it. Text is fitted to the projector, like Bible verses.')));
+  views.make.append(h('div.split.banner-split', h('div.pane.bn-edit-pane', editorScroll), previewPane));
+
+  function setPreviewAspect() {
+    const a = link.aspect ? link.aspect() : 16 / 9;
+    stage.setAspect(a);
+    screen.style.aspectRatio = String(a);
+  }
+  live.on('style', (s) => { stage.applyStyle(s); setPreviewAspect(); refreshPreview(); });
+  if (link.on) link.on('hello', () => { setPreviewAspect(); refreshPreview(); });
+
+  let previewSeq = 0;
+  async function refreshPreview() {
+    if (view !== 'make') return;
+    const my = ++previewSeq;
+    const fr = await frameOf(cur);
+    if (my !== previewSeq) return;
+    stage.show(fr);
+    // Keep the Next screen truthful while editing the banner that is staged.
+    if (live.staged && live.staged.id === cueId(cur) && live.staged.tab === 'ai') ctx.setStaged('ai', bannerCue(cur, fr));
+  }
+  const schedule = debounce(refreshPreview, 120);
+  function changed(rerender) {
+    updateSaveBtn();
+    saveDraft();
+    if (rerender) renderEditor();
+    schedule();
+  }
+  function updateSaveBtn() {
+    const clean = savedSig && savedSig === sig(cur) && cur.id && lib.some((b) => b.id === cur.id);
+    saveBtn.disabled = !!clean;
+    saveBtn.lastChild.textContent = clean ? 'Saved' : 'Save';
+  }
+
+  async function setNext() {
+    const fr = await frameOf(cur);
+    ctx.setStaged('ai', bannerCue(cur, fr));
+    toast('Banner is Next. Press Present (F5) to show it.', 'ok', 2500);
+  }
+  function saveCurrent(announce) {
+    const now = Date.now();
+    if (!cur.id) { cur.id = 'b-' + uid(); cur.created = now; }
+    cur.updated = now;
+    if (!cur.name) cur.name = nameOf(cur);
+    nameInp.value = cur.name;
+    const copy = clone(cur);
+    const i = lib.findIndex((b) => b.id === cur.id);
+    if (i >= 0) lib[i] = copy; else lib.unshift(copy);
+    savedSig = sig(cur);
+    saveLib(); saveDraft(); updateSaveBtn(); renderViewSeg();
+    if (announce) toast('Saved to Saved banners.', 'ok', 2000);
+    return copy;
+  }
+  async function addCurToPlan() {
+    const b = saveCurrent(false);
+    (await ctx.tab('plan')).addItem({ tab: 'ai', banner: b.id, label: 'Banner: ' + nameOf(b) });
+  }
+  function addCurToLoop() {
+    const b = saveCurrent(false);
+    if (!loop.items.some((it) => it.t === 'banner' && it.id === b.id)) { loop.items.push({ t: 'banner', id: b.id }); saveLoop(); }
+    toast('Added to the pre-service loop (' + loop.items.length + ' item' + (loop.items.length === 1 ? '' : 's') + ').', 'ok');
+  }
+  function startNew(tpl) {
+    cur = newBanner(tpl || cur.tpl);
+    savedSig = null;
+    nameInp.value = '';
+    changed(true);
+    if (cur.tpl === 'verse') fetchVerse();
+  }
+  function edit(b) {
+    cur = clone(b); savedSig = sig(cur);
+    nameInp.value = cur.name || '';
+    setView('make');
+    changed(true);
+  }
+
+  // ------------------------------------------------------------ editor
+  let trList = [];
+  function renderEditor() {
+    clear(editorScroll);
+    const c = church();
+    if (!c.name) {
+      editorScroll.appendChild(h('div.card.bn-church', h('div.row.wrap',
+        icon('pin'), h('div.grow', h('b', 'Add your church’s name once'), h('div.note', 'Banners fill it in, with the date, sunset time and giving QR code.')),
+        h('button.btn.sm.primary', { type: 'button', onclick: () => churchDialog() }, 'Church details'))));
     }
-    if (line) lines.push(line.trim());
-    const startY = y - ((lines.length - 1) * lineHeight) / 2;
-    lines.forEach((ln, i) => ctx2.fillText(ln, x, startY + i * lineHeight));
-  }
+    // Template chips
+    const tplRow = h('div.row.wrap.bn-tpls');
+    Object.keys(TPL).forEach((k) => tplRow.appendChild(h('button.chip', { type: 'button', 'aria-pressed': String(cur.tpl === k), onclick: () => switchTemplate(k) }, TPL[k].name)));
+    editorScroll.append(h('h3.bn-h', 'Kind of banner'), tplRow);
 
-  function saveCurrent() {
-    canvas.toBlob((blob) => {
-      if (!blob) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        saveHistory({ type: 'banner', title: currentTemplate.name, style: styleSel.value, data: reader.result, ts: Date.now() });
-        showToast('Saved to history.', 'ok');
-        renderHistory();
-      };
-      reader.readAsDataURL(blob);
-    }, 'image/jpeg', 0.85);
-  }
-
-  function makeMultiDeck() {
-    const frames = [];
-    const themes = ['welcome', 'verse', 'offering'];
-    themes.forEach((id) => {
-      const t = BANNER_TEMPLATES.find((x) => x.id === id);
-      if (!t) return;
-      const c = document.createElement('canvas');
-      c.width = 1920; c.height = 1080;
-      const ctx2 = c.getContext('2d');
-      const style = styleSel.value || 'classic';
-      const palettes = { classic: ['#1a3a5c', '#0d1f33'], warm: ['#5c3a1a', '#2a1a0d'], cool: ['#1a4a5c', '#0d2a33'], gold: ['#5c4a1a', '#2a220d'], deep: ['#2c1a5c', '#140d2a'], light: ['#e8e0d0', '#c9bfa8'], sunset: ['#c45c26', '#4a2a12'], nature: ['#2d5a3d', '#0f2a1a'], scripture: ['#1c1c1c', '#0a0a0a'], texture: ['#3a3a4a', '#1a1a24'] };
-      const [c1, c2] = palettes[style] || palettes.classic;
-      const g = ctx2.createLinearGradient(0, 0, c.width, c.height);
-      g.addColorStop(0, c1); g.addColorStop(1, c2);
-      ctx2.fillStyle = g; ctx2.fillRect(0, 0, c.width, c.height);
-      ctx2.fillStyle = style === 'light' ? '#2a2418' : '#f5f0e6';
-      ctx2.textAlign = 'center'; ctx2.textBaseline = 'middle';
-      ctx2.font = 'bold 72px system-ui, sans-serif';
-      ctx2.fillText(t.defaults[0] || t.name, c.width / 2, c.height * 0.4);
-      ctx2.font = '36px system-ui, sans-serif';
-      ctx2.fillStyle = accentInput.value || '#d4cfc4';
-      ctx2.fillText(t.defaults[1] || '', c.width / 2, c.height * 0.55);
-      frames.push(new Promise((res) => c.toBlob((b) => res({ kind: 'image', src: b, fit: 'contain' }), 'image/jpeg', 0.85)));
+    // Fields
+    const form = h('div.form.bn-form');
+    const t = TPL[cur.tpl];
+    t.fields.forEach((k) => {
+      const F = FIELD[k];
+      let label = F.label;
+      if (cur.tpl === 'verse' && k === 'title') label = 'Verse text';
+      if (cur.tpl === 'verse' && k === 'kicker') label = 'Top line';
+      if (cur.tpl === 'countdown' && k === 'kicker') label = 'Above the clock';
+      if (k === 'ref') {
+        const refInp = h('input.field', { value: cur.f.ref || '', placeholder: 'e.g. Psalm 23:1 or John 3:16', 'aria-label': 'Bible reference', style: { flex: '1 1 160px', minWidth: '0' },
+          oninput: () => { cur.f.ref = refInp.value; fetchVerseSoon(); } });
+        const trSel = h('select.field', { 'aria-label': 'Translation', onchange: () => { cur.f.tr = trSel.value; fetchVerse(); } });
+        trList.forEach((x) => trSel.appendChild(h('option', { value: x.id, selected: x.id === (cur.f.tr || settings.v.bible.primary) }, x.abbr)));
+        form.append(h('label', label), h('div.row', refInp, trSel));
+        return;
+      }
+      if (k === 'at') {
+        const tm = h('input.field', { type: 'time', value: cur.f.at || c.service, 'aria-label': 'Service starts at', style: { width: '130px' },
+          onchange: () => { cur.f.at = tm.value; changed(false); } });
+        form.append(h('label', label), h('div.row', tm, h('span.note', 'Counts down on the screen; shows “' + (cur.f.done || 'Welcome') + '” at zero.')));
+        return;
+      }
+      const inp = F.multi
+        ? h('textarea.field.bn-ta', { rows: F.multi, placeholder: F.ph || '', 'aria-label': label })
+        : h('input.field', { placeholder: F.ph || '', 'aria-label': label, style: { width: '100%' } });
+      inp.value = cur.f[k] || '';
+      inp.oninput = () => { cur.f[k] = inp.value; changed(false); };
+      if (cur.tpl === 'verse' && k === 'title') inp.dataset.verse = '1';
+      form.append(h('label', label), inp);
     });
-    return Promise.all(frames);
+    if (t.presets) {
+      const pr = h('div.row.wrap');
+      t.presets.forEach((r) => pr.appendChild(h('button.chip', { type: 'button', title: 'Use this verse as the message', onclick: () => presetVerse(r) }, r)));
+      form.append(h('label', 'Verse'), pr);
+    }
+    editorScroll.appendChild(form);
+
+    // Extras
+    const ex = h('div.row.wrap.bn-extras');
+    const hasLogo = !!(settings.v.display.logo);
+    EXTRAS.forEach(([k, label, title]) => {
+      let why = '';
+      if (k === 'logo' && !hasLogo) why = 'Add a logo picture in Settings → Screen first.';
+      if (k === 'sunset' && !hasLocation()) why = 'Add your church’s location in Church details first.';
+      if (k === 'qr' && !safeGivingUrl(c.givingUrl)) why = 'Add a giving link in Church details first.';
+      const on = !!cur.x[k] && !why;
+      ex.appendChild(h('button.chip', { type: 'button', 'aria-pressed': String(on), title: why || title, 'aria-disabled': why ? 'true' : null,
+        onclick: () => { if (why) { toast(why, '', 4000); if (k !== 'logo') churchDialog(); return; } cur.x[k] = !cur.x[k]; changed(true); } },
+      on ? icon('check') : null, label));
+    });
+    editorScroll.append(h('h3.bn-h', 'Also show'), ex);
+
+    // Look
+    const sw = h('div.row.wrap.bn-swatches');
+    Object.keys(PALETTES).forEach((k) => {
+      const p = PALETTES[k];
+      sw.appendChild(h('button.swatch', { type: 'button', title: p.name, 'aria-label': 'Colours: ' + p.name, 'aria-pressed': String((cur.s.pal || 'navy') === k),
+        style: { background: 'linear-gradient(135deg,' + p.bg[0] + ',' + p.bg[1] + ')', color: p.accent }, onclick: () => { cur.s.pal = k; changed(true); } }, 'Aa'));
+    });
+    const decoSeg = seg(Object.keys(DECOS).map((k) => [k, DECOS[k]]), cur.s.deco || 'none', (v) => { cur.s.deco = v; changed(false); });
+    const posSeg = seg(POS, cur.s.pos || 'center', (v) => { cur.s.pos = v; changed(false); });
+    const fontSeg = seg([['sans', 'Clear sans'], ['serif', 'Serif']], cur.s.font || 'sans', (v) => { cur.s.font = v; changed(false); });
+    const look = h('div.form.bn-form',
+      h('label', 'Colours'), sw,
+      h('label', 'Pattern'), decoSeg,
+      h('label', 'Picture'), pictureRow(),
+      cur.s.img ? h('label', 'Darken picture') : null, cur.s.img ? dimRow() : null,
+      h('label', 'Text position'), posSeg,
+      h('label', 'Font'), fontSeg);
+    editorScroll.append(h('h3.bn-h', 'Look'), look);
+    if (cur.s.img) decoSeg.querySelectorAll('button').forEach((b) => { b.disabled = true; b.title = 'Patterns are for plain colours (a picture is chosen)'; });
   }
 
-  function presentMulti() {
-    makeMultiDeck().then((frames) => {
-      const cue = { tab: 'ai', title: 'Service pack', sub: '3 slides', deck: { kind: 'image', frames } };
-      ctx.setStaged('ai', cue);
-      live.take(cue);
-      showToast('3-slide pack presented.', 'ok');
+  function switchTemplate(k) {
+    if (k === cur.tpl) return;
+    const keep = { id: null, name: '', s: Object.assign({}, cur.s) };
+    const nb = newBanner(k);
+    // Keep a chosen picture; take the new kind's colours only when no picture is used.
+    if (keep.s.img) { nb.s.img = keep.s.img; nb.s.dim = keep.s.dim; }
+    cur = nb; savedSig = null; nameInp.value = '';
+    changed(true);
+    if (k === 'verse') fetchVerse();
+  }
+
+  // Verse text from the installed Bible (any translation, Afrikaans and Xhosa too).
+  let verseSeq = 0;
+  async function versesText(ref, tr) {
+    const r = parseRef(ref);
+    if (!r || !/\d/.test(ref)) return null;
+    const info = await getInfo(tr || settings.v.bible.primary);
+    if (!info.books[r.book - 1] || !info.books[r.book - 1][1]) return null;
+    const vs = await versesFor(info.id, r.book, r.segs);
+    if (!vs.length) return null;
+    return { text: vs.slice(0, 12).map((v) => verseText(v.text)).join(' ').replace(/^(A Psalm[^.]*\.|To the chief Musician[^.]*\.|[A-Z]{2,}\.)\s*/, ''),
+      label: refText(info.names, r.book, r.segs) + ' (' + info.abbr + ')', many: vs.length > 12 };
+  }
+  async function fetchVerse() {
+    const my = ++verseSeq;
+    const v = await versesText(cur.f.ref || '', cur.f.tr).catch(() => null);
+    if (my !== verseSeq) return;
+    if (!v) { changed(false); return; }
+    cur.f.title = v.text; cur.f.refLabel = v.label;
+    const ta = editorScroll.querySelector('textarea[data-verse]');
+    if (ta) ta.value = v.text;
+    if (v.many) toast('Long passage: only the first 12 verses fit on one banner.', '', 3500);
+    changed(false);
+  }
+  const fetchVerseSoon = debounce(fetchVerse, 350);
+  async function presetVerse(ref) {
+    const v = await versesText(ref, settings.v.bible.primary).catch(() => null);
+    if (!v) { toast('That verse is not in the installed Bible.', 'err'); return; }
+    cur.f.text = '“' + v.text + '”\n' + v.label.replace(/ \([^)]*\)$/, '');
+    changed(true);
+  }
+
+  // Pictures: the church's own photos (kept offline), or one made by online AI.
+  function pictureRow() {
+    const row = h('div.col.bn-pics');
+    const inp = h('input', { type: 'file', accept: 'image/*', hidden: true, onchange: async () => {
+      const f = inp.files[0]; inp.value = '';
+      if (!f) return;
+      try { await usePicture(await storePicture(f, f.name)); } catch (e) { toast('Could not use that picture: ' + e.message, 'err'); }
+    } });
+    const aiDesc = h('input.field', { placeholder: 'Describe a picture (optional), e.g. mountains at sunrise', 'aria-label': 'Describe the AI picture', style: { flex: '1 1 200px', minWidth: '0' } });
+    const aiBtn = h('button.btn.sm', { type: 'button', title: 'Make a background picture with online AI (no text in it — the banner words stay sharp on top)', onclick: async () => {
+      aiBtn.disabled = true; const lbl = aiBtn.lastChild.textContent; aiBtn.lastChild.textContent = 'Making picture…';
+      try {
+        const desc = aiDesc.value.trim();
+        const prompt = (desc || TPL[cur.tpl].mood) + '. A wide 16:9 background photograph for a church projector screen. Calm, reverent and uplifting, soft natural light, ' +
+          'simple composition with plenty of open space for text. Absolutely no text, letters, words, numbers, logos, signs or watermarks.';
+        const flags = ai.flaggedWords(desc);
+        if (flags.length) { toast('Please describe a picture suitable for church.', 'err'); return; }
+        const blob = await ai.aiImage(prompt);
+        await usePicture(await storePicture(blob, 'AI picture ' + new Date().toLocaleDateString()));
+        toast('AI picture added. It is saved on this device and works offline from now on.', 'ok', 4000);
+      } catch (e) { toast(ai.friendlyAiError(e), 'err', 8000); }
+      finally { aiBtn.disabled = false; aiBtn.lastChild.textContent = lbl; }
+    } }, icon('sparkle'), h('span', 'AI picture (online)'));
+    const gallery = h('div.bn-gallery');
+    row.append(h('div.row.wrap',
+      h('button.btn.sm', { type: 'button', onclick: () => inp.click() }, icon('upload'), h('span', 'Choose picture…')),
+      cur.s.img ? h('button.btn.sm', { type: 'button', onclick: () => { cur.s.img = null; changed(true); } }, icon('x'), h('span', 'No picture')) : null,
+      inp), gallery);
+    if (ai.hasKey() && ai.canImage()) row.append(h('div.row.wrap', aiDesc, aiBtn));
+    else row.append(h('p.note', 'Online AI pictures: add a key in Settings → AI (OpenAI, Gemini, Grok, Together or OpenRouter).'));
+    fillGallery(gallery);
+    return row;
+  }
+  async function fillGallery(gallery) {
+    const files = (await db.all('files').catch(() => [])).filter((f) => f.kind === 'banner-bg').sort((a, b) => (b.added || 0) - (a.added || 0));
+    clear(gallery);
+    files.forEach((f) => {
+      const u = URL.createObjectURL(f.thumb || f.blob);
+      const pick = h('button.bn-pic', { type: 'button', title: 'Use ' + (f.name || 'this picture'), 'aria-pressed': String(cur.s.img === f.id),
+        onclick: () => usePicture(f.id) }, h('img', { src: u, alt: f.name || 'Picture', onload: () => setTimeout(() => URL.revokeObjectURL(u), 1000) }));
+      const del = h('button.bn-pic-x', { type: 'button', title: 'Delete this picture from this device', 'aria-label': 'Delete picture ' + (f.name || ''),
+        onclick: async () => {
+          const used = lib.filter((b) => b.s && b.s.img === f.id).length;
+          if (!(await confirmBox('Delete picture?', used ? 'It is used by ' + used + ' saved banner' + (used === 1 ? '' : 's') + '; they will show plain colours instead.' : 'Delete this picture from this device?', 'Delete', true))) return;
+          await db.del('files', f.id); blobCache.delete(f.id);
+          if (cur.s.img === f.id) cur.s.img = null;
+          changed(true);
+        } }, icon('x'));
+      gallery.appendChild(h('div.bn-pic-wrap', pick, del));
     });
   }
+  async function usePicture(id) {
+    const rec = await db.get('files', id).catch(() => null);
+    cur.s.img = id;
+    cur.s.dim = autoDim(rec && rec.meta && rec.meta.lum);
+    changed(true);
+  }
+  function dimRow() {
+    const out = h('span.note', Math.round((cur.s.dim == null ? 0.45 : cur.s.dim) * 100) + '%');
+    const r = h('input', { type: 'range', min: 0, max: 0.85, step: 0.05, 'aria-label': 'Darken picture', style: { flex: '1', maxWidth: '240px' },
+      oninput: () => { cur.s.dim = +r.value; out.textContent = Math.round(cur.s.dim * 100) + '%'; changed(false); } });
+    r.value = cur.s.dim == null ? 0.45 : cur.s.dim;
+    return h('div.row', r, out);
+  }
 
-  function renderHistory() {
-    clear(historyList);
-    const list = loadHistory();
-    if (!list.length) { historyList.append(h('p.note', 'No recent generations yet.')); return; }
-    list.forEach((it) => {
-      const row = h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid var(--line)' } },
-        it.data ? h('img', { src: it.data, style: { width: '64px', height: '36px', objectFit: 'cover', borderRadius: '4px' } }) : null,
-        h('span.grow', it.title + ' · ' + new Date(it.ts).toLocaleTimeString()),
-        btn('present', 'Present', () => {
-          if (it.data) {
-            fetch(it.data).then((r) => r.blob()).then((blob) => {
-              const cue = { tab: 'ai', title: it.title, sub: 'Saved', deck: { kind: 'image', frames: [{ kind: 'image', src: blob, fit: 'contain' }] } };
-              ctx.setStaged('ai', cue); live.take(cue);
-            });
-          }
-        })
-      );
-      historyList.append(row);
+  // ============================================================ SAVED (library)
+  let minis = [];
+  const destroyMinis = () => { minis.forEach((s) => s.destroy()); minis = []; };
+  function mini(frameP) {
+    const hostM = h('div.stage-host');
+    const box = h('div.bn-thumb', hostM);
+    box.style.aspectRatio = String(link.aspect ? link.aspect() : 16 / 9);
+    requestAnimationFrame(async () => {
+      const st = createStage(hostM, { placeholderOnly: true, aspect: link.aspect ? link.aspect() : 16 / 9 });
+      minis.push(st);
+      if (live.style) st.applyStyle(live.style);
+      try { st.show(await frameP); } catch (e) { /* */ }
     });
+    return box;
   }
-
-  function presentBanner() {
-    drawBanner();
-    canvas.toBlob((blob) => {
-      if (!blob) { showToast('Could not create banner image.', 'err'); return; }
-      const cue = {
-        tab: 'ai',
-        title: currentTemplate.name,
-        sub: 'Banner',
-        deck: {
-          kind: 'image',
-          frames: [{ kind: 'image', src: blob, fit: 'contain' }],
-        },
-      };
-      ctx.setStaged('ai', cue);
-      live.take(cue);
-      showToast('Banner generated and presented.', 'ok');
-    }, 'image/jpeg', 0.92);
-  }
-
-  // ---------- Research
-  const researchInput = h('input.field', { placeholder: 'Topic e.g. Sabbath, prayer, baptism, second coming…', style: { width: '100%' } });
-  const researchOut = h('div', { style: { marginTop: '10px' } });
-
-  function doResearch() {
-    const q = researchInput.value.trim().toLowerCase();
-    if (!q) return;
-    if (BLOCKED.test(q)) {
-      showToast('This topic is not suitable for church presentation.', 'err');
+  function renderLibrary() {
+    destroyMinis();
+    const box = views.library;
+    clear(box);
+    if (!lib.length) {
+      box.appendChild(emptyState('banner', 'No saved banners yet', 'Make a banner and press Save, or Add to loop / Add to plan.', { label: 'Make a banner', icon: 'plus', primary: true, onclick: () => setView('make') }));
       return;
     }
-    let found = null;
-    for (const key of Object.keys(SAFE_TOPICS)) {
-      if (q.includes(key) || SAFE_TOPICS[key].title.toLowerCase().includes(q)) {
-        found = SAFE_TOPICS[key];
-        break;
+    const grid = h('div.bn-lib');
+    lib.forEach((b) => {
+      const more = btn('more', 'More', () => menu(more, [
+        { label: 'Add to the pre-service loop', icon: 'loop', onclick: () => { if (!loop.items.some((it) => it.t === 'banner' && it.id === b.id)) { loop.items.push({ t: 'banner', id: b.id }); saveLoop(); } toast('Added to the loop.', 'ok'); } },
+        { label: 'Add to the service plan', icon: 'plan', onclick: async () => (await ctx.tab('plan')).addItem({ tab: 'ai', banner: b.id, label: 'Banner: ' + nameOf(b) }) },
+        { label: 'Rename…', icon: 'edit', onclick: async () => { const n = await promptBox('Rename banner', 'Name', b.name || nameOf(b)); if (n && n.trim()) { b.name = n.trim(); b.updated = Date.now(); if (cur.id === b.id) { cur.name = b.name; nameInp.value = b.name; savedSig = sig(cur); } await saveLib(); renderLibrary(); } } },
+        { label: 'Duplicate', icon: 'copy', onclick: async () => { const c = clone(b); c.id = 'b-' + uid(); c.name = nameOf(b) + ' (copy)'; c.created = c.updated = Date.now(); lib.unshift(c); await saveLib(); renderLibrary(); renderViewSeg(); } },
+        '-',
+        { label: 'Delete', icon: 'trash', onclick: async () => {
+          if (!(await confirmBox('Delete banner?', 'Delete “' + nameOf(b) + '”?' + (loop.items.some((it) => it.id === b.id) ? ' It is also removed from the pre-service loop.' : ''), 'Delete', true))) return;
+          lib = lib.filter((x) => x.id !== b.id);
+          loop.items = loop.items.filter((it) => !(it.t === 'banner' && it.id === b.id));
+          if (loop.end === b.id) loop.end = '';
+          if (cur.id === b.id) { cur.id = null; savedSig = null; }
+          await saveLib(); await saveLoop(); renderLibrary(); renderViewSeg(); updateSaveBtn();
+        } },
+      ]), { cls: 'sm' });
+      const card = h('div.bn-card',
+        mini(frameOf(b)),
+        h('div.bn-card-b',
+          h('div.bn-card-t.trunc', nameOf(b)),
+          h('div.note', TPL[b.tpl] ? TPL[b.tpl].name : 'Banner', b.updated ? ' · ' + new Date(b.updated).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : ''),
+          h('div.row.bn-card-a',
+            h('button.btn.sm.primary', { type: 'button', onclick: async () => { ctx.setStaged('ai', bannerCue(b, await frameOf(b))); toast('“' + nameOf(b) + '” is Next. Press Present (F5).', 'ok', 2500); } }, icon('next'), h('span', 'Set as Next')),
+            h('button.btn.sm', { type: 'button', onclick: () => edit(b) }, icon('edit'), h('span', 'Edit')),
+            more)));
+      grid.appendChild(card);
+    });
+    box.appendChild(grid);
+  }
+
+  // ============================================================ PRE-SERVICE LOOP
+  async function decks() { return (await db.all('files').catch(() => [])).filter((f) => f.kind === 'deck' && f.type !== 'web'); }
+  async function deckFrames(d) {
+    if (d.type === 'pptx') { const rec = await db.get('renders', d.id + '/frames').catch(() => null); return rec ? rec.frames.map((f) => Object.assign({}, f)) : []; }
+    const out = [];
+    for (let i = 0; i < (d.count || 0); i++) {
+      const r = await db.get('renders', d.id + '/' + i).catch(() => null);
+      if (r && r.full) out.push({ kind: 'image', src: r.full, fit: settings.v.slides.fit || 'contain' });
+    }
+    return out;
+  }
+  async function loopCue() {
+    const frames = [], labels = [];
+    const dl = await decks();
+    for (const it of loop.items) {
+      if (it.t === 'banner') {
+        const b = lib.find((x) => x.id === it.id); if (!b) continue;
+        frames.push(await frameOf(b)); labels.push(short(nameOf(b), 18));
+      } else if (it.t === 'deck') {
+        const d = dl.find((x) => x.id === it.id); if (!d) continue;
+        const fs = await deckFrames(d);
+        fs.forEach((f, i) => { frames.push(f); labels.push(short(d.name, 12) + ' ' + (i + 1)); });
       }
     }
-    clear(researchOut);
-    if (found) {
-      researchOut.append(
-        h('p.note', 'Child-friendly summary ready. Present to show on screen.'),
-        h('div.col', { style: { gap: '6px', marginTop: '8px' } },
-          ...found.slides.map((s, i) => h('div.card', { style: { padding: '10px', border: '1px solid var(--line)', borderRadius: '8px' } },
-            h('strong', s.h), h('p', { style: { margin: '6px 0 0', whiteSpace: 'pre-wrap' } }, s.t))),
-          btn('present', 'Present these slides', () => {
-            const cue = makeTextCue(found.title, found.slides);
-            ctx.setStaged('ai', cue);
-            live.take(cue);
-          }))
-      );
-    } else {
-      researchOut.append(
-        h('p.note', 'No built-in summary for this exact topic. Try: Sabbath, creation, prayer, baptism, communion, second coming, or tithe.'),
-        h('p.note', 'Tip: you can also type a short safe summary yourself in the box below and present it.')
-      );
-      const custom = h('textarea.field', { rows: 4, placeholder: 'Type a short child-friendly summary (1–2 slides)…', style: { width: '100%', marginTop: '6px' } });
-      researchOut.append(custom, btn('present', 'Present my summary', () => {
-        const txt = custom.value.trim();
-        if (!txt || BLOCKED.test(txt)) { showToast('Please enter suitable text.', 'err'); return; }
-        const parts = txt.split(/\n\s*\n/).slice(0, 2);
-        const slides = parts.map((p, i) => ({ h: i === 0 ? researchInput.value : '', t: p }));
-        const cue = makeTextCue(researchInput.value || 'Summary', slides);
-        ctx.setStaged('ai', cue);
-        live.take(cue);
-      }));
+    if (!frames.length) return null;
+    const len = frames.length;
+    const secs = +loop.secs || 8;
+    let at = null, end = null;
+    if (loop.count) { const t = nextTime(loop.at || church().service); at = t ? t.getTime() : null; }
+    if (at) frames.forEach((f) => { if (!(f.kind === 'banner' && f.countdown)) f.clock = { at, label: 'Service starts in' }; });
+    if (at && loop.end) {
+      const b = lib.find((x) => x.id === loop.end);
+      if (b) { frames.push(await frameOf(b)); labels.push('At start: ' + short(nameOf(b), 14)); end = len; }
     }
+    return { id: 'loop:' + Date.now(), tab: 'ai', title: 'Pre-service loop', sub: len + ' slide' + (len === 1 ? '' : 's') + ' · every ' + secs + ' s',
+      deck: { kind: 'loop', frames, auto: { secs, len, at, end } }, index: 0, labels, autoLoop: true, isLoop: true,
+      plan: { tab: 'ai', loop: true, label: 'Pre-service loop' } };
+  }
+  async function renderLoop() {
+    destroyMinis();
+    const box = views.loop;
+    clear(box);
+    const dl = await decks();
+    const c = church();
+    box.appendChild(h('p.note.bn-intro', 'Plays before the service: your banners and announcement slides take turns on the screen. It runs on the display itself, so it keeps going if this phone or PC sleeps. Use Next / Previous at any time to move by hand.'));
+    const list = h('div.list.bn-loop-list');
+    if (!loop.items.length) list.appendChild(h('p.note.pad', 'The loop is empty. Add saved banners or slide decks below.'));
+    loop.items.forEach((it, i) => {
+      let name = '', kind = '', thumb;
+      if (it.t === 'banner') { const b = lib.find((x) => x.id === it.id); name = b ? nameOf(b) : '(deleted banner)'; kind = 'Banner'; thumb = b ? mini(frameOf(b)) : h('div.bn-thumb'); }
+      else { const d = dl.find((x) => x.id === it.id); name = d ? d.name : '(deleted slides)'; kind = d ? d.count + ' slide' + (d.count === 1 ? '' : 's') : 'Slides'; thumb = h('div.bn-thumb', h('div.bn-thumb-ic', icon('slides'))); }
+      list.appendChild(h('div.li.bn-loop-row', thumb,
+        h('div.grow', h('div.trunc', name), h('div.note', kind)),
+        btn('up', 'Move up', () => { if (i > 0) { const t = loop.items[i - 1]; loop.items[i - 1] = it; loop.items[i] = t; saveLoop(); renderLoop(); } }, { cls: 'sm' }),
+        btn('down', 'Move down', () => { if (i < loop.items.length - 1) { const t = loop.items[i + 1]; loop.items[i + 1] = it; loop.items[i] = t; saveLoop(); renderLoop(); } }, { cls: 'sm' }),
+        btn('trash', 'Remove from the loop', () => { loop.items.splice(i, 1); saveLoop(); renderLoop(); }, { cls: 'sm' })));
+    });
+    box.appendChild(list);
+    box.appendChild(h('div.row.wrap.bn-add',
+      h('button.btn', { type: 'button', onclick: () => pickBanners() }, icon('banner'), h('span', 'Add banners…')),
+      h('button.btn', { type: 'button', onclick: () => pickDecks(dl) }, icon('slides'), h('span', 'Add slides…'))));
+
+    const secsSeg = seg([5, 8, 10, 15, 20, 30].map((s) => [String(s), s + ' s']), String(loop.secs || 8), (v) => { loop.secs = +v; saveLoop(); });
+    const atInp = h('input.field', { type: 'time', value: loop.at || c.service, 'aria-label': 'Service starts at', style: { width: '130px' },
+      onchange: () => { loop.at = atInp.value; saveLoop(); } });
+    const countChip = h('button.chip', { type: 'button', 'aria-pressed': String(!!loop.count), onclick: () => { loop.count = !loop.count; saveLoop(); renderLoop(); } },
+      loop.count ? icon('check') : null, 'Show “Service starts in” clock');
+    const endSel = h('select.field', { 'aria-label': 'When it is time', onchange: () => { loop.end = endSel.value; saveLoop(); } },
+      h('option', { value: '' }, 'Keep looping'),
+      lib.map((b) => h('option', { value: b.id, selected: loop.end === b.id }, 'Show: ' + nameOf(b))));
+    box.appendChild(h('div.form.bn-form',
+      h('label', 'Each slide shows for'), secsSeg,
+      h('label', 'Countdown'), h('div.row.wrap', countChip),
+      loop.count ? h('label', 'Service starts at') : null, loop.count ? h('div.row', atInp) : null,
+      loop.count ? h('label', 'When it is time') : null, loop.count ? h('div.col', { style: { alignItems: 'flex-start' } }, endSel, h('p.note', 'For example your Welcome banner. The loop stops there.')) : null));
+    box.appendChild(h('div.row.wrap.bn-actions',
+      h('button.btn.primary', { type: 'button', disabled: !loop.items.length, onclick: async () => {
+        const cue = await loopCue();
+        if (!cue) { toast('The loop has nothing to show yet.', 'err'); return; }
+        ctx.setStaged('ai', cue); toast('Loop is Next. Press Present (F5) to start it.', 'ok', 2500);
+      } }, icon('next'), h('span', 'Set loop as Next')),
+      h('button.btn', { type: 'button', disabled: !loop.items.length, onclick: async () => (await ctx.tab('plan')).addItem({ tab: 'ai', loop: true, label: 'Pre-service loop' }) }, icon('plan'), h('span', 'Add to plan'))));
+  }
+  function pickBanners() {
+    if (!lib.length) { toast('No saved banners yet. Make one and press Save.'); setView('make'); return; }
+    const chosen = new Set();
+    const list = h('div.list', { style: { maxHeight: '50vh', overflow: 'auto' } });
+    lib.forEach((b) => {
+      const inLoop = loop.items.some((it) => it.t === 'banner' && it.id === b.id);
+      const row = h('button', { type: 'button', 'aria-pressed': 'false', disabled: inLoop, onclick: () => { if (chosen.has(b.id)) chosen.delete(b.id); else chosen.add(b.id); row.setAttribute('aria-pressed', String(chosen.has(b.id))); } },
+        icon('banner'), h('span.grow', nameOf(b)), inLoop ? h('span.note', 'in the loop') : null);
+      list.appendChild(row);
+    });
+    modal({ title: 'Add banners to the loop', body: list, actions: [{ label: 'Cancel' }, { label: 'Add', primary: true, onclick: () => {
+      lib.forEach((b) => { if (chosen.has(b.id)) loop.items.push({ t: 'banner', id: b.id }); });
+      saveLoop(); renderLoop();
+    } }] });
+  }
+  function pickDecks(dl) {
+    if (!dl.length) { toast('No slide decks yet. Add announcement slides in the Slides tab first.'); return; }
+    const list = h('div.list', { style: { maxHeight: '50vh', overflow: 'auto' } });
+    dl.forEach((d) => list.appendChild(h('button', { type: 'button', onclick: () => { loop.items.push({ t: 'deck', id: d.id }); saveLoop(); closeModal(); renderLoop(); } },
+      icon('slides'), h('span.grow', d.name), h('span.note', d.count + ' slides'))));
+    modal({ title: 'Add slides to the loop', body: list, actions: [{ label: 'Cancel' }] });
   }
 
+  // ============================================================ TOPICS
+  const tpSearch = h('input.field.grow', { type: 'search', placeholder: 'Topic, belief or words — e.g. hope, Sabbath, baptism, Psalm 23', 'aria-label': 'Find a topic',
+    oninput: () => filterTopics(), onkeydown: (e) => { if (e.key === 'Enter') runTopicSearch(); } });
+  const tpTr = h('select.field', { 'aria-label': 'Translation', onchange: () => { if (curTopic) showTopic(curTopic); else if (lastQuery) runTopicSearch(); } });
+  const tpList = h('div.tp-list');
+  const tpOut = h('div.tp-out.scroll.pad');
+  views.topics.append(
+    h('div.toolbar.tp-bar', tpSearch, tpTr, h('button.btn', { type: 'button', onclick: () => runTopicSearch() }, icon('search'), h('span', 'Find'))),
+    h('div.split.topics-split', h('div.pane', h('div.scroll', tpList)), h('div.pane', tpOut)));
+  let curTopic = null, lastQuery = '';
 
-  async function callLLM(prompt, system) {
-    const cfg = ctx.settings.v.ai || {};
-    const key = (cfg.apiKey || '').trim();
-    const provider = cfg.provider || 'openai';
-    const model = (cfg.model || '').trim();
-    if (!key) throw new Error('Add an API key in Settings → AI first.');
-    if (BLOCKED.test(prompt)) throw new Error('Topic not suitable for church use.');
-
-    if (provider === 'openai') {
-      const m = model || 'gpt-5-mini';
-      const r = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: m,
-          messages: [
-            { role: 'system', content: system || 'You are a helpful assistant for a Seventh-day Adventist church. Keep answers short, clear, and suitable for all ages including children. Use simple language. Never include violence, adult content, or anything inappropriate for a church service.' },
-            { role: 'user', content: prompt },
-          ],
-          max_tokens: 600,
-          temperature: 0.4,
-        }),
-      });
-      if (!r.ok) throw aiHttpError('OpenAI error', r.status);
-      const j = await r.json();
-      return j.choices?.[0]?.message?.content || '';
-    }
-
-    if (provider === 'google') {
-      const m = model || 'gemini-3.8-flash';
-      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: (system ? system + '\n\n' : '') + prompt }] }],
-          generationConfig: { temperature: 0.4, maxOutputTokens: 600 },
-        }),
-      });
-      if (!r.ok) { const t = await r.text().catch(() => ''); throw aiHttpError('Gemini error', r.status, t); }
-      const j = await r.json();
-      return j.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    }
-
-    if (provider === 'xai') {
-      const m = model || 'grok-4.7';
-      const r = await fetch('https://api.x.ai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: m,
-          messages: [
-            { role: 'system', content: system || 'You are a helpful assistant for a Seventh-day Adventist church. Keep answers short, clear, and suitable for all ages including children.' },
-            { role: 'user', content: prompt },
-          ],
-          max_tokens: 600,
-          temperature: 0.4,
-        }),
-      });
-      if (!r.ok) throw aiHttpError('Grok error', r.status);
-      return (await r.json()).choices?.[0]?.message?.content || '';
-    }
-
-    if (provider === 'together') {
-      const m = model || 'MiniMaxAI/MiniMax-M3';
-      const r = await fetch('https://api.together.xyz/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: m,
-          messages: [
-            { role: 'system', content: system || 'You are a helpful assistant for a Seventh-day Adventist church. Keep answers short, clear, and suitable for all ages including children.' },
-            { role: 'user', content: prompt },
-          ],
-          max_tokens: 600,
-          temperature: 0.4,
-        }),
-      });
-      if (!r.ok) throw aiHttpError('Together error', r.status);
-      return (await r.json()).choices?.[0]?.message?.content || '';
-    }
-
-    if (provider === 'openrouter') {
-      const m = model || 'google/gemini-3.8-flash';
-      const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json', 'HTTP-Referer': location.origin },
-        body: JSON.stringify({
-          model: m,
-          messages: [
-            { role: 'system', content: system || 'You are a helpful assistant for a Seventh-day Adventist church. Keep answers short, clear, and suitable for all ages including children.' },
-            { role: 'user', content: prompt },
-          ],
-          max_tokens: 600,
-          temperature: 0.4,
-        }),
-      });
-      if (!r.ok) throw aiHttpError('OpenRouter error', r.status);
-      return (await r.json()).choices?.[0]?.message?.content || '';
-    }
-
-    if (provider === 'anthropic') {
-      const m = model || 'claude-haiku-5-5';
-      const r = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key': key,
-          'anthropic-version': '2023-06-01',
-          'content-type': 'application/json',
-          // Required by Anthropic for calls made straight from a browser with the user's own key.
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
-        body: JSON.stringify({
-          model: m,
-          max_tokens: 600,
-          system: system || 'You are a helpful assistant for a Seventh-day Adventist church. Keep answers short, clear, and suitable for all ages including children.',
-          messages: [{ role: 'user', content: prompt }],
-        }),
-      });
-      if (!r.ok) throw aiHttpError('Claude error', r.status);
-      const j = await r.json();
-      return j.content?.[0]?.text || '';
-    }
-    throw new Error('Unknown provider');
+  async function loadTopics() {
+    if (topics) return topics;
+    const r = await fetch('data/topics/topics.json');
+    topics = (await r.json()).topics || [];
+    topics.forEach((t) => { t._k = normalize([t.t, t.d, (t.a || []).join(' ')].join(' ')); });
+    return topics;
   }
-
-  async function generateOnlineBanner() {
-    const cfg = ctx.settings.v.ai || {};
-    const key = (cfg.apiKey || '').trim();
-    const provider = cfg.provider || 'openai';
-    if (!key) { showToast('Add an API key in Settings → AI first.', 'err'); return; }
-
-    const vals = fieldInputs.map((i) => i.value.trim()).filter(Boolean);
-    const prompt = currentTemplate.master + '. ' + vals.join('. ') + '. Colour style: ' + ((styleSel && styleSel.value) || 'classic') + '. Beautiful, elegant, church-appropriate, high quality, soft lighting, suitable for a projector in a Seventh-day Adventist church. Peaceful, no violence, no adult content.';
-    showToast('Generating image…');
-    try {
-      let url = null;
-      if (provider === 'openai') {
-        const r = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: 'gpt-image-2.5-flare', prompt, n: 1, size: '1792x1024' }),
-        });
-        if (!r.ok) throw aiHttpError('OpenAI image', r.status);
-        url = (await r.json()).data?.[0]?.url;
-      } else if (provider === 'google') {
-        // Imagen is shut down. Use the current Gemini native image model.
-        const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-nano-banana-2.1:generateContent', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt + ' Aspect ratio 16:9, suitable for a church projector.' }] }],
-            generationConfig: { responseModalities: ['IMAGE'] },
-          }),
-        });
-        if (!r.ok) {
-          const errText = await r.text().catch(() => '');
-          throw aiHttpError('Gemini image', r.status, errText);
-        }
-        const j = await r.json();
-        const parts = j.candidates?.[0]?.content?.parts || [];
-        const imgPart = parts.find((p) => p.inlineData || p.inline_data);
-        const b64 = imgPart && (imgPart.inlineData?.data || imgPart.inline_data?.data);
-        const mime = imgPart && (imgPart.inlineData?.mimeType || imgPart.inline_data?.mime_type) || 'image/png';
-        if (b64) url = 'data:' + mime + ';base64,' + b64;
-      } else if (provider === 'xai') {
-        const r = await fetch('https://api.x.ai/v1/images/generations', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: 'grok-imagine-image-2.0', prompt, n: 1 }),
-        });
-        if (!r.ok) throw aiHttpError('Grok image', r.status);
-        url = (await r.json()).data?.[0]?.url;
-      } else if (provider === 'together') {
-        const r = await fetch('https://api.together.xyz/v1/images/generations', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: 'black-forest-labs/FLUX.2-dev', prompt, n: 1, width: 1792, height: 1024 }),
-        });
-        if (!r.ok) throw aiHttpError('Together image', r.status);
-        url = (await r.json()).data?.[0]?.url;
-      } else if (provider === 'openrouter') {
-        const r = await fetch('https://openrouter.ai/api/v1/images/generations', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json', 'HTTP-Referer': location.origin },
-          body: JSON.stringify({ model: 'black-forest-labs/flux.2-dev', prompt }),
-        });
-        if (!r.ok) throw aiHttpError('OpenRouter image', r.status);
-        url = (await r.json()).data?.[0]?.url;
-      } else {
-        throw new Error('This provider does not support images. Use OpenAI, Gemini, Grok, Together, or OpenRouter.');
-      }
-      if (url && !/^(https:|data:image\/)/i.test(url)) url = null;
-      if (!url) throw new Error('No image returned');
-      const cue = {
-        tab: 'ai',
-        title: currentTemplate.name + ' (AI)',
-        sub: 'Online banner',
-        deck: { kind: 'image', frames: [{ kind: 'image', src: url, fit: 'contain' }] },
-      };
-      ctx.setStaged('ai', cue);
-      live.take(cue);
-      showToast('AI banner presented.', 'ok');
-    } catch (e) {
-      showToast(friendlyAiError(e), 'err');
+  async function renderTopics() {
+    if (!trList.length) trList = await listTranslations().catch(() => []);
+    if (!tpTr.options.length) trList.forEach((x) => tpTr.appendChild(h('option', { value: x.id, selected: x.id === settings.v.bible.primary }, x.abbr)));
+    await loadTopics().catch(() => { clear(tpList); tpList.appendChild(h('p.note.pad', 'The topic list could not be loaded.')); });
+    filterTopics();
+    if (!curTopic && !lastQuery && !tpOut.childNodes.length) {
+      tpOut.appendChild(emptyState('bible', 'Key verses for any topic', 'Pick a belief or topic, or type words. Verses come from the Bible you choose above, so they work offline and in Afrikaans or Xhosa too.'));
     }
   }
-
-  async function doOnlineResearch() {
-    const q = researchInput.value.trim();
+  function filterTopics() {
+    if (!topics) return;
+    const q = normalize(tpSearch.value.trim());
+    clear(tpList);
+    const groups = [['belief', '28 Fundamental Beliefs'], ['topic', 'Topics']];
+    groups.forEach(([g, label]) => {
+      const items = topics.filter((t) => t.group === g && (!q || t._k.includes(q) || (g === 'belief' && String(t.n) === q)));
+      if (!items.length) return;
+      tpList.appendChild(h('div.tp-h', label));
+      items.forEach((t) => {
+        const b = h('button.tp-item', { type: 'button', 'aria-pressed': String(curTopic === t), onclick: () => showTopic(t) },
+          t.n ? h('span.tp-n', String(t.n)) : null, h('span.grow', h('span.tp-t', t.t), h('span.note.tp-d', t.d)));
+        tpList.appendChild(b);
+      });
+    });
+    if (!tpList.childNodes.length) tpList.appendChild(h('p.note.pad', 'No topic matches. Press Find to search the Bible for these words.'));
+  }
+  function bestTopic(q) {
+    const n = normalize(q);
+    if (!n || !topics) return null;
+    const num = /^(?:fb|belief|fundamental belief)?\s*#?(\d{1,2})$/.exec(n);
+    if (num) return topics.find((t) => t.group === 'belief' && t.n === +num[1]) || null;
+    return topics.find((t) => normalize(t.t) === n) || topics.find((t) => (t.a || []).some((a) => normalize(a) === n)) ||
+      topics.find((t) => normalize(t.t).includes(n)) || topics.find((t) => (t.a || []).some((a) => normalize(a).includes(n) || (n.length > 4 && n.includes(normalize(a))))) || null;
+  }
+  async function runTopicSearch() {
+    await loadTopics();
+    const q = tpSearch.value.trim();
     if (!q) return;
-    if (BLOCKED.test(q)) { showToast('Topic not suitable.', 'err'); return; }
-    showToast('Researching…');
-    try {
-      const text = await callLLM(
-        'Summarise the following topic for a Seventh-day Adventist church service. Use simple language suitable for children and adults. Maximum 2 short slides. Format as:\nSlide 1 title: ...\nSlide 1 text: ...\nSlide 2 title: ...\nSlide 2 text: ...\n\nTopic: ' + q,
-        'Keep it accurate, biblical where relevant, short, and completely appropriate for all ages. No controversy, no adult content.'
-      );
-      clear(researchOut);
-      const slides = [];
-      const blocks = text.split(/Slide \d+/i).filter(Boolean);
-      if (blocks.length) {
-        blocks.forEach((b) => {
-          const titleM = /title:\s*(.+)/i.exec(b);
-          const textM = /text:\s*([\s\S]+)/i.exec(b);
-          slides.push({ h: titleM ? titleM[1].trim() : '', t: textM ? textM[1].trim() : b.trim() });
-        });
-      } else {
-        slides.push({ h: q, t: text });
-      }
-      researchOut.append(
-        h('p.note', 'AI summary ready.'),
-        ...slides.map((s) => h('div.card', { style: { padding: '10px', border: '1px solid var(--line)', borderRadius: '8px', marginTop: '6px' } },
-          s.h ? h('strong', s.h) : null,
-          h('p', { style: { margin: '6px 0 0', whiteSpace: 'pre-wrap' } }, s.t))),
-        btn('present', 'Present AI summary', () => {
-          const cue = makeTextCue(q, slides);
-          ctx.setStaged('ai', cue);
-          live.take(cue);
-        })
-      );
-    } catch (e) {
-      showToast(friendlyAiError(e), 'err');
+    lastQuery = q;
+    if (/\d/.test(q) && parseRef(q) && !/^(?:fb|belief)?\s*#?\d{1,2}$/i.test(q)) { showPassages(q, [q]); return; }
+    const t = bestTopic(q);
+    if (t) { showTopic(t); return; }
+    // No topic: search the chosen Bible for the words.
+    curTopic = null; filterTopics();
+    clear(tpOut);
+    tpOut.appendChild(h('p.note', 'Searching ' + (tpTr.selectedOptions[0] ? tpTr.selectedOptions[0].textContent : 'the Bible') + ' for “' + q + '”…'));
+    const info = await getInfo(tpTr.value || settings.v.bible.primary);
+    const res = await bibleSearch(info.id, q, { limit: 40 });
+    clear(tpOut);
+    if (!res.length) { tpOut.appendChild(emptyState('search', 'Nothing found for “' + q + '”', 'Try fewer words, another translation, or one of the topics on the left.')); return; }
+    tpOut.appendChild(h('div.tp-head', h('h3', 'Verses with “' + q + '”'), h('p.note', res.length >= 40 ? 'The first 40 verses in ' + info.abbr + '.' : res.length + ' verses in ' + info.abbr + '.')));
+    res.forEach((r) => tpOut.appendChild(verseRow(info.names[r.b - 1] + ' ' + r.c + ':' + r.v, verseText(r.text))));
+  }
+  async function showTopic(t) {
+    curTopic = t; lastQuery = '';
+    filterTopics();
+    await showPassages(t.t, t.r, t);
+    if (ctx.isMobile()) tpOut.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  async function showPassages(title, refs, topic) {
+    clear(tpOut);
+    const tr = tpTr.value || settings.v.bible.primary;
+    const info = await getInfo(tr);
+    const head = h('div.tp-head',
+      h('h3', topic && topic.n ? topic.n + '. ' + title : title),
+      topic ? h('p.note', topic.d) : null,
+      h('div.row.wrap.bn-actions',
+        h('button.btn.primary', { type: 'button', onclick: () => stageTopic(topic, refs, title, tr) }, icon('next'), h('span', refs.length > 1 ? 'Set all as Next' : 'Set as Next')),
+        topic ? h('button.btn', { type: 'button', onclick: async () => (await ctx.tab('plan')).addItem({ tab: 'ai', topic: topic.id, tr, label: 'Verses: ' + topic.t }) }, icon('plan'), h('span', 'Add to plan')) : null,
+        h('button.btn', { type: 'button', title: 'A short summary with Bible references, made online and shown here for checking first', onclick: () => aiSummary(title, refs) }, icon('sparkle'), h('span', 'AI summary (online)'))));
+    tpOut.appendChild(head);
+    const aiBox = h('div.tp-ai');
+    tpOut.appendChild(aiBox);
+    for (const ref of refs) {
+      const r = parseRef(ref);
+      if (!r) continue;
+      let text = '', label = ref;
+      try {
+        if (info.books[r.book - 1] && info.books[r.book - 1][1]) {
+          const vs = await versesFor(info.id, r.book, r.segs);
+          text = vs.map((v) => verseText(v.text)).join(' ');
+          label = refText(info.names, r.book, r.segs);
+        }
+      } catch (e) { /* missing book in this translation */ }
+      tpOut.appendChild(verseRow(label, text || '(not in ' + info.abbr + ')', ref));
     }
   }
+  function verseRow(label, text, ref) {
+    const tr = tpTr.value || settings.v.bible.primary;
+    const r = ref || label;
+    return h('div.tp-verse',
+      h('div.tp-verse-t', h('b', label), ' ', text.length > 420 ? text.slice(0, 419) + '…' : text),
+      h('div.row.tp-verse-a',
+        h('button.btn.sm', { type: 'button', title: 'Put this passage on the Next screen', onclick: async () => {
+          const cue = await (await ctx.tab('bible')).cueFor(r, tr);
+          if (!cue) { toast('That passage is not in this translation.', 'err'); return; }
+          ctx.setStaged('ai', cue); toast(cue.title + ' is Next. Press Present (F5).', 'ok', 2500);
+        } }, icon('next'), h('span', 'Next')),
+        h('button.btn.sm', { type: 'button', title: 'Make a banner with this verse', onclick: () => {
+          cur = newBanner('verse'); cur.f.ref = r; cur.f.tr = tr; savedSig = null; nameInp.value = '';
+          setView('make'); changed(true); fetchVerse();
+        } }, icon('banner'), h('span', 'Banner'))));
+  }
+  async function topicCue(topic, refs, title, tr) {
+    const bible = await ctx.tab('bible');
+    const frames = [], labels = [];
+    for (const ref of refs) {
+      const c = await bible.cueFor(ref, tr);
+      if (!c) continue;
+      const sh = refText(SHORT, c.book, c.segs);
+      c.deck.frames.forEach((f, i) => { frames.push(f); labels.push(c.deck.frames.length > 1 ? sh + ' (' + (i + 1) + ')' : sh); });
+    }
+    if (!frames.length) return null;
+    const info = await getInfo(tr);
+    return { id: 'topic:' + (topic ? topic.id : title) + ':' + tr, tab: 'ai', title: topic ? topic.t : title, sub: info.abbr + ' · ' + refs.length + ' passage' + (refs.length === 1 ? '' : 's'),
+      deck: { kind: 'text', frames }, index: 0, labels, plan: topic ? { tab: 'ai', topic: topic.id, tr, label: 'Verses: ' + topic.t } : null };
+  }
+  async function stageTopic(topic, refs, title, tr) {
+    const cue = await topicCue(topic, refs, title, tr);
+    if (!cue) { toast('None of these passages are in this translation.', 'err'); return; }
+    ctx.setStaged('ai', cue);
+    toast(cue.title + ': ' + cue.deck.frames.length + ' slides are Next. Press Present (F5).', 'ok', 3000);
+  }
 
-  const el = h('section',
-    h('div.toolbar', h('h2', 'AI'), h('div.grow')),
-    h('div.scroll', { style: { flex: '1', padding: '4px' } },
-      h('div.card', { style: { marginBottom: '14px', padding: '12px', border: '1px solid var(--line)', borderRadius: '10px' } },
-        h('h3', { style: { margin: '0 0 6px' } }, 'AI Banner / Screensaver'),
-        h('p.note', 'Choose a master style and edit the fields. Offline generates a clean banner immediately. Online (Settings → AI) creates a richer AI image.'),
-        templateSel,
-        h('label.note', { style: { display: 'block', marginTop: '8px' } }, 'Colour style'),
-        styleSel,
-        fieldsWrap,
-        h('div.row', { style: { gap: '8px', alignItems: 'center', marginTop: '6px' } },
-          h('label.note', 'Accent'), accentInput),
-        h('div.row', { style: { gap: '8px', marginTop: '6px', flexWrap: 'wrap' } },
-          btn('reload', 'Preview (offline)', drawBanner),
-          btn('present', 'Present offline', presentBanner),
-          btn('present', '3-slide pack', presentMulti),
-          btn('save', 'Save', saveCurrent),
-          btn('present', 'AI image (online)', generateOnlineBanner)),
-        preview,
-        h('h4', { style: { margin: '12px 0 4px' } }, 'Recent'),
-        historyList),
-      h('div.card', { style: { padding: '12px', border: '1px solid var(--line)', borderRadius: '10px' } },
-        h('h3', { style: { margin: '0 0 6px' } }, 'Quick Research'),
-        h('p.note', 'Offline uses built-in safe summaries. Online uses your configured LLM for a fresh child-friendly summary.'),
-        researchInput,
-        h('div.row', { style: { marginTop: '8px', gap: '8px', flexWrap: 'wrap' } },
-          btn('search', 'Offline summary', doResearch),
-          btn('search', 'AI research (online)', doOnlineResearch)),
-        researchOut)
-    ));
+  // AI summary: editable slides, Bible references checked against the offline Bible before anything is shown.
+  async function aiSummary(title, refs) {
+    const box = tpOut.querySelector('.tp-ai');
+    if (!box) return;
+    if (!ai.hasKey()) { toast('Add an API key in Settings → AI to use online summaries. Everything else here works offline.', '', 6000); return; }
+    clear(box);
+    box.appendChild(h('p.note', 'Asking ' + ai.providerName() + '…'));
+    let reply;
+    try {
+      reply = await ai.aiText({
+        system: 'You write short, accurate, Bible-based slide text for a Seventh-day Adventist church service. Warm, simple language suitable for all ages, faithful to Scripture and to Seventh-day Adventist beliefs. No controversy. Reply with JSON only.',
+        prompt: 'Topic: ' + title + (refs && refs.length ? '\nKey texts: ' + refs.slice(0, 8).join('; ') : '') +
+          '\nWrite 2 or 3 slides. Each slide has a short title (at most 6 words) and text (at most 45 words). Give 2 to 4 Bible references that support it.' +
+          '\nReply exactly in this JSON form: {"slides":[{"title":"…","text":"…"}],"verses":["John 3:16"]}',
+      });
+    } catch (e) { clear(box); box.appendChild(h('p.note.warn', ai.friendlyAiError(e))); return; }
+    const slides = parseSlides(reply);
+    const j = ai.parseJsonReply(reply);
+    const verses = (j && Array.isArray(j.verses) ? j.verses : []).map(String);
+    renderAiSlides(box, slides, verses);
+  }
+  function parseSlides(reply) {
+    const j = ai.parseJsonReply(reply);
+    if (j && Array.isArray(j.slides)) {
+      const out = j.slides.map((s) => ({ title: String((s && s.title) || '').trim(), text: String((s && s.text) || '').trim() })).filter((s) => s.title || s.text);
+      if (out.length) return out.slice(0, 5);
+    }
+    // Older "Slide 1 title: … / Slide 1 text: …" replies.
+    const out = [];
+    const re = /slide\s*\d+\s*title\s*:\s*(.+)\s*\n\s*slide\s*\d+\s*text\s*:\s*([\s\S]*?)(?=\n\s*slide\s*\d+\s*title\s*:|$)/gi;
+    let m;
+    while ((m = re.exec(reply))) out.push({ title: m[1].trim(), text: m[2].trim() });
+    if (out.length) return out.slice(0, 5);
+    const plain = String(reply || '').trim();
+    return plain ? [{ title: '', text: plain.slice(0, 600) }] : [];
+  }
+  function refsIn(text) {
+    const found = [];
+    const re = /\b((?:[1-3]\s?)?[A-Z][a-z]+\.?\s\d{1,3}(?::\d{1,3}(?:\s?[-–]\s?\d{1,3})?)?)/g;
+    let m;
+    while ((m = re.exec(text))) { const p = parseRef(m[1]); if (p) found.push(m[1].trim()); }
+    return found;
+  }
+  async function renderAiSlides(box, slides, verses) {
+    clear(box);
+    const tr = tpTr.value || settings.v.bible.primary;
+    const info = await getInfo(tr);
+    const list = h('div.col');
+    const draw = () => {
+      clear(list);
+      slides.forEach((s, i) => {
+        const ti = h('input.field', { value: s.title, placeholder: 'Slide title', 'aria-label': 'Slide ' + (i + 1) + ' title', style: { width: '100%' }, oninput: () => { s.title = ti.value; } });
+        const tx = h('textarea.field.bn-ta', { rows: 3, placeholder: 'Slide text', 'aria-label': 'Slide ' + (i + 1) + ' text', oninput: () => { s.text = tx.value; } });
+        tx.value = s.text;
+        list.appendChild(h('div.card.tp-ai-slide', h('div.row', h('b.grow', 'Slide ' + (i + 1)), btn('trash', 'Remove this slide', () => { slides.splice(i, 1); draw(); }, { cls: 'sm' })), ti, tx));
+      });
+    };
+    draw();
+    const all = slides.map((s) => s.title + ' ' + s.text).join(' ');
+    const flags = ai.flaggedWords(all);
+    const refs = Array.from(new Set(verses.concat(refsIn(all))));
+    const checks = h('div.col.tp-checks');
+    for (const ref of refs) {
+      const r = parseRef(ref);
+      let vs = [];
+      try { if (r && info.books[r.book - 1] && info.books[r.book - 1][1]) vs = await versesFor(info.id, r.book, r.segs); } catch (e) { vs = []; }
+      const ok = vs.length && vs.every((v) => v.text);
+      if (ok) {
+        const label = refText(info.names, r.book, r.segs);
+        const txt = vs.map((v) => verseText(v.text)).join(' ');
+        checks.appendChild(h('div.tp-check.ok', icon('check'), h('div.grow', h('b', label), ' ', short(txt, 160)),
+          h('button.btn.sm', { type: 'button', title: 'Add this verse as a slide', onclick: () => { slides.push({ title: label, text: txt }); draw(); } }, icon('plus'), h('span', 'Slide'))));
+      } else {
+        checks.appendChild(h('div.tp-check.bad', icon('info'), h('div.grow', h('b', ref), ' — not found in ' + info.abbr + '. Check this reference before showing it.')));
+      }
+    }
+    box.append(...[
+      h('div.row.wrap', h('h3.grow', 'AI summary — check before showing'), h('span.note', ai.providerName())),
+      flags.length ? h('p.note.warn', 'Please read carefully: the reply contains “' + flags.join('”, “') + '”.') : null,
+      list,
+      h('div.row.wrap', h('button.btn.sm', { type: 'button', onclick: () => { slides.push({ title: '', text: '' }); draw(); } }, icon('plus'), h('span', 'Add slide'))),
+      refs.length ? h('h4', 'Bible references') : null, checks,
+      h('div.row.wrap.bn-actions',
+        h('button.btn.primary', { type: 'button', onclick: () => {
+          const fr = slides.filter((s) => (s.title || s.text).trim()).map((s) => ({ kind: 'text', variant: 'plain', head: s.title.trim() || undefined, html: esc(s.text.trim()).replace(/\n/g, '<br>') }));
+          if (!fr.length) { toast('Nothing to show yet.', 'err'); return; }
+          ctx.setStaged('ai', { id: 'aisum:' + Date.now(), tab: 'ai', title: (slides[0] && slides[0].title) || 'Summary', sub: 'Checked summary', deck: { kind: 'text', frames: fr }, index: 0, labels: fr.map((f, i) => String(i + 1)) });
+          toast('Summary slides are Next. Press Present (F5).', 'ok', 2500);
+        } }, icon('next'), h('span', 'Set as Next')),
+        h('button.btn', { type: 'button', title: 'Start a banner from the first slide', onclick: () => {
+          const s = slides[0]; if (!s) return;
+          cur = newBanner('blank'); cur.f.title = s.title; cur.f.text = s.text; savedSig = null; nameInp.value = '';
+          setView('make'); changed(true);
+        } }, icon('banner'), h('span', 'Make a banner')))].filter(Boolean));
+  }
 
-  // Initial preview
-  setTimeout(drawBanner, 50);
-  renderHistory();
+  // ============================================================ control bar + plan
+  const api = {
+    el,
+    onShow() { setPreviewAspect(); if (view === 'make') refreshPreview(); },
+    /** Open a plan item: {banner} | {loop} | {topic, tr}. Returns the staged cue. */
+    async open(item) {
+      await ready;
+      let cue = null;
+      if (item.banner) {
+        const b = lib.find((x) => x.id === item.banner);
+        if (!b) { toast('That banner is no longer on this device.', 'err'); return null; }
+        cue = bannerCue(b, await frameOf(b));
+      } else if (item.loop) {
+        cue = await loopCue();
+        if (!cue) { toast('The pre-service loop is empty. Add banners in Banners → Pre-service loop.', 'err'); return null; }
+      } else if (item.topic) {
+        await loadTopics();
+        const t = topics.find((x) => x.id === item.topic);
+        if (!t) return null;
+        cue = await topicCue(t, t.r, t.t, item.tr || settings.v.bible.primary);
+      }
+      if (cue) ctx.setStaged('ai', cue);
+      return cue;
+    },
+    controls(cue) {
+      if (!cue.isLoop) return null;
+      const b = h('button.btn.sm', { type: 'button', title: 'Pause or resume the loop',
+        onclick: () => { live.autoRun(!!live.autoPaused); paint(); } });
+      const paint = () => { clear(b); b.append(icon(live.autoPaused ? 'play' : 'pause'), h('span', live.autoPaused ? 'Resume loop' : 'Pause loop')); };
+      paint();
+      const a = cue.deck.auto || {};
+      return h('div.row', b, h('span.note.hide-sm', 'every ' + a.secs + ' s' + (a.at ? ' · until ' + new Date(a.at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false }) : '')));
+    },
+    /** Saved banners, for the Plan tab's Link dialog. */
+    banners() { return lib.map((b) => ({ id: b.id, name: nameOf(b) })); },
+  };
 
-  return { el, open() { return null; } };
+  const ready = (async () => {
+    await load().catch((e) => console.warn('banners', e));
+    trList = await listTranslations().catch(() => []);
+    if (!live.style) await live.buildStyle().catch(() => {});
+    if (live.style) stage.applyStyle(live.style);
+    setPreviewAspect();
+    nameInp.value = cur.name || '';
+    renderEditor();
+    updateSaveBtn();
+    setView(view);
+  })();
+  settings.on('change:church', (path) => {
+    // A church name added after starting a banner fills the empty lines that would have shown it.
+    if (path === 'church.name') {
+      const c = church(), d = TPL[cur.tpl].d(c);
+      Object.keys(d).forEach((k) => { if (!cur.f[k] && d[k] && c.name && d[k].includes(c.name)) cur.f[k] = d[k]; });
+      saveDraft();
+    }
+    if (view === 'make') { renderEditor(); schedule(); }
+  });
+  settings.on('change:display', (p) => { if (p === 'display.logo' && view === 'make') renderEditor(); });
+  renderViewSeg();
+  return api;
 }

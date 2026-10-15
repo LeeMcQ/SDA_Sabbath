@@ -31,6 +31,11 @@ link.on('msg', (m) => {
   else if (m.t === 'notice') live.emit('notice', m);
   else if (m.t === 'snapshot') live.emit('snapshot', m.blob);
   else if (m.t === 'key') live.emit('remote-key', m);
+  else if (m.t === 'auto-go' && live.cue && live.cue.deck.auto) {
+    // A self-running loop moved on by itself on the display: keep the Live monitor and counter in step.
+    live.index = Math.max(0, Math.min(m.index || 0, frameCount(live.cue) - 1));
+    live.emit('go', live.index);
+  }
 });
 
 async function fileBlob(id) {
@@ -161,6 +166,7 @@ live.take = async (cue) => {
   live.blank = null;
   live.frozen = false;
   live.media = null;
+  live.autoPaused = false;
   link.send({ t: 'deck', deck: cue.deck, index: live.index, blank: null });
   live.emit('live', cue);
   live.emit('go', live.index);
@@ -250,6 +256,8 @@ live.clear = () => {
 };
 
 live.mediaCmd = (op, v) => link.send({ t: 'media', op, v });
+/** Pause or resume a self-running loop on the display. */
+live.autoRun = (on) => { link.send({ t: 'auto', on: !!on }); live.autoPaused = !on; live.emit('auto', !!on); };
 live.caption = (text) => link.send({ t: 'caption', text });
 
 // Set by app.js: opens the right kind of display for this device.
