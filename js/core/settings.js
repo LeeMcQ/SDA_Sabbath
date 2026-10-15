@@ -14,7 +14,12 @@ export const DEFAULTS = {
     primary: 'kjv', parallel: '', parallelLayout: 'cols', perSlide: 'auto', numbers: true, redLetter: false,
     italics: false, refPos: 'bottom', continue: true, history: [],
   },
-  hymns: { book: 'sda-sample', chorusRepeat: true, titleSlide: true, showNumber: true, maxLines: 0, caps: false, refPos: 'bottom' },
+  hymns: {
+    book: 'sda-sample', chorusRepeat: true, titleSlide: true, showNumber: true, maxLines: 0, caps: false, refPos: 'bottom',
+    // Hymn music (MIDI accompaniment through GeneralUser GS)
+    musicIntro: true, musicFollow: true, musicInstrument: 'arranged', musicTempo: 100, musicKey: 0, musicVolume: 1.3,
+    musicReverb: 59, musicChorus: 43, musicOutput: 'auto',
+  },
   slides: { fit: 'contain', autoSec: 8, quality: 0.9 },
   video: { volume: 1, autoNext: true, repeat: 'off', fit: 'contain' },
   screen: { cursor: 'never', audio: false },

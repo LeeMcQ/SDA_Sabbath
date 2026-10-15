@@ -71,7 +71,7 @@ file (Bibles, hymns, fonts, PDF engine) downloads in one go; after that SDA Sabb
 
 ### 3. The SDA Sabbath companion (optional, recommended for the church PC)
 
-One small program (about 5 MB, no installer, no other software) that contains the whole app:
+One program (about 25 MB — most of it the hymn-music instrument sounds; no installer, no other software) that contains the whole app:
 
 - **Windows:** download `selah-windows-x64.exe` from the [Releases page](https://github.com/LeeMcQ/SDA_Sabbath/releases/latest) and double-click it.
   SDA Sabbath opens at `http://localhost:7777`. To add Start-menu and desktop shortcuts in one go:
@@ -129,6 +129,35 @@ publicly. Each church adds its own licensed copy:
 
 To ship a hymnbook with the app, put the JSON in `data/hymns/` and list it in `data/hymns/index.json`.
 
+### Hymn music (offline)
+
+695 hymns of the English SDA Hymnal (1–695) have their accompaniment built in, marked ♪ in the list. The church's
+MIDI files are played by a SoundFont synthesizer inside the browser (SpessaSynth) with the **GeneralUser GS 2.0.3**
+SoundFont and the author's recommended GS reverb (59) and chorus (43, Chorus 3) — the same sound you get from
+Falcosoft MIDI Player with that SoundFont. Nothing is streamed: it works with no internet.
+
+- **Play music** plays the accompaniment for exactly the stanzas you chose to sing: introduction, then one verse of
+  music per stanza, with the real ending on the last one. **Present & play** puts the hymn on the screen and starts
+  the music together; press **M** to play/pause.
+- **Words follow music:** while the hymn is live, the slides change with the music (title during the introduction,
+  each stanza and chorus as it is reached). Press → / ← at any time to take over.
+- **Tempo** (60–140 %), **Key** (±6 semitones), **Instrument** (as arranged, piano, organ, strings, choir), jump to the
+  introduction or any verse, **Fade** and **Stop**. Volume, reverb and chorus are in **Hymns → ⚙ Hymn options**.
+- **Phone as remote:** when a phone controls the church PC through the companion, the music plays on the PC (the
+  display window). Open the display on the PC from `http://localhost:7777` — browsers only allow the synthesizer on
+  `https://` or `localhost`. Click the projector window once at the start so it may play sound.
+- 33 hymns (mostly the short responses 660–695) are through-composed, so they always play as recorded; 25 hymns have
+  fewer verses of music than stanzas, so the verse music is repeated. Hymns 696–698 have no MIDI yet.
+
+To rebuild after changing the MIDI files (put the numbered `.mid` files in `sources/hymn-midi/`):
+
+```
+pip install mido; npm i spessasynth_core                # once
+python tools/build_hymn_music.py sources/hymn-midi     # verse/intro analysis → data/music/index.json + MIDI pack
+node tools/build_hymn_soundfont.mjs path/to/GeneralUser-GS.sf2 sources/hymn-midi   # → data/music/hymnal.sf2
+python tools/build.py
+```
+
 ## Built for weak computers
 
 - **No framework.** Plain JavaScript modules, about 0.3 MB in total; each tab loads only when first opened.
@@ -138,10 +167,10 @@ To ship a hymnbook with the app, put the JSON in `data/hymns/` and list it in `d
   lighter than running VLC itself. The equaliser and volume boost switch on only when used.
 - **Low-power mode** (automatic on ≤2 GB RAM or ≤2 cores): no fades, no live video thumbnail, slides at 1280 px,
   screen sharing at 15 fps.
-- **Rust where it pays off.** The companion is written in Rust with no third-party crates: a 5 MB program
+- **Rust where it pays off.** The companion is written in Rust with no third-party crates: one program
   that serves the app, relays the phone remote over WebSockets, streams media and runs LibreOffice.
 
-Measured in testing: whole app installs (262 files, 14 MB) in about 3 seconds on a LAN; each window uses
+Measured in testing: before hymn music was added the whole app installed (262 files, 14 MB) in about 3 seconds on a LAN; it is now 276 files, 34 MB, and updates only download the files that changed; each window uses
 about 8 MB of JavaScript memory; with the CPU slowed six times, a 24-verse passage is laid out in about
 0.5 s and Present + Next takes about 0.4 s.
 
@@ -169,7 +198,12 @@ js/display/display.js        projector renderer (also used for "this device" and
 data/bibles/<id>/            info.json + 01.json … 66.json per translation
 data/hymns/                  hymnbooks
 companion/                   Rust companion (std only); build.rs embeds the app
-tools/                       build.py, build_bibles.py
+data/music/                  hymn MIDI pack, verse index, GeneralUser GS subset (hymnal.sf2)
+js/core/musicengine.js       SoundFont player (SpessaSynth), arrangement of intro + sung stanzas
+js/core/hymnmusic.js         music controller: this device, or the PC display when used as a remote
+js/lib/smf.js                MIDI file reader/writer and section joining
+vendor/spessasynth/          SpessaSynth (Apache 2.0)
+tools/                       build.py, build_bibles.py, build_hymn_music.py, build_hymn_soundfont.mjs
 ```
 
 ## Credits and licences
@@ -178,7 +212,10 @@ tools/                       build.py, build_bibles.py
   (`github.com/LeeMcQ/joy-in-the-journey`).
 - Sample hymn words: public domain.
 - Fonts: Atkinson Hyperlegible Next and Source Serif 4 (SIL Open Font License).
-- pdf.js (Apache 2.0), fflate (MIT), qrcode-generator (MIT).
+- pdf.js (Apache 2.0), fflate (MIT), qrcode-generator (MIT), SpessaSynth (Apache 2.0).
+- GeneralUser GS 2.0.3 SoundFont by S. Christian Collins — free to use and modify
+  (`data/music/GeneralUser-GS-LICENSE.txt`, https://www.schristiancollins.com).
+- Hymn MIDI files: supplied by the church for its own services.
 - SDA Sabbath code: MIT.
 
 ## Service tools (new)

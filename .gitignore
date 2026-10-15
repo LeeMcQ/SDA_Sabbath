@@ -11,4 +11,6 @@ companion/target/
 companion/embed/
 node_modules/
 *.zip
+!data/music/*.zip
 .DS_Store
+__pycache__/

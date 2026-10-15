@@ -494,3 +494,23 @@ google-cast-launcher, .cast-button, [aria-label*="Cast"], button[title*="Cast"],
 .field.quiet-focus:focus-visible, .toolbar .field.quiet-focus:focus-visible, .pane-h .field.quiet-focus:focus-visible { outline: none; box-shadow: none; }
 /* Small controls: at least 24 px targets (WCAG 2.2 AA 2.5.8). */
 .btn.sm, .chip, input[type=checkbox], input[type=radio] { min-height: 24px; min-width: 24px; }
+
+/* ---------- Hymn music ---------- */
+.music-bar { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--sunk); }
+.music-bar .music-info { min-width: 0; flex: 1 1 160px; }
+.music-bar .music-opts { gap: 6px 10px; }
+.music-bar .music-jumps { gap: 4px; }
+.music-bar select.field.sm { height: 30px; font-size: 13px; padding: 0 6px; }
+.stepper { display: inline-flex; align-items: center; gap: 4px; }
+.stepper .note { margin-right: 2px; }
+.stepper .val { min-width: 40px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 13px; }
+.stepper .btn.sm.icon { width: 28px; height: 28px; }
+.has-music { color: var(--brass); display: inline-flex; flex: none; }
+.has-music svg.i { width: 16px; height: 16px; }
+.music-mini svg.i { flex: none; }
+@media (max-width: 760px) {
+  .music-bar { padding: 8px; }
+  .music-bar .music-info { flex: 1 1 150px; }
+  .music-bar .fade-btn span { display: none; }
+  .music-bar .fade-btn { width: 32px; padding: 0; justify-content: center; }
+}

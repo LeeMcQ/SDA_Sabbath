@@ -1,6 +1,6 @@
 // SDA Sabbath service worker: installs the whole app (Bibles, hymns, fonts, pdf.js) in one go
 // so it runs with no internet. VERSION is rewritten by tools/build.py on every build.
-const VERSION = '535fc2c4d4aa';
+const VERSION = '8d2c703d3093';
 const CACHE = 'selah-' + VERSION; // prefix kept from the first name so old caches are found and removed
 const NETWORK_ONLY = /\/(api|media|ws)(\/|$)/;
 
@@ -20,13 +20,36 @@ self.addEventListener('install', (event) => {
     await cache.put('asset-manifest.json', manRes.clone());
     const man = await manRes.json();
     const files = man.files;
+    const hashes = man.hashes || {};
+    const older = (await caches.keys()).filter((k) => k.startsWith('selah-') && k !== CACHE);
+    // A file whose content did not change is copied from the previous version's cache, so an
+    // update only downloads what is new (the instruments and hymn music are 18 MB).
+    async function unchanged(f) {
+      const want = hashes[f];
+      if (!want) return null;
+      for (const k of older) {
+        const r = await (await caches.open(k)).match(f);
+        if (r && r.headers.get('x-selah-hash') === want) return r;
+      }
+      return null;
+    }
+    async function stamp(f, r) {
+      if (!hashes[f]) return r;
+      const hd = new Headers(r.headers);
+      hd.set('x-selah-hash', hashes[f]);
+      return new Response(await r.blob(), { status: 200, statusText: 'OK', headers: hd });
+    }
     let done = 0;
     // Small batches keep memory and connections low on weak devices.
     for (let i = 0; i < files.length; i += 6) {
       await Promise.all(files.slice(i, i + 6).map(async (f) => {
         try {
-          const r = await fetch(f, { cache: 'no-cache' });
-          if (r.ok) await cache.put(f, r);
+          const old = await unchanged(f);
+          if (old) await cache.put(f, old);
+          else {
+            const r = await fetch(f, { cache: 'no-cache' });
+            if (r.ok) await cache.put(f, await stamp(f, r));
+          }
         } catch (e) { /* retried on next update */ }
         done++;
       }));
