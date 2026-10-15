@@ -8,6 +8,8 @@ import { listTranslations, deleteImported, resetCaches } from '../core/bibledata
 import { importBibleDialog } from './bible-import.js';
 import { listScreens } from '../core/link.js';
 import { sanitizeImportedSettings, exportableSettings } from '../core/settings.js';
+import { churchForm } from './church-form.js';
+import { PROVIDERS, listModels, modelFor, friendlyAiError } from '../core/ai.js';
 
 export default function create(ctx) {
   const { settings, live, link } = ctx;
@@ -165,65 +167,27 @@ export default function create(ctx) {
   });
 
 
+  // ------------------------------------------------------------ Church
+  section('church', 'Church', (box) => {
+    box.append(h('p.note', { style: { marginBottom: '12px' } }, 'Used by Banners: the church name, the date and sunset time, the service countdown and the QR code for giving. Stored only on this device.'),
+      churchForm(settings));
+  });
+
   // ------------------------------------------------------------ AI providers
   section('ai', 'AI', (box) => {
     const A = settings.v.ai || {};
-    const PROVIDERS = {
-      openai: {
-        name: 'OpenAI',
-        text: true, image: true,
-        hint: 'Get a key at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>. Needs a paid account. Keys start with <strong>sk-</strong>.',
-        models: 'Text: gpt-5-mini · Images: gpt-image-2.5-flare',
-      },
-      google: {
-        name: 'Google Gemini',
-        text: true, image: true,
-        hint: 'Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. No credit card needed. Keys start with <strong>AIza</strong> or <strong>AQ.</strong>',
-        models: 'Text: gemini-3.8-flash · Images: gemini-nano-banana-2.1',
-      },
-      xai: {
-        name: 'xAI Grok',
-        text: true, image: true,
-        hint: 'Get a key at <a href="https://console.x.ai" target="_blank" rel="noopener">console.x.ai</a>. Keys start with <strong>xai-</strong>.',
-        models: 'Text: grok-4.7 · Images: grok-imagine-image-2.0',
-      },
-      together: {
-        name: 'Together AI',
-        text: true, image: true,
-        hint: 'Get a key at <a href="https://api.together.xyz/settings/api-keys" target="_blank" rel="noopener">api.together.xyz</a>. Free tier available. Keys start with <strong>tgp_</strong> or similar.',
-        models: 'Text: MiniMax-M3 · Images: FLUX.2-dev',
-      },
-      openrouter: {
-        name: 'OpenRouter',
-        text: true, image: true,
-        hint: 'Get a key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>. One key for many models. Keys start with <strong>sk-or-</strong>.',
-        models: 'Text + image models via one key',
-      },
-      anthropic: {
-        name: 'Anthropic Claude',
-        text: true, image: false,
-        hint: 'Get a key at <a href="https://platform.claude.com/" target="_blank" rel="noopener noreferrer">platform.claude.com</a>. Text only (excellent research). Keys start with <strong>sk-ant-</strong>.',
-        models: 'Text: claude-haiku-5-5',
-      },
-    };
-
-    const providerSel = h('select.field', {
-      id: 'aiProvider', 'aria-label': 'AI provider',
-      value: A.provider || 'openai',
-      onchange: () => { settings.set('ai.provider', providerSel.value); updateHint(); },
-    });
+    const providerSel = h('select.field', { id: 'aiProvider', 'aria-label': 'AI provider',
+      onchange: () => { settings.set('ai.provider', providerSel.value); settings.set('ai.model', ''); settings.set('ai.imageModel', ''); updateHint(); clear(models); clear(testOut); } });
     Object.keys(PROVIDERS).forEach((id) => {
       const p = PROVIDERS[id];
-      const label = p.name + (p.image ? ' · text + images' : ' · text only');
-      providerSel.appendChild(h('option', { value: id }, label));
+      providerSel.appendChild(h('option', { value: id }, p.name + (p.image ? ' · text + pictures' : ' · text only')));
     });
+    providerSel.value = PROVIDERS[A.provider] ? A.provider : 'openai';
 
     const keyInp = h('input.field', {
       type: 'password', id: 'aiKey', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'AI API key',
-      value: A.apiKey || '',
-      placeholder: 'Paste API key',
-      style: { width: '100%' },
-      onchange: () => settings.set('ai.apiKey', keyInp.value.trim()),
+      value: A.apiKey || '', placeholder: 'Paste API key', style: { width: '100%' },
+      onchange: () => { settings.set('ai.apiKey', keyInp.value.trim()); clear(testOut); },
     });
     const showBtn = h('button.btn.sm', { type: 'button', onclick: () => {
       keyInp.type = keyInp.type === 'password' ? 'text' : 'password';
@@ -232,36 +196,60 @@ export default function create(ctx) {
     const removeBtn = h('button.btn.sm', { type: 'button', 'aria-label': 'Remove API key from this device', onclick: () => {
       keyInp.value = ''; keyInp.type = 'password'; showBtn.textContent = 'Show';
       settings.set('ai.apiKey', '');
+      clear(models); clear(testOut);
       toast('API key removed from this device.', 'ok');
     } }, 'Remove key');
 
     const hintEl = h('div.note', { style: { marginTop: '6px', lineHeight: '1.45' } });
-    const modelEl = h('p.note', { style: { marginTop: '4px' } });
-
+    const usingEl = h('p.note', { style: { marginTop: '4px' } });
     function updateHint() {
       const p = PROVIDERS[providerSel.value] || PROVIDERS.openai;
       hintEl.innerHTML = p.hint;
-      modelEl.textContent = p.models;
+      usingEl.textContent = 'Using: text ' + (modelFor('text') || '—') + (p.image ? ' · pictures ' + (modelFor('image') || 'chosen after Test key') : ' · no pictures');
     }
     updateHint();
 
-    const modelInp = h('input.field', {
-      value: A.model || '',
-      placeholder: 'Optional model override', id: 'aiModel', 'aria-label': 'AI model (optional)',
-      style: { width: '100%' },
-      onchange: () => settings.set('ai.model', modelInp.value.trim()),
-    });
+    // Test the key and choose from the models it can really use (names change often).
+    const testOut = h('div');
+    const models = h('div.form', { style: { marginTop: '8px' } });
+    const testBtn = h('button.btn', { type: 'button', onclick: async () => {
+      settings.set('ai.apiKey', keyInp.value.trim());
+      clear(testOut); clear(models);
+      if (!keyInp.value.trim()) { testOut.appendChild(h('p.note.warn', 'Paste a key first.')); return; }
+      testBtn.disabled = true; testOut.appendChild(h('p.note', 'Checking the key…'));
+      try {
+        const list = await listModels();
+        clear(testOut);
+        testOut.appendChild(h('p.note', { style: { color: 'var(--next)' } }, '✓ The key works: ' + list.text.length + ' text model' + (list.text.length === 1 ? '' : 's') +
+          (PROVIDERS[providerSel.value].image ? ' and ' + list.image.length + ' picture model' + (list.image.length === 1 ? '' : 's') : '') + ' available.'));
+        const pickSel = (kind, arr, label) => {
+          const cur = (kind === 'image' ? settings.v.ai.imageModel : settings.v.ai.model) || '';
+          const sel = h('select.field', { 'aria-label': label, style: { maxWidth: '100%' }, onchange: () => { settings.set(kind === 'image' ? 'ai.imageModel' : 'ai.model', sel.value); updateHint(); } },
+            h('option', { value: '' }, 'Automatic (' + (arr[0] || 'default') + ')'),
+            arr.slice(0, 80).map((m) => h('option', { value: m, selected: m === cur }, m)));
+          return sel;
+        };
+        models.append(h('label', 'Text model'), pickSel('text', list.text, 'Text model'));
+        if (PROVIDERS[providerSel.value].image) models.append(h('label', 'Picture model'), list.image.length ? pickSel('image', list.image, 'Picture model') : h('p.note', 'This key has no picture models.'));
+        // Remember the best automatic choices so the first request does not need a retry.
+        const auto = Object.assign({}, settings.v.ai.auto || {});
+        auto[providerSel.value] = { text: list.text[0] || '', image: list.image[0] || '' };
+        settings.set('ai.auto', auto);
+        updateHint();
+      } catch (e) { clear(testOut); testOut.appendChild(h('p.note.warn', friendlyAiError(e))); }
+      finally { testBtn.disabled = false; }
+    } }, icon('check'), h('span', 'Test key'));
 
     box.append(h('div.form',
       h('label', { for: 'aiProvider' }, 'Provider'), providerSel,
       hintEl,
-      modelEl,
+      usingEl,
       h('label', { for: 'aiKey' }, 'API key'),
       h('div.row', { style: { gap: '8px', alignItems: 'center' } }, keyInp, showBtn, removeBtn),
+      h('label', 'Check'), h('div.col', { style: { alignItems: 'flex-start' } }, testBtn, testOut),
+      h('span'), models,
       h('p.note', 'Stored only in this browser on this device, and never included in backups. On a shared church computer anyone using this browser can use the key: press "Remove key" after the service, and set a spending limit with your provider.'),
-      h('p.note', 'Privacy (POPIA): when you use an online AI button, the topic or banner text you typed is sent directly to the provider chosen above and handled under their terms. Do not type names, contact details or other personal information. The offline buttons send nothing.'),
-      h('label', { for: 'aiModel' }, 'Model (optional)'), modelInp,
-      h('p.note', 'Leave blank to use the recommended default for the selected provider.')));
+      h('p.note', 'Privacy (POPIA): when you use an online AI button, the topic or picture description you typed is sent directly to the provider chosen above and handled under their terms. Do not type names, contact details or other personal information. Everything else in SDA Sabbath works offline and sends nothing.')));
   });
 
   // ------------------------------------------------------------ Coming next

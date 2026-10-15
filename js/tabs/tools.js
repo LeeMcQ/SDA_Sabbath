@@ -18,11 +18,6 @@ const COMMUNION = [
   { title: 'Closing', text: 'For as often as ye eat this bread, and drink this cup, ye do shew the Lord’s death till he come.\n\n1 Corinthians 11:26' },
 ];
 
-const OFFERING = [
-  { title: 'Offering', text: '“Every man according as he purposeth in his heart, so let him give; not grudgingly, or of necessity: for God loveth a cheerful giver.”\n\n2 Corinthians 9:7' },
-  { title: 'Tithe', text: '“Bring ye all the tithes into the storehouse… and prove me now herewith, saith the Lord of hosts.”\n\nMalachi 3:10' },
-];
-
 export default function create(ctx) {
   const { live, toast: showToast } = ctx;
   let timerInterval = null;
@@ -180,23 +175,23 @@ export default function create(ctx) {
       h('div.card', { style: { marginBottom: '12px', padding: '12px', border: '1px solid var(--line)', borderRadius: '10px' } },
         h('h3', { style: { margin: '0 0 8px' } }, 'Stage / confidence monitor'),
         h('p.note', 'Opens a small window showing the current live item, next item, and service timer. Place it on a stage monitor or second laptop.'),
-        btn('present', 'Open stage monitor', openStage)),
+        btn('present', 'Open stage monitor', openStage, { label: true })),
       h('div.card', { style: { marginBottom: '12px', padding: '12px', border: '1px solid var(--line)', borderRadius: '10px' } },
         h('h3', { style: { margin: '0 0 8px' } }, 'Lower third / overlay'),
         h('div.row', { style: { gap: '8px', marginBottom: '8px' } }, lowerKind, lowerText),
-        h('div.row', btn('present', 'Show lower third', showLower),
-          btn('x', 'Clear overlay', () => { if (overlayWin && !overlayWin.closed) overlayWin.document.getElementById('bar')?.classList.remove('show'); })),
+        h('div.row', btn('present', 'Show lower third', showLower, { label: true }),
+          btn('x', 'Clear overlay', () => { if (overlayWin && !overlayWin.closed) overlayWin.document.getElementById('bar')?.classList.remove('show'); }, { label: true })),
         h('p.note', 'Also stages the text so you can Present it full-screen on the projector. For streaming, use the overlay window as a browser source in OBS (transparent background).')),
       h('div.card', { style: { marginBottom: '12px', padding: '12px', border: '1px solid var(--line)', borderRadius: '10px' } },
         h('h3', { style: { margin: '0 0 8px' } }, 'Service timer'),
         timerDisplay,
         h('div.row', { style: { gap: '6px', marginTop: '8px', flexWrap: 'wrap' } },
-          btn('play', 'Start', () => startTimer(0)),
-          btn('stop', 'Stop', stopTimer),
-          btn('reload', 'Reset', () => { stopTimer(); timerElapsed = 0; timerDisplay.textContent = '00:00'; updateStage(); }),
-          btn('clock', '5 min', () => startTimer(300)),
-          btn('clock', '10 min', () => startTimer(600)),
-          btn('clock', '20 min', () => startTimer(1200)))),
+          btn('play', 'Start', () => startTimer(0), { label: true }),
+          btn('stop', 'Stop', stopTimer, { label: true }),
+          btn('reload', 'Reset', () => { stopTimer(); timerElapsed = 0; timerDisplay.textContent = '00:00'; updateStage(); }, { label: true }),
+          btn('clock', '5 min', () => startTimer(300), { label: true }),
+          btn('clock', '10 min', () => startTimer(600), { label: true }),
+          btn('clock', '20 min', () => startTimer(1200), { label: true }))),
       h('div.card', { style: { marginBottom: '12px', padding: '12px', border: '1px solid var(--line)', borderRadius: '10px' } },
         h('h3', { style: { margin: '0 0 8px' } }, 'Responsive readings'),
         h('div.col', { style: { gap: '6px' } },
@@ -207,17 +202,17 @@ export default function create(ctx) {
         h('div.col', { style: { gap: '6px' } },
           ...COMMUNION.map((c, i) => h('button.btn', { type: 'button', onclick: () => presentText(c.title, c.text) }, (i + 1) + '. ' + c.title)))),
       h('div.card', { style: { marginBottom: '12px', padding: '12px', border: '1px solid var(--line)', borderRadius: '10px' } },
-        h('h3', { style: { margin: '0 0 8px' } }, 'Offering & tithe graphics'),
-        h('div.row', { style: { gap: '6px', flexWrap: 'wrap' } },
-          ...OFFERING.map((o) => h('button.btn', { type: 'button', onclick: () => presentText(o.title, o.text) }, o.title)))),
+        h('h3', { style: { margin: '0 0 8px' } }, 'Offering & tithe'),
+        h('p.note', 'Offering banners (with a verse and a QR code for online giving) are made in Banners.'),
+        h('button.btn', { type: 'button', style: { marginTop: '8px' }, onclick: () => ctx.showTab('ai') }, icon('banner'), h('span', 'Open Banners'))),
       h('div.card', { style: { marginBottom: '12px', padding: '12px', border: '1px solid var(--line)', borderRadius: '10px' } },
         h('h3', { style: { margin: '0 0 8px' } }, 'Streaming output'),
         h('p.note', 'Open the overlay window above, then in OBS add a Browser Source pointing at this page (or the overlay window). Use a transparent background for lower thirds over camera. The main display.html remains the full projector output.'),
-        btn('link', 'Open streaming overlay window', openOverlay)),
+        btn('link', 'Open streaming overlay window', openOverlay, { label: true })),
       h('div.card', { style: { padding: '12px', border: '1px solid var(--line)', borderRadius: '10px' } },
         h('h3', { style: { margin: '0 0 8px' } }, 'Live captions (experimental)'),
         h('p.note', 'Uses the browser’s speech recognition. Works best in Chrome/Edge on a quiet system. Captions are staged as text slides. Full multi-language translation remains planned.'),
-        btn('mic', 'Start / stop captions', startCaptions))
+        btn('mic', 'Start / stop captions', startCaptions, { label: true }))
     ));
 
   live.on('live', updateStage);

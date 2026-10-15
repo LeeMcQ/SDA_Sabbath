@@ -24,7 +24,9 @@ export const DEFAULTS = {
   video: { volume: 1, autoNext: true, repeat: 'off', fit: 'contain' },
   screen: { cursor: 'never', audio: false },
   companion: { url: '', pin: '' },
-  ai: { provider: 'openai', apiKey: '', model: '' },
+  ai: { provider: 'openai', apiKey: '', model: '', imageModel: '', auto: {} },
+  // The church's details, used by Banners (name, town, sunset times, service countdown, giving QR code).
+  church: { name: '', town: '', lat: null, lon: null, service: '09:30', givingUrl: '', givingLabel: '' },
 };
 
 function merge(base, over) {
@@ -70,7 +72,8 @@ export function sanitizeImportedSettings(raw) {
     return out;
   }
   const out = walk(DEFAULTS, raw, 0);
-  if (out.ai) delete out.ai.apiKey;
+  if (out.ai) { delete out.ai.apiKey; delete out.ai.auto; }
+  if (out.church) for (const k of ['lat', 'lon']) if (out.church[k] != null && !(typeof out.church[k] === 'number' && Math.abs(out.church[k]) <= 180)) delete out.church[k];
   if (out.companion && out.companion.url && !/^(https?|wss?):\/\//i.test(out.companion.url)) out.companion.url = '';
   for (const c of ['fg', 'bg', 'accent']) if (out.display && out.display[c] != null && !/^#[0-9a-f]{3,8}$/i.test(out.display[c])) delete out.display[c];
   return out;

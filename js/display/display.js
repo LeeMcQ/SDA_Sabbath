@@ -264,14 +264,41 @@ export function createDisplay(root, { post, self = false } = {}) {
     hint(false);
   }
 
+  // ---------------------------------------------------------------- self-running loops (pre-service)
+  // A deck with auto:{secs, len, at?, end?} advances here, on the display, so it keeps going even when
+  // the phone or PC that started it goes to sleep. Frames 0…len-1 rotate; at `at` (epoch ms) the display
+  // jumps to frame `end` (e.g. the Welcome banner) and stops. Each step is reported back with 'auto-go'.
+  let autoT = null, autoLast = 0, autoPaused = false;
+  function stopAuto() { if (autoT) { clearInterval(autoT); autoT = null; } }
+  function startAuto() {
+    stopAuto();
+    const a = deck && deck.auto;
+    if (!a || !(a.secs > 0) || !(a.len > 0)) return;
+    autoLast = Date.now(); autoPaused = false;
+    autoT = setInterval(() => {
+      if (!deck || deck.auto !== a) { stopAuto(); return; }
+      const now = Date.now();
+      if (a.at && a.end != null && now >= a.at) {
+        if (index !== a.end) { index = a.end; showCurrent(); post({ t: 'auto-go', index }); }
+        stopAuto(); return;
+      }
+      if (autoPaused || index >= a.len || now - autoLast < a.secs * 1000) return;
+      autoLast = now;
+      index = (index + 1) % a.len;
+      showCurrent();
+      post({ t: 'auto-go', index });
+    }, 250);
+  }
+
   function handle(msg) {
     if (!msg || !msg.t) return;
     switch (msg.t) {
       case 'style': style = msg.style || {}; stage.applyStyle(style); if (deck && deck.frames) { lastFrame = null; showCurrent(); } break;
-      case 'deck': deck = msg.deck; index = msg.index || 0; lastFrame = null; stage.setBlank(msg.blank || null); showCurrent(); break;
-      case 'go': index = msg.index || 0; showCurrent(); break;
+      case 'deck': deck = msg.deck; index = msg.index || 0; lastFrame = null; stage.setBlank(msg.blank || null); showCurrent(); startAuto(); break;
+      case 'go': index = msg.index || 0; autoLast = Date.now(); showCurrent(); break;
+      case 'auto': autoPaused = !msg.on; autoLast = Date.now(); break;
       case 'blank': stage.setBlank(msg.mode); break;
-      case 'clear': deck = null; lastFrame = null; teardownVideo(); stage.show(null); stage.setBlank(msg.mode || null); break;
+      case 'clear': deck = null; lastFrame = null; stopAuto(); teardownVideo(); stage.show(null); stage.setBlank(msg.mode || null); break;
       case 'media': mediaCmd(msg.op, msg.v); break;
       case 'caption': stage.setCaption(msg.text || ''); break;
       case 'music': musicCmd(msg); break;
@@ -333,6 +360,6 @@ export function createDisplay(root, { post, self = false } = {}) {
     setStream(s) { stream = s || null; if (deck && deck.kind === 'stream') { lastFrame = null; showCurrent(); } },
     get video() { return video; },
     get mediaEl() { const l = stage.frontLayer(); return l && l.querySelector('video'); },
-    destroy() { window.removeEventListener('resize', onResize); teardownVideo(); stage.destroy(); },
+    destroy() { window.removeEventListener('resize', onResize); stopAuto(); teardownVideo(); stage.destroy(); },
   };
 }

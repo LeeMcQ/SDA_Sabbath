@@ -30,7 +30,7 @@ const TEMPLATES = {
   'Vespers / AY': ['Song service', 'Opening hymn', 'Prayer', 'Scripture', 'Programme', 'Closing hymn', 'Prayer'],
   'Empty plan': [],
 };
-const TAB_ICON = { bible: 'bible', hymns: 'hymn', slides: 'slides', video: 'video', web: 'web', note: 'info' };
+const TAB_ICON = { bible: 'bible', hymns: 'hymn', slides: 'slides', video: 'video', web: 'web', ai: 'banner', note: 'info' };
 
 export default function create(ctx) {
   const { live } = ctx;
@@ -131,7 +131,8 @@ export default function create(ctx) {
 
   function sub(it) {
     if (it.heading) return '';
-    return { bible: 'Bible' + (it.tr ? ' · ' + it.tr.toUpperCase() : ''), hymns: 'Hymn', slides: 'Slides', video: 'Video', web: 'Web' }[it.tab] || '';
+    return { bible: 'Bible' + (it.tr ? ' · ' + it.tr.toUpperCase() : ''), hymns: 'Hymn', slides: 'Slides', video: 'Video', web: 'Web',
+      ai: it.loop ? 'Pre-service loop' : it.topic ? 'Bible verses' + (it.tr ? ' · ' + it.tr.toUpperCase() : '') : 'Banner' }[it.tab] || '';
   }
 
   function render() {
@@ -216,7 +217,8 @@ export default function create(ctx) {
       h('option', { value: 'hymns' }, 'Hymn'),
       h('option', { value: 'slides' }, 'Slides'),
       h('option', { value: 'video' }, 'Video'),
-      h('option', { value: 'web' }, 'Web page / link'));
+      h('option', { value: 'web' }, 'Web page / link'),
+      h('option', { value: 'ai' }, 'Banner or pre-service loop'));
     const input = h('input.field', { placeholder: 'John 3:16  or  hymn number' });
     const list = h('div.list', { style: { maxHeight: '260px', overflow: 'auto' } });
     body.append(h('p.note', target ? 'Attach media to this part of the plan.' : 'Add a new item that links to media.'), kindSel, input, list);
@@ -225,7 +227,7 @@ export default function create(ctx) {
       clear(list);
       const k = kindSel.value;
       input.placeholder = k === 'bible' ? 'Or type John 3:16' : k === 'hymns' ? 'Hymn number (e.g. 73)' : k === 'web' ? 'https://…' : 'Filter…';
-      input.hidden = k === 'slides' || k === 'video';
+      input.hidden = k === 'slides' || k === 'video' || k === 'ai';
       if (k === 'bible') {
         await showBiblePicker();
       } else if (k === 'slides') {
@@ -238,6 +240,12 @@ export default function create(ctx) {
         if (!files.length) list.appendChild(h('p.note', 'No videos yet. Add some in the Video tab first.'));
         files.forEach((f) => list.appendChild(h('button', { type: 'button', onclick: () => pick({ tab: 'video', item: f.id, label: f.name }) },
           icon('video'), h('span.grow', f.name))));
+      } else if (k === 'ai') {
+        const bs = (await db.get('kv', 'banners').catch(() => null)) || [];
+        list.appendChild(h('button', { type: 'button', onclick: () => pick({ tab: 'ai', loop: true, label: 'Pre-service loop' }) }, icon('loop'), h('span.grow', 'Pre-service loop'), h('span.note', 'Banners → Loop')));
+        if (!bs.length) list.appendChild(h('p.note', 'No saved banners yet. Make some in the Banners tab first.'));
+        bs.forEach((b) => list.appendChild(h('button', { type: 'button', onclick: () => pick({ tab: 'ai', banner: b.id, label: 'Banner: ' + (b.name || 'Banner') }) },
+          icon('banner'), h('span.grow', b.name || 'Banner'))));
       } else if (k === 'web') {
         list.appendChild(h('p.note', 'Paste a full https:// link above and press Link.'));
       } else if (k === 'hymns') {
@@ -319,7 +327,7 @@ export default function create(ctx) {
       } else if (k === 'web') {
         if (!/^https?:\/\//i.test(v)) { toast('Enter a full https:// link.', 'err'); return; }
         pick({ tab: 'web', url: v, label: v.replace(/^https?:\/\//, '').slice(0, 48) });
-      } else if (k === 'slides' || k === 'video') {
+      } else if (k === 'slides' || k === 'video' || k === 'ai') {
         toast('Choose an item from the list.', 'err');
       }
     }

@@ -437,6 +437,18 @@ export default function create(ctx) {
       setMode('browse');
       return goRef(ref);
     },
+    /** Slides for a reference without selecting it here (used by Banners → Topics). */
+    async cueFor(ref, tr) {
+      await ready;
+      const r = parseRef(ref);
+      if (!r) return null;
+      const t = tr && trList.some((x) => x.id === tr) ? tr : st.tr;
+      const ti = await getInfo(t);
+      if (!ti.books[r.book - 1] || !ti.books[r.book - 1][1]) return null;
+      const cue = await buildCue(t, r.book, r.segs);
+      if (cue) cue.extend = null; // a topic passage does not "keep reading"
+      return cue;
+    },
     onShow() { if (!st.segs && !noFocus && !ctx.isMobile()) setTimeout(() => { refInput.classList.add('quiet-focus'); refInput.focus(); }, 50); noFocus = false; },
     controls(cue) {
       if (trList.length < 2) return null;
