@@ -84,6 +84,9 @@
 .f-hymn .chorus { font-style: italic; }
 .f-text.caps .f-fit { text-transform: uppercase; letter-spacing: .01em; }
 .f-text.is-chorus .f-fit { font-style: italic; }
+/* Responsive readings (Tools): Leader / People labels in the accent colour, read left to right */
+.f-fit .who { color: var(--d-accent); }
+.f-text.responsive .f-fit { text-align: left; }
 
 /* Images, PDFs, slides */
 .f-image { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }

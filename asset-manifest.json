@@ -1,6 +1,6 @@
 {
-"version": "65eb12c7ad3e",
-"bytes": 36882474,
+"version": "7ba7a5903c0e",
+"bytes": 36888132,
 "files": [
 "index.html",
 "display.html",
@@ -291,7 +291,7 @@
 "display.html": "8cd7c6329849954d",
 "manifest.webmanifest": "f2aa34a6f92b60be",
 "css/app.css": "f2ff834d7b8dacac",
-"css/stage.css": "c1532640fa9c6e7d",
+"css/stage.css": "d0d0194659593414",
 "js/app.js": "cd89b632d3c2d237",
 "js/controlbar.js": "8889a02badbfe107",
 "js/display-main.js": "dbb09b01f5cc4394",
@@ -331,7 +331,7 @@
 "js/tabs/screen.js": "5f59e366c040e629",
 "js/tabs/settings.js": "03a106ada1c72ceb",
 "js/tabs/slides.js": "99c88439a226cc1b",
-"js/tabs/tools.js": "f68262cdc4016d33",
+"js/tabs/tools.js": "afa1a48c3e9d0e84",
 "js/tabs/video.js": "0b06ecdabeab6966",
 "js/tabs/web.js": "e42a98c8d3d7ff45",
 "vendor/fflate-unzip.min.js": "6e460045bc2342dd",

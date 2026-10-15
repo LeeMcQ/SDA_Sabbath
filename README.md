@@ -229,12 +229,14 @@ tools/                       build.py, build_bibles.py, build_hymn_music.py, bui
 The **Tools** tab (under More) adds:
 
 - Stage / confidence monitor window (current + next item + timer)
-- Lower-third / overlay window suitable for OBS browser source
+- Lower thirds: **Set as Next** for the projector, or **Show on stream overlay** (a separate window for OBS)
 - Service timer and countdown presets (5/10/20 min)
-- Responsive readings
-- Communion / Ordinance of Humility step-through slides
+- Responsive readings (Leader / People in the accent colour) — click to put on Next, double-click to show at once
+- Communion / Ordinance of Humility as one four-slide sequence: Present, then → for each step
 - Streaming overlay window
-- Experimental live captions via browser speech recognition
+- Experimental live captions via browser speech recognition, on the display's caption line over whatever is showing
+
+Like every tab, Tools slides go to the green **Next** screen first; Present (F5) shows them.
 
 Offering banners (verse + giving QR code) are in **Banners**. Children’s story templates were intentionally left out.
 

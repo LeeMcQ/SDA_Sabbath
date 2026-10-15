@@ -1,7 +1,8 @@
 // Service tools: stage monitor, lower thirds, timer, responsive readings,
-// communion sequence, offering graphics, streaming overlay, basic captions.
+// communion sequence, streaming overlay, basic captions.
+// Like every other tab, slides from here go to the green Next screen first; Present shows them.
 // Children's story templates intentionally omitted.
-import { h } from '../core/util.js';
+import { h, esc } from '../core/util.js';
 import { icon } from '../core/icons.js';
 import { btn } from '../core/ui.js';
 
@@ -38,23 +39,56 @@ export default function create(ctx) {
     h('option', { value: 'offering' }, 'Offering'),
     h('option', { value: 'custom' }, 'Custom'));
 
-  function makeTextCue(title, lines, kind = 'note') {
-    const text = Array.isArray(lines) ? lines.join('\n') : lines;
-    return {
-      tab: 'tools',
-      title,
-      sub: kind,
-      deck: {
-        kind: 'text',
-        slides: [{ lines: text.split('\n'), notes: '' }],
-      },
-    };
+  // ------------------------------------------------------------ slides (Next first, then Present)
+  // Text becomes a normal text slide: "Leader:" / "People:" labels in the accent colour, and a
+  // Bible reference on its own last line moves to the footer like the Bible tab's references.
+  const REF_LINE = /^(?:[1-3]\s?)?[A-Z][a-z]+\.?\s\d{1,3}(?::\d{1,3}(?:\s?[-–]\s?\d{1,3})?)?$/;
+  function textFrame(title, text) {
+    const paras = String(text || '').trim().split(/\n\s*\n/);
+    let foot = '';
+    if (paras.length > 1 && REF_LINE.test(paras[paras.length - 1].trim())) foot = paras.pop().trim();
+    const html = paras.map((p) => p.split('\n').map((line) => {
+      const m = /^(Leader|People|All|Minister|Congregation):\s*(.*)$/.exec(line.trim());
+      return m ? '<span class="who">' + esc(m[1]) + ':</span> ' + esc(m[2]) : esc(line);
+    }).join('<br>')).join('<br><br>');
+    return { kind: 'text', variant: 'plain', head: title, html, foot, cls: /Leader:|People:/.test(text) ? 'responsive' : '' };
   }
+  const textCue = (id, title, sub, items) => ({
+    id, tab: 'tools', title, sub, index: 0,
+    deck: { kind: 'text', frames: items.map((x) => textFrame(x.title, x.text)) },
+    labels: items.map((x, i) => (items.length > 1 ? String(i + 1) : x.title)),
+  });
+  const readingCue = (i) => textCue('tools:reading:' + i, RESPONSIVE[i].title, 'Responsive reading', [RESPONSIVE[i]]);
+  const communionCue = () => textCue('tools:communion', 'Communion', 'Ordinance of Humility & Lord’s Supper', COMMUNION);
 
-  function presentText(title, text) {
-    const cue = makeTextCue(title, text);
+  /** Put a cue on the Next screen; `now` (double-click) also presents it. */
+  function stage(cue, now) {
     ctx.setStaged('tools', cue);
-    live.take(cue);
+    if (now) live.take(cue);
+    else showToast(cue.title + (cue.deck.frames.length > 1 ? ' (slide ' + ((cue.index || 0) + 1) + ')' : '') + ' is Next. Press Present (F5).', 'ok', 2200);
+  }
+  /** A communion step: when the sequence is already on screen, go straight to that step. */
+  function communionStep(i, now) {
+    const c = communionCue();
+    c.index = i;
+    if (live.cue && live.cue.id === c.id) { live.go(i); ctx.setStaged('tools', c); return; }
+    stage(c, now);
+  }
+  // Show which reading or step is Next (green) or on screen (red).
+  const pickBtns = [];
+  function markPicks() {
+    const s = live.staged, c = live.cue;
+    pickBtns.forEach(({ b, id, i }) => {
+      const isNext = !!s && s.id === id && (i == null || (s.index || 0) === i);
+      const isLive = !!c && c.id === id && (i == null || live.index === i);
+      b.setAttribute('aria-pressed', String(isNext));
+      b.classList.toggle('live-on', isLive);
+    });
+  }
+  function pickBtn(label, id, i, onPick) {
+    const b = h('button.btn', { type: 'button', title: 'Click: put on Next. Double-click: show now.', onclick: () => onPick(false), ondblclick: () => onPick(true) }, label);
+    pickBtns.push({ b, id, i });
+    return b;
   }
 
   function openStage() {
@@ -97,22 +131,27 @@ export default function create(ctx) {
     overlayWin.document.close();
   }
 
-  function showLower() {
+  const KIND_LABEL = { scripture: 'Scripture', hymn: 'Hymn', speaker: 'Speaker', offering: 'Offering', custom: '' };
+  /** Projector: the lower-third text as a slide on the Next screen. */
+  function stageLower() {
     const text = lowerText.value.trim();
-    if (!text) return;
+    if (!text) { showToast('Type the lower-third text first.', 'err'); return; }
+    stage(textCue('tools:lower:' + text, text, 'Lower third', [{ title: KIND_LABEL[lowerKind.value] || '', text }]), false);
+  }
+  /** Streaming: the bar in the separate overlay window (for OBS), not the projector. */
+  function showLowerOnStream() {
+    const text = lowerText.value.trim();
+    if (!text) { showToast('Type the lower-third text first.', 'err'); return; }
     openOverlay();
     if (overlayWin && !overlayWin.closed) {
       const bar = overlayWin.document.getElementById('bar');
-      const k = overlayWin.document.getElementById('k');
-      const txt = overlayWin.document.getElementById('txt');
-      k.textContent = lowerKind.value;
-      txt.textContent = text;
+      overlayWin.document.getElementById('k').textContent = KIND_LABEL[lowerKind.value] || '';
+      overlayWin.document.getElementById('txt').textContent = text;
       bar.classList.add('show');
-      setTimeout(() => bar && bar.classList.remove('show'), 12000);
+      clearTimeout(showLowerOnStream.t);
+      showLowerOnStream.t = setTimeout(() => { if (overlayWin && !overlayWin.closed) bar.classList.remove('show'); }, 12000);
+      showToast('Shown on the stream overlay for 12 seconds.', 'ok');
     }
-    // Also stage as a full slide for projector use
-    presentText(text, text);
-    showToast('Lower third shown (and staged for Present).', 'ok');
   }
 
   function tick() {
@@ -152,22 +191,50 @@ export default function create(ctx) {
     }
   }
 
-  function startCaptions() {
+  // Captions go on the display's caption line, over whatever is on screen (they never replace a slide).
+  // Starting them is the operator's explicit choice, so they show straight away.
+  const capPreview = h('p.note', { style: { marginTop: '8px', minHeight: '1.4em' } }, '');
+  const capBtn = h('button.btn', { type: 'button', onclick: () => toggleCaptions() });
+  function paintCapBtn() { capBtn.replaceChildren(icon('mic'), h('span', captionRec ? 'Stop captions' : 'Start captions on screen')); capBtn.setAttribute('aria-pressed', String(!!captionRec)); }
+  function stopCaptions(msg) {
+    const r = captionRec; captionRec = null;
+    if (r) { r.onend = null; try { r.stop(); } catch (e) { /* */ } }
+    live.caption('');
+    capPreview.textContent = '';
+    paintCapBtn();
+    if (msg) showToast(msg, msg === 'Captions stopped.' ? '' : 'err');
+  }
+  function toggleCaptions() {
+    if (captionRec) { stopCaptions('Captions stopped.'); return; }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { showToast('Speech recognition not available in this browser.', 'err'); return; }
-    if (captionRec) { captionRec.stop(); captionRec = null; showToast('Captions stopped.'); return; }
-    captionRec = new SR();
-    captionRec.continuous = true;
-    captionRec.interimResults = true;
-    captionRec.onresult = (e) => {
+    if (!SR) { showToast('Speech recognition is not available in this browser (use Chrome or Edge).', 'err'); return; }
+    const rec = new SR();
+    captionRec = rec;
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.onresult = (e) => {
       let txt = '';
       for (let i = e.resultIndex; i < e.results.length; i++) txt += e.results[i][0].transcript;
-      if (txt) presentText('Caption', txt);
+      txt = txt.trim().slice(-160); // one or two lines at the bottom of the screen
+      if (txt) { live.caption(txt); capPreview.textContent = txt; }
     };
-    captionRec.onerror = () => showToast('Caption error. Stopped.', 'err');
-    captionRec.start();
-    showToast('Listening for captions (experimental).', 'ok');
+    rec.onerror = (e) => { if (e.error !== 'no-speech' && e.error !== 'aborted') stopCaptions('Captions stopped: ' + (e.error || 'error') + '.'); };
+    // Keep listening after pauses in speech, but never spin: more than 6 restarts in 15 s means the
+    // browser cannot listen here (no microphone, no connection), so stop and say so.
+    const restarts = [];
+    rec.onend = () => {
+      if (captionRec !== rec) return;
+      const now = Date.now();
+      restarts.push(now);
+      while (restarts.length && now - restarts[0] > 15000) restarts.shift();
+      if (restarts.length > 6) { stopCaptions('Captions stopped: the browser keeps stopping the microphone. Check the microphone and the internet connection.'); return; }
+      setTimeout(() => { if (captionRec === rec) { try { rec.start(); } catch (e) { stopCaptions('Captions stopped.'); } } }, 250);
+    };
+    try { rec.start(); } catch (e) { stopCaptions('Captions could not start: ' + e.message); return; }
+    paintCapBtn();
+    showToast('Captions are on the screen’s caption line (experimental).', 'ok');
   }
+  paintCapBtn();
 
   const el = h('section',
     h('div.toolbar', h('h2', 'Service tools'), h('div.grow')),
@@ -179,9 +246,10 @@ export default function create(ctx) {
       h('div.card', { style: { marginBottom: '12px', padding: '12px', border: '1px solid var(--line)', borderRadius: '10px' } },
         h('h3', { style: { margin: '0 0 8px' } }, 'Lower third / overlay'),
         h('div.row', { style: { gap: '8px', marginBottom: '8px' } }, lowerKind, lowerText),
-        h('div.row', btn('present', 'Show lower third', showLower, { label: true }),
+        h('div.row.wrap', btn('next', 'Set as Next', stageLower, { label: true, cls: 'primary' }),
+          btn('link', 'Show on stream overlay', showLowerOnStream, { label: true }),
           btn('x', 'Clear overlay', () => { if (overlayWin && !overlayWin.closed) overlayWin.document.getElementById('bar')?.classList.remove('show'); }, { label: true })),
-        h('p.note', 'Also stages the text so you can Present it full-screen on the projector. For streaming, use the overlay window as a browser source in OBS (transparent background).')),
+        h('p.note', 'Set as Next puts the text on the green Next screen for the projector; Present (F5) shows it. The stream overlay is a separate window for OBS (browser source, transparent background).')),
       h('div.card', { style: { marginBottom: '12px', padding: '12px', border: '1px solid var(--line)', borderRadius: '10px' } },
         h('h3', { style: { margin: '0 0 8px' } }, 'Service timer'),
         timerDisplay,
@@ -194,13 +262,14 @@ export default function create(ctx) {
           btn('clock', '20 min', () => startTimer(1200), { label: true }))),
       h('div.card', { style: { marginBottom: '12px', padding: '12px', border: '1px solid var(--line)', borderRadius: '10px' } },
         h('h3', { style: { margin: '0 0 8px' } }, 'Responsive readings'),
+        h('p.note', { style: { marginBottom: '8px' } }, 'Click to put a reading on the green Next screen, then Present (F5). Double-click to show it at once.'),
         h('div.col', { style: { gap: '6px' } },
-          ...RESPONSIVE.map((r) => h('button.btn', { type: 'button', onclick: () => presentText(r.title, r.text) }, r.title)))),
+          ...RESPONSIVE.map((r, i) => pickBtn(r.title, 'tools:reading:' + i, null, (now) => stage(readingCue(i), now))))),
       h('div.card', { style: { marginBottom: '12px', padding: '12px', border: '1px solid var(--line)', borderRadius: '10px' } },
         h('h3', { style: { margin: '0 0 8px' } }, 'Communion / Ordinance of Humility'),
-        h('p.note', 'Step through the sequence. Present each slide when ready.'),
+        h('p.note', { style: { marginBottom: '8px' } }, 'The four slides go on Next as one sequence: Present (F5), then → / Next for each step. While it is on screen, clicking a step shows that step.'),
         h('div.col', { style: { gap: '6px' } },
-          ...COMMUNION.map((c, i) => h('button.btn', { type: 'button', onclick: () => presentText(c.title, c.text) }, (i + 1) + '. ' + c.title)))),
+          ...COMMUNION.map((c, i) => pickBtn((i + 1) + '. ' + c.title, 'tools:communion', i, (now) => communionStep(i, now))))),
       h('div.card', { style: { marginBottom: '12px', padding: '12px', border: '1px solid var(--line)', borderRadius: '10px' } },
         h('h3', { style: { margin: '0 0 8px' } }, 'Offering & tithe'),
         h('p.note', 'Offering banners (with a verse and a QR code for online giving) are made in Banners.'),
@@ -211,12 +280,13 @@ export default function create(ctx) {
         btn('link', 'Open streaming overlay window', openOverlay, { label: true })),
       h('div.card', { style: { padding: '12px', border: '1px solid var(--line)', borderRadius: '10px' } },
         h('h3', { style: { margin: '0 0 8px' } }, 'Live captions (experimental)'),
-        h('p.note', 'Uses the browser’s speech recognition. Works best in Chrome/Edge on a quiet system. Captions are staged as text slides. Full multi-language translation remains planned.'),
-        btn('mic', 'Start / stop captions', startCaptions, { label: true }))
+        h('p.note', 'Uses the browser’s speech recognition (needs internet in Chrome/Edge). The words appear on the caption line at the bottom of the screen, over whatever is showing. Full multi-language translation remains planned.'),
+        capBtn, capPreview)
     ));
 
-  live.on('live', updateStage);
-  live.on('staged', updateStage);
+  live.on('live', () => { updateStage(); markPicks(); });
+  live.on('staged', () => { updateStage(); markPicks(); });
+  live.on('go', markPicks);
 
   return {
     el,
