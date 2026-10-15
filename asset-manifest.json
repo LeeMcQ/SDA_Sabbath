@@ -1,6 +1,6 @@
 {
-"version": "374af047977d",
-"bytes": 16326573,
+"version": "535fc2c4d4aa",
+"bytes": 16974214,
 "files": [
 "index.html",
 "display.html",
@@ -268,6 +268,7 @@
 "data/bibles/web/66.json",
 "data/bibles/web/info.json",
 "data/hymns/afrikaans.json",
+"data/hymns/church-1941.json",
 "data/hymns/index.json",
 "data/hymns/sda-online.json"
 ]
