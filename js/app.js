@@ -1,5 +1,5 @@
 // SDA Sabbath control app boot: tabs, Present button, display menu, shortcuts, service worker.
-import { $, h, clear, isTyping } from './core/util.js';
+import { $, h, isTyping } from './core/util.js';
 import { icon } from './core/icons.js';
 import { settings } from './core/settings.js';
 import { db, persistStorage } from './core/db.js';
@@ -265,16 +265,24 @@ topIcons.append(searchBtn, installBtn, helpBtn);
 // Church logo in the top-right corner (replaces any browser cast icon visually).
 const churchLogo = h('img.church-logo', { alt: 'Church logo', src: 'icons/favicon.svg' });
 topIcons.appendChild(churchLogo);
+// Only when the logo itself changes (colour changes must not make a new picture URL each time).
+let logoShown = undefined, logoUrl = null;
 async function refreshChurchLogo() {
-  const id = settings.v.display.logo;
-  if (!id) { churchLogo.src = 'icons/favicon.svg'; return; }
-  try {
-    const rec = await db.get('files', id);
-    if (rec && rec.blob) churchLogo.src = URL.createObjectURL(rec.blob);
-  } catch (e) { churchLogo.src = 'icons/favicon.svg'; }
+  const id = settings.v.display.logo || null;
+  if (id === logoShown) return;
+  logoShown = id;
+  let src = 'icons/favicon.svg', url = null;
+  if (id) {
+    try { const rec = await db.get('files', id); if (rec && rec.blob) src = url = URL.createObjectURL(rec.blob); } catch (e) { /* default icon */ }
+  }
+  if (logoShown !== id) { if (url) URL.revokeObjectURL(url); return; } // changed again meanwhile
+  churchLogo.src = src;
+  if (logoUrl) URL.revokeObjectURL(logoUrl);
+  logoUrl = url;
 }
 refreshChurchLogo();
-settings.on('change:display', refreshChurchLogo);
+settings.on('change:display', (path) => { if (path === 'display.logo' || path === '*') refreshChurchLogo(); });
+settings.on('change', (path) => { if (path === '*') refreshChurchLogo(); });
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); ctx.installPrompt = e; installBtn.hidden = false; ui.enter(installBtn, 'pop'); });
 window.addEventListener('appinstalled', () => { ctx.installPrompt = null; installBtn.hidden = true; ui.toast('SDA Sabbath is installed.', 'ok'); });
 const mq = matchMedia('(max-width: 760px)');
@@ -333,10 +341,25 @@ createControlBar($('#ctrlbar'), getTab);
 // ------------------------------------------------------------ keep the control screen awake during a service (phones)
 let wake = null;
 async function keepAwake() {
+  if (wake && !wake.released) return; // one lock is enough
   try { if ('wakeLock' in navigator && document.visibilityState === 'visible' && (live.cue || link.kind)) wake = await navigator.wakeLock.request('screen'); } catch (e) { /* */ }
 }
 document.addEventListener('visibilitychange', keepAwake);
 live.on('live', keepAwake);
+
+// ------------------------------------------------------------ storage problems
+// Saving not possible at all (private window, storage blocked): say so once; the app still works.
+window.addEventListener('selah-storage', () => ui.toast('This browser is not letting SDA Sabbath save (private window or storage turned off). Everything works, but changes are lost when it closes.', 'err', 10000));
+// A full disk, or any other failure nobody waited for: tell the operator plainly instead of failing silently.
+let fullShown = 0;
+window.addEventListener('unhandledrejection', (e) => {
+  const r = e.reason;
+  const name = r && r.name, msg = (r && r.message) || String(r || '');
+  if (name === 'QuotaExceededError' || /quota|disk|space/i.test(msg)) {
+    e.preventDefault();
+    if (Date.now() - fullShown > 15000) { fullShown = Date.now(); ui.toast('This device is out of storage space, so the last change was not saved. Delete unused slides or videos (or free space on the device).', 'err', 10000); }
+  }
+});
 
 // Warn before closing while something is live.
 window.addEventListener('beforeunload', (e) => { if (live.cue && link.kind === 'window') { e.preventDefault(); e.returnValue = ''; } });

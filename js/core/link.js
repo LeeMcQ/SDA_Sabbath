@@ -28,9 +28,17 @@ function setState(kind, ready, label) {
   link.emit('state');
 }
 
+// Each display page has a session id. A new one (page reloaded, TV reconnected) has none of the
+// pictures sent before, so the encoders forget what they sent and send pictures again.
+let displaySid = null;
 function onDisplayMsg(m) {
   if (!m || !m.t) return;
   if (m.t === 'hello') {
+    if (!m.sid || m.sid !== displaySid) {
+      displaySid = m.sid || null;
+      if (wsEnc && wsEnc.reset) wsEnc.reset();
+      if (castEnc && castEnc.reset) castEnc.reset();
+    }
     link.info.w = m.w; link.info.h = m.h;
     if (!link.ready) setState(link.kind, true);
     link.emit('hello', m);
@@ -46,7 +54,7 @@ window.addEventListener('message', (e) => {
 link.send = (msg) => { if (sendImpl) sendImpl(msg); };
 link.aspect = () => {
   const a = settings.v.display.aspect;
-  if (a && a !== 'auto') { const [x, y] = a.split(':').map(Number); if (x && y) return x / y; }
+  if (typeof a === 'string' && a !== 'auto') { const [x, y] = a.split(':').map(Number); if (x > 0 && y > 0) return x / y; }
   return link.info.w && link.info.h ? link.info.w / link.info.h : 16 / 9;
 };
 

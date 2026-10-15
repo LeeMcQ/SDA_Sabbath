@@ -288,7 +288,7 @@ export default function create(ctx) {
       slider('Text size', 60, 200, 10, (opts.subs && opts.subs.size) || 100, (v) => v + '%', (v) => { if (opts.subs) { opts.subs.size = v; apply('subs', opts.subs); } }),
       h('div.row.wrap', { style: { marginTop: '8px' } },
         h('button.btn.sm', { type: 'button', onclick: () => snapshot() }, icon('snapshot'), 'Snapshot'),
-        h('span.note', 'Saves the current picture as PNG.'))));
+        h('span.note', 'Saves the current picture.'))));
   }
 
   function snapshot() {
@@ -296,9 +296,9 @@ export default function create(ctx) {
     if (!prevVideo.videoWidth) { toast('Select a video first.', 'err'); return; }
     const c = h('canvas', { width: prevVideo.videoWidth, height: prevVideo.videoHeight });
     c.getContext('2d').drawImage(prevVideo, 0, 0);
-    c.toBlob((b) => download(b, 'snapshot.png'), 'image/png');
+    c.toBlob((b) => b && download(b, 'snapshot.jpg'), 'image/jpeg', 0.92);
   }
-  live.on('snapshot', (b) => { if (b) download(b, 'snapshot-' + fmtTime(live.media ? live.media.time : 0).replace(/:/g, '-') + '.png'); });
+  live.on('snapshot', (b) => { if (b) download(b, 'snapshot-' + fmtTime(live.media ? live.media.time : 0).replace(/:/g, '-') + (b.type === 'image/png' ? '.png' : '.jpg')); });
 
   // ------------------------------------------------------------ playlist auto-next
   live.on('live', () => { endedFor = null; renderList(); });

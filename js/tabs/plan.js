@@ -5,7 +5,7 @@ import { icon } from '../core/icons.js';
 import { btn, menu, toast, promptBox, confirmBox, modal, closeModal, activatable, emptyState } from '../core/ui.js';
 import { db } from '../core/db.js';
 import { parseRef, refText, EN } from '../core/books.js';
-import { listTranslations, getInfo, versesFor } from '../core/bibledata.js';
+import { getInfo, versesFor } from '../core/bibledata.js';
 
 const TEMPLATES = {
   'Divine Service': [
@@ -30,7 +30,6 @@ const TEMPLATES = {
   'Vespers / AY': ['Song service', 'Opening hymn', 'Prayer', 'Scripture', 'Programme', 'Closing hymn', 'Prayer'],
   'Empty plan': [],
 };
-const TAB_ICON = { bible: 'bible', hymns: 'hymn', slides: 'slides', video: 'video', web: 'web', ai: 'banner', note: 'info' };
 
 export default function create(ctx) {
   const { live } = ctx;
@@ -57,8 +56,16 @@ export default function create(ctx) {
     h('div.toolbar', addInput, h('button.btn', { type: 'button', onclick: addFromText }, icon('plus'), 'Add'), h('button.btn', { type: 'button', onclick: () => linkMedia() }, icon('link'), 'Link media')),
     h('div.scroll', { style: { flex: '1' } }, listEl));
 
+  // Plans saved by older versions, imported files or a damaged database: keep only usable items.
+  const okPlan = (p) => p && typeof p === 'object' && (typeof p.id === 'string' || typeof p.id === 'number');
+  function tidy(p) {
+    if (typeof p.name !== 'string' || !p.name.trim()) p.name = 'Service plan';
+    p.items = (Array.isArray(p.items) ? p.items : []).filter((it) => it && typeof it === 'object' && typeof it.tab === 'string');
+    p.items.forEach((it) => { if (typeof it.label !== 'string') it.label = String(it.label == null ? '' : it.label); if (!it.id) it.id = uid(); });
+    return p;
+  }
   async function load() {
-    plans = (await db.all('plans')).sort((a, b) => (b.updated || 0) - (a.updated || 0));
+    plans = ((await db.all('plans').catch(() => [])) || []).filter(okPlan).map(tidy).sort((a, b) => (b.updated || 0) - (a.updated || 0));
     const curId = await db.get('kv', 'plan-current');
     clear(planSel);
     planSel.hidden = !plans.length;
@@ -120,8 +127,8 @@ export default function create(ctx) {
     inp.onchange = async () => {
       try {
         const p = JSON.parse(await readText(inp.files[0]));
-        if (!p.items) throw new Error('Not an SDA Sabbath plan file.');
-        p.id = uid(); p.updated = Date.now();
+        if (!p || typeof p !== 'object' || !Array.isArray(p.items)) throw new Error('Not an SDA Sabbath plan file.');
+        tidy(p); p.id = uid(); p.updated = Date.now();
         await db.put('plans', p.id, p); await db.put('kv', 'plan-current', p.id); await load();
         toast('Plan imported. Slides and videos must also exist on this device.', 'ok', 5000);
       } catch (e) { toast(e.message, 'err'); }
@@ -154,7 +161,7 @@ export default function create(ctx) {
         it.role ? h('div.pi-s', { style: { color: 'var(--next)' } }, it.role) : null),
       h('div.row', { onclick: (e) => e.stopPropagation() },
         it.heading ? null : btn('present', 'Present now', () => select(i).then((c) => { if (c) { live.take(c); if (plan.autoAdvance) setTimeout(() => step(1), 400); } }), { cls: 'sm' }),
-        btn('edit', 'Role', () => { const r = prompt('Role (e.g. Elder, Deacon, Speaker)', it.role || ''); if (r != null) { it.role = r.trim(); save(); render(); } }, { cls: 'sm' }),
+        btn('edit', 'Role', async () => { const r = await promptBox('Who leads this part?', 'Role (e.g. Elder, Deacon, Speaker)', it.role || ''); if (r != null) { it.role = r.trim(); save(); render(); } }, { cls: 'sm' }),
         btn('link', 'Link', () => linkMedia(i), { cls: 'sm', label: 'Link' }),
         btn('up', 'Move up', () => moveItem(i, -1), { cls: 'sm' }),
         btn('down', 'Move down', () => moveItem(i, 1), { cls: 'sm' }),
@@ -254,7 +261,6 @@ export default function create(ctx) {
     }
 
     async function showBiblePicker() {
-      const trs = await listTranslations();
       const primary = ctx.settings.v.bible.primary;
       const info = await getInfo(primary);
       if (!info) { list.appendChild(h('p.note', 'No Bible loaded.')); return; }

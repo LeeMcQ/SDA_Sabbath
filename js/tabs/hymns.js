@@ -4,7 +4,7 @@ import { h, clear, esc, debounce, normalize, readText, download } from '../core/
 import { icon } from '../core/icons.js';
 import { btn, modal, seg, toggle, menu, toast, confirmBox, closeModal, enter, emptyState } from '../core/ui.js';
 import { db } from '../core/db.js';
-import { fitsText, createStage } from '../core/render.js';
+import { fitsText } from '../core/render.js';
 import { music, INSTRUMENTS } from '../core/hymnmusic.js';
 import { fmtTime } from '../core/util.js';
 
@@ -56,6 +56,19 @@ function normaliseBook(j, fallbackName) {
     .map((x) => Object.assign(x, { t: decodeEntities(x.t || ''), a: decodeEntities(x.a || ''), v: decodeDeep(x.v), c: x.c ? decodeDeep(x.c) : null }));
   return { id: j.id || 'book-' + Date.now().toString(36), name: j.name || fallbackName || 'Imported hymns', short: j.short || '', lang: j.lang || 'en', hymns };
 }
+
+/** A hymn saved on this device, checked before use (older versions or a damaged database). */
+const strList = (a) => (Array.isArray(a) ? a.filter((l) => typeof l === 'string') : []);
+function cleanHymn(x) {
+  if (!x || typeof x !== 'object') return null;
+  const n = +x.n;
+  if (!(n > 0)) return null;
+  const v = (Array.isArray(x.v) ? x.v : []).map(strList).filter((st) => st.length);
+  if (!v.length) return null;
+  const c = strList(x.c);
+  return Object.assign({}, x, { n, t: typeof x.t === 'string' ? x.t : String(x.t == null ? '' : x.t), a: typeof x.a === 'string' ? x.a : '', v, c: c.length ? c : null });
+}
+const cleanHymns = (list) => (Array.isArray(list) ? list.map(cleanHymn).filter(Boolean) : []);
 
 /** Plain-text hymnbook: each hymn starts with "# 73 Holy, Holy, Holy" */
 function parseTxtBook(text, name) {
@@ -140,13 +153,15 @@ export default function create(ctx) {
       }
     } catch (e) { console.warn('hymn index', e); }
     try {
-      const saved = await db.all('hymnbooks');
+      const saved = (await db.all('hymnbooks')) || [];
       saved.forEach((sb) => {
+        if (!sb || typeof sb !== 'object' || !sb.id) return;
         if (sb.overlayOf) {
           const base = books.find((b) => b.id === sb.overlayOf);
-          if (base) sb.hymns.forEach((hy) => { const i = base.hymns.findIndex((x) => x.n === hy.n); if (i >= 0) base.hymns[i] = hy; else base.hymns.push(hy); });
+          if (base) cleanHymns(sb.hymns).forEach((hy) => { const i = base.hymns.findIndex((x) => x.n === hy.n); if (i >= 0) base.hymns[i] = hy; else base.hymns.push(hy); });
           if (base) base.hymns.sort((a, b) => a.n - b.n);
-        } else books.push(sb);
+        } else books.push({ id: String(sb.id), name: typeof sb.name === 'string' && sb.name ? sb.name : 'Hymnbook', short: typeof sb.short === 'string' ? sb.short : '',
+          lang: typeof sb.lang === 'string' ? sb.lang : 'en', hymns: cleanHymns(sb.hymns).sort((a, b) => a.n - b.n) });
       });
     } catch (e) { console.warn(e); }
     clear(bookSel);
@@ -464,18 +479,21 @@ export default function create(ctx) {
 
     function importPasted(title, text) {
       if (!book) { toast('Select a hymnbook first (or create one).', 'err'); return; }
+      if (!String(text || '').trim()) { toast('Paste the lyrics first.', 'err'); return; }
       const p = parseLyrics(text);
       if (!p.v.length) { toast('Could not parse any stanzas. Use blank lines between stanzas and “Chorus:” for the refrain.', 'err'); return; }
-      const num = Math.max(0, ...book.hymns.map((x) => x.n)) + 1;
+      const num = book.hymns.reduce((m, x) => Math.max(m, +x.n || 0), 0) + 1;
       const nh = { n: num, t: title || 'Untitled', a: '', v: p.v, c: p.c };
       book.hymns.push(nh);
       book.hymns.sort((a, b) => a.n - b.n);
       saveBookEdit(nh, true).then(() => {
         toast('Added “' + nh.t + '” (# ' + num + ') to ' + book.name, 'ok');
+        closeModal();
         selectHymn(nh);
-        // close modal if possible
-        const m = document.querySelector('.modal');
-        if (m && m.close) m.close();
+      }).catch((e) => {
+        // Not saved: take it out again so the list matches what is stored.
+        book.hymns = book.hymns.filter((x) => x !== nh);
+        toast('Could not save the lyrics: ' + ((e && e.message) || e), 'err', 7000);
       });
     }
 

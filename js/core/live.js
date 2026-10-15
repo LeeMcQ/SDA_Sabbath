@@ -1,6 +1,6 @@
 // Live controller: what is staged (Next) and what is on screen (Live).
 // Nothing reaches the display until Present is pressed.
-import { emitter } from './util.js';
+import { emitter, debounce } from './util.js';
 import { link } from './link.js';
 import { settings } from './settings.js';
 import { db } from './db.js';
@@ -9,7 +9,11 @@ export const live = emitter({ staged: null, cue: null, index: 0, blank: null, me
 
 let styleSentFor = null;
 let pendingStyle = true;
-const restyle = () => { pendingStyle = true; if (link.ready) live.sendStyle(); else live.buildStyle(); };
+// Dragging a colour picker or slider changes the style many times a second. Each style carries the
+// background picture and logo, so send only the settled result (Present still sends it at once).
+const restyleNow = () => { if (link.ready) live.sendStyle(); else live.buildStyle(); };
+const restyleSoon = debounce(restyleNow, 180);
+const restyle = () => { pendingStyle = true; restyleSoon(); };
 settings.on('change:display', restyle);
 settings.on('change:app', (p) => { if (p === 'app.lowPower') restyle(); });
 

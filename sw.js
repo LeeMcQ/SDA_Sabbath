@@ -1,6 +1,6 @@
 // SDA Sabbath service worker: installs the whole app (Bibles, hymns, fonts, pdf.js) in one go
 // so it runs with no internet. VERSION is rewritten by tools/build.py on every build.
-const VERSION = '70d73e58d16f';
+const VERSION = '65eb12c7ad3e';
 const CACHE = 'selah-' + VERSION; // prefix kept from the first name so old caches are found and removed
 const NETWORK_ONLY = /\/(api|media|ws)(\/|$)/;
 
@@ -40,20 +40,29 @@ self.addEventListener('install', (event) => {
       return new Response(await r.blob(), { status: 200, statusText: 'OK', headers: hd });
     }
     let done = 0;
+    const failed = [];
+    async function get(f) {
+      const old = await unchanged(f);
+      if (old) { await cache.put(f, old); return true; }
+      const r = await fetch(f, { cache: 'no-cache' });
+      if (!r.ok) return false;
+      await cache.put(f, await stamp(f, r));
+      return true;
+    }
     // Small batches keep memory and connections low on weak devices.
     for (let i = 0; i < files.length; i += 6) {
       await Promise.all(files.slice(i, i + 6).map(async (f) => {
-        try {
-          const old = await unchanged(f);
-          if (old) await cache.put(f, old);
-          else {
-            const r = await fetch(f, { cache: 'no-cache' });
-            if (r.ok) await cache.put(f, await stamp(f, r));
-          }
-        } catch (e) { /* retried on next update */ }
+        let ok = false;
+        try { ok = await get(f); } catch (e) { ok = false; }
+        if (!ok) failed.push(f);
         done++;
       }));
       broadcast({ t: 'progress', done, total: files.length });
+    }
+    // Weak church Wi-Fi: try the files that failed once more, a little later, one at a time.
+    if (failed.length) {
+      await new Promise((r) => setTimeout(r, 3000));
+      for (const f of failed) { try { await get(f); } catch (e) { /* fetched and cached when first used */ } }
     }
     // The page asks before switching versions, so a service is never interrupted.
   })());
@@ -85,8 +94,9 @@ self.addEventListener('fetch', (event) => {
     if (hit) return hit;
     try {
       const res = await fetch(req);
-      // Cache extra same-origin data (e.g. licensed Bibles added later) for next time.
-      if (res.ok && /\/data\//.test(url.pathname)) cache.put(req, res.clone());
+      // Keep app files that were missed during install (weak Wi-Fi) and extra data (licensed Bibles
+      // added later), so they work offline next time.
+      if (res.ok && res.type === 'basic' && !isPage && /\/(data|js|css|fonts|vendor|icons)\//.test(url.pathname)) cache.put(req, res.clone()).catch(() => {});
       return res;
     } catch (e) {
       return new Response('Offline and not cached: ' + url.pathname, { status: 503, headers: { 'Content-Type': 'text/plain' } });

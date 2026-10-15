@@ -6,7 +6,7 @@
 // (The tab id stays 'ai' so existing settings and service plans keep working.)
 import { h, clear, uid, debounce, esc, normalize } from '../core/util.js';
 import { icon } from '../core/icons.js';
-import { btn, seg, toast, modal, closeModal, confirmBox, promptBox, menu, emptyState, activatable } from '../core/ui.js';
+import { btn, seg, toast, modal, closeModal, confirmBox, promptBox, menu, emptyState } from '../core/ui.js';
 import { db } from '../core/db.js';
 import { createStage } from '../core/render.js';
 import { PALETTES, DECOS } from '../core/bannerframe.js';
@@ -84,12 +84,39 @@ export default function create(ctx) {
   const saveLoop = () => db.put('kv', 'banner-loop', loop);
   const saveDraft = debounce(() => db.put('kv', 'banner-draft', { cur, savedSig }).catch(() => {}), 500);
 
+  // Saved data from older versions or a damaged database: repair what can be used, drop the rest.
+  const isObj = (o) => !!o && typeof o === 'object' && !Array.isArray(o);
+  function repair(b) {
+    if (!isObj(b) || !TPL[b.tpl]) return null;
+    const base = newBanner(b.tpl);
+    const out = Object.assign(base, { id: typeof b.id === 'string' ? b.id : null, name: typeof b.name === 'string' ? b.name : '', created: b.created, updated: b.updated });
+    if (isObj(b.f)) Object.keys(b.f).forEach((k) => { if (typeof b.f[k] === 'string') out.f[k] = b.f[k]; });
+    if (isObj(b.x)) Object.keys(b.x).forEach((k) => { out.x[k] = !!b.x[k]; });
+    if (isObj(b.s)) {
+      if (PALETTES[b.s.pal]) out.s.pal = b.s.pal;
+      if (DECOS[b.s.deco]) out.s.deco = b.s.deco;
+      if (['center', 'left', 'low'].includes(b.s.pos)) out.s.pos = b.s.pos;
+      if (['sans', 'serif'].includes(b.s.font)) out.s.font = b.s.font;
+      out.s.img = typeof b.s.img === 'string' ? b.s.img : null;
+      out.s.dim = typeof b.s.dim === 'number' && isFinite(b.s.dim) ? b.s.dim : null;
+    }
+    return out;
+  }
   async function load() {
-    lib = (await db.get('kv', 'banners').catch(() => null)) || [];
-    loop = Object.assign(loop, (await db.get('kv', 'banner-loop').catch(() => null)) || {});
+    const raw = await db.get('kv', 'banners').catch(() => null);
+    lib = (Array.isArray(raw) ? raw : []).map(repair).filter((b) => b && b.id);
+    const lp = await db.get('kv', 'banner-loop').catch(() => null);
+    if (isObj(lp)) {
+      loop.items = (Array.isArray(lp.items) ? lp.items : []).filter((it) => isObj(it) && (it.t === 'banner' || it.t === 'deck') && typeof it.id === 'string');
+      loop.secs = [5, 8, 10, 15, 20, 30].includes(+lp.secs) ? +lp.secs : 8;
+      loop.count = lp.count !== false;
+      loop.at = /^\d{1,2}:\d{2}$/.test(lp.at || '') ? lp.at : '';
+      loop.end = typeof lp.end === 'string' ? lp.end : '';
+    }
     const d = await db.get('kv', 'banner-draft').catch(() => null);
-    if (d && d.cur && TPL[d.cur.tpl]) { cur = d.cur; savedSig = d.savedSig || null; }
-    await migrateOldHistory();
+    const dc = d && repair(d.cur);
+    if (dc) { cur = dc; savedSig = typeof d.savedSig === 'string' ? d.savedSig : null; }
+    await migrateOldHistory().catch((e) => console.warn('old banners', e));
   }
   // Banners saved by the old Banner tab were pictures in browser storage (about 5 MB, easily full).
   // Move them into the app's database once, as Picture banners.

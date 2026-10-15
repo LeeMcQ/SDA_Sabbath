@@ -100,6 +100,7 @@ document.addEventListener('keydown', (e) => {
 
 let wake = null;
 async function keepAwake() {
+  if (wake && !wake.released) return; // one lock is enough
   try { if ('wakeLock' in navigator && document.visibilityState === 'visible') wake = await navigator.wakeLock.request('screen'); } catch (e) { /* */ }
 }
 document.addEventListener('visibilitychange', keepAwake);

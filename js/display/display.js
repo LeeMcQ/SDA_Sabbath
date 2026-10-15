@@ -80,7 +80,7 @@ export function createDisplay(root, { post, self = false } = {}) {
 
   function setSubs(sub) {
     if (!video) return;
-    Array.prototype.slice.call(video.querySelectorAll('track')).forEach((t) => t.remove());
+    Array.prototype.slice.call(video.querySelectorAll('track')).forEach((t) => { if (t.src.startsWith('blob:')) URL.revokeObjectURL(t.src); t.remove(); });
     if (!sub || !sub.vtt) return;
     const tr = document.createElement('track');
     tr.kind = 'subtitles'; tr.default = true; tr.srclang = 'en'; tr.label = 'Subtitles';
@@ -130,7 +130,7 @@ export function createDisplay(root, { post, self = false } = {}) {
     const c = document.createElement('canvas');
     c.width = video.videoWidth; c.height = video.videoHeight;
     c.getContext('2d').drawImage(video, 0, 0);
-    c.toBlob((b) => post({ t: 'snapshot', blob: b }), 'image/png');
+    c.toBlob((b) => post({ t: 'snapshot', blob: b }), 'image/jpeg', 0.92); // JPEG: a full-HD PNG can stall a weak PC for a second
   }
 
   function mediaCmd(op, v) {
@@ -337,7 +337,8 @@ export function createDisplay(root, { post, self = false } = {}) {
     } catch (e) { post({ t: 'music-error', text: e.message || String(e) }); }
   }
 
-  function sayHello() { post({ t: 'hello', w: root.clientWidth || innerWidth, h: root.clientHeight || innerHeight, self }); }
+  const sid = Date.now().toString(36) + Math.random().toString(36).slice(2, 8); // this page's session
+  function sayHello() { post({ t: 'hello', w: root.clientWidth || innerWidth, h: root.clientHeight || innerHeight, self, sid }); }
 
   // ---------------------------------------------------------------- hint overlay
   let hintEl = null;

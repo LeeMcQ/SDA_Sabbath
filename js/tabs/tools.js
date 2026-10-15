@@ -1,9 +1,9 @@
 // Service tools: stage monitor, lower thirds, timer, responsive readings,
 // communion sequence, offering graphics, streaming overlay, basic captions.
 // Children's story templates intentionally omitted.
-import { h, clear, uid } from '../core/util.js';
+import { h } from '../core/util.js';
 import { icon } from '../core/icons.js';
-import { btn, toast, modal } from '../core/ui.js';
+import { btn } from '../core/ui.js';
 
 const RESPONSIVE = [
   { title: 'Call to Worship', text: 'Leader: O come, let us worship and bow down.\nPeople: Let us kneel before the Lord our maker.\nLeader: For he is our God.\nPeople: And we are the people of his pasture, and the sheep of his hand.' },

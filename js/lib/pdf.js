@@ -58,7 +58,7 @@ export async function renderPdf(blob, { boxW = 1920, boxH = 1080, quality = 0.9,
 /** Downscale a picture to fit the display (big phone photos waste RAM on weak PCs). */
 export async function prepareImage(file, { boxW = 1920, boxH = 1080, quality = 0.9 } = {}) {
   const bmp = await (window.createImageBitmap ? createImageBitmap(file) : new Promise((res, rej) => {
-    const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = URL.createObjectURL(file);
+    const im = new Image(); const u = URL.createObjectURL(file); im.onload = () => { URL.revokeObjectURL(u); res(im); }; im.onerror = (e) => { URL.revokeObjectURL(u); rej(e); }; im.src = u;
   }));
   const w = bmp.width, hh = bmp.height;
   const sc = Math.min(1, boxW / w, boxH / hh);

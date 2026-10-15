@@ -40,10 +40,31 @@ function merge(base, over) {
   return out;
 }
 
+/**
+ * Saved settings may come from an older version or be damaged: every value that has a default must
+ * have the default's type (numbers must be real numbers), otherwise the default is used.
+ */
+function fixTypes(base, v) {
+  for (const k of Object.keys(base)) {
+    const b = base[k];
+    if (b && typeof b === 'object' && !Array.isArray(b)) {
+      if (!v[k] || typeof v[k] !== 'object' || Array.isArray(v[k])) v[k] = merge(b, {});
+      else fixTypes(b, v[k]);
+    } else if (Array.isArray(b)) {
+      if (!Array.isArray(v[k])) v[k] = b.slice();
+    } else if (b !== null && b !== undefined) {
+      if (typeof v[k] !== typeof b || (typeof b === 'number' && !isFinite(v[k]))) v[k] = b;
+    }
+  }
+  return v;
+}
+
 function load() {
   let v;
-  try { v = merge(DEFAULTS, JSON.parse(localStorage.getItem(KEY) || '{}')); }
-  catch (e) { v = merge(DEFAULTS, {}); }
+  try {
+    const raw = JSON.parse(localStorage.getItem(KEY) || '{}');
+    v = fixTypes(DEFAULTS, merge(DEFAULTS, raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}));
+  } catch (e) { v = merge(DEFAULTS, {}); }
   // v1.1: the projector margin default grew from 80 to 96 px (safe area for cropping projectors).
   // Move people still on the old default along once; a margin they chose themselves is kept.
   if (!v.app.rev || v.app.rev < 2) {

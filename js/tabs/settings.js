@@ -1,7 +1,7 @@
 // Settings: how the screen looks, displays, Bibles, the app itself, and what's coming next.
-import { h, clear, uid, fmtBytes, download, readText, scrubUrls } from '../core/util.js';
+import { h, clear, uid, fmtBytes, download, readText, scrubUrls, debounce } from '../core/util.js';
 import { icon } from '../core/icons.js';
-import { btn, seg, toggle, toast, confirmBox, select } from '../core/ui.js';
+import { btn, seg, toggle, toast, confirmBox } from '../core/ui.js';
 import { db, persistStorage } from '../core/db.js';
 import { createStage } from '../core/render.js';
 import { listTranslations, deleteImported, resetCaches } from '../core/bibledata.js';
@@ -32,7 +32,7 @@ export default function create(ctx) {
       html: '<span class="v"><span class="vn">16</span>For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.</span>',
       foot: 'John 3:16', footR: 'KJV' };
     const redraw = async () => { stage.setAspect(link.aspect()); prev.style.aspectRatio = String(link.aspect()); const s = await live.buildStyle(); stage.applyStyle(s); stage.show(sample); };
-    const off = settings.on('change:display', redraw);
+    const off = settings.on('change:display', debounce(redraw, 120)); // colour pickers fire many changes
     box._cleanup = off;
 
     const imgPick = (key, label) => {
@@ -305,7 +305,6 @@ export default function create(ctx) {
     inp.onchange = async () => {
       try {
         const d = JSON.parse(await readText(inp.files[0]));
-        if (d.app !== 'selah') throw new Error('Not an SDA Sabbath backup.');
         if (!d || typeof d !== 'object' || d.app !== 'selah') throw new Error('Not an SDA Sabbath backup.');
         if (d.settings && typeof d.settings === 'object') {
           // keep this device's AI key; never take one from a file

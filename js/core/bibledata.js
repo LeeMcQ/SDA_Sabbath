@@ -59,7 +59,14 @@ export async function getInfo(id) {
   let info;
   if (t.src === 'imported') info = await db.get('bibles', 'info:' + t.id);
   else info = await fetchJSON(t.dir + '/info.json');
+  if (!info || typeof info !== 'object') throw new Error(t.abbr + ' could not be read. Remove it in Settings → Bibles & hymns and add it again.');
   info = Object.assign({}, info, { src: t.src, dir: t.dir });
+  // Imported Bibles saved by an older version, or damaged: make every book entry usable.
+  const bk = Array.isArray(info.books) ? info.books : [];
+  info.books = EN.map((n, i) => {
+    const b = bk[i];
+    return Array.isArray(b) ? [typeof b[0] === 'string' && b[0] ? b[0] : n, +b[1] || 0, Array.isArray(b[2]) ? b[2] : []] : [n, 0, []];
+  });
   info.names = info.books.map((b) => b[0]);
   infoCache.set(t.id, info);
   if (t.id !== id) infoCache.set(id, info);
@@ -73,7 +80,7 @@ export async function getBook(id, b) {
   let data;
   if (info.src === 'imported') data = await db.get('bibles', info.id + '/' + b);
   else data = await fetchJSON(info.dir + '/' + (b < 10 ? '0' : '') + b + '.json');
-  data = data || [];
+  data = Array.isArray(data) ? data.map((ch) => (Array.isArray(ch) ? ch : [])) : [];
   bookCache.set(k, data);
   while (bookCache.size > MAX_BOOKS) bookCache.delete(bookCache.keys().next().value);
   return data;
