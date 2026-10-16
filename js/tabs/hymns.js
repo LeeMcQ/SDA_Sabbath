@@ -426,68 +426,115 @@ export default function create(ctx) {
 
   // ------------------------------------------------------------ online lyrics
   function findLyrics() {
-    const titleIn = h('input.field', { placeholder: 'Title or first line of hymn / chorus', value: q.value.trim() });
-    const results = h('div.col', { style: { gap: '8px', marginTop: '10px', maxHeight: '55vh', overflow: 'auto' } });
+    const titleIn = h('input.field', { placeholder: 'Title, first line, or words…', value: q.value.trim() });
+    const results = h('div.col', { style: { gap: '10px', marginTop: '10px', maxHeight: '58vh', overflow: 'auto' } });
     const status = h('p.note', '');
 
-    function addSourceLinks(qy) {
+    function suggestLocal(qy) {
+      const nq = normalize(qy);
+      if (!nq) return [];
+      const hits = [];
+      books.forEach((b) => {
+        (b.hymns || []).forEach((hy) => {
+          const title = normalize(hy.t || '');
+          const first = normalize((hy.v && hy.v[0] && hy.v[0][0]) || '');
+          if (title.includes(nq) || first.includes(nq) || nq.split(/\s+/).every((w) => title.includes(w) || first.includes(w))) {
+            hits.push({ book: b, hy });
+          }
+        });
+      });
+      return hits.slice(0, 8);
+    }
+
+    function showSuggestions(qy) {
+      const hits = suggestLocal(qy);
+      if (!hits.length) return;
+      const box = h('div.col', { style: { gap: '4px' } });
+      box.appendChild(h('p.note', 'Already in your books (tap to open as slides):'));
+      hits.forEach(({ book: b, hy }) => {
+        box.appendChild(h('button.btn', { type: 'button', onclick: () => {
+          setBook(b.id);
+          selectHymn(hy);
+          closeModal();
+        } }, b.short || b.name + '  ·  ' + hy.n + '  ' + hy.t));
+      });
+      results.appendChild(box);
+    }
+
+    async function tryFetch(qy) {
+      // Best-effort public lookup (CORS may block; fall back to paste)
+      const urls = [
+        'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://hymnary.org/search?qu=' + encodeURIComponent(qy) + '&sort=matching'),
+      ];
+      for (const u of urls) {
+        try {
+          const r = await fetch(u, { mode: 'cors' });
+          if (!r.ok) continue;
+          const text = await r.text();
+          // crude extract of verse-like lines
+          const lines = text.replace(/<[^>]+>/g, '\n').split('\n').map((l) => l.trim()).filter((l) => l.length > 8 && l.length < 120 && !/^(search|login|copyright|hymnary)/i.test(l));
+          if (lines.length >= 4) return lines.slice(0, 40).join('\n');
+        } catch (_) { /* ignore */ }
+      }
+      return null;
+    }
+
+    async function search() {
+      const qy = titleIn.value.trim();
+      if (!qy) { status.textContent = 'Type a title or first line.'; return; }
+      status.textContent = 'Searching your books and online sources…';
+      clear(results);
+      showSuggestions(qy);
+
+      results.appendChild(h('p.note', 'Online sources (open, copy lyrics, then paste below to add as slides):'));
       const sources = [
         { name: 'Hymnary.org', url: 'https://hymnary.org/search?qu=' + encodeURIComponent(qy) },
         { name: 'Hymnal.net', url: 'https://www.hymnal.net/en/search/all/all/' + encodeURIComponent(qy) },
         { name: 'SDA Hymnals', url: 'https://sdahymnals.com/?s=' + encodeURIComponent(qy) },
         { name: 'Open Hymnal', url: 'https://openhymnal.org/search.html?q=' + encodeURIComponent(qy) },
-        { name: 'Hymnary (text)', url: 'https://hymnary.org/text/' + encodeURIComponent(qy.toLowerCase().replace(/\s+/g, '_')) },
       ];
-      const box = h('div.col', { style: { gap: '6px' } });
-      sources.forEach((s) => {
-        box.appendChild(h('a.btn', { href: s.url, target: '_blank', rel: 'noopener noreferrer' }, s.name + ' ↗'));
-      });
-      return box;
-    }
+      sources.forEach((s) => results.appendChild(h('a.btn', { href: s.url, target: '_blank', rel: 'noopener' }, s.name + ' ↗')));
 
-    async function search() {
-      const qy = titleIn.value.trim();
-      if (!qy) { status.textContent = 'Type a title or first line first.'; return; }
-      status.textContent = 'Looking up sources…';
-      clear(results);
-      results.appendChild(h('p.note', 'Open any source below, copy the lyrics, then paste them in the box and click Add. They will be stored in the same format as the choruses.'));
-      results.appendChild(addSourceLinks(qy));
-      const paste = h('textarea.field', {
-        rows: 12,
-        placeholder: 'Paste lyrics here…\n\nStanza 1 line 1\nStanza 1 line 2\n\nChorus:\nChorus line 1\nChorus line 2\n\nStanza 2 line 1…'
-      });
-      results.appendChild(h('label', 'Paste lyrics'));
+      const paste = h('textarea.field', { rows: 10, placeholder: 'Paste lyrics here…\n\nStanza 1 line 1\nStanza 1 line 2\n\nChorus:\nChorus line 1\n\nStanza 2…' });
+      results.appendChild(h('label', 'Paste lyrics (will be added as slides like the choruses)'));
       results.appendChild(paste);
-      results.appendChild(h('button.btn.primary', { type: 'button', onclick: () => importPasted(qy, paste.value) }, 'Add to current book'));
-      status.textContent = 'Sources ready. Copy lyrics from any link above, paste, then Add.';
+      results.appendChild(h('button.btn.primary', { type: 'button', onclick: () => importAndShow(qy, paste.value) }, 'Add & show as slides'));
+
+      // try automatic fetch
+      const fetched = await tryFetch(qy);
+      if (fetched) {
+        paste.value = fetched;
+        status.textContent = 'Found text online — review and click Add & show as slides.';
+      } else {
+        status.textContent = 'Suggestions above. Paste lyrics from a source, then Add.';
+      }
     }
 
-    function importPasted(title, text) {
-      if (!book) { toast('Select a hymnbook first (or create one).', 'err'); return; }
+    function importAndShow(title, text) {
+      if (!book) { toast('Select a hymnbook first.', 'err'); return; }
       const p = parseLyrics(text);
-      if (!p.v.length) { toast('Could not parse any stanzas. Use blank lines between stanzas and “Chorus:” for the refrain.', 'err'); return; }
+      if (!p.v.length) { toast('Could not parse stanzas. Use blank lines between stanzas and “Chorus:” for the refrain.', 'err'); return; }
       const num = Math.max(0, ...book.hymns.map((x) => x.n)) + 1;
       const nh = { n: num, t: title || 'Untitled', a: '', v: p.v, c: p.c };
       book.hymns.push(nh);
       book.hymns.sort((a, b) => a.n - b.n);
       saveBookEdit(nh, true).then(() => {
-        toast('Added “' + nh.t + '” (# ' + num + ') to ' + book.name, 'ok');
-        selectHymn(nh);
-        // close modal if possible
-        const m = document.querySelector('.modal');
-        if (m && m.close) m.close();
+        toast('Added “' + nh.t + '” and ready as slides', 'ok');
+        selectHymn(nh);          // stages it in the same slide format as choruses
+        closeModal();
       });
     }
 
     modal({
-      title: 'Find lyrics online', wide: true,
+      title: 'Find lyrics', wide: true,
       body: h('div.col',
-        h('p.note', 'Search public sources for any hymn or chorus. Copy the lyrics and paste them to add offline in the same format as the choruses.'),
+        h('p.note', 'Search your books for suggestions, or find lyrics online. When you add them they appear as slides just like the choruses.'),
         h('div.row', titleIn, h('button.btn', { type: 'button', onclick: search }, 'Search')),
         status, results),
       actions: [{ label: 'Close' }],
     });
     titleIn.focus();
+    if (titleIn.value) search();
   }
 
   // ------------------------------------------------------------ music (offline MIDI accompaniment)
