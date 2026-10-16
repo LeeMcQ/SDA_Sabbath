@@ -162,7 +162,18 @@ export default function create(ctx) {
       linked ? h('div.plan-bar', { role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(pct), 'aria-label': 'Parts shown' }, h('i', { style: { width: pct + '%' } })) : null);
   }
 
-  async function presentItem(i) {
+  async function presentItem(i, withMusic) {
+    const it = plan.items[i];
+    if (withMusic && it && it.tab === 'hymns') {
+      ctx.hold = 'plan';
+      try {
+        const t = await ctx.tab('hymns');
+        const c = await t.presentAndPlay(it);
+        if (c) { cur = i; it.done = true; shownCue.set(it.id, c.id); save(); render(); }
+      } catch (e) { toast('Could not present and play: ' + e.message, 'err'); }
+      finally { ctx.hold = null; }
+      return;
+    }
     const c = await select(i);
     if (c) { live.take(c); if (plan.autoAdvance) setTimeout(() => step(1), 400); }
   }
@@ -229,7 +240,11 @@ export default function create(ctx) {
       h('div.row', { onclick: (e) => e.stopPropagation() },
         it.heading
           ? h('button.btn.sm', { type: 'button', title: 'Attach a Bible verse, hymn, slides, video, web page or banner to this part', onclick: () => linkMedia(i) }, icon('link'), h('span', 'Attach'))
-          : h('button.btn.sm.primary', { type: 'button', title: 'Show this part on the screen now', onclick: () => presentItem(i) }, icon('present'), h('span.hide-sm', 'Present')),
+          : it.tab === 'hymns'
+            ? h('div.row', { style: { gap: '4px' } },
+                h('button.btn.sm.primary', { type: 'button', title: 'Show the words on the screen', onclick: () => presentItem(i) }, icon('present'), h('span.hide-sm', 'Present')),
+                h('button.btn.sm', { type: 'button', title: 'Show the words and start the music', onclick: () => presentItem(i, true) }, icon('play'), h('span.hide-sm', 'Present & play')))
+            : h('button.btn.sm.primary', { type: 'button', title: 'Show this part on the screen now', onclick: () => presentItem(i) }, icon('present'), h('span.hide-sm', 'Present')),
         more));
       activatable(row);
       listEl.appendChild(row);

@@ -671,6 +671,15 @@ export default function create(ctx) {
     },
     musicFor(c) { return c && c.tab === 'hymns' && !!(musicSet && book && c.hymnKey && c.hymnKey.startsWith(book.id + ':') && musicSet.has(+c.hymnKey.split(':')[1])); },
     startMusicFor(c) { if (cue && c && cue.hymnKey === c.hymnKey) startMusic(false); },
+    /** Present the hymn and start the music together (used by Plan). */
+    async presentAndPlay(item) {
+      const c = await api.open(item);
+      if (!c) return null;
+      // Give the music bar a moment to resolve the entry, then present and play.
+      await new Promise((r) => setTimeout(r, 80));
+      await startMusic(true);
+      return c;
+    },
     controls(c) {
       // Jump straight to a stanza: T 1 C 2 C 3 …
       const box = h('div.row', { style: { flexWrap: 'nowrap', overflowX: 'auto' } });
