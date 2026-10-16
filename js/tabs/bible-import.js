@@ -26,10 +26,14 @@ export function importBibleDialog(onDone) {
       status.textContent = 'Found ' + parsed.total.toLocaleString() + ' verses in ' + parsed.books.size + ' books. Check the name and press Add.';
     } catch (e) { parsed = null; status.textContent = e.message; status.classList.add('warn'); }
   });
+  const PRESETS = [['NIV', 'New International Version'], ['ESV', 'English Standard Version'], ['NKJV', 'New King James Version']];
+  const presets = h('div.row.wrap', { style: { gap: '6px' } }, h('span.note', 'Quick fill:'),
+    PRESETS.map(([a, n]) => h('button.btn.sm', { type: 'button', onclick: () => { abbr.value = a; name.value = n; lang.value = 'en'; } }, a)));
   modal({
     title: 'Add a Bible translation',
     body: h('div.col',
-      h('p.note.warn', 'Only add translations your church is licensed to use. NIV is © Biblica; the 1975 Xhosa Bible is © Bible Society of South Africa.'),
+      h('p.note.warn', 'Only add translations your church is licensed to use. NIV is © Biblica, ESV is © Crossway, NKJV is © Thomas Nelson, and the 1975 Xhosa Bible is © Bible Society of South Africa. The app cannot include them; choose a file you are licensed to use (see Supported below).'),
+      presets,
       file, h('div.form', h('label', 'Short name'), abbr, h('label', 'Full name'), name, h('label', 'Language (book names)'), lang), status),
     actions: [{ label: 'Cancel' }, {
       label: 'Add Bible', primary: true, onclick: async () => {

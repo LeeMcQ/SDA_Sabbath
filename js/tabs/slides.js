@@ -5,7 +5,7 @@ import { h, clear, uid, fmtBytes } from '../core/util.js';
 import { icon } from '../core/icons.js';
 import { btn, dropzone, menu, toast, confirmBox, promptBox, seg, emptyState } from '../core/ui.js';
 import { db } from '../core/db.js';
-import { createStage } from '../core/render.js';
+import { createStage, renderFrame } from '../core/render.js';
 
 export default function create(ctx) {
   const { settings, live } = ctx;
@@ -26,10 +26,10 @@ export default function create(ctx) {
   const zone = dropzone('Drop PDF, PowerPoint (.pptx) or pictures here, or tap to choose', '.pdf,.pptx,image/*', (files) => importFiles(files));
   const addBtn = btn('plus', 'Add files', () => zone.querySelector('input').click(), { cls: 'sm', label: 'Add' });
   const linkBtn = btn('link', 'Add from link', () => addFromLink(), { cls: 'sm', label: 'Link' });
-  const saveBannerBtn = btn('banner', 'Save this slide as a banner', saveSlideAsBanner, { cls: 'sm', label: 'Save as banner' });
+  const saveBannerBtn = btn('banner', 'Make the selected slide a banner', () => makeBanner(), { cls: 'sm', label: 'Make banner' });
   saveBannerBtn.hidden = true;
   const deckMenuBtn = btn('more', 'Deck options', () => deck && menu(deckMenuBtn, [
-    { label: 'Save this slide as banner', icon: 'banner', onclick: saveSlideAsBanner },
+    { label: 'Make this slide a banner', icon: 'banner', onclick: makeBanner },
     { label: 'Rename', icon: 'edit', onclick: renameDeck },
     { label: 'Add to the service plan', icon: 'plan', onclick: addToPlan },
     { label: 'Delete', icon: 'trash', onclick: deleteDeck },
@@ -275,99 +275,6 @@ export default function create(ctx) {
     deck = { id };
   }
 
-  async function captureFrame(f) {
-    if (f.kind === 'image' && f.src) return f.src;
-    if (f.kind !== 'html' || !f.html) return null;
-    const W = f.w || 960, H = f.h || 540;
-    const c = document.createElement('canvas');
-    c.width = W; c.height = H;
-    const g = c.getContext('2d');
-    // background
-    g.fillStyle = '#fff';
-    g.fillRect(0, 0, W, H);
-    if (f.bg) {
-      try { g.fillStyle = f.bg; g.fillRect(0, 0, W, H); } catch (e) { /* gradient etc */ }
-    }
-    // offscreen host to resolve images and measure text
-    const host = document.createElement('div');
-    host.style.cssText = 'position:fixed;left:-10000px;top:0;width:' + W + 'px;height:' + H + 'px;background:transparent;';
-    host.innerHTML = f.html;
-    const assets = f.assets || [];
-    const urls = [];
-    host.querySelectorAll('[data-a]').forEach((n) => {
-      const b = assets[+n.getAttribute('data-a')];
-      if (b) { const u = URL.createObjectURL(b); urls.push(u); n.src = u; }
-    });
-    host.querySelectorAll('[data-abg]').forEach((n) => {
-      const b = assets[+n.getAttribute('data-abg')];
-      if (b) { const u = URL.createObjectURL(b); urls.push(u); n.style.backgroundImage = 'url("' + u + '")'; }
-    });
-    document.body.appendChild(host);
-    await new Promise((r) => setTimeout(r, 80));
-    // draw each shape
-    const shapes = host.querySelectorAll('.sp');
-    for (const sp of shapes) {
-      const st = sp.style;
-      const x = parseFloat(st.left) || 0, y = parseFloat(st.top) || 0;
-      const w = parseFloat(st.width) || 0, h = parseFloat(st.height) || 0;
-      // background image or color
-      const bgImg = sp.querySelector('img');
-      if (bgImg && bgImg.complete && bgImg.naturalWidth) {
-        g.drawImage(bgImg, x, y, w, h);
-      } else if (st.backgroundColor && st.backgroundColor !== 'transparent') {
-        g.fillStyle = st.backgroundColor;
-        g.fillRect(x, y, w, h);
-      }
-      // text
-      const text = sp.innerText || sp.textContent || '';
-      if (text.trim()) {
-        g.fillStyle = st.color || '#000';
-        const fs = parseFloat(st.fontSize) || 18;
-        g.font = (st.fontWeight || '400') + ' ' + fs + 'px ' + (st.fontFamily || 'sans-serif');
-        g.textAlign = 'left';
-        g.textBaseline = 'top';
-        const lines = text.split('\n');
-        const lh = fs * 1.25;
-        let ty = y + (parseFloat(st.paddingTop) || 4);
-        const tx = x + (parseFloat(st.paddingLeft) || 4);
-        for (const ln of lines) {
-          if (ty + lh > y + h) break;
-          g.fillText(ln.trim(), tx, ty, w - 8);
-          ty += lh;
-        }
-      }
-    }
-    urls.forEach((u) => URL.revokeObjectURL(u));
-    host.remove();
-    return await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.9));
-  }
-
-  async function saveSlideAsBanner() {
-    if (!deck || !frames || !frames[stagedIndex]) { toast('Open a slide first.', 'err'); return; }
-    const f = frames[stagedIndex];
-    toast('Capturing slide…', 'ok', 1500);
-    let blob = null;
-    try { blob = await captureFrame(f); } catch (e) { console.warn('capture', e); }
-    if (!blob) { toast('Could not capture this slide. Try saving the deck as PDF for a perfect copy.', 'err', 5000); return; }
-    const name = (await promptBox('Save as banner', 'Name for this banner', deck.name + ' — slide ' + (stagedIndex + 1))) || (deck.name + ' slide ' + (stagedIndex + 1));
-    const id = 'bg-' + Date.now().toString(36);
-    await db.put('files', id, { id, kind: 'banner-bg', name, type: 'image/jpeg', size: blob.size || 0, blob, added: Date.now() });
-    const lib = (await db.get('kv', 'banners').catch(() => null)) || [];
-    const banner = {
-      id: 'b-' + Date.now().toString(36),
-      name,
-      tpl: 'picture',
-      f: { title: name, text: '' },
-      x: {},
-      s: { pal: 'navy', deco: 'none', pos: 'center', font: 'sans', img: id, dim: 0 },
-      created: Date.now(),
-      updated: Date.now(),
-    };
-    lib.unshift(banner);
-    await db.put('kv', 'banners', lib);
-    toast('Saved as banner. Find it in Banners → Saved.', 'ok');
-  }
-
   async function renameDeck() {
     const n = await promptBox('Rename', 'Name', deck.name);
     if (!n) return;
@@ -380,6 +287,78 @@ export default function create(ctx) {
     await db.del('files', deck.id);
     deck = null; ctx.setStaged('slides', null);
     await loadLibrary();
+  }
+  /** Draw a PowerPoint (HTML) slide to a picture: render it, copy every computed style, and rasterise through SVG. */
+  async function rasterSlide(f) {
+    const W = Math.round(f.w || 960), H = Math.round(f.h || 540);
+    const k = Math.min(2, 1920 / W);
+    const host = document.createElement('div');
+    host.style.cssText = 'position:fixed;left:-20000px;top:0;width:' + W + 'px;height:' + H + 'px;overflow:hidden;';
+    document.body.appendChild(host);
+    try {
+      const cleanup = await renderFrame(host, f, { sw: W, sh: H });
+      const box = host.querySelector('.f-html');
+      if (!box) throw new Error('no slide');
+      box.style.transform = 'none';
+      await new Promise((r) => setTimeout(r, 60));
+      const toData = async (u) => {
+        const b = await (await fetch(u)).blob();
+        return await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(b); });
+      };
+      const clone = box.cloneNode(true);
+      const src = [box, ...box.querySelectorAll('*')], dst = [clone, ...clone.querySelectorAll('*')];
+      for (let i = 0; i < src.length; i++) {
+        const cs = getComputedStyle(src[i]);
+        let css = '';
+        for (const pr of cs) css += pr + ':' + cs.getPropertyValue(pr) + ';';
+        dst[i].setAttribute('style', css);
+        if (dst[i].tagName === 'IMG' && /^blob:/.test(src[i].src)) dst[i].setAttribute('src', await toData(src[i].src));
+        const bg = cs.backgroundImage;
+        const m = bg && bg.match(/url\("?(blob:[^")]+)"?\)/);
+        if (m) dst[i].style.backgroundImage = 'url("' + (await toData(m[1])) + '")';
+      }
+      clone.style.transform = 'none'; clone.style.position = 'static';
+      const xml = new XMLSerializer().serializeToString(clone);
+      const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '"><foreignObject width="100%" height="100%">' +
+        xml + '</foreignObject></svg>';
+      const img = new Image();
+      await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('could not draw the slide')); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
+      const c = document.createElement('canvas');
+      c.width = Math.round(W * k); c.height = Math.round(H * k);
+      const g = c.getContext('2d');
+      g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+      g.drawImage(img, 0, 0, c.width, c.height);
+      if (cleanup) cleanup();
+      return await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.9));
+    } finally { host.remove(); }
+  }
+
+  /** Make the selected slide a banner: a picture banner (PowerPoint slides are drawn to a picture; text only if that fails). */
+  async function makeBanner() {
+    if (!deck || !frames || !frames[stagedIndex]) { toast('Open a slide first.', 'err'); return; }
+    const f = frames[stagedIndex];
+    const name = deck.name + ' – slide ' + (stagedIndex + 1);
+    try {
+      let spec = null;
+      if (f.kind === 'image') {
+        const r = await db.get('renders', deck.id + '/' + stagedIndex);
+        if (r && r.full) spec = { blob: r.full, name };
+      } else if (f.kind === 'html') {
+        let blob = null;
+        try { blob = await rasterSlide(f); } catch (e) { console.warn('raster', e); }
+        if (blob && blob.size > 2000) spec = { blob, name };
+        else {
+          const d = new DOMParser().parseFromString('<div>' + String(f.html || '').replace(/<\/(p|div|h\d|li)>/gi, '$&\n') + '</div>', 'text/html');
+          const lines = (d.body.textContent || '').split('\n').map((x) => x.replace(/\s+/g, ' ').trim()).filter(Boolean);
+          if (lines.length) spec = { title: lines[0], text: lines.slice(1).join('\n'), name };
+        }
+      }
+      if (!spec) { toast('This slide cannot become a banner (web links have no picture). Import it as PDF first.', 'err', 6000); return; }
+      const ai = await ctx.showTab('ai');
+      const b = ai && ai.fromSlide ? ai : await ctx.tab('ai');
+      await b.fromSlide(spec);
+      toast('Slide ' + (stagedIndex + 1) + ' is now a banner. Save it, or set it as Next.', 'ok', 4000);
+    } catch (e) { console.error(e); toast('Could not make a banner: ' + e.message, 'err', 6000); }
   }
   async function addToPlan() { const c = ctx.stagedOf('slides'); if (c) (await ctx.tab('plan')).addItem(c.plan); }
 

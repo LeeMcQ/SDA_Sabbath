@@ -118,7 +118,7 @@ export function createMonitors(host) {
   function applyStyle(s) { nextStage.applyStyle(s); liveStage.applyStyle(s); renderNext(); if (live.cue) renderLive(); }
 
   function updateBlank(mode) {
-    liveStage.setBlank(mode);
+    inStep(() => liveStage.setBlank(mode));
     blackBtn.classList.toggle('live-on', mode === 'black');
     logoBtn.classList.toggle('live-on', mode === 'logo');
   }
@@ -139,10 +139,17 @@ export function createMonitors(host) {
   };
   live.on('staged', renderNext);
   live.on('staged', markSame);
-  live.on('live', renderLive);
+  // On a TV or another computer, the Live monitor waits until the display says it has drawn the change,
+  // so both change at the same moment.
+  const inStep = (fn) => {
+    if (!link.remote() || !link.lastQ) { fn(); return; }
+    const q = link.lastQ;
+    link.whenShown(q).then(() => { if (q === link.lastQ || !link.remote()) fn(); });
+  };
+  live.on('live', () => inStep(renderLive));
   live.on('live', markSame);
   live.on('live', renderNext);
-  live.on('go', () => { liveStage.show(frameOf(live.cue, live.index)); renderFrames(); markSame(); renderNext(); });
+  live.on('go', () => { inStep(() => liveStage.show(frameOf(live.cue, live.index))); renderFrames(); markSame(); renderNext(); });
   settings.on('change:display', syncLogo);
   syncLogo();
   live.on('blank', updateBlank);
