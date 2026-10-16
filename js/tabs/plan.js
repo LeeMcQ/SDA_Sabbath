@@ -6,6 +6,7 @@ import { btn, menu, toast, promptBox, confirmBox, modal, closeModal, activatable
 import { db } from '../core/db.js';
 import { parseRef, refText, EN } from '../core/books.js';
 import { getInfo, versesFor } from '../core/bibledata.js';
+import { music } from '../core/hymnmusic.js';
 
 const TEMPLATES = {
   'Divine Service': [
@@ -164,6 +165,8 @@ export default function create(ctx) {
 
   async function presentItem(i, withMusic) {
     const it = plan.items[i];
+    // Leaving a hymn: stop its music unless this present is itself starting music.
+    if (!withMusic) { try { music.stop(); } catch (e) { /* */ } }
     if (withMusic && it && it.tab === 'hymns') {
       ctx.hold = 'plan';
       try {
@@ -300,9 +303,11 @@ export default function create(ctx) {
     return c;
   }
 
-  /** Previous / next part of the plan: it becomes Next (green). Press Present (F5) to show it. */
+  /** Previous / next part of the plan: stop any hymn music, then the next media takes over. */
   async function step(d) {
     if (!plan) return;
+    // Stop hymn music so the next item's media can take over.
+    try { music.stop(); } catch (e) { /* no music playing */ }
     let i = cur;
     do { i += d; } while (plan.items[i] && plan.items[i].heading);
     if (i < 0 || i >= plan.items.length) { toast(d > 0 ? 'End of the plan.' : 'Start of the plan.'); return; }
