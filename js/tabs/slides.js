@@ -26,8 +26,8 @@ export default function create(ctx) {
   const zone = dropzone('Drop PDF, PowerPoint (.pptx) or pictures here, or tap to choose', '.pdf,.pptx,image/*', (files) => importFiles(files));
   const addBtn = btn('plus', 'Add files', () => zone.querySelector('input').click(), { cls: 'sm', label: 'Add' });
   const linkBtn = btn('link', 'Add from link', () => addFromLink(), { cls: 'sm', label: 'Link' });
-  const saveBannerBtn = btn('banner', 'Save this slide as a banner', saveSlideAsBanner, { cls: 'sm', label: 'Save as banner' });
-  saveBannerBtn.hidden = true;
+  const saveBannerBtn = h('button.btn.sm.primary', { type: 'button', title: 'Save the selected slide as a banner for later', onclick: saveSlideAsBanner, hidden: true },
+    icon('banner'), h('span', 'Save as banner'));
   const deckMenuBtn = btn('more', 'Deck options', () => deck && menu(deckMenuBtn, [
     { label: 'Save this slide as banner', icon: 'banner', onclick: saveSlideAsBanner },
     { label: 'Rename', icon: 'edit', onclick: renameDeck },
@@ -37,11 +37,11 @@ export default function create(ctx) {
   const fitSeg = seg([['contain', 'Fit'], ['cover', 'Fill']], settings.v.slides.fit, (v) => { settings.set('slides.fit', v); if (deck) stageAt(stagedIndex); });
 
   const el = h('section',
-    h('div.toolbar', h('h2', 'Slides'), addBtn, linkBtn, h('div.grow'), fitSeg),
+    h('div.toolbar', h('h2', 'Slides'), addBtn, linkBtn, h('div.grow'), saveBannerBtn, fitSeg),
     prog,
     h('div.split.lib-split',
       h('div.pane', h('div.pane-h', 'Library'), h('div.scroll', { style: { flex: '1' } }, libList, h('div.pad', zone))),
-      h('div.pane', h('div.pane-h', head, info, saveBannerBtn, deckMenuBtn), h('div.scroll', { style: { flex: '1' } }, grid, notes))));
+      h('div.pane', h('div.pane-h', head, info, deckMenuBtn), h('div.scroll', { style: { flex: '1' } }, grid, notes))));
 
   // ------------------------------------------------------------ library
   async function loadLibrary() {

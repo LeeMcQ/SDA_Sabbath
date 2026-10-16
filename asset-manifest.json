@@ -1,6 +1,6 @@
 {
-"version": "2409c854f5f3",
-"bytes": 36951118,
+"version": "2c1912dcd003",
+"bytes": 36951177,
 "files": [
 "index.html",
 "display.html",
@@ -338,7 +338,7 @@
 "js/tabs/plan.js": "59d62a90676e2271",
 "js/tabs/screen.js": "5f59e366c040e629",
 "js/tabs/settings.js": "03a106ada1c72ceb",
-"js/tabs/slides.js": "a1992c00e0163679",
+"js/tabs/slides.js": "87f44b1b91a4766e",
 "js/tabs/tools.js": "afa1a48c3e9d0e84",
 "js/tabs/video.js": "0b06ecdabeab6966",
 "js/tabs/web.js": "e42a98c8d3d7ff45",
