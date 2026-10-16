@@ -67,7 +67,22 @@ p { margin: 0; }
 .app.no-monitors .monitors, html.no-mon .monitors { display: none; }
 
 /* ---------- Top bar ---------- */
-.topbar { grid-area: top; display: flex; align-items: center; gap: 12px; padding: 0 12px 0 16px; background: var(--sunk); border-bottom: 1px solid var(--line); min-width: 0; }
+.install-banner {
+  display: flex; align-items: center; gap: 12px; margin: 10px 12px 0;
+  padding: 12px 14px; border-radius: 10px;
+  background: linear-gradient(135deg, #1e3a2f, #2b7f3e);
+  border: 1px solid #3d9a55; color: #fff;
+  box-shadow: 0 4px 16px rgba(43, 127, 62, .35);
+}
+.install-banner .ib-text { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.install-banner .ib-text strong { font-size: 15px; }
+.install-banner .ib-text span { font-size: 13px; opacity: .92; }
+.install-banner .ib-btn { background: #fff; color: #1e3a2f; border-color: #fff; font-weight: 700; }
+.install-banner .ib-btn:hover { background: #f0fff4; }
+@media (max-width: 600px) {
+  .install-banner { flex-direction: column; align-items: stretch; text-align: center; }
+  .install-banner .ib-btn { width: 100%; }
+}
 .brand { margin: 0; display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: var(--fs-lg); letter-spacing: .01em; white-space: nowrap; }
 .brand img { width: 30px; height: 30px; border-radius: 7px; }
 .disp-btn { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border-radius: var(--r); border: 1px solid var(--line); background: var(--panel); max-width: 260px; }

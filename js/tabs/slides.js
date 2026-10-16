@@ -26,7 +26,10 @@ export default function create(ctx) {
   const zone = dropzone('Drop PDF, PowerPoint (.pptx) or pictures here, or tap to choose', '.pdf,.pptx,image/*', (files) => importFiles(files));
   const addBtn = btn('plus', 'Add files', () => zone.querySelector('input').click(), { cls: 'sm', label: 'Add' });
   const linkBtn = btn('link', 'Add from link', () => addFromLink(), { cls: 'sm', label: 'Link' });
+  const saveBannerBtn = btn('banner', 'Save this slide as a banner', saveSlideAsBanner, { cls: 'sm', label: 'Save as banner' });
+  saveBannerBtn.hidden = true;
   const deckMenuBtn = btn('more', 'Deck options', () => deck && menu(deckMenuBtn, [
+    { label: 'Save this slide as banner', icon: 'banner', onclick: saveSlideAsBanner },
     { label: 'Rename', icon: 'edit', onclick: renameDeck },
     { label: 'Add to the service plan', icon: 'plan', onclick: addToPlan },
     { label: 'Delete', icon: 'trash', onclick: deleteDeck },
@@ -38,7 +41,7 @@ export default function create(ctx) {
     prog,
     h('div.split.lib-split',
       h('div.pane', h('div.pane-h', 'Library'), h('div.scroll', { style: { flex: '1' } }, libList, h('div.pad', zone))),
-      h('div.pane', h('div.pane-h', head, info, deckMenuBtn), h('div.scroll', { style: { flex: '1' } }, grid, notes))));
+      h('div.pane', h('div.pane-h', head, info, saveBannerBtn, deckMenuBtn), h('div.scroll', { style: { flex: '1' } }, grid, notes))));
 
   // ------------------------------------------------------------ library
   async function loadLibrary() {
@@ -85,7 +88,7 @@ export default function create(ctx) {
     clear(grid);
     if (io) { io.disconnect(); io = null; }
     notes.hidden = true;
-    head.hidden = !deck; deckMenuBtn.hidden = !deck;
+    head.hidden = !deck; deckMenuBtn.hidden = !deck; saveBannerBtn.hidden = !deck;
     if (!deck) { head.textContent = ''; info.textContent = ''; grid.appendChild(emptyState('slides', decks.length ? 'No slide deck open' : 'No slides yet', decks.length ? 'Pick a deck from the library.' : 'Add a PDF, PowerPoint, pictures, or a Google Slides / web link.', null, { style: { gridColumn: '1/-1' } })); return; }
     head.textContent = deck.name;
     info.textContent = deck.count + ' slides' + (deck.size ? ' · ' + fmtBytes(deck.size) : '');
@@ -270,6 +273,38 @@ export default function create(ctx) {
     await db.put('files', id, { id, kind: 'deck', type: 'web', name, count: 1, url, added: Date.now() });
     toast('Link added. It will open when you present (needs internet).', 'ok');
     deck = { id };
+  }
+
+  async function saveSlideAsBanner() {
+    if (!deck || !frames || !frames[stagedIndex]) { toast('Open a slide first.', 'err'); return; }
+    const f = frames[stagedIndex];
+    let blob = null;
+    if (f.kind === 'image' && f.src) {
+      blob = f.src;
+    } else {
+      // Capture the currently staged slide from the live preview stage
+      const host = document.querySelector('.stage-host');
+      const canvas = host && host.querySelector('canvas');
+      if (canvas) blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.9));
+    }
+    if (!blob) { toast('Could not capture this slide as an image.', 'err'); return; }
+    const name = (await promptBox('Save as banner', 'Name for this banner', deck.name + ' — slide ' + (stagedIndex + 1))) || (deck.name + ' slide ' + (stagedIndex + 1));
+    const id = 'bg-' + Date.now().toString(36);
+    await db.put('files', id, { id, kind: 'banner-bg', name, type: 'image/jpeg', size: blob.size || 0, blob, added: Date.now() });
+    const lib = (await db.get('kv', 'banners').catch(() => null)) || [];
+    const banner = {
+      id: 'b-' + Date.now().toString(36),
+      name,
+      tpl: 'picture',
+      f: { title: name, text: '' },
+      x: {},
+      s: { pal: 'navy', deco: 'none', pos: 'center', font: 'sans', img: id, dim: 0 },
+      created: Date.now(),
+      updated: Date.now(),
+    };
+    lib.unshift(banner);
+    await db.put('kv', 'banners', lib);
+    toast('Saved as banner. Find it in Banners → Saved.', 'ok');
   }
 
   async function renameDeck() {
