@@ -5,7 +5,7 @@ import { h, clear, uid, fmtBytes } from '../core/util.js';
 import { icon } from '../core/icons.js';
 import { btn, dropzone, menu, toast, confirmBox, promptBox, seg, emptyState } from '../core/ui.js';
 import { db } from '../core/db.js';
-import { createStage } from '../core/render.js';
+import { createStage, renderFrame } from '../core/render.js';
 
 export default function create(ctx) {
   const { settings, live } = ctx;
@@ -288,7 +288,52 @@ export default function create(ctx) {
     deck = null; ctx.setStaged('slides', null);
     await loadLibrary();
   }
-  /** Make the selected slide a banner: a picture banner for PDF/pictures, a text banner for PowerPoint slides. */
+  /** Draw a PowerPoint (HTML) slide to a picture: render it, copy every computed style, and rasterise through SVG. */
+  async function rasterSlide(f) {
+    const W = Math.round(f.w || 960), H = Math.round(f.h || 540);
+    const k = Math.min(2, 1920 / W);
+    const host = document.createElement('div');
+    host.style.cssText = 'position:fixed;left:-20000px;top:0;width:' + W + 'px;height:' + H + 'px;overflow:hidden;';
+    document.body.appendChild(host);
+    try {
+      const cleanup = await renderFrame(host, f, { sw: W, sh: H });
+      const box = host.querySelector('.f-html');
+      if (!box) throw new Error('no slide');
+      box.style.transform = 'none';
+      await new Promise((r) => setTimeout(r, 60));
+      const toData = async (u) => {
+        const b = await (await fetch(u)).blob();
+        return await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(b); });
+      };
+      const clone = box.cloneNode(true);
+      const src = [box, ...box.querySelectorAll('*')], dst = [clone, ...clone.querySelectorAll('*')];
+      for (let i = 0; i < src.length; i++) {
+        const cs = getComputedStyle(src[i]);
+        let css = '';
+        for (const pr of cs) css += pr + ':' + cs.getPropertyValue(pr) + ';';
+        dst[i].setAttribute('style', css);
+        if (dst[i].tagName === 'IMG' && /^blob:/.test(src[i].src)) dst[i].setAttribute('src', await toData(src[i].src));
+        const bg = cs.backgroundImage;
+        const m = bg && bg.match(/url\("?(blob:[^")]+)"?\)/);
+        if (m) dst[i].style.backgroundImage = 'url("' + (await toData(m[1])) + '")';
+      }
+      clone.style.transform = 'none'; clone.style.position = 'static';
+      const xml = new XMLSerializer().serializeToString(clone);
+      const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '"><foreignObject width="100%" height="100%">' +
+        xml + '</foreignObject></svg>';
+      const img = new Image();
+      await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('could not draw the slide')); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
+      const c = document.createElement('canvas');
+      c.width = Math.round(W * k); c.height = Math.round(H * k);
+      const g = c.getContext('2d');
+      g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+      g.drawImage(img, 0, 0, c.width, c.height);
+      if (cleanup) cleanup();
+      return await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.9));
+    } finally { host.remove(); }
+  }
+
+  /** Make the selected slide a banner: a picture banner (PowerPoint slides are drawn to a picture; text only if that fails). */
   async function makeBanner() {
     if (!deck || !frames || !frames[stagedIndex]) { toast('Open a slide first.', 'err'); return; }
     const f = frames[stagedIndex];
@@ -299,9 +344,14 @@ export default function create(ctx) {
         const r = await db.get('renders', deck.id + '/' + stagedIndex);
         if (r && r.full) spec = { blob: r.full, name };
       } else if (f.kind === 'html') {
-        const d = new DOMParser().parseFromString('<div>' + String(f.html || '').replace(/<\/(p|div|h\d|li)>/gi, '$&\n') + '</div>', 'text/html');
-        const lines = (d.body.textContent || '').split('\n').map((s) => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
-        if (lines.length) spec = { title: lines[0], text: lines.slice(1).join('\n'), name };
+        let blob = null;
+        try { blob = await rasterSlide(f); } catch (e) { console.warn('raster', e); }
+        if (blob && blob.size > 2000) spec = { blob, name };
+        else {
+          const d = new DOMParser().parseFromString('<div>' + String(f.html || '').replace(/<\/(p|div|h\d|li)>/gi, '$&\n') + '</div>', 'text/html');
+          const lines = (d.body.textContent || '').split('\n').map((x) => x.replace(/\s+/g, ' ').trim()).filter(Boolean);
+          if (lines.length) spec = { title: lines[0], text: lines.slice(1).join('\n'), name };
+        }
       }
       if (!spec) { toast('This slide cannot become a banner (web links have no picture). Import it as PDF first.', 'err', 6000); return; }
       const ai = await ctx.showTab('ai');
