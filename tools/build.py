@@ -30,7 +30,26 @@ def collect():
     return files
 
 
+def check_syntax():
+    """Refuse to stamp a build when any app script has a syntax error (it would break a tab for everyone)."""
+    import shutil
+    node = shutil.which('node')
+    if not node:
+        return
+    bad = []
+    for base, _, names in os.walk(os.path.join(ROOT, 'js')):
+        for n in names:
+            if n.endswith('.js'):
+                path = os.path.join(base, n)
+                r = subprocess.run([node, '--input-type=module', '--check'], stdin=open(path, 'rb'), capture_output=True, text=True)
+                if r.returncode:
+                    bad.append(os.path.relpath(path, ROOT) + ': ' + (r.stderr.strip().splitlines() or ['syntax error'])[-1 if False else 0])
+    if bad:
+        raise SystemExit('Syntax error, build stopped:\n  ' + '\n  '.join(bad))
+
+
 def main():
+    check_syntax()
     if '--bibles' in sys.argv:
         subprocess.check_call([sys.executable, os.path.join(ROOT, 'tools', 'build_bibles.py'), '--licensed'])
     files = collect()
