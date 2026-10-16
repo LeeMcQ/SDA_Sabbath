@@ -9,7 +9,7 @@ export function importBibleDialog(onDone) {
   const abbr = h('input.field', { placeholder: 'NIV', maxlength: 8 });
   const name = h('input.field', { placeholder: 'New International Version' });
   const lang = h('select.field', h('option', { value: 'en' }, 'English'), h('option', { value: 'af' }, 'Afrikaans'), h('option', { value: 'xh' }, 'isiXhosa'), h('option', { value: 'zu' }, 'isiZulu / other'));
-  const status = h('p.note', 'Supported: Zefania XML, OSIS XML, JSON (Joy in the Journey, bible-api, thiagobodruk) and CSV/TSV (book, chapter, verse, text).');
+  const status = h('p.note', 'Supported: Zefania XML, OSIS XML, JSON (Joy in the Journey, bible-api, thiagobodruk, and book → chapter → verse files such as Bible-json) and CSV/TSV (book, chapter, verse, text).');
   let parsed = null;
   file.addEventListener('change', async () => {
     const f = file.files[0];

@@ -207,6 +207,12 @@ export async function parseBibleFile(file) {
       j.forEach((bk, i) => bk.chapters.forEach((ch, ci) => ch.forEach((t, vi) => put(i + 1, ci + 1, vi + 1, t))));
     } else if (Array.isArray(j) && j[0] && (j[0].book || j[0].book_name) && j[0].verse) {
       j.forEach((x) => put(bookNo(x.book || x.book_name), x.chapter, x.verse, x.text));
+    } else if (j && !Array.isArray(j) && typeof j === 'object' && Object.keys(j).length >= 60 && Object.values(j).every((v) => v && typeof v === 'object')) {
+      // { "Genesis": { "1": { "1": "In the beginning…" } } } (book name → chapter → verse), e.g. the Bible-json collections
+      Object.keys(j).forEach((name, i) => {
+        const b = bookNo(name) || i + 1;
+        Object.keys(j[name]).forEach((c) => Object.keys(j[name][c]).forEach((v) => put(b, parseInt(c, 10), parseInt(v, 10), j[name][c][v])));
+      });
     } else throw new Error('Unknown JSON Bible format.');
   } else { // CSV / TSV: book,chapter,verse,text
     const delim = text.indexOf('\t') >= 0 ? '\t' : ',';
