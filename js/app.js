@@ -41,6 +41,8 @@ const railBtns = new Map();
 let current = null;
 
 export const isMobile = () => matchMedia('(max-width: 760px)').matches;
+// Android app (Capacitor WebView): there is no second window, so present on this device instead.
+const NATIVE = !!window.SDA_NATIVE;
 
 // ------------------------------------------------------------ context passed to tabs
 const ctx = {
@@ -215,7 +217,7 @@ function companionDialog() {
 
 function displayMenu(anchor) {
   const items = [];
-  if (!isMobile() || innerWidth > 900) {
+  if (!NATIVE && (!isMobile() || innerWidth > 900)) {
     items.push({ label: 'Open display on second screen', icon: 'present', onclick: () => link.openWindow() });
     if ('getScreenDetails' in window) items.push({ label: 'Choose screen…', icon: 'pc', onclick: () => chooseScreen() });
   }
@@ -234,7 +236,7 @@ function displayMenu(anchor) {
 dispBtn.addEventListener('click', () => displayMenu(dispBtn));
 
 live.ensureDisplay = () => new Promise((resolve) => {
-  if (!isMobile() && !matchMedia('(pointer: coarse)').matches) { link.openWindow().then(resolve); return; }
+  if (!NATIVE && !isMobile() && !matchMedia('(pointer: coarse)').matches) { link.openWindow().then(resolve); return; }
   let done = false;
   const opt = (ic, title, desc, fn) => h('button', { type: 'button', onclick: async () => { done = true; ui.closeModal(); try { resolve(await fn()); } catch (e) { ui.toast(e.message, 'err'); resolve(false); } } },
     icon(ic), h('div.grow', h('div', { style: { fontWeight: 700 } }, title), h('div.note', desc)));
@@ -242,7 +244,7 @@ live.ensureDisplay = () => new Promise((resolve) => {
     opt('phone', 'This device', 'Full screen here. Use with an HDMI adapter or screen mirroring.', () => link.openSelf(createDisplay)),
     link.canCast() ? opt('cast', 'Cast', 'Chromecast only. For LG Smart View / Miracast, use This device then mirror.', () => link.openCast()) : null,
     opt('link', 'SDA Sabbath companion', 'Control a PC or TV on the church network from this phone.', companionDialog),
-    innerWidth > 700 ? opt('present', 'Display window', 'A separate window you can move to a projector.', () => link.openWindow()) : null);
+    !NATIVE && innerWidth > 700 ? opt('present', 'Display window', 'A separate window you can move to a projector.', () => link.openWindow()) : null);
   ui.modal({ title: 'Where should SDA Sabbath present?', body: list, onclose: () => { if (!done) resolve(false); } });
 });
 
@@ -391,6 +393,8 @@ async function detectCompanion() {
 // ------------------------------------------------------------ service worker (offline + updates)
 function registerSW() {
   if (!('serviceWorker' in navigator) || !window.isSecureContext) return;
+  // Android app: every file is already inside the APK, and Capacitor serves them itself.
+  if (NATIVE) return;
   navigator.serviceWorker.register('sw.js').then((reg) => {
     const ask = (w) => {
       const t = ui.toast(h('span', 'An SDA Sabbath update is ready. ', h('button.btn.sm', { type: 'button', onclick: () => { w.postMessage({ t: 'skip' }); } }, 'Update now')), 'ok', 15000);

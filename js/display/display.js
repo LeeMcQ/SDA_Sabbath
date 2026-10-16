@@ -202,7 +202,8 @@ export function createDisplay(root, { post, self = false } = {}) {
       const fr = document.createElement('iframe');
       fr.src = safeHttpUrl(frame.url) || 'about:blank';
       fr.allow = 'autoplay; fullscreen; encrypted-media';
-      fr.referrerPolicy = 'no-referrer';
+      // YouTube refuses embeds with no Referer (Error 153, 2025+): send only our origin, never the path.
+      fr.referrerPolicy = 'strict-origin-when-cross-origin';
       box.appendChild(fr);
       return () => { fr.src = 'about:blank'; };
     }
