@@ -33,6 +33,7 @@ function setState(kind, ready, label) {
 let displaySid = null;
 function onDisplayMsg(m) {
   if (!m || !m.t) return;
+  if (m.t === 'ack') { if (m.q > link.acked) link.acked = m.q; link.emit('ack'); return; }
   if (m.t === 'hello') {
     if (!m.sid || m.sid !== displaySid) {
       displaySid = m.sid || null;
@@ -51,7 +52,26 @@ window.addEventListener('message', (e) => {
   onDisplayMsg(e.data);
 });
 
-link.send = (msg) => { if (sendImpl) sendImpl(msg); };
+// Messages that change the picture carry a number when the display is on the TV or another computer.
+// The display answers {t:'ack', q} once it has drawn that change, so the Live monitor can follow the
+// real screen instead of running ahead of it.
+const PICTURE_MSGS = new Set(['deck', 'go', 'blank', 'clear']);
+let seq = 0;
+link.acked = 0; link.lastQ = 0;
+link.remote = () => !!link.ready && (link.kind === 'cast' || link.kind === 'socket');
+link.send = (msg) => {
+  if (!sendImpl) return;
+  if (PICTURE_MSGS.has(msg.t) && link.remote()) { msg = Object.assign({}, msg, { q: ++seq }); link.lastQ = seq; }
+  sendImpl(msg);
+};
+/** Resolves when the display has drawn change number q (or after ms, so a lost answer never freezes the monitor). */
+link.whenShown = (q, ms = 1500) => new Promise((res) => {
+  if (!q || link.acked >= q) { res(); return; }
+  let off = null;
+  const done = () => { clearTimeout(t); if (off) off(); res(); };
+  const t = setTimeout(done, ms);
+  off = link.on('ack', () => { if (link.acked >= q) done(); });
+});
 link.aspect = () => {
   const a = settings.v.display.aspect;
   if (typeof a === 'string' && a !== 'auto') { const [x, y] = a.split(':').map(Number); if (x > 0 && y > 0) return x / y; }

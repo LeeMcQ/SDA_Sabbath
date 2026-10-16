@@ -260,8 +260,9 @@ export function createDisplay(root, { post, self = false } = {}) {
     // Re-showing the same media frame (e.g. a "go" while a video plays) must not restart it.
     if (f && f === lastFrame && (f.kind === 'video' || f.kind === 'stream' || f.kind === 'web')) return;
     lastFrame = f;
-    stage.show(f);
+    const shown = stage.show(f);
     hint(false);
+    return shown;
   }
 
   // ---------------------------------------------------------------- self-running loops (pre-service)
@@ -292,10 +293,12 @@ export function createDisplay(root, { post, self = false } = {}) {
 
   function handle(msg) {
     if (!msg || !msg.t) return;
+    const q = msg.q;
+    let drawn = null;
     switch (msg.t) {
-      case 'style': style = msg.style || {}; stage.applyStyle(style); if (deck && deck.frames) { lastFrame = null; showCurrent(); } break;
-      case 'deck': deck = msg.deck; index = msg.index || 0; lastFrame = null; stage.setBlank(msg.blank || null); showCurrent(); startAuto(); break;
-      case 'go': index = msg.index || 0; autoLast = Date.now(); showCurrent(); break;
+      case 'style': style = msg.style || {}; stage.applyStyle(style); if (deck && deck.frames) { lastFrame = null; drawn = showCurrent(); } break;
+      case 'deck': deck = msg.deck; index = msg.index || 0; lastFrame = null; stage.setBlank(msg.blank || null); drawn = showCurrent(); startAuto(); break;
+      case 'go': index = msg.index || 0; autoLast = Date.now(); drawn = showCurrent(); break;
       case 'auto': autoPaused = !msg.on; autoLast = Date.now(); break;
       case 'blank': stage.setBlank(msg.mode); break;
       case 'clear': deck = null; lastFrame = null; stopAuto(); teardownVideo(); stage.show(null); stage.setBlank(msg.mode || null); break;
@@ -304,6 +307,11 @@ export function createDisplay(root, { post, self = false } = {}) {
       case 'music': musicCmd(msg); break;
       case 'hello?': sayHello(); break;
       case 'ping': post({ t: 'pong' }); break;
+    }
+    // Tell the controller this change is on the screen now (it keeps its Live monitor in step with it).
+    if (q) {
+      const say = () => requestAnimationFrame(() => requestAnimationFrame(() => post({ t: 'ack', q })));
+      Promise.resolve(drawn).then(say, say);
     }
   }
 
