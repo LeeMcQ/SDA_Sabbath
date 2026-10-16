@@ -1135,6 +1135,25 @@ export default function create(ctx) {
   // ============================================================ control bar + plan
   const api = {
     el,
+    /** Turn a slide into a banner in the editor: {blob} makes a picture banner, {title,text} a text banner. */
+    async fromSlide({ blob, title, text, name }) {
+      await ready;
+      if (blob) {
+        const id = await storePicture(blob, (name || 'Slide') + '.jpg');
+        cur = newBanner('picture');
+        cur.s.img = id; cur.s.dim = 0; cur.name = name || 'Slide banner';
+      } else {
+        cur = newBanner('announce');
+        cur.f.kicker = ''; cur.f.foot = '';
+        cur.f.title = String(title || '').slice(0, 120);
+        cur.f.text = String(text || '').slice(0, 400);
+        cur.name = name || cur.f.title || 'Slide banner';
+      }
+      savedSig = null; nameInp.value = cur.name;
+      setView('make');
+      changed(true);
+      return cur;
+    },
     onShow() { setPreviewAspect(); if (view === 'make') refreshPreview(); },
     /** Open a plan item: {banner} | {loop} | {topic, tr}. Returns the staged cue. */
     async open(item) {
