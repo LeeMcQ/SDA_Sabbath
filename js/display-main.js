@@ -95,7 +95,24 @@ async function goFull() {
 }
 function toggleFull() { if (isFull()) (document.exitFullscreen || document.webkitExitFullscreen).call(document); else goFull(); }
 
-root.addEventListener('click', () => { if (!isFull()) goFull(); disp.hint(false); disp.unlockAudio(); });
+// A clicker in mouse mode: once the projector window is full screen, left click = next, right click = back,
+// scroll = next / back (like a PowerPoint slide show). The first click makes it full screen.
+root.addEventListener('click', () => {
+  const wasFull = isFull();
+  if (!wasFull) goFull(); else post({ t: 'key', key: '', sig: 'mouse:0' });
+  disp.hint(false); disp.unlockAudio();
+});
+root.addEventListener('contextmenu', (e) => { e.preventDefault(); post({ t: 'key', key: '', sig: 'mouse:2' }); });
+let wheelAt = 0;
+root.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const now = Date.now();
+  if (now - wheelAt < 450 || Math.abs(e.deltaY) < 4) return;
+  wheelAt = now;
+  post({ t: 'key', key: '', sig: e.deltaY > 0 ? 'wheel:down' : 'wheel:up' });
+}, { passive: false });
+document.addEventListener('mouseup', (e) => { if (e.button === 3 || e.button === 4) { e.preventDefault(); post({ t: 'key', key: '', sig: 'mouse:' + e.button }); } });
+document.addEventListener('auxclick', (e) => { if (e.button === 3 || e.button === 4) e.preventDefault(); });
 root.addEventListener('dblclick', toggleFull);
 document.addEventListener('fullscreenchange', () => disp.hint(false));
 
@@ -103,10 +120,10 @@ const FORWARD = new Set(['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'Pag
   'b', 'B', '.', 'Escape', 'F5', 'Enter', 'c', 'C', 'l', 'L', 'w', 'W']);
 document.addEventListener('keydown', (e) => {
   if (e.key === 'f' || e.key === 'F') { e.preventDefault(); toggleFull(); return; }
-  if (FORWARD.has(e.key)) {
-    if (e.key !== 'Escape' || !isFull()) e.preventDefault();
-    post({ t: 'key', key: e.key, shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey, alt: e.altKey });
-  }
+  // Every key goes to the control screen (it knows the clicker buttons taught in Clicker setup).
+  if (/^(Shift|Control|Alt|AltGraph|Meta|CapsLock|F11|F12|Tab)$/.test(e.key)) return;
+  if (FORWARD.has(e.key) || e.key.length > 1) { if (e.key !== 'Escape' || !isFull()) e.preventDefault(); }
+  post({ t: 'key', key: e.key, code: e.code, shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey, alt: e.altKey });
 });
 
 let wake = null;

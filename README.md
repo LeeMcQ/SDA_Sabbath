@@ -61,6 +61,12 @@ box, like in PowerPoint or Google Slides:
 - On the last slide of an item, pressing next again within 4 seconds moves on to the item on the Next screen
   (Bible readings simply continue to the following verses).
 - The clicker’s “start slideshow” button (F5 / Shift+F5) presents; its black-screen button (“.”, B or W) blacks out.
+- Browser Forward / Back keys, media next / previous keys and mouse side buttons also change slides.
+- A clicker in **mouse mode** works on the projector window once it is full screen: left click = next, right
+  click = back, scroll = next / back.
+- **Clicker setup and test…** (display menu, or `?`) shows exactly what each clicker button sends and lets you
+  **teach** any button (Next, Previous, Black, Present, Clear) by pressing it once. Taught buttons work everywhere,
+  also while typing. It also shows the app build number, to check the newest version is running.
 
 ## Getting started
 

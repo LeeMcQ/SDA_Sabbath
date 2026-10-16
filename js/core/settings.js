@@ -24,6 +24,8 @@ export const DEFAULTS = {
   video: { volume: 1, autoNext: true, repeat: 'off', fit: 'contain' },
   screen: { cursor: 'never', audio: false },
   companion: { url: '', pin: '' },
+  // Presentation clicker: buttons taught in Clicker setup ({next:['key:F14'], prev:[…], black:[…], present:[…], clear:[…]}).
+  clicker: { map: {} },
   ai: { provider: 'openai', apiKey: '', model: '', imageModel: '', auto: {} },
   // The church's details, used by Banners (name, town, sunset times, service countdown, giving QR code).
   church: { name: '', town: '', lat: null, lon: null, service: '09:30', givingUrl: '', givingLabel: '' },

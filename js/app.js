@@ -12,8 +12,10 @@ import { createControlBar } from './controlbar.js';
 import { createQuick } from './quick.js';
 import { createDisplay } from './display/display.js';
 import { openPip, pipSupported } from './pip.js';
+import { clicker, actionFor, sigOfKey, sigOfMouse } from './core/clicker.js';
+import { openClickerSetup, builtinAction } from './clickerui.js';
 
-export const VERSION = '1.1.0';
+export const VERSION = '1.2.0';
 
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', load: () => import('./tabs/bible.js') },
@@ -321,6 +323,7 @@ function displayMenu(anchor) {
   if (onWindows()) items.push({ label: 'Connect to a wireless display (Windows)…', icon: 'pc', onclick: wirelessDialog });
   items.push({ label: 'SDA Sabbath companion on the network…', icon: 'link', onclick: companionDialog });
   if (link.canCast() || onWindows()) items.push({ label: 'TV not found? Help…', icon: 'info', onclick: () => castHelp(null) });
+  items.push({ label: 'Clicker setup and test…', icon: 'settings', onclick: () => clickerSetup() });
   if (pipSupported()) items.push('-', { label: 'Mini controller (stays on top)', icon: 'pip', onclick: () => openPip().catch((e) => ui.toast('The mini controller could not open: ' + e.message, 'err')) });
   ui.menu(anchor, items);
 }
@@ -398,7 +401,10 @@ function showHelp() {
     ['Space (video live)', 'Play / pause'], ['F (on the display)', 'Toggle full screen'],
     ['Clicker', 'Page Down / Page Up work even while typing in a box; with nothing on screen, next shows the Next item'],
   ];
-  ui.modal({ title: 'Keyboard and clicker shortcuts', body: h('div.form', rows.map(([k, d]) => [h('label', h('kbd', k)), h('span', d)])) });
+  ui.modal({ title: 'Keyboard and clicker shortcuts', body: h('div.col', h('div.form', rows.map(([k, d]) => [h('label', h('kbd', k)), h('span', d)])),
+    h('div.row', h('button.btn', { type: 'button', onclick: () => { ui.closeModal(); clickerSetup(); } }, icon('settings'), h('span', 'Clicker setup and test…')))) });
+}
+function clickerSetup() { openClickerSetup({ version: VERSION });
 }
 
 // Presentation clickers are keyboards that send Page Down / Page Up (some send arrows, "." or B for black, F5 /
@@ -436,11 +442,27 @@ function clickerNext() {
   live.next();
 }
 
+function doAction(act) {
+  if (act === 'next') clickerNext();
+  else if (act === 'prev') live.prev();
+  else if (act === 'black') live.setBlank('black');
+  else if (act === 'present') doPresent();
+  else if (act === 'clear') live.clear();
+}
+// Keys a keyboard sends all the time: never worth a "clicker key not used" hint.
+const PLAIN = /^(Shift|Control|Alt|AltGraph|Meta|OS|CapsLock|NumLock|ScrollLock|Tab|Enter|Backspace|Delete|Insert|ContextMenu|Dead|Compose|F(?:[1-9]|1[0-2])|Home|End|Arrow\w+|Page\w+|Escape|AudioVolume\w+|Print|PrintScreen|Pause)$/;
+let hinted = false;
+
 function handleKey(e, remote) {
   const k = e.key;
   const t = remote ? null : e.target;
-  const clicker = (CLICK_NEXT.has(k) || CLICK_PREV.has(k)) && !inBigText(t) && !e.ctrlKey && !e.metaKey && !e.altKey;
-  if (clicker) {
+  const sig = (remote && e.sig) || sigOfKey(e);
+  if (clicker.testing) { if (remote) clicker.emit('event', { sig, from: 'projector window' }); return remote; }
+  // A taught button, or one of the odd keys some clickers send (Browser Forward/Back, media keys, mouse on the projector).
+  const taughtAct = actionFor(sig) || (remote && /^(mouse|wheel):/.test(sig) ? builtinAction(sig, true) : null);
+  if (taughtAct && !inBigText(t)) { if (t && t.tagName === 'SELECT') t.blur(); doAction(taughtAct); return true; }
+  const pager = (CLICK_NEXT.has(k) || CLICK_PREV.has(k)) && !inBigText(t) && !e.ctrlKey && !e.metaKey && !e.altKey;
+  if (pager) {
     if (t && t.tagName === 'SELECT') t.blur(); // otherwise the dropdown would also change
     if (CLICK_NEXT.has(k)) clickerNext(); else live.prev();
     return true;
@@ -469,10 +491,29 @@ function handleKey(e, remote) {
     case 'm': case 'M': getTab('hymns').then((tb) => tb.musicKey && tb.musicKey()); return true;
     case '?': showHelp(); return true;
   }
+  if (!hinted && k && k.length > 1 && !PLAIN.test(k) && !isTyping(e)) {
+    hinted = true;
+    ui.toast(h('span', 'A button sent “' + k + '”, which SDA Sabbath does not use yet. ', h('button.btn.sm', { type: 'button', onclick: () => clickerSetup() }, 'Clicker setup')), '', 9000);
+  }
   return false;
 }
+// Mouse “back / forward” side buttons (some clickers send these): change slides instead of leaving the app.
+const onSideButton = (e) => {
+  if (e.button !== 3 && e.button !== 4) return;
+  e.preventDefault();
+  if (clicker.testing) return;
+  const act = actionFor(sigOfMouse(e.button));
+  if (act) doAction(act);
+};
+document.addEventListener('mouseup', onSideButton);
+document.addEventListener('auxclick', (e) => { if (e.button === 3 || e.button === 4) e.preventDefault(); });
+// The keyboard follows the mouse back out of an embedded web page, so the clicker works again.
+document.addEventListener('pointermove', () => {
+  const a = document.activeElement;
+  if (a && a.tagName === 'IFRAME') { a.blur(); window.focus(); }
+}, { passive: true });
 document.addEventListener('keydown', (e) => { if (handleKey(e, false)) e.preventDefault(); });
-live.on('remote-key', (m) => handleKey({ key: m.key, ctrlKey: m.ctrl, metaKey: false, altKey: m.alt, shiftKey: m.shift, target: null }, true));
+live.on('remote-key', (m) => handleKey({ key: m.key, code: m.code, sig: m.sig, ctrlKey: m.ctrl, metaKey: false, altKey: m.alt, shiftKey: m.shift, target: null }, true));
 
 // ------------------------------------------------------------ monitors & control bar
 createMonitors($('#monitors'));

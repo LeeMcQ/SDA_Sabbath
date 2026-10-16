@@ -657,3 +657,15 @@ google-cast-launcher, .cast-button, [aria-label*="Cast"], button[title*="Cast"],
 .wd-status.ok { background: var(--next-soft); color: var(--text); }
 .wd a.btn { text-decoration: none; }
 @media (max-width: 760px) { .disp-stop { width: 34px; height: 34px; margin-left: -2px; } }
+
+/* ---------- Clicker setup ---------- */
+.ck-status { padding: 12px 14px; border-radius: 10px; background: var(--sunk); border: 1px solid var(--line); min-height: 58px; }
+.ck-status b { font-size: 1.05em; }
+.ck-log { display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-sm); max-height: 120px; overflow: auto; }
+.ck-line { padding: 2px 4px; border-bottom: 1px dashed var(--line); }
+.ck-rows { display: flex; flex-direction: column; gap: 6px; }
+.ck-row { display: grid; grid-template-columns: 150px 1fr auto; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.ck-chip { font-size: var(--fs-xs); }
+.ck-help summary { cursor: pointer; font-weight: 700; }
+.ck-help ul { margin: 6px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+@media (max-width: 560px) { .ck-row { grid-template-columns: 1fr auto; } .ck-row > b { grid-column: 1 / -1; } }
