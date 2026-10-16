@@ -118,10 +118,10 @@ link.openWindow = async ({ prompt = false } = {}) => {
   const url = new URL('display.html', location.href).href;
   // Reuse an already-open display window (e.g. after this control page was reloaded).
   let w = null;
-  const scr = await pickScreen(prompt);
+  const scr = await pickScreen(true); // always prefer the extended screen
   let features = 'popup=yes';
   if (scr) features += ',left=' + scr.availLeft + ',top=' + scr.availTop + ',width=' + scr.availWidth + ',height=' + scr.availHeight + ',fullscreen=yes';
-  else features += ',width=960,height=540';
+  else features += ',width=1920,height=1080,fullscreen=yes';
   if (displayAlive) {
     try { w = window.open('', WIN_NAME, features); } catch (e) { w = null; }
     if (w && !(() => { try { return w.SelahDisplay; } catch (e) { return null; } })()) { try { w.location.href = url; } catch (e) { /* */ } }
@@ -137,6 +137,8 @@ link.openWindow = async ({ prompt = false } = {}) => {
   let tries = 0;
   const ask = () => { if (link.win !== w || link.ready || tries++ > 40) return; sendImpl({ t: 'hello?' }); setTimeout(ask, 250); };
   ask();
+  // Ask the display to go full screen once it is up.
+  setTimeout(() => { try { if (!w.closed) w.postMessage({ t: 'fullscreen' }, location.origin); } catch (e) { /* */ } }, 500);
   if (lastStream) setTimeout(() => link.setStream(lastStream), 600);
   return true;
 };

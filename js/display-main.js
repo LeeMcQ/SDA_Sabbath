@@ -134,5 +134,9 @@ async function keepAwake() {
 document.addEventListener('visibilitychange', keepAwake);
 keepAwake();
 
-if (!params.get('via') && !isFull()) disp.hint(true);
+if (!params.get('via') && !isFull()) {
+  disp.hint(true);
+  // Try to go full screen immediately when opened on the extended screen.
+  setTimeout(() => { if (!isFull()) goFull(); }, 300);
+}
 disp.sayHello();

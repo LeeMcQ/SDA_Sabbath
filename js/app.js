@@ -14,7 +14,7 @@ import { createDisplay } from './display/display.js';
 import { openPip, pipSupported } from './pip.js';
 
 export const VERSION = '1.1.0';
-export const BUILD = '74fb84e';
+export const BUILD = '73dfed4';
 
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', load: () => import('./tabs/bible.js') },
@@ -157,6 +157,17 @@ async function doPresent() {
   persistStorage();
   const a = document.activeElement;
   if (a && (a.tagName === 'INPUT' || a.tagName === 'SELECT') && a !== document.body) a.blur();
+  // Always present on the extended screen, full screen.
+  if (!link.ready) {
+    const opened = await link.openWindow({ prompt: true });
+    if (!opened) return;
+    // Wait briefly for the display window to be ready.
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  // Ask the display window to go full screen.
+  if (link.kind === 'window' && link.win && !link.win.closed) {
+    try { link.win.postMessage({ t: 'fullscreen' }, location.origin); } catch (e) { /* */ }
+  }
   const ok = await live.take();
   if (ok) { presentBtn.classList.add('flash'); setTimeout(() => presentBtn.classList.remove('flash'), 260); }
 }

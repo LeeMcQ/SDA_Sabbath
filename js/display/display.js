@@ -307,6 +307,13 @@ export function createDisplay(root, { post, self = false } = {}) {
       case 'music': musicCmd(msg); break;
       case 'hello?': sayHello(); break;
       case 'ping': post({ t: 'pong' }); break;
+      case 'fullscreen':
+        try {
+          const el = document.documentElement;
+          if (el.requestFullscreen) el.requestFullscreen({ navigationUI: 'hide' });
+          else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+        } catch (e) { /* needs a user gesture */ }
+        break;
     }
     // Tell the controller this change is on the screen now (it keeps its Live monitor in step with it).
     if (q) {
