@@ -644,3 +644,16 @@ google-cast-launcher, .cast-button, [aria-label*="Cast"], button[title*="Cast"],
 .pi-badge.live { background: var(--live, #e5484d); color: #fff; }
 .pi-badge.next { background: var(--next); color: #04210f; }
 .plan-tpls { justify-content: center; margin-top: 8px; }
+
+/* ---------- Display: stop button, wireless display help ---------- */
+.disp-stop { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; margin-left: -4px; border-radius: var(--r); border: 1px solid var(--line); background: var(--panel); color: var(--muted); flex: none; }
+.disp-stop:hover { color: var(--text); border-color: var(--live); background: var(--live-soft); }
+.disp-stop[hidden] { display: none; }
+.disp-stop svg.i { width: 18px; height: 18px; }
+.wd-steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 12px; }
+.wd-steps li { line-height: 1.45; }
+.wd-steps kbd { font: inherit; font-size: var(--fs-xs); padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; background: var(--sunk); }
+.wd-status { padding: 8px 10px; border-radius: 8px; background: var(--sunk); }
+.wd-status.ok { background: var(--next-soft); color: var(--text); }
+.wd a.btn { text-decoration: none; }
+@media (max-width: 760px) { .disp-stop { width: 34px; height: 34px; margin-left: -2px; } }

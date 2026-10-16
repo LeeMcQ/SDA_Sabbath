@@ -174,7 +174,16 @@ function updateDispBtn() {
   dispBtn.querySelector('.lbl-s').textContent = !link.kind ? 'No display' : !link.ready ? 'Connecting' : (isLive ? 'Live · ' : 'Ready · ') + (SHORT_KIND[link.kind] || 'Screen');
   dispBtn.setAttribute('aria-label', 'Display: ' + full + (isLive ? ', something is live' : '') + '. Choose where to present');
 }
+// A one-tap stop button beside the display button whenever something is connected (cast, window, TV …).
+const dispStop = h('button.disp-stop', { type: 'button', hidden: true, onclick: () => { const was = link.kind; link.close(); ui.toast(was === 'cast' ? 'Casting stopped.' : 'Display closed.', 'ok', 2000); } }, icon('x'));
+dispBtn.after(dispStop);
+function updateDispStop() {
+  dispStop.hidden = !link.kind;
+  const t = link.stopLabel();
+  dispStop.title = t; dispStop.setAttribute('aria-label', t);
+}
 link.on('state', updateDispBtn);
+link.on('state', updateDispStop);
 link.on('hello', updateDispBtn);
 live.on('live', updateDispBtn);
 link.on('blocked', () => ui.toast('The browser blocked the display window. Allow pop-ups for this site, then press Present again.', 'err', 7000));
@@ -213,22 +222,106 @@ function companionDialog() {
   });
 }
 
+const onWindows = () => /Windows/i.test((navigator.userAgentData && navigator.userAgentData.platform) || navigator.userAgent);
+const onAndroid = () => /Android/i.test(navigator.userAgent);
+
+/** Cast through the browser (Chromecast, Google TV, Android TV). Explains the other ways when it fails. */
+function startCast() {
+  return link.openCast().catch((e) => {
+    // The person closed the browser's cast picker: nothing to report.
+    if (e && (e.name === 'AbortError' || e.name === 'NotAllowedError')) return false;
+    castHelp(e);
+    return false;
+  });
+}
+
+function castHelp(e) {
+  const asked = !e; // opened from “TV not found? Help…”
+  const noDevice = !e || e.name === 'NoCastDevice' || e.name === 'NotFoundError' || /no screens|not available|not found/i.test((e && e.message) || '');
+  const steps = h('div.col', { style: { gap: '10px' } });
+  steps.appendChild(h('p', asked
+    ? 'Browser casting only works with Chromecast, Google TV and Android TV. Most other TVs (Samsung, LG, Hisense and projectors with “Screen mirroring”) use Miracast instead, which a web page cannot reach directly. These ways work with them:'
+    : noDevice
+    ? 'The browser found no cast device. Browser casting only works with Chromecast, Google TV and Android TV. Most other TVs (Samsung, LG, Hisense and projectors with “Screen mirroring”) use Miracast instead, which a web page cannot reach directly.'
+    : 'Casting failed: ' + ((e && e.message) || e) + '.'));
+  const opt = (ic, title, desc, fn) => h('button', { type: 'button', onclick: () => { ui.closeModal(); fn(); } },
+    icon(ic), h('div.grow', h('div', { style: { fontWeight: 700 } }, title), h('div.note', desc)));
+  const list = h('div.list');
+  if (onWindows()) list.appendChild(opt('pc', 'Connect to a wireless display (Windows)', 'Windows connects to Miracast TVs and projectors itself. The TV then becomes a second screen for SDA Sabbath. Recommended.', wirelessDialog));
+  list.appendChild(opt('link', 'SDA Sabbath companion', 'Best for a smart TV with a web browser: the TV opens the companion address and this device controls it over Wi-Fi.', companionDialog));
+  if (onAndroid()) list.appendChild(opt('phone', 'Use this phone as the screen, then mirror it', 'Open your phone’s Smart View / Screen Cast / Screen mirroring from the quick settings and pick the TV. The TV shows the phone screen.', () => link.openSelf(createDisplay)));
+  else list.appendChild(opt('phone', 'Use this device as the screen', 'Full screen here, for an HDMI cable or the device’s own screen mirroring.', () => link.openSelf(createDisplay)));
+  list.appendChild(opt('cast', 'Try casting again', 'Make sure the TV and this device are on the same Wi-Fi and the TV is on.', () => startCast()));
+  steps.appendChild(list);
+  ui.modal({ title: asked ? 'TV not found? Other ways to connect' : noDevice ? 'No cast device found' : 'Casting failed', body: steps, actions: [{ label: 'Close' }], wide: true });
+}
+
+/**
+ * Windows' own "Connect to a wireless display" (Miracast): Windows connects to the TV or projector and treats it
+ * as a second screen; SDA Sabbath then opens its display window there like on any extended screen.
+ */
+function wirelessDialog() {
+  const status = h('p.note.wd-status', 'Waiting for the wireless display…');
+  let before = null, sd = null;
+  const watch = async () => {
+    if (sd || !('getScreenDetails' in window)) return;
+    try {
+      sd = await window.getScreenDetails();
+      before = sd.screens.length;
+      status.textContent = 'Screens now: ' + before + '. Connect the TV in the Windows panel; it shows up here when it is ready.';
+      sd.addEventListener('screenschange', () => {
+        const n = sd.screens.length;
+        if (n > before) {
+          const s2 = sd.screens.find((x) => x !== sd.currentScreen);
+          status.textContent = 'Found: ' + ((s2 && s2.label) || 'a new screen') + '. Make sure Windows is set to Extend, then press Present on it.';
+          status.classList.add('ok');
+          goBtn.classList.add('primary');
+        } else status.textContent = 'Screens now: ' + n + '.';
+        before = n;
+      });
+    } catch (err) { /* permission refused: the steps still work */ }
+  };
+  const castLink = h('a.btn.primary', { href: 'ms-settings-connectabledevices:devicediscovery', onclick: () => { watch(); } }, icon('cast'), h('span', 'Open Windows “Connect”'));
+  const dispLink = h('a.btn', { href: 'ms-settings:display', onclick: () => { watch(); } }, icon('pc'), h('span', 'Open Display settings'));
+  const goBtn = h('button.btn', { type: 'button', onclick: async () => {
+    ui.closeModal();
+    if ('getScreenDetails' in window) await chooseScreen(); else await link.openWindow();
+  } }, icon('present'), h('span', 'Present on the wireless display'));
+  ui.modal({
+    title: 'Connect to a wireless display (Windows)', wide: true,
+    body: h('div.col.wd', { style: { gap: '10px' } },
+      h('p.note', 'Use this when casting from the browser does not find your TV or projector. Windows connects to it (Miracast) and uses it as a second screen.'),
+      h('ol.wd-steps',
+        h('li', h('b', 'Open the Windows Connect panel'), ' and pick the TV or projector from the list (or press ', h('kbd', 'Windows'), ' + ', h('kbd', 'K'), '). The browser may ask “Open Settings?”: allow it.',
+          h('div.row.wrap', { style: { marginTop: '6px' } }, castLink, dispLink),
+          h('div.note', 'Not listed? Turn on “Screen mirroring” (or open the Screen Mirroring app) on the TV, keep it close, and make sure Wi-Fi is on. In Display settings this is “Connect to a wireless display”.')),
+        h('li', h('b', 'Choose Extend'), ', not Duplicate: in the Connect panel press “Change projection mode” → Extend, or press ', h('kbd', 'Windows'), ' + ', h('kbd', 'P'), ' → Extend. Then the TV shows only the slides, and this screen keeps the controls.'),
+        h('li', h('b', 'Present on it'), '. SDA Sabbath opens its display on the TV. To stop, press the × next to the display button, then Disconnect in the Windows panel.',
+          h('div.row.wrap', { style: { marginTop: '6px' } }, goBtn))),
+      status),
+    actions: [{ label: 'Close' }],
+  });
+  watch();
+}
+
 function displayMenu(anchor) {
   const items = [];
+  // Connected: stopping and switching come first, so they are easy to find.
+  if (link.kind) {
+    items.push({ label: link.stopLabel() + (link.info.label ? ' (' + link.info.label + ')' : ''), icon: 'x', onclick: () => { link.close(); ui.toast('Display closed.', 'ok', 2000); } });
+    if (link.kind === 'cast') items.push({ label: 'Cast to another device…', icon: 'cast', onclick: () => { link.close(); startCast(); } });
+    items.push('-');
+  }
   if (!isMobile() || innerWidth > 900) {
     items.push({ label: 'Open display on second screen', icon: 'present', onclick: () => link.openWindow() });
     if ('getScreenDetails' in window) items.push({ label: 'Choose screen…', icon: 'pc', onclick: () => chooseScreen() });
   }
   items.push({ label: 'Use this device as the screen', icon: 'phone', onclick: () => link.openSelf(createDisplay) });
-  if (link.canCast()) items.push({ label: 'Cast to a TV or wireless display', icon: 'cast', onclick: () => link.openCast().catch((e) => {
-    const msg = /no screens|not available|cancelled/i.test(e.message)
-      ? 'Cast needs a Chromecast. Your LG TV uses Smart View (Miracast). Tap “Use this device as the screen”, then open Smart View and pick the TV.'
-      : 'Cast failed: ' + e.message;
-    ui.toast(msg, 'err', 8000);
-  }) });
+  if (link.canCast() && link.kind !== 'cast') items.push({ label: 'Cast (Chromecast, Google TV, Android TV)', icon: 'cast', onclick: () => startCast() });
+  if (onWindows()) items.push({ label: 'Connect to a wireless display (Windows)…', icon: 'pc', onclick: wirelessDialog });
   items.push({ label: 'SDA Sabbath companion on the network…', icon: 'link', onclick: companionDialog });
+  if (link.canCast() || onWindows()) items.push({ label: 'TV not found? Help…', icon: 'info', onclick: () => castHelp(null) });
   if (pipSupported()) items.push('-', { label: 'Mini controller (stays on top)', icon: 'pip', onclick: () => openPip().catch((e) => ui.toast('The mini controller could not open: ' + e.message, 'err')) });
-  if (link.kind) items.push('-', { label: 'Close display', icon: 'x', onclick: () => { link.close(); } });
   ui.menu(anchor, items);
 }
 dispBtn.addEventListener('click', () => displayMenu(dispBtn));
@@ -240,7 +333,8 @@ live.ensureDisplay = () => new Promise((resolve) => {
     icon(ic), h('div.grow', h('div', { style: { fontWeight: 700 } }, title), h('div.note', desc)));
   const list = h('div.list',
     opt('phone', 'This device', 'Full screen here. Use with an HDMI adapter or screen mirroring.', () => link.openSelf(createDisplay)),
-    link.canCast() ? opt('cast', 'Cast', 'Chromecast only. For LG Smart View / Miracast, use This device then mirror.', () => link.openCast()) : null,
+    link.canCast() ? opt('cast', 'Cast', 'Chromecast, Google TV or Android TV on the same Wi-Fi.', () => startCast()) : null,
+    onAndroid() ? opt('info', 'My TV is not found', 'Smart View, Miracast and other ways to reach the TV.', () => { castHelp(null); return false; }) : null,
     opt('link', 'SDA Sabbath companion', 'Control a PC or TV on the church network from this phone.', companionDialog),
     innerWidth > 700 ? opt('present', 'Display window', 'A separate window you can move to a projector.', () => link.openWindow()) : null);
   ui.modal({ title: 'Where should SDA Sabbath present?', body: list, onclose: () => { if (!done) resolve(false); } });

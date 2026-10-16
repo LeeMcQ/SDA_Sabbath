@@ -96,6 +96,20 @@ Options: `--port`, `--media <folder>`, `--pin <NNNN>`, `--no-browser`, `--instal
 are remembered in `%APPDATA%\Selah\companion.txt`. Windows asks once to allow network access — allow
 it for private networks.
 
+### Casting to a TV or wireless display
+
+- **Cast (Chromecast, Google TV, Android TV)** in the display menu uses the browser’s own casting. It only finds
+  Google Cast devices. Most other TVs and projectors (Samsung, LG, Hisense, “Screen mirroring”) use **Miracast**,
+  which a web page cannot reach, so they never appear in that list — on Android too.
+- **Windows: Connect to a wireless display…** (display menu) opens the Windows Connect panel (also **Windows + K**,
+  or Settings → System → Display → *Connect to a wireless display*). Pick the TV, choose **Extend** (Windows + P),
+  and press **Present on the wireless display**: the TV is then a second screen with only the slides on it.
+- **Android phones:** use the SDA Sabbath companion (the TV’s browser opens the companion address), or **Use this
+  device as the screen** and then the phone’s *Smart View / Screen Cast / Screen mirroring*.
+- While a display is connected, the **×** beside the display button stops it (Stop casting / Close the display
+  window). The display menu also has **Cast to another device…**. Closing or reloading the app stops a cast and
+  closes the display window; a cast TV that loses its controller goes black and ends the cast after a few seconds.
+
 ### Phones and tablets
 
 Press **Present** and choose:

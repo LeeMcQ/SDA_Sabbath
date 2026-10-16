@@ -185,10 +185,10 @@ link.openCast = async () => {
   try {
     const avail = await req.getAvailability();
     if (!avail.value) {
-      throw new Error('No Chromecast found. For LG Smart View / Miracast, use This device then mirror the screen.');
+      const err = new Error('No cast device found.'); err.name = 'NoCastDevice'; throw err;
     }
   } catch (e) {
-    if (/not supported|not available/i.test(e.message)) { /* older browsers may not support getAvailability */ }
+    if (e.name === 'NotSupportedError' || /not supported|not available/i.test(e.message)) { /* availability cannot be checked here: just try */ }
     else throw e;
   }
   const conn = await req.start();
@@ -236,6 +236,17 @@ link.connectSocket = (base, pin, room = 'main') => {
   setState('socket', false, 'LAN display (' + u.host + ')');
   open();
 };
+
+/** What the stop button says for the current display. */
+link.stopLabel = () => ({ cast: 'Stop casting', window: 'Close the display window', socket: 'Disconnect from the companion', self: 'Exit display' }[link.kind] || 'Close display');
+
+// Closing or reloading the control page stops a cast (the TV goes back to its home screen) and closes the
+// display window, so nothing is left showing an old slide with no one able to control it. A LAN display
+// (companion) is left alone: other controllers, such as the church PC, may still be using it.
+window.addEventListener('pagehide', () => {
+  if (link.kind === 'cast' && castConn) { try { castConn.terminate(); } catch (e) { /* */ } }
+  if (link.kind === 'window' && link.win) { try { link.win.close(); } catch (e) { /* */ } }
+});
 
 link.close = (silent) => {
   clearInterval(pollT); clearTimeout(wsTimer);

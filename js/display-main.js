@@ -41,8 +41,19 @@ if (navigator.presentation && navigator.presentation.receiver) {
       const enc = createEncoder((s) => conn.send(s), (b) => conn.send(b));
       outs.add(enc);
       conn.onmessage = (e) => (typeof e.data === 'string' ? dec.text(e.data) : dec.binary(e.data));
-      conn.onclose = conn.onterminate = () => outs.delete(enc);
+      let gone = false;
+      conn.onclose = conn.onterminate = () => { if (gone) return; gone = true; outs.delete(enc); live--; endSoon(); };
+      live++; clearTimeout(endT);
       disp.sayHello();
+    };
+    // The controlling app was closed (or lost): clear the screen and end the cast, so the TV does not keep
+    // showing the last slide. A short wait lets a dropped Wi-Fi connection come back first.
+    let live = 0, endT = null;
+    const endSoon = () => {
+      clearTimeout(endT);
+      if (live > 0) return;
+      try { disp.handle({ t: 'clear', mode: 'black' }); } catch (e) { /* */ }
+      endT = setTimeout(() => { if (live <= 0) { try { window.close(); } catch (e) { /* */ } } }, 8000);
     };
     list.connections.forEach(setup);
     list.onconnectionavailable = (e) => setup(e.connection);
