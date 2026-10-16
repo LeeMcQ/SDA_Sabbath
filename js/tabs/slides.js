@@ -277,40 +277,69 @@ export default function create(ctx) {
 
   async function captureFrame(f) {
     if (f.kind === 'image' && f.src) return f.src;
-    // Render HTML / other frames offscreen and capture
-    const W = f.w || 1920, H = f.h || 1080;
-    const host = document.createElement('div');
-    host.style.cssText = 'position:fixed;left:-10000px;top:0;width:' + W + 'px;height:' + H + 'px;background:#000;overflow:hidden;';
-    document.body.appendChild(host);
-    try {
-      const st = createStage(host, { aspect: W / H, observe: false, placeholderOnly: false });
-      st.applyStyle({ fade: 0, bg: '#000' });
-      await st.show(f);
-      await new Promise((r) => setTimeout(r, 150));
-      const stageEl = st.el;
-      // Capture via SVG foreignObject
-      const clone = stageEl.cloneNode(true);
-      clone.style.transform = 'none';
-      clone.style.width = W + 'px';
-      clone.style.height = H + 'px';
-      const wrap = document.createElement('div');
-      wrap.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
-      wrap.style.cssText = 'width:' + W + 'px;height:' + H + 'px;background:#000;';
-      wrap.appendChild(clone);
-      const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '">' +
-        '<foreignObject width="100%" height="100%">' + new XMLSerializer().serializeToString(wrap) + '</foreignObject></svg>';
-      const img = new Image();
-      const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
-      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
-      const c = document.createElement('canvas');
-      c.width = W; c.height = H;
-      c.getContext('2d').drawImage(img, 0, 0);
-      URL.revokeObjectURL(url);
-      st.destroy();
-      return await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.88));
-    } finally {
-      host.remove();
+    if (f.kind !== 'html' || !f.html) return null;
+    const W = f.w || 960, H = f.h || 540;
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    // background
+    g.fillStyle = '#fff';
+    g.fillRect(0, 0, W, H);
+    if (f.bg) {
+      try { g.fillStyle = f.bg; g.fillRect(0, 0, W, H); } catch (e) { /* gradient etc */ }
     }
+    // offscreen host to resolve images and measure text
+    const host = document.createElement('div');
+    host.style.cssText = 'position:fixed;left:-10000px;top:0;width:' + W + 'px;height:' + H + 'px;background:transparent;';
+    host.innerHTML = f.html;
+    const assets = f.assets || [];
+    const urls = [];
+    host.querySelectorAll('[data-a]').forEach((n) => {
+      const b = assets[+n.getAttribute('data-a')];
+      if (b) { const u = URL.createObjectURL(b); urls.push(u); n.src = u; }
+    });
+    host.querySelectorAll('[data-abg]').forEach((n) => {
+      const b = assets[+n.getAttribute('data-abg')];
+      if (b) { const u = URL.createObjectURL(b); urls.push(u); n.style.backgroundImage = 'url("' + u + '")'; }
+    });
+    document.body.appendChild(host);
+    await new Promise((r) => setTimeout(r, 80));
+    // draw each shape
+    const shapes = host.querySelectorAll('.sp');
+    for (const sp of shapes) {
+      const st = sp.style;
+      const x = parseFloat(st.left) || 0, y = parseFloat(st.top) || 0;
+      const w = parseFloat(st.width) || 0, h = parseFloat(st.height) || 0;
+      // background image or color
+      const bgImg = sp.querySelector('img');
+      if (bgImg && bgImg.complete && bgImg.naturalWidth) {
+        g.drawImage(bgImg, x, y, w, h);
+      } else if (st.backgroundColor && st.backgroundColor !== 'transparent') {
+        g.fillStyle = st.backgroundColor;
+        g.fillRect(x, y, w, h);
+      }
+      // text
+      const text = sp.innerText || sp.textContent || '';
+      if (text.trim()) {
+        g.fillStyle = st.color || '#000';
+        const fs = parseFloat(st.fontSize) || 18;
+        g.font = (st.fontWeight || '400') + ' ' + fs + 'px ' + (st.fontFamily || 'sans-serif');
+        g.textAlign = 'left';
+        g.textBaseline = 'top';
+        const lines = text.split('\n');
+        const lh = fs * 1.25;
+        let ty = y + (parseFloat(st.paddingTop) || 4);
+        const tx = x + (parseFloat(st.paddingLeft) || 4);
+        for (const ln of lines) {
+          if (ty + lh > y + h) break;
+          g.fillText(ln.trim(), tx, ty, w - 8);
+          ty += lh;
+        }
+      }
+    }
+    urls.forEach((u) => URL.revokeObjectURL(u));
+    host.remove();
+    return await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.9));
   }
 
   async function saveSlideAsBanner() {
