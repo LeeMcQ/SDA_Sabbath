@@ -1,6 +1,6 @@
 {
-"version": "b228f1a6d513",
-"bytes": 36975767,
+"version": "977bf72161e2",
+"bytes": 36976295,
 "files": [
 "index.html",
 "display.html",
@@ -331,8 +331,8 @@
 "js/lib/srt.js": "3f4b4e9311e3b758",
 "js/tabs/ai-full.js": "8adc8e507e7d5e27",
 "js/tabs/ai.js": "8890acd97650fcb0",
-"js/tabs/bible-import.js": "88fe00c3a28df5f2",
-"js/tabs/bible.js": "e40024c233003ffd",
+"js/tabs/bible-import.js": "9c73bde31d91c724",
+"js/tabs/bible.js": "def2433b3fccb3c3",
 "js/tabs/church-form.js": "bac83f98d685b0ef",
 "js/tabs/hymns.js": "8342b22e4ac44367",
 "js/tabs/plan.js": "59d62a90676e2271",

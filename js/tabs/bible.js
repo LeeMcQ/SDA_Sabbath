@@ -24,7 +24,7 @@ export default function create(ctx) {
   const searchBtn = btn('search', 'Search the Bible', () => setMode(st.mode === 'search' ? 'browse' : 'search'), { cls: 'sm' });
   const optsBtn = btn('settings', 'Bible display options', () => optionsDialog(), { cls: 'sm' });
   const moreBtn = btn('more', 'More', () => menu(moreBtn, [
-    { label: 'Add a Bible (NIV, Xhosa, …)', icon: 'plus', onclick: () => importBibleDialog(async (id) => { await loadTranslations(); setTr(id); }) },
+    { label: 'Add a Bible (NIV, ESV, NKJV, …)', icon: 'plus', onclick: () => importBibleDialog(async (id) => { await loadTranslations(); setTr(id); }) },
     { label: 'Add this passage to the service plan', icon: 'plan', onclick: addToPlan, disabled: !st.segs },
     { label: 'Clear history', icon: 'trash', onclick: () => { settings.set('bible.history', []); renderHistory(); } },
   ]), { cls: 'sm' });
