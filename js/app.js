@@ -14,7 +14,7 @@ import { createDisplay } from './display/display.js';
 import { openPip, pipSupported } from './pip.js';
 
 export const VERSION = '1.1.0';
-export const BUILD = '4cded83';
+export const BUILD = 'f8e1f7e';
 
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', load: () => import('./tabs/bible.js') },
