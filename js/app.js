@@ -14,6 +14,7 @@ import { createDisplay } from './display/display.js';
 import { openPip, pipSupported } from './pip.js';
 
 export const VERSION = '1.1.0';
+export const BUILD = '4cded83';
 
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', load: () => import('./tabs/bible.js') },
@@ -44,7 +45,7 @@ export const isMobile = () => matchMedia('(max-width: 760px)').matches;
 
 // ------------------------------------------------------------ context passed to tabs
 const ctx = {
-  live, link, settings, db, bgAudio, ui, toast: ui.toast, isMobile, VERSION,
+  live, link, settings, db, bgAudio, ui, toast: ui.toast, isMobile, VERSION, BUILD,
   setStaged(id, cue) {
     stagedBy.set(id, cue || null);
     if (id === current) live.stage(cue || null);
