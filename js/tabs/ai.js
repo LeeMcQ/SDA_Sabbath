@@ -15,6 +15,7 @@ import { listTranslations, getInfo, versesFor, verseText, search as bibleSearch 
 import { parseRef, refText, SHORT } from '../core/books.js';
 import * as ai from '../core/ai.js';
 import { churchForm } from './church-form.js';
+import { openFullBanner } from './ai-full.js';
 
 // ------------------------------------------------------------ templates
 const TPL = {
@@ -474,7 +475,8 @@ export default function create(ctx) {
       try { await usePicture(await storePicture(f, f.name)); } catch (e) { toast('Could not use that picture: ' + e.message, 'err'); }
     } });
     const aiDesc = h('input.field', { placeholder: 'Describe a picture (optional), e.g. mountains at sunrise', 'aria-label': 'Describe the AI picture', style: { flex: '1 1 200px', minWidth: '0' } });
-    const aiBtn = h('button.btn.sm', { type: 'button', title: 'Make a background picture with online AI (no text in it — the banner words stay sharp on top)', onclick: async () => {
+    // Maker 1: a background only. The banner words stay sharp (drawn live by the app) on top of it.
+    const aiBtn = h('button.btn.sm', { type: 'button', title: 'Make a background picture with online AI (no text in it, the banner words stay sharp on top)', onclick: async () => {
       aiBtn.disabled = true; const lbl = aiBtn.lastChild.textContent; aiBtn.lastChild.textContent = 'Making picture…';
       try {
         const desc = aiDesc.value.trim();
@@ -487,16 +489,46 @@ export default function create(ctx) {
         toast('AI picture added. It is saved on this device and works offline from now on.', 'ok', 4000);
       } catch (e) { toast(ai.friendlyAiError(e), 'err', 8000); }
       finally { aiBtn.disabled = false; aiBtn.lastChild.textContent = lbl; }
-    } }, icon('sparkle'), h('span', 'AI picture (online)'));
+    } }, icon('sparkle'), h('span', 'Make background'));
+    // Maker 2: a full finished banner picture with all the words in it, built around the church's own pictures.
+    const fullBtn = h('button.btn.sm', { type: 'button', title: 'Make one finished banner picture with all your words and your own pictures built in', onclick: () => fullBannerDialog() },
+      icon('sparkle'), h('span', 'Make full banner…'));
     const gallery = h('div.bn-gallery');
     row.append(h('div.row.wrap',
       h('button.btn.sm', { type: 'button', onclick: () => inp.click() }, icon('upload'), h('span', 'Choose picture…')),
       cur.s.img ? h('button.btn.sm', { type: 'button', onclick: () => { cur.s.img = null; changed(true); } }, icon('x'), h('span', 'No picture')) : null,
       inp), gallery);
-    if (ai.hasKey() && ai.canImage()) row.append(h('div.row.wrap', aiDesc, aiBtn));
-    else row.append(h('p.note', 'Online AI pictures: add a key in Settings → AI (OpenAI, Gemini, Grok, Together or OpenRouter).'));
+    if (ai.hasKey() && ai.canImage()) {
+      row.append(h('div.card.bn-aimakers',
+        h('h4', icon('sparkle'), ' Two online AI picture makers'),
+        h('div.bn-maker', h('b', '1. Background'), h('p.note', 'A picture with no words. Your banner words are drawn sharp on top by the app.'), h('div.row.wrap', aiDesc, aiBtn)),
+        h('div.bn-maker', h('b', '2. Full banner'), h('p.note', 'One finished picture with all your words in it, built around pictures you attach. Check the spelling.'), h('div.row.wrap', fullBtn))));
+    } else row.append(h('p.note', 'Two online AI picture makers (background, and full banner with your words and pictures): add a key in Settings → AI (OpenAI, Gemini, Grok, Together or OpenRouter).'));
     fillGallery(gallery);
     return row;
+  }
+  /** The full-banner maker: opens a dialog pre-filled from the banner being edited. */
+  async function fullBannerDialog() {
+    const c = church();
+    const fr = await frameOf(cur).catch(() => null) || {};
+    const f = cur.f || {};
+    let heading = (fr.title || '').trim();
+    if (cur.tpl === 'countdown') heading = ((f.kicker || 'Our service starts at') + ' ' + (f.at || c.service || '')).trim();
+    const kicker = (fr.kicker || '').trim();
+    openFullBanner({
+      fields: { church: c.name || '', heading, message: fr.text || '', foot: fr.foot || '', extra: kicker && kicker !== c.name && cur.tpl !== 'countdown' ? 'Small top line: "' + kicker + '"' : '', style: TPL[cur.tpl].mood },
+      files: async () => (await db.all('files').catch(() => [])).filter((x) => x.kind === 'banner-bg').sort((a, b) => (b.added || 0) - (a.added || 0)),
+      logo: () => logoBlob(),
+      storePicture: (blob, name) => storePicture(blob, name, {}),
+      onUse: (id) => {
+        const keepQr = !!(cur.x && cur.x.qr);
+        cur = newBanner('picture');
+        cur.s.img = id; cur.s.dim = 0; cur.x = { qr: keepQr }; cur.name = 'AI banner';
+        savedSig = null; nameInp.value = cur.name;
+        changed(true);
+        toast('Full AI banner is ready. Set as Next, or Save it.', 'ok', 4000);
+      },
+    });
   }
   async function fillGallery(gallery) {
     const files = (await db.all('files').catch(() => [])).filter((f) => f.kind === 'banner-bg').sort((a, b) => (b.added || 0) - (a.added || 0));
@@ -696,8 +728,12 @@ export default function create(ctx) {
   const tpTr = h('select.field', { 'aria-label': 'Translation', onchange: () => { if (curTopic) showTopic(curTopic); else if (lastQuery) runTopicSearch(); } });
   const tpList = h('div.tp-list');
   const tpOut = h('div.tp-out.scroll.pad');
+  const askIn = h('input.field.grow', { type: 'search', placeholder: 'Ask a question, e.g. What does the Bible say about the Sabbath?', 'aria-label': 'Ask a question',
+    onkeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); askAi(); } } });
+  const askBtn = h('button.btn.primary', { type: 'button', title: 'Online AI answers your question in three ways that fit a slide. You choose one.', onclick: () => askAi() }, icon('sparkle'), h('span', 'Ask AI'));
   views.topics.append(
     h('div.toolbar.tp-bar', tpSearch, tpTr, h('button.btn', { type: 'button', onclick: () => runTopicSearch() }, icon('search'), h('span', 'Find'))),
+    h('div.toolbar.tp-bar.tp-ask', icon('sparkle'), askIn, askBtn),
     h('div.split.topics-split', h('div.pane', h('div.scroll', tpList)), h('div.pane', tpOut)));
   let curTopic = null, lastQuery = '';
 
@@ -752,6 +788,7 @@ export default function create(ctx) {
     if (t) { showTopic(t); return; }
     // No topic: search the chosen Bible for the words.
     curTopic = null; filterTopics();
+    dropAskStage();
     clear(tpOut);
     tpOut.appendChild(h('p.note', 'Searching ' + (tpTr.selectedOptions[0] ? tpTr.selectedOptions[0].textContent : 'the Bible') + ' for “' + q + '”…'));
     const info = await getInfo(tpTr.value || settings.v.bible.primary);
@@ -768,6 +805,7 @@ export default function create(ctx) {
     if (ctx.isMobile()) tpOut.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   async function showPassages(title, refs, topic) {
+    dropAskStage();
     clear(tpOut);
     const tr = tpTr.value || settings.v.bible.primary;
     const info = await getInfo(tr);
@@ -926,6 +964,172 @@ export default function create(ctx) {
           cur = newBanner('blank'); cur.f.title = s.title; cur.f.text = s.text; savedSig = null; nameInp.value = '';
           setView('make'); changed(true);
         } }, icon('banner'), h('span', 'Make a banner')))].filter(Boolean));
+  }
+
+
+  // ------------------------------------------------------------ Ask AI: one question, three slide-sized answers
+  // The person picks the answer they prefer (and may edit it), optionally adds a picture, and sets it as a
+  // slide. Bible references in the answers are checked against the installed Bible; a verse shown on a slide
+  // is always the Bible's own words, never AI's wording of it.
+  let askStage = null;
+  const dropAskStage = () => { if (askStage) { try { askStage.destroy(); } catch (e) { /* */ } askStage = null; } };
+  const clampStr = (v, n) => String(v == null ? '' : v).replace(/\r/g, '').trim().slice(0, n);
+  const ASK_LABELS = ['Short answer', 'With the Bible’s own words', 'Key points'];
+
+  async function askAi() {
+    const question = askIn.value.trim();
+    if (!question) { askIn.focus(); return; }
+    await loadTopics().catch(() => {});
+    if (!ai.hasKey() || navigator.onLine === false) {
+      toast(!ai.hasKey() ? 'No AI key yet (Settings → AI), so the Bible and topics were searched instead.' : 'No internet, so the Bible and topics were searched instead.', '', 5000);
+      tpSearch.value = question; runTopicSearch();
+      return;
+    }
+    dropAskStage(); curTopic = null; lastQuery = ''; filterTopics();
+    clear(tpOut);
+    tpOut.appendChild(h('p.note', 'Asking ' + ai.providerName() + '…'));
+    askBtn.disabled = true;
+    let reply;
+    try {
+      reply = await ai.aiText({
+        system: 'You help a Seventh-day Adventist church media team answer questions on a projector slide. Be accurate, warm, simple and faithful to the Bible and to Seventh-day Adventist beliefs. No controversy. Never invent Bible references. Reply with JSON only.',
+        prompt: 'Question: ' + question +
+          '\nGive exactly 3 different ways to answer on one slide:' +
+          '\n1 "Short answer": title (at most 6 words), text (at most 30 words), 0 to 2 Bible references.' +
+          '\n2 "With the Bible’s own words": title (at most 6 words), text = one short lead-in sentence (at most 16 words), and exactly one best Bible reference (one verse or at most 3 verses) in "verses".' +
+          '\n3 "Key points": title (at most 6 words), text = exactly 3 short points of at most 8 words, one per line, each starting with "• ", 0 to 2 Bible references.' +
+          '\nAlso "picture": at most 12 words describing a calm, reverent background scene with no people and no text.' +
+          '\nIf the question is not suitable for church or cannot be answered, reply {"options":[]}.' +
+          '\nReply exactly in this JSON form: {"options":[{"label":"Short answer","title":"…","text":"…","verses":["John 3:16"]},{"label":"…","title":"…","text":"…","verses":["…"]},{"label":"Key points","title":"…","text":"• …\\n• …\\n• …","verses":[]}],"picture":"…"}',
+        maxTokens: 900,
+      });
+    } catch (e) { clear(tpOut); tpOut.appendChild(h('p.note.warn', ai.friendlyAiError(e))); askBtn.disabled = false; return; }
+    askBtn.disabled = false;
+    const j = ai.parseJsonReply(reply);
+    const raw = j && Array.isArray(j.options) ? j.options.filter((o) => o && typeof o === 'object').slice(0, 3) : [];
+    clear(tpOut);
+    if (!raw.length) {
+      tpOut.appendChild(emptyState('search', 'No answer to show', 'The AI could not answer that for a slide. Try asking in other words, or search the topics on the left.'));
+      return;
+    }
+    const tr = tpTr.value || settings.v.bible.primary;
+    const options = [];
+    for (let i = 0; i < raw.length; i++) {
+      const o = raw[i];
+      const refs = (Array.isArray(o.verses) ? o.verses : []).map((x) => String(x).trim()).filter(Boolean).slice(0, i === 1 ? 1 : 2);
+      const ok = [], bad = [];
+      for (const ref of refs) {
+        const v = await versesText(ref, tr).catch(() => null);
+        if (v) ok.push({ ref, label: v.label.replace(/ \([^)]*\)$/, ''), text: v.text }); else bad.push(ref);
+      }
+      let title = clampStr(o.title, 70), text = clampStr(o.text, 420), foot = ok.map((v) => v.label).join('  ·  ');
+      if (i === 1 && ok[0]) {
+        const vt = ok[0].text.length > 260 ? ok[0].text.slice(0, 259).replace(/\s+\S*$/, '') + '…' : ok[0].text;
+        text = (text ? text + '\n\n' : '') + '“' + vt + '”';
+      }
+      options.push({ label: clampStr(o.label, 40) || ASK_LABELS[i] || 'Answer ' + (i + 1), title, text, foot, bad });
+    }
+    const mood = ai.flaggedWords(j.picture).length ? '' : clampStr(j.picture, 160);
+    renderAsk(question, options, mood, tr);
+  }
+
+  function renderAsk(question, options, mood, tr) {
+    dropAskStage();
+    clear(tpOut);
+    let sel = 0;
+    const ab = newBanner('blank');           // the banner for the chosen answer
+    ab.s.pal = 'navy'; ab.s.deco = 'glow';
+    const cards = h('div.col.tp-ask-cards');
+    const stHost = h('div.stage-host');
+    const stScreen = h('div.screen.bn-screen', stHost);
+    askStage = createStage(stHost, { placeholderOnly: true, aspect: link.aspect ? link.aspect() : 16 / 9 });
+    if (live.style) askStage.applyStyle(live.style);
+    stScreen.style.aspectRatio = String(link.aspect ? link.aspect() : 16 / 9);
+    const pre = (o) => { ab.f.title = o.title; ab.f.text = o.text; ab.f.foot = o.foot; };
+    const sync = () => { pre(options[sel]); refresh(); };
+    let seq = 0;
+    async function refresh() {
+      const my = ++seq;
+      const fr = await frameOf(ab).catch(() => null);
+      if (my !== seq || !fr || !askStage) return;
+      askStage.show(fr);
+    }
+    const refreshSoon = debounce(refresh, 150);
+    function drawCards() {
+      clear(cards);
+      options.forEach((o, i) => {
+        const on = i === sel;
+        const ti = h('input.field', { value: o.title, 'aria-label': 'Slide heading', placeholder: 'Heading', style: { width: '100%' }, oninput: () => { o.title = ti.value; if (on) { sync(); } } });
+        const tx = h('textarea.field.bn-ta', { rows: 3, 'aria-label': 'Slide text', oninput: () => { o.text = tx.value; if (on) { sync(); } } });
+        tx.value = o.text;
+        const ft = h('input.field', { value: o.foot, 'aria-label': 'Bible reference line', placeholder: 'Bible reference (bottom line)', style: { width: '100%' }, oninput: () => { o.foot = ft.value; if (on) sync(); } });
+        const flags = ai.flaggedWords(o.title + ' ' + o.text);
+        cards.appendChild(h('div.card.tp-ask-card' + (on ? '.on' : ''), { 'aria-current': on ? 'true' : null },
+          h('div.row', h('span.chip', o.label), h('div.grow'),
+            h('button.btn.sm' + (on ? '.primary' : ''), { type: 'button', 'aria-pressed': String(on), onclick: () => { sel = i; sync(); drawCards(); } }, on ? icon('check') : null, h('span', on ? 'Chosen' : 'Use this one'))),
+          ti, tx, ft,
+          o.bad.length ? h('p.note.warn', 'Not found in the Bible: ' + o.bad.join(', ') + '. Left out of the slide; check it before using.') : null,
+          flags.length ? h('p.note.warn', 'Please read carefully: contains “' + flags.join('”, “') + '”.') : null));
+      });
+    }
+    const dimInfo = h('span.note', '');
+    const picRow = h('div.row.wrap');
+    function drawPic() {
+      clear(picRow);
+      const file = h('input', { type: 'file', accept: 'image/*', hidden: true, onchange: async () => {
+        const f0 = file.files[0]; file.value = '';
+        if (!f0) return;
+        try { await setPic(await storePicture(f0, f0.name)); } catch (e) { toast('Could not use that picture: ' + e.message, 'err'); }
+      } });
+      const aiPic = h('button.btn', { type: 'button', title: 'Make a calm background picture for this answer with online AI (no words in it)', onclick: async () => {
+        aiPic.disabled = true; const lbl = aiPic.lastChild.textContent; aiPic.lastChild.textContent = 'Making picture…';
+        try {
+          const blob = await ai.aiImage((mood || 'A peaceful nature scene, soft light') + '. A wide 16:9 background photograph for a church projector screen. Calm, reverent and uplifting, soft natural light, ' +
+            'simple composition with plenty of open space for text. Absolutely no text, letters, words, numbers, logos, signs or watermarks.');
+          await setPic(await storePicture(blob, 'AI picture ' + new Date().toLocaleDateString()));
+        } catch (e) { toast(ai.friendlyAiError(e), 'err', 8000); }
+        finally { aiPic.disabled = false; aiPic.lastChild.textContent = lbl; }
+      } }, icon('sparkle'), h('span', ai.canImage() ? 'Add AI picture (online)' : 'AI picture (not with this provider)'));
+      aiPic.disabled = !ai.canImage();
+      picRow.append(aiPic, h('button.btn', { type: 'button', onclick: () => file.click() }, icon('upload'), h('span', 'Choose picture…')), file,
+        ab.s.img ? h('button.btn', { type: 'button', onclick: () => { ab.s.img = null; ab.s.dim = null; drawPic(); refresh(); } }, icon('x'), h('span', 'No picture')) : null);
+    }
+    async function setPic(id) {
+      const rec = await db.get('files', id).catch(() => null);
+      ab.s.img = id; ab.s.dim = Math.max(0.35, autoDim(rec && rec.meta && rec.meta.lum));
+      drawPic(); refresh();
+    }
+    async function cue() {
+      const fr = await frameOf(ab);
+      const title = (ab.f.title || ab.f.text || 'Answer').split('\n')[0];
+      return Object.assign(bannerCue(ab, fr), { id: 'banner:ask:' + Date.now(), title: short(title, 50), sub: 'Answer: ' + short(question, 40), plan: null });
+    }
+    function saveAsBanner() {
+      const b = clone(ab);
+      b.id = 'b-' + uid(); b.created = b.updated = Date.now(); b.name = short(question, 50);
+      lib.unshift(b); saveLib(); renderViewSeg();
+      return b;
+    }
+    tpOut.append(
+      h('div.tp-head', h('h3', 'Your question'), h('p', question), h('p.note', 'Three ways to answer on a slide. Pick the one you like, edit it if needed, and add a picture if you wish. Check it before it goes on screen.')),
+      cards,
+      h('h4', 'Picture (optional)'), picRow,
+      h('h4', 'Slide preview'), stScreen,
+      h('div.row.wrap.bn-actions',
+        h('button.btn.primary', { type: 'button', onclick: async () => {
+          const o = options[sel];
+          if (!(o.title || o.text).trim()) { toast('The slide is empty. Choose or write an answer first.', 'err'); return; }
+          ctx.setStaged('ai', await cue()); toast('Answer is Next. Press Present (F5) to show it.', 'ok', 3000);
+        } }, icon('next'), h('span', 'Set as Next')),
+        h('button.btn', { type: 'button', onclick: async () => { const b = saveAsBanner(); (await ctx.tab('plan')).addItem({ tab: 'ai', banner: b.id, label: 'Answer: ' + short(question, 40) }); } }, icon('plan'), h('span', 'Add to plan')),
+        h('button.btn', { type: 'button', onclick: () => { saveAsBanner(); toast('Saved in Banners → Saved.', 'ok', 2500); } }, icon('save'), h('span', 'Save')),
+        h('button.btn', { type: 'button', title: 'Open it in the banner editor to change colours and text position', onclick: () => {
+          cur = clone(ab); cur.id = null; savedSig = null; nameInp.value = ''; setView('make'); changed(true);
+        } }, icon('banner'), h('span', 'Edit as banner')),
+        h('button.btn', { type: 'button', onclick: () => askAi() }, icon('sparkle'), h('span', 'Ask again'))),
+      dimInfo);
+    drawCards(); drawPic(); sync();
+    if (ctx.isMobile()) tpOut.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   // ============================================================ control bar + plan

@@ -18,13 +18,13 @@ export const VERSION = '1.1.0';
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', load: () => import('./tabs/bible.js') },
   { id: 'hymns', label: 'Hymns', icon: 'hymn', load: () => import('./tabs/hymns.js') },
+  { id: 'ai', label: 'Banners', icon: 'banner', load: () => import('./tabs/ai.js') }, // id kept from the first version (plans and settings refer to it)
   { id: 'slides', label: 'Slides', icon: 'slides', load: () => import('./tabs/slides.js') },
   { id: 'video', label: 'Video', icon: 'video', load: () => import('./tabs/video.js') },
   { id: 'web', label: 'Web', icon: 'web', load: () => import('./tabs/web.js') },
   { id: 'screen', label: 'PC view', icon: 'pc', load: () => import('./tabs/screen.js') },
   { id: 'plan', label: 'Plan', icon: 'plan', load: () => import('./tabs/plan.js') },
   { id: 'tools', label: 'Tools', icon: 'grid', load: () => import('./tabs/tools.js') },
-  { id: 'ai', label: 'Banners', icon: 'banner', load: () => import('./tabs/ai.js') }, // id kept from the first version (plans and settings refer to it)
   null,
   { id: 'settings', label: 'Settings', icon: 'settings', load: () => import('./tabs/settings.js') },
 ];
@@ -98,12 +98,12 @@ async function showTab(id) {
 }
 
 // ------------------------------------------------------------ rail
-// On phones only five buttons fit comfortably: Bible, Hymns, Plan, Slides and More (the rest).
+// On phones only five buttons fit comfortably: Bible, Hymns, Banners, Slides, Plan and More (the rest).
 const MORE_TABS = ['video', 'web', 'screen', 'tools', 'settings'];
-const MORE_MENU = ['ai', ...MORE_TABS];
+const MORE_MENU = MORE_TABS; // Banners has its own button in the rail (never repeated in this menu)
 TABS.forEach((t, i) => {
   if (!t) { rail.appendChild(h('div.rail-gap')); return; }
-  const b = h('button' + (MORE_TABS.includes(t.id) ? '.more-tab' : ''), { type: 'button', role: 'tab', 'aria-selected': 'false', 'data-tab': t.id, title: t.label + (i < 7 ? '  (Alt+' + (i + 1) + ')' : ''), onclick: () => showTab(t.id) },
+  const b = h('button' + (MORE_TABS.includes(t.id) ? '.more-tab' : ''), { type: 'button', role: 'tab', 'aria-selected': 'false', 'data-tab': t.id, title: t.label + (i < 9 ? '  (Alt+' + (i + 1) + ')' : ''), onclick: () => showTab(t.id) },
     icon(t.icon), h('span', t.label), h('span.tally'));
   railBtns.set(t.id, b);
   rail.appendChild(b);
@@ -300,7 +300,7 @@ function showHelp() {
     ['→  ↓  Page Down  Space', 'Next verse / slide / stanza'],
     ['←  ↑  Page Up', 'Previous'], ['Home  End', 'First / last'],
     ['B  or  .', 'Black screen (press again to return)'], ['L', 'Show logo'], ['Esc  or  C', 'Clear the screen'], ['M', 'Hymn music: play / pause'],
-    ['/  or  Ctrl+K', 'Go to a Bible reference or hymn number'], ['Alt+1 … Alt+7', 'Switch tabs'],
+    ['/  or  Ctrl+K', 'Go to a Bible reference or hymn number'], ['Alt+1 … Alt+9', 'Switch tabs'],
     ['Space (video live)', 'Play / pause'], ['F (on the display)', 'Toggle full screen'],
   ];
   ui.modal({ title: 'Keyboard and clicker shortcuts', body: h('div.form', rows.map(([k, d]) => [h('label', h('kbd', k)), h('span', d)])) });
@@ -314,7 +314,7 @@ function handleKey(e, remote) {
   if (k === 'F5' || (ctrl && k === 'Enter')) { doPresent(); return true; }
   if (typing) return false;
   if (!remote && ((ctrl && (k === 'k' || k === 'K')) || k === '/')) { quick.focus(); return true; }
-  if (e.altKey && /^[1-7]$/.test(k)) { const t = TABS.filter(Boolean)[+k - 1]; if (t) showTab(t.id); return true; }
+  if (e.altKey && /^[1-9]$/.test(k)) { const t = TABS.filter(Boolean)[+k - 1]; if (t) showTab(t.id); return true; }
   if (ctrl || e.altKey) return false;
   const kind = live.cue && live.cue.deck.kind;
   switch (k) {
