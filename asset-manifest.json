@@ -1,5 +1,5 @@
 {
-"version": "2f152bb3f6f6",
+"version": "4af48d7138a4",
 "bytes": 36952394,
 "files": [
 "index.html",
@@ -296,7 +296,7 @@
 "manifest.webmanifest": "f2aa34a6f92b60be",
 "css/app.css": "ec648949a0538a39",
 "css/stage.css": "d0d0194659593414",
-"js/app.js": "2f47417d142cc784",
+"js/app.js": "c2d38a784a151510",
 "js/clickerui.js": "53822136e3da91ca",
 "js/controlbar.js": "8889a02badbfe107",
 "js/display-main.js": "1da3f23c3d4c86b0",
