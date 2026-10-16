@@ -28,9 +28,17 @@ function setState(kind, ready, label) {
   link.emit('state');
 }
 
+// Each display page has a session id. A new one (page reloaded, TV reconnected) has none of the
+// pictures sent before, so the encoders forget what they sent and send pictures again.
+let displaySid = null;
 function onDisplayMsg(m) {
   if (!m || !m.t) return;
   if (m.t === 'hello') {
+    if (!m.sid || m.sid !== displaySid) {
+      displaySid = m.sid || null;
+      if (wsEnc && wsEnc.reset) wsEnc.reset();
+      if (castEnc && castEnc.reset) castEnc.reset();
+    }
     link.info.w = m.w; link.info.h = m.h;
     if (!link.ready) setState(link.kind, true);
     link.emit('hello', m);
@@ -46,7 +54,7 @@ window.addEventListener('message', (e) => {
 link.send = (msg) => { if (sendImpl) sendImpl(msg); };
 link.aspect = () => {
   const a = settings.v.display.aspect;
-  if (a && a !== 'auto') { const [x, y] = a.split(':').map(Number); if (x && y) return x / y; }
+  if (typeof a === 'string' && a !== 'auto') { const [x, y] = a.split(':').map(Number); if (x > 0 && y > 0) return x / y; }
   return link.info.w && link.info.h ? link.info.w / link.info.h : 16 / 9;
 };
 
@@ -177,10 +185,10 @@ link.openCast = async () => {
   try {
     const avail = await req.getAvailability();
     if (!avail.value) {
-      throw new Error('No Chromecast found. For LG Smart View / Miracast, use This device then mirror the screen.');
+      const err = new Error('No cast device found.'); err.name = 'NoCastDevice'; throw err;
     }
   } catch (e) {
-    if (/not supported|not available/i.test(e.message)) { /* older browsers may not support getAvailability */ }
+    if (e.name === 'NotSupportedError' || /not supported|not available/i.test(e.message)) { /* availability cannot be checked here: just try */ }
     else throw e;
   }
   const conn = await req.start();
@@ -228,6 +236,17 @@ link.connectSocket = (base, pin, room = 'main') => {
   setState('socket', false, 'LAN display (' + u.host + ')');
   open();
 };
+
+/** What the stop button says for the current display. */
+link.stopLabel = () => ({ cast: 'Stop casting', window: 'Close the display window', socket: 'Disconnect from the companion', self: 'Exit display' }[link.kind] || 'Close display');
+
+// Closing or reloading the control page stops a cast (the TV goes back to its home screen) and closes the
+// display window, so nothing is left showing an old slide with no one able to control it. A LAN display
+// (companion) is left alone: other controllers, such as the church PC, may still be using it.
+window.addEventListener('pagehide', () => {
+  if (link.kind === 'cast' && castConn) { try { castConn.terminate(); } catch (e) { /* */ } }
+  if (link.kind === 'window' && link.win) { try { link.win.close(); } catch (e) { /* */ } }
+});
 
 link.close = (silent) => {
   clearInterval(pollT); clearTimeout(wsTimer);

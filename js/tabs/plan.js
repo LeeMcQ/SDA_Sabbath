@@ -5,7 +5,7 @@ import { icon } from '../core/icons.js';
 import { btn, menu, toast, promptBox, confirmBox, modal, closeModal, activatable, emptyState } from '../core/ui.js';
 import { db } from '../core/db.js';
 import { parseRef, refText, EN } from '../core/books.js';
-import { listTranslations, getInfo, versesFor } from '../core/bibledata.js';
+import { getInfo, versesFor } from '../core/bibledata.js';
 
 const TEMPLATES = {
   'Divine Service': [
@@ -30,7 +30,6 @@ const TEMPLATES = {
   'Vespers / AY': ['Song service', 'Opening hymn', 'Prayer', 'Scripture', 'Programme', 'Closing hymn', 'Prayer'],
   'Empty plan': [],
 };
-const TAB_ICON = { bible: 'bible', hymns: 'hymn', slides: 'slides', video: 'video', web: 'web', ai: 'banner', note: 'info' };
 
 export default function create(ctx) {
   const { live } = ctx;
@@ -44,21 +43,30 @@ export default function create(ctx) {
     { label: 'Rename', icon: 'edit', onclick: renamePlan, disabled: !plan },
     { label: 'Export (to use on another device)', icon: 'download', onclick: exportPlan, disabled: !plan },
     { label: 'Import a plan…', icon: 'upload', onclick: importPlan },
+    { label: 'Copy the order of service (text)', icon: 'download', onclick: copyOrder, disabled: !plan },
     { label: 'Mark all as not done', icon: 'reload', onclick: () => { if (plan) { plan.items.forEach((i) => { i.done = false; }); save(); render(); } } },
     { label: 'Duplicate this plan', icon: 'plus', onclick: duplicatePlan, disabled: !plan },
     { label: plan && plan.autoAdvance ? 'Auto-advance: on' : 'Auto-advance: off', icon: 'next', onclick: toggleAuto, disabled: !plan },
     { label: 'Delete this plan', icon: 'trash', onclick: deletePlan, disabled: !plan },
   ]), { cls: 'sm' });
-  const nextBtn = h('button.btn.primary', { type: 'button', title: 'Select the next item in the plan', onclick: () => step(1) }, icon('next'), h('span', 'Next item'));
-  const prevBtn = btn('prev', 'Previous item', () => step(-1), { cls: 'sm' });
+  const nextBtn = h('button.btn.primary', { type: 'button', title: 'Put the next part of the plan on the green Next screen', onclick: () => step(1) }, icon('next'), h('span', 'Next part'));
+  const prevBtn = btn('prev', 'Previous part', () => step(-1), { cls: 'sm' });
 
   const el = h('section',
     h('div.toolbar', h('h2', 'Plan'), planSel, h('div.grow'), prevBtn, nextBtn, moreBtn),
     h('div.toolbar', addInput, h('button.btn', { type: 'button', onclick: addFromText }, icon('plus'), 'Add'), h('button.btn', { type: 'button', onclick: () => linkMedia() }, icon('link'), 'Link media')),
     h('div.scroll', { style: { flex: '1' } }, listEl));
 
+  // Plans saved by older versions, imported files or a damaged database: keep only usable items.
+  const okPlan = (p) => p && typeof p === 'object' && (typeof p.id === 'string' || typeof p.id === 'number');
+  function tidy(p) {
+    if (typeof p.name !== 'string' || !p.name.trim()) p.name = 'Service plan';
+    p.items = (Array.isArray(p.items) ? p.items : []).filter((it) => it && typeof it === 'object' && typeof it.tab === 'string');
+    p.items.forEach((it) => { if (typeof it.label !== 'string') it.label = String(it.label == null ? '' : it.label); if (!it.id) it.id = uid(); });
+    return p;
+  }
   async function load() {
-    plans = (await db.all('plans')).sort((a, b) => (b.updated || 0) - (a.updated || 0));
+    plans = ((await db.all('plans').catch(() => [])) || []).filter(okPlan).map(tidy).sort((a, b) => (b.updated || 0) - (a.updated || 0));
     const curId = await db.get('kv', 'plan-current');
     clear(planSel);
     planSel.hidden = !plans.length;
@@ -120,8 +128,8 @@ export default function create(ctx) {
     inp.onchange = async () => {
       try {
         const p = JSON.parse(await readText(inp.files[0]));
-        if (!p.items) throw new Error('Not an SDA Sabbath plan file.');
-        p.id = uid(); p.updated = Date.now();
+        if (!p || typeof p !== 'object' || !Array.isArray(p.items)) throw new Error('Not an SDA Sabbath plan file.');
+        tidy(p); p.id = uid(); p.updated = Date.now();
         await db.put('plans', p.id, p); await db.put('kv', 'plan-current', p.id); await load();
         toast('Plan imported. Slides and videos must also exist on this device.', 'ok', 5000);
       } catch (e) { toast(e.message, 'err'); }
@@ -134,35 +142,120 @@ export default function create(ctx) {
     return { bible: 'Bible' + (it.tr ? ' · ' + it.tr.toUpperCase() : ''), hymns: 'Hymn', slides: 'Slides', video: 'Video', web: 'Web',
       ai: it.loop ? 'Pre-service loop' : it.topic ? 'Bible verses' + (it.tr ? ' · ' + it.tr.toUpperCase() : '') : 'Banner' }[it.tab] || '';
   }
+  const ICONS = { bible: 'bible', hymns: 'hymn', slides: 'slides', video: 'video', web: 'web', ai: 'banner' };
+  const itemIcon = (it) => (it.heading ? 'info' : it.loop ? 'loop' : ICONS[it.tab] || 'info');
 
+  // Which plan item is on the screen now (so the row can say "On screen").
+  const shownCue = new Map(); // item id -> cue id
+  const onScreen = (it) => !!(live.cue && shownCue.get(it.id) === live.cue.id);
+  live.on('live', () => { if (plan && !el.hidden) render(); });
+
+  function summaryBar() {
+    const real = plan.items.filter((x) => !x.heading);
+    const linked = real.length, parts = plan.items.length;
+    const done = real.filter((x) => x.done).length;
+    const open = plan.items.filter((x) => x.heading).length;
+    const pct = linked ? Math.round((done / linked) * 100) : 0;
+    return h('div.plan-sum',
+      h('div.row.wrap', h('b', plan.name), h('span.note', parts + ' part' + (parts === 1 ? '' : 's') + (linked ? ' · ' + done + ' of ' + linked + ' shown' : '')),
+        open ? h('span.note.plan-open', open + ' without media yet') : null),
+      linked ? h('div.plan-bar', { role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(pct), 'aria-label': 'Parts shown' }, h('i', { style: { width: pct + '%' } })) : null);
+  }
+
+  async function presentItem(i) {
+    const c = await select(i);
+    if (c) { live.take(c); if (plan.autoAdvance) setTimeout(() => step(1), 400); }
+  }
+
+  function removeItem(i) {
+    const gone = plan.items.splice(i, 1)[0];
+    if (!gone) return;
+    const wasCur = cur;
+    if (cur >= plan.items.length) cur = plan.items.length - 1;
+    save(); render();
+    toast(h('span', 'Removed “' + (gone.label || 'item') + '”. ', h('button.btn.sm', { type: 'button', onclick: () => {
+      plan.items.splice(Math.min(i, plan.items.length), 0, gone); cur = wasCur; save(); render(); toast('Put back.', 'ok', 1500);
+    } }, 'Undo')), '', 7000);
+  }
+
+  function itemMenu(anchor, it, i) {
+    menu(anchor, [
+      it.heading ? null : { label: 'Set as Next', icon: 'next', onclick: () => select(i).then((c) => { if (c) toast((it.label || 'Item') + ' is Next. Press Present (F5).', 'ok', 2500); }) },
+      { label: it.heading ? 'Attach media…' : 'Change linked media…', icon: 'link', onclick: () => linkMedia(i) },
+      { label: 'Who leads this part…', icon: 'edit', onclick: async () => { const r = await promptBox('Who leads this part?', 'Role (e.g. Elder, Deacon, Speaker)', it.role || ''); if (r != null) { it.role = r.trim(); save(); render(); } } },
+      it.heading ? null : { label: it.done ? 'Mark as not shown yet' : 'Mark as shown', icon: 'check', onclick: () => { it.done = !it.done; save(); render(); } },
+      '-',
+      { label: 'Move up', icon: 'up', onclick: () => moveItem(i, -1), disabled: i === 0 },
+      { label: 'Move down', icon: 'down', onclick: () => moveItem(i, 1), disabled: i >= plan.items.length - 1 },
+      '-',
+      { label: 'Remove from plan', icon: 'trash', onclick: () => removeItem(i) },
+    ]);
+  }
+
+  let dragFrom = -1;
   function render() {
     clear(listEl);
     // No plan yet: nothing to step through, so no Next / Previous item buttons.
     nextBtn.hidden = prevBtn.hidden = planSel.hidden = !plan;
     if (!plan) {
-      listEl.appendChild(emptyState('plan', 'No service plan yet', 'Prepare the order of service before Sabbath: Bible readings, hymns, slides and videos in the order you need them.',
-        { label: 'New plan', icon: 'plus', primary: true, onclick: newPlan }));
+      listEl.appendChild(emptyState('plan', 'No service plan yet', 'Prepare the order of service before Sabbath: Bible readings, hymns, slides and videos in the order you need them. Start from a ready-made order:',
+        { label: 'Divine Service', icon: 'plus', primary: true, onclick: () => createFromTemplate('Divine Service') }));
+      const alt = h('div.row.wrap.plan-tpls');
+      Object.keys(TEMPLATES).filter((k) => k !== 'Divine Service' && k !== 'Empty plan').forEach((k) => alt.appendChild(h('button.btn', { type: 'button', onclick: () => createFromTemplate(k) }, k)));
+      alt.appendChild(h('button.btn', { type: 'button', onclick: newPlan }, icon('plus'), h('span', 'New plan…')));
+      listEl.lastChild.appendChild(alt);
       return;
     }
+    listEl.appendChild(summaryBar());
     plan.items.forEach((it, i) => {
-      const row = h('div.plan-item' + (i === cur ? '.cur' : '') + (it.done ? '.done' : ''), {
-        onclick: () => select(i), ondblclick: () => select(i).then((c) => c && live.take(c)) },
-      h('span.pi-n', it.heading ? '' : String(plan.items.slice(0, i + 1).filter((x) => !x.heading).length)),
+      const now = onScreen(it);
+      const n = String(i + 1);
+      const more = btn('more', 'More for this part', (e) => { e.stopPropagation(); itemMenu(more, it, i); }, { cls: 'sm' });
+      const row = h('div.plan-item' + (i === cur ? '.cur' : '') + (it.done ? '.done' : '') + (now ? '.now' : '') + (it.heading ? '.is-head' : ''), {
+        draggable: 'true',
+        onclick: () => select(i), ondblclick: () => presentItem(i),
+        ondragstart: (e) => { dragFrom = i; try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(i)); } catch (x) { /* */ } },
+        ondragover: (e) => { if (dragFrom < 0) return; e.preventDefault(); row.classList.add('drag-over'); },
+        ondragleave: () => row.classList.remove('drag-over'),
+        ondrop: (e) => { e.preventDefault(); row.classList.remove('drag-over'); const from = dragFrom; dragFrom = -1; if (from >= 0 && from !== i) dropItem(from, i); },
+        ondragend: () => { dragFrom = -1; listEl.querySelectorAll('.drag-over').forEach((x) => x.classList.remove('drag-over')); },
+      },
+      h('span.pi-n', n),
       h('div', { style: { minWidth: 0 } },
-        h('div.pi-t.trunc', { style: it.heading ? { color: 'var(--muted)' } : null }, it.heading ? h('span', icon('info'), ' ', it.label) : it.label),
+        h('div.pi-t.trunc', icon(itemIcon(it)), ' ', it.label, now ? h('span.pi-badge.live', 'On screen') : i === cur && !it.heading && live.staged && shownCue.get(it.id) === live.staged.id ? h('span.pi-badge.next', 'Next') : null),
         sub(it) ? h('div.pi-s', sub(it)) : null,
+        it.heading ? h('div.pi-s', 'No media attached yet') : null,
         it.role ? h('div.pi-s', { style: { color: 'var(--next)' } }, it.role) : null),
       h('div.row', { onclick: (e) => e.stopPropagation() },
-        it.heading ? null : btn('present', 'Present now', () => select(i).then((c) => { if (c) { live.take(c); if (plan.autoAdvance) setTimeout(() => step(1), 400); } }), { cls: 'sm' }),
-        btn('edit', 'Role', () => { const r = prompt('Role (e.g. Elder, Deacon, Speaker)', it.role || ''); if (r != null) { it.role = r.trim(); save(); render(); } }, { cls: 'sm' }),
-        btn('link', 'Link', () => linkMedia(i), { cls: 'sm', label: 'Link' }),
-        btn('up', 'Move up', () => moveItem(i, -1), { cls: 'sm' }),
-        btn('down', 'Move down', () => moveItem(i, 1), { cls: 'sm' }),
-        btn('trash', 'Remove', () => { plan.items.splice(i, 1); if (cur >= plan.items.length) cur = plan.items.length - 1; save(); render(); }, { cls: 'sm' })));
+        it.heading
+          ? h('button.btn.sm', { type: 'button', title: 'Attach a Bible verse, hymn, slides, video, web page or banner to this part', onclick: () => linkMedia(i) }, icon('link'), h('span', 'Attach'))
+          : h('button.btn.sm.primary', { type: 'button', title: 'Show this part on the screen now', onclick: () => presentItem(i) }, icon('present'), h('span.hide-sm', 'Present')),
+        more));
       activatable(row);
       listEl.appendChild(row);
     });
-    if (!plan.items.length) listEl.appendChild(h('p.note.pad', 'Empty plan. Type above, use Link to attach Bible verses, hymns, slides, videos or web pages, or use “Add to plan” in the other tabs.'));
+    if (!plan.items.length) listEl.appendChild(h('p.note.pad', 'Empty plan. Type above (for example “John 3:16”, “hymn 73” or a heading like “Offering”), use Link media, or use “Add to plan” in the other tabs.'));
+  }
+
+  function dropItem(from, to) {
+    const [it] = plan.items.splice(from, 1);
+    plan.items.splice(to, 0, it);
+    if (cur === from) cur = to; else if (from < cur && to >= cur) cur--; else if (from > cur && to <= cur) cur++;
+    save(); render();
+  }
+
+  async function createFromTemplate(tpl) {
+    const p = makePlan('Sabbath ' + new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short' }), tpl);
+    await db.put('plans', p.id, p); await db.put('kv', 'plan-current', p.id); await load();
+    toast('Plan ready. Attach media to each part, or double-click a part to present it.', 'ok', 4500);
+  }
+
+  function copyOrder() {
+    if (!plan) return;
+    const text = plan.name + '\n\n' + plan.items.map((it, i) => (i + 1) + '. ' + it.label + (it.role ? ' (' + it.role + ')' : '')).join('\n');
+    const done = () => toast('Order of service copied. Paste it into a message or document.', 'ok', 3500);
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, () => download(new Blob([text], { type: 'text/plain' }), plan.name.replace(/[^\w-]+/g, '_') + '.txt'));
+    else download(new Blob([text], { type: 'text/plain' }), plan.name.replace(/[^\w-]+/g, '_') + '.txt');
   }
 
   function moveItem(i, d) {
@@ -184,7 +277,7 @@ export default function create(ctx) {
     try {
       const t = await ctx.tab(it.tab);
       c = await t.open(it);
-      if (c) { it.done = true; save(); }
+      if (c) { it.done = true; shownCue.set(it.id, c.id); save(); }
     } catch (e) { toast('Could not open this item: ' + e.message, 'err'); }
     finally { ctx.hold = null; }
     ctx.setStaged('plan', c);
@@ -192,19 +285,14 @@ export default function create(ctx) {
     return c;
   }
 
+  /** Previous / next part of the plan: it becomes Next (green). Press Present (F5) to show it. */
   async function step(d) {
     if (!plan) return;
     let i = cur;
     do { i += d; } while (plan.items[i] && plan.items[i].heading);
     if (i < 0 || i >= plan.items.length) { toast(d > 0 ? 'End of the plan.' : 'Start of the plan.'); return; }
-    const next = plan.items[i];
-    if (d > 0) {
-      const label = next.label || 'next item';
-      const ok = await confirmBox('Next item?', 'Go to “' + label + '” and present it?', 'Next', false);
-      if (!ok) return;
-    }
     const c = await select(i);
-    if (c) live.take(c);
+    if (c) toast((plan.items[i].label || 'Item') + ' is Next. Press Present (F5).', 'ok', 2500);
   }
 
   async function linkMedia(replaceIndex) {
@@ -254,7 +342,6 @@ export default function create(ctx) {
     }
 
     async function showBiblePicker() {
-      const trs = await listTranslations();
       const primary = ctx.settings.v.bible.primary;
       const info = await getInfo(primary);
       if (!info) { list.appendChild(h('p.note', 'No Bible loaded.')); return; }

@@ -377,9 +377,8 @@ input[type=range] { accent-color: var(--next); }
   .present .pn { grid-column: 1; }
   .rail { flex-direction: row; padding: 4px; gap: 2px; border: 0; border-top: 1px solid var(--line); overflow-x: auto; overflow-y: hidden; }
   .rail button { flex: 1 0 44px; padding: 6px 0; font-size: var(--fs-xs); }
-  /* Five tabs on phones: Bible, Hymns, Plan, Slides and More (Video, Web, PC view, Settings). */
-  .rail button[data-tab="plan"] { order: 3; } .rail button[data-tab="slides"] { order: 4; }
-  .rail button[data-tab="ai"] { order: 2; flex: 1 0 56px; }
+  /* Phones: Bible, Hymns, Banners, Slides, Plan and More (Video, Web, PC view, Tools, Settings). */
+  .rail button[data-tab="ai"] { order: 2; } .rail button[data-tab="slides"] { order: 3; } .rail button[data-tab="plan"] { order: 4; }
   .rail button.more-tab { display: none; }
   .rail-nav .rail-more { display: flex; }
   .rail button svg.i { width: 22px; height: 22px; }
@@ -613,3 +612,75 @@ google-cast-launcher, .cast-button, [aria-label*="Cast"], button[title*="Cast"],
   .topics-split > .pane:first-child { max-height: 42vh; overflow: auto; }
   .tp-bar .field[type=search] { min-width: 0; }
 }
+
+/* ---------- Find lyrics online ---------- */
+.lyr-wrap { gap: 10px; min-width: 0; }
+.lyr-wrap h4 { margin: 6px 0 2px; font-size: var(--fs-sm); color: var(--muted); font-weight: 700; }
+.lyr-res, .lyr-off { gap: 6px; }
+.lyr-item { display: flex; align-items: center; gap: 10px; text-align: left; width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--raise, var(--sunk)); color: var(--text); cursor: pointer; min-height: 48px; }
+.lyr-item:hover { border-color: var(--next); }
+.lyr-item[aria-pressed="true"] { border-color: var(--next); box-shadow: 0 0 0 2px color-mix(in srgb, var(--next) 35%, transparent); }
+.lyr-prev { font-size: var(--fs-sm); color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 2px; }
+.lyr-badge { font-size: var(--fs-xs); font-weight: 700; padding: 2px 8px; border-radius: 99px; background: var(--sunk); color: var(--muted); white-space: nowrap; }
+.lyr-badge.best { background: color-mix(in srgb, var(--next) 25%, transparent); color: var(--text); }
+.lyr-badge.likely { background: color-mix(in srgb, #e6b422 25%, transparent); color: var(--text); }
+.lyr-go { font-weight: 700; color: var(--next); }
+.lyr-detail { border-top: 1px solid var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.lyr-ta { width: 100%; font-family: inherit; line-height: 1.4; }
+.lyr-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; max-height: 26vh; overflow: auto; }
+.lyr-card { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: var(--sunk); font-size: var(--fs-sm); white-space: pre-line; }
+.lyr-card b { display: block; font-size: var(--fs-xs); color: var(--muted); margin-bottom: 2px; }
+.lyr-card.chorus { border-color: var(--next); }
+.lyr-links a.btn { text-decoration: none; }
+
+/* ---------- Banners: two AI makers, Topics: Ask AI ---------- */
+.bn-aimakers { display: flex; flex-direction: column; gap: 10px; padding: 12px; }
+.bn-aimakers h4 { display: flex; align-items: center; gap: 6px; margin: 0; }
+.bn-maker { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; border-top: 1px solid var(--line); }
+.bn-maker p.note { margin: 0; }
+.tp-ask { gap: 8px; }
+.tp-ask > svg.i { flex: 0 0 auto; color: var(--next); }
+.tp-ask-cards { gap: 10px; }
+.tp-ask-card { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; }
+.tp-ask-card.on { border-color: var(--next); box-shadow: 0 0 0 2px color-mix(in srgb, var(--next) 35%, transparent); }
+
+/* ---------- Plan: clearer rows ---------- */
+.plan-sum { padding: 10px 12px 8px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+.plan-bar { height: 6px; border-radius: 99px; background: var(--sunk); overflow: hidden; }
+.plan-bar i { display: block; height: 100%; background: var(--next); border-radius: 99px; transition: width .25s; }
+.plan-open { color: var(--next); }
+.plan-item .pi-t { display: flex; align-items: center; gap: 6px; }
+.plan-item .pi-t svg.i { width: 16px; height: 16px; flex: 0 0 auto; color: var(--muted); }
+.plan-item.is-head .pi-t { color: var(--muted); font-weight: 600; }
+.plan-item.now { background: color-mix(in srgb, var(--live, #e5484d) 12%, transparent); box-shadow: inset 3px 0 0 var(--live, #e5484d); }
+.plan-item.drag-over { box-shadow: inset 0 3px 0 var(--next); }
+.plan-item[draggable="true"] { cursor: pointer; }
+.pi-badge { font-size: var(--fs-xs); font-weight: 700; padding: 1px 8px; border-radius: 99px; flex: 0 0 auto; }
+.pi-badge.live { background: var(--live, #e5484d); color: #fff; }
+.pi-badge.next { background: var(--next); color: #04210f; }
+.plan-tpls { justify-content: center; margin-top: 8px; }
+
+/* ---------- Display: stop button, wireless display help ---------- */
+.disp-stop { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; margin-left: -4px; border-radius: var(--r); border: 1px solid var(--line); background: var(--panel); color: var(--muted); flex: none; }
+.disp-stop:hover { color: var(--text); border-color: var(--live); background: var(--live-soft); }
+.disp-stop[hidden] { display: none; }
+.disp-stop svg.i { width: 18px; height: 18px; }
+.wd-steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 12px; }
+.wd-steps li { line-height: 1.45; }
+.wd-steps kbd { font: inherit; font-size: var(--fs-xs); padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; background: var(--sunk); }
+.wd-status { padding: 8px 10px; border-radius: 8px; background: var(--sunk); }
+.wd-status.ok { background: var(--next-soft); color: var(--text); }
+.wd a.btn { text-decoration: none; }
+@media (max-width: 760px) { .disp-stop { width: 34px; height: 34px; margin-left: -2px; } }
+
+/* ---------- Clicker setup ---------- */
+.ck-status { padding: 12px 14px; border-radius: 10px; background: var(--sunk); border: 1px solid var(--line); min-height: 58px; }
+.ck-status b { font-size: 1.05em; }
+.ck-log { display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-sm); max-height: 120px; overflow: auto; }
+.ck-line { padding: 2px 4px; border-bottom: 1px dashed var(--line); }
+.ck-rows { display: flex; flex-direction: column; gap: 6px; }
+.ck-row { display: grid; grid-template-columns: 150px 1fr auto; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.ck-chip { font-size: var(--fs-xs); }
+.ck-help summary { cursor: pointer; font-weight: 700; }
+.ck-help ul { margin: 6px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+@media (max-width: 560px) { .ck-row { grid-template-columns: 1fr auto; } .ck-row > b { grid-column: 1 / -1; } }

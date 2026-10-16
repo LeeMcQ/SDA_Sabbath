@@ -157,10 +157,42 @@ async function pictureFrom(j) {
   return null;
 }
 
-async function imageOnce(model, prompt) {
+/** Can the chosen provider and model take the church's own pictures along with the request? */
+export function canAttach() {
+  const p = provider();
+  return (p === 'openai' && !/^dall-e/.test(modelFor('image'))) || p === 'google';
+}
+/** A picture sent to the AI is scaled down first (a phone photo can be many MB). */
+export async function shrinkPicture(blob, max = 1280) {
+  const bmp = await createImageBitmap(blob);
+  const sc = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(bmp.width * sc)); c.height = Math.max(1, Math.round(bmp.height * sc));
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  if (bmp.close) bmp.close();
+  const out = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.88));
+  c.width = c.height = 0;
+  if (!out) throw new Error('A picture could not be prepared for the AI.');
+  return out;
+}
+const blobToB64 = (b) => new Promise((res, rej) => { const f = new FileReader(); f.onload = () => res(String(f.result).split(',')[1] || ''); f.onerror = () => rej(f.error); f.readAsDataURL(b); });
+
+async function imageOnce(model, prompt, refs = []) {
   const p = provider();
   let r;
-  if (p === 'openai') {
+  if (p === 'openai' && refs.length && !/^dall-e/.test(model)) {
+    const fd = new FormData();
+    fd.append('model', model); fd.append('prompt', prompt); fd.append('n', '1'); fd.append('size', '1536x1024');
+    refs.forEach((b, i) => fd.append('image[]', b, 'picture' + (i + 1) + '.jpg'));
+    r = await fetch('https://api.openai.com/v1/images/edits', { method: 'POST', headers: { Authorization: 'Bearer ' + key() }, body: fd });
+  } else if (p === 'google' && refs.length) {
+    const pics = await Promise.all(refs.map(async (b) => ({ inlineData: { mimeType: b.type || 'image/jpeg', data: await blobToB64(b) } })));
+    const call = (gen) => fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent', {
+      method: 'POST', headers: json({ 'x-goog-api-key': key() }),
+      body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt + ' Wide 16:9 landscape format.' }].concat(pics) }], generationConfig: gen }) });
+    r = await call({ responseModalities: ['TEXT', 'IMAGE'], imageConfig: { aspectRatio: '16:9' } });
+    if (r.status === 400) r = await call({ responseModalities: ['TEXT', 'IMAGE'] });
+  } else if (p === 'openai') {
     const dalle = /^dall-e/.test(model);
     r = await fetch('https://api.openai.com/v1/images/generations', { method: 'POST', headers: openaiLike('').headers,
       body: JSON.stringify(Object.assign({ model, prompt, n: 1, size: dalle ? '1792x1024' : '1536x1024' }, dalle ? { response_format: 'b64_json' } : {})) });
@@ -187,19 +219,20 @@ async function imageOnce(model, prompt) {
 }
 
 /** Make a picture. Retries once with an image model the key can use if the default is not available. */
-export async function aiImage(prompt) {
+export async function aiImage(prompt, refs = []) {
+  refs = canAttach() ? await Promise.all((refs || []).filter(Boolean).slice(0, 4).map((b) => shrinkPicture(b))) : [];
   if (!key()) throw new Error('Add an API key in Settings → AI first.');
   if (!canImage()) throw new Error(providerName() + ' cannot make pictures. Choose OpenAI, Gemini, Grok, Together or OpenRouter in Settings → AI.');
   let model = modelFor('image');
   if (!model) { const list = await listModels(); model = list.image[0]; if (!model) throw new Error('This key has no picture models. Choose one in Settings → AI → Test key.'); remember('image', model); }
-  try { return await imageOnce(model, prompt); }
+  try { return await imageOnce(model, prompt, refs); }
   catch (e) {
     if (!modelMissing(e) || (cfg().imageModel || '').trim()) throw e;
     const list = await listModels().catch(() => null);
     const alt = list && list.image.find((m) => m !== model);
     if (!alt) throw e;
     remember('image', alt);
-    return imageOnce(alt, prompt);
+    return imageOnce(alt, prompt, refs);
   }
 }
 

@@ -10,21 +10,43 @@ const NAME = 'selah'; // storage name kept from the app's first name, so existin
 const VERSION = 1;
 const STORES = ['kv', 'files', 'renders', 'bibles', 'hymnbooks', 'plans'];
 let dbp = null;
+// When the browser will not open its database (some private windows, storage turned off, a damaged
+// profile), SDA Sabbath keeps working with an in-memory store for this session instead of failing.
+let mem = null;
+function useMemory(why) {
+  if (!mem) {
+    mem = new Map(STORES.map((s) => [s, new Map()]));
+    console.warn('SDA Sabbath: saving is not available here (' + why + '); working in memory for this session.');
+    try { window.dispatchEvent(new CustomEvent('selah-storage', { detail: { off: true, why: String(why) } })); } catch (e) { /* */ }
+  }
+  return null;
+}
 
 function open() {
   if (dbp) return dbp;
-  dbp = new Promise((resolve, reject) => {
-    const req = indexedDB.open(NAME, VERSION);
+  dbp = new Promise((resolve) => {
+    let req;
+    try { req = indexedDB.open(NAME, VERSION); } catch (e) { resolve(useMemory(e && e.message)); return; }
+    const timer = setTimeout(() => resolve(useMemory('the database did not answer')), 8000);
     req.onupgradeneeded = () => {
       const d = req.result;
       STORES.forEach((s) => { if (!d.objectStoreNames.contains(s)) d.createObjectStore(s); });
     };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-    req.onblocked = () => reject(new Error('Database blocked — close other SDA Sabbath tabs.'));
+    req.onsuccess = () => { clearTimeout(timer); resolve(req.result); };
+    req.onerror = () => { clearTimeout(timer); resolve(useMemory(req.error && req.error.message)); };
+    req.onblocked = () => console.warn('Database upgrade waiting for another SDA Sabbath tab to close.');
   });
   return dbp;
 }
+
+// In-memory versions of the operations below (same results, nothing kept after closing).
+const memOps = {
+  get: (st, k) => st.get(k),
+  put: (st, k, v) => { st.set(k, v); },
+  del: (st, k) => { st.delete(k); },
+  keys: (st) => Array.from(st.keys()),
+  all: (st) => Array.from(st.values()),
+};
 
 function wrap(req) {
   return new Promise((resolve, reject) => { req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error); });
@@ -32,6 +54,7 @@ function wrap(req) {
 
 async function tx(store, mode, fn) {
   const d = await open();
+  if (!d) return fn.memory ? fn.memory(mem.get(store)) : undefined;
   const t = d.transaction(store, mode);
   const s = t.objectStore(store);
   const r = fn(s);
@@ -40,19 +63,20 @@ async function tx(store, mode, fn) {
   return res;
 }
 
+const op = (fn, memory) => { fn.memory = memory; return fn; };
 export const db = {
-  get: (store, key) => tx(store, 'readonly', (s) => s.get(key)),
-  put: (store, key, val) => tx(store, 'readwrite', (s) => s.put(val, key)),
-  del: (store, key) => tx(store, 'readwrite', (s) => s.delete(key)),
-  keys: (store) => tx(store, 'readonly', (s) => s.getAllKeys()),
-  all: (store) => tx(store, 'readonly', (s) => s.getAll()),
+  get: (store, key) => tx(store, 'readonly', op((s) => s.get(key), (m) => memOps.get(m, key))),
+  put: (store, key, val) => tx(store, 'readwrite', op((s) => s.put(val, key), (m) => memOps.put(m, key, val))),
+  del: (store, key) => tx(store, 'readwrite', op((s) => s.delete(key), (m) => memOps.del(m, key))),
+  keys: (store) => tx(store, 'readonly', op((s) => s.getAllKeys(), (m) => memOps.keys(m))),
+  all: (store) => tx(store, 'readonly', op((s) => s.getAll(), (m) => memOps.all(m))),
   /** Delete every key starting with prefix (e.g. all renders of a deck). */
-  delPrefix: async (store, prefix) => {
-    const range = IDBKeyRange.bound(prefix, prefix + '￿');
-    return tx(store, 'readwrite', (s) => s.delete(range));
-  },
+  delPrefix: async (store, prefix) => tx(store, 'readwrite', op((s) => s.delete(IDBKeyRange.bound(prefix, prefix + '\uffff')),
+    (m) => { for (const k of Array.from(m.keys())) if (typeof k === 'string' && k.startsWith(prefix)) m.delete(k); })),
   /** Many puts in one transaction (much faster on low-end storage). */
-  putMany: (store, entries) => tx(store, 'readwrite', (s) => { entries.forEach(([k, v]) => s.put(v, k)); }),
+  putMany: (store, entries) => tx(store, 'readwrite', op((s) => { entries.forEach(([k, v]) => s.put(v, k)); }, (m) => { entries.forEach(([k, v]) => m.set(k, v)); })),
+  /** True when saving is not available and data only lives until the app is closed. */
+  inMemory: () => !!mem,
 };
 
 /** Ask the browser not to evict our data (Bibles, slides) when storage is low. */

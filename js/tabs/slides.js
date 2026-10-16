@@ -3,7 +3,7 @@
 // (when publicly shared) or presented live from the web.
 import { h, clear, uid, fmtBytes } from '../core/util.js';
 import { icon } from '../core/icons.js';
-import { btn, dropzone, menu, toast, confirmBox, promptBox, seg, modal, emptyState } from '../core/ui.js';
+import { btn, dropzone, menu, toast, confirmBox, promptBox, seg, emptyState } from '../core/ui.js';
 import { db } from '../core/db.js';
 import { createStage } from '../core/render.js';
 

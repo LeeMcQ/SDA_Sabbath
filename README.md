@@ -8,7 +8,8 @@ Progressive Web App: install it once and it runs with **no internet**, on old PC
 ┌ SDA Sabbath ─ ● Display: Projector ─ [ Go to… John 3:16 / hymn 73 ] ────── [▶ Present  F5 ] ┐
 │ Bible  │                                                         │ ○ Next  (green)          │
 │ Hymns  │   the selected tab's options for what goes on next      │ ● Live  (red)            │
-│ Slides │                                                         │ Black · Logo · Clear     │
+│ Banners│                                                         │ Black · Logo · Clear     │
+│ Slides │                                                         │                          │
 │ Video  │                                                         │                          │
 │ Web    │                                                         │                          │
 │ PC view│                                                         │                          │
@@ -29,7 +30,7 @@ Nothing reaches the projector until **Present** (F5 or Ctrl+Enter). Each tab kee
 | **Video** | VLC-style player: playlist with auto-next and repeat, speed 0.25×–4×, A-B repeat, loop, frame step, fade in/out, volume boost to 200 %, 10-band equaliser with presets, fit/fill/stretch, zoom, rotate, mirror, brightness/contrast/colour/hue, .srt/.vtt subtitles, snapshots. Music can play **in the background** while lyrics stay on screen. |
 | **Web** | **Mirror a tab** — the projector shows exactly that browser tab, without the mouse pointer (scroll/zoom it from SDA Sabbath in Chrome). **Embed** — YouTube and embeddable sites load directly on the display. |
 | **PC view** | Share the whole screen, one window (e.g. PowerPoint or a Bible app) or a tab; see it live inside SDA Sabbath. **Freeze** keeps the last picture up while you work privately. The **mini controller** floats on top of other programs. |
-| **Plan** | Prepare the order of service at home (Divine Service, Sabbath School and Vespers templates), export it, and step through it in church with **Next item**. |
+| **Plan** | Prepare the order of service at home (one-tap Divine Service, Sabbath School and Vespers templates), attach media to each part, drag parts into order, see progress and what is **On screen**, undo a removal, copy the order as text, export it, and step through it in church with **Next part** (it becomes Next; Present shows it). |
 | **Banners** | Welcome, verse, announcement, offering (with giving QR code), countdown and Sabbath-sunset banners drawn live on the display; a self-running pre-service loop; key verses for the 28 Fundamental Beliefs and sermon topics. See [Banners](#banners). |
 | **Settings** | Fonts (Atkinson Hyperlegible, serif), colours, background picture, logo, margins, text sizes, fade/cut, 4:3 projectors, light/dark theme, tabs left or right, low-power mode, backups, Bibles, church details, online AI. |
 
@@ -47,11 +48,25 @@ built into the display.
 | L | Logo |
 | Esc or C | Clear the screen |
 | / or Ctrl+K | Go to a reference or hymn number |
-| Alt+1 … Alt+7 | Switch tabs |
+| Alt+1 … Alt+9 | Switch tabs (Bible, Hymns, Banners, Slides, Video, Web, PC view, Plan, Tools) |
 | F (on the projector window) | Full screen on/off |
 
-Presentation clickers send Page Up / Page Down, so they work out of the box — even if the projector
-window has focus.
+Presentation clickers (Logitech, Targus, Norwii and the like) send Page Up / Page Down, so they work out of the
+box, like in PowerPoint or Google Slides:
+- Page Down / Page Up always move the slides, even when the cursor is in a search box, a dropdown has focus, a
+  dialog is open, or the projector window has focus (only a multi-line text box keeps them).
+- In a search box the app focused by itself (Bible reference, hymn search) and that is still empty, the other
+  clicker buttons work too: arrows, “.” (black screen) and Esc. Letters still type normally.
+- With nothing on screen, the clicker’s next button shows what is on the green Next screen.
+- On the last slide of an item, pressing next again within 4 seconds moves on to the item on the Next screen
+  (Bible readings simply continue to the following verses).
+- The clicker’s “start slideshow” button (F5 / Shift+F5) presents; its black-screen button (“.”, B or W) blacks out.
+- Browser Forward / Back keys, media next / previous keys and mouse side buttons also change slides.
+- A clicker in **mouse mode** works on the projector window once it is full screen: left click = next, right
+  click = back, scroll = next / back.
+- **Clicker setup and test…** (display menu, or `?`) shows exactly what each clicker button sends and lets you
+  **teach** any button (Next, Previous, Black, Present, Clear) by pressing it once. Taught buttons work everywhere,
+  also while typing. It also shows the app build number, to check the newest version is running.
 
 ## Getting started
 
@@ -95,6 +110,20 @@ Options: `--port`, `--media <folder>`, `--pin <NNNN>`, `--no-browser`, `--instal
 are remembered in `%APPDATA%\Selah\companion.txt`. Windows asks once to allow network access — allow
 it for private networks.
 
+### Casting to a TV or wireless display
+
+- **Cast (Chromecast, Google TV, Android TV)** in the display menu uses the browser’s own casting. It only finds
+  Google Cast devices. Most other TVs and projectors (Samsung, LG, Hisense, “Screen mirroring”) use **Miracast**,
+  which a web page cannot reach, so they never appear in that list — on Android too.
+- **Windows: Connect to a wireless display…** (display menu) opens the Windows Connect panel (also **Windows + K**,
+  or Settings → System → Display → *Connect to a wireless display*). Pick the TV, choose **Extend** (Windows + P),
+  and press **Present on the wireless display**: the TV is then a second screen with only the slides on it.
+- **Android phones:** use the SDA Sabbath companion (the TV’s browser opens the companion address), or **Use this
+  device as the screen** and then the phone’s *Smart View / Screen Cast / Screen mirroring*.
+- While a display is connected, the **×** beside the display button stops it (Stop casting / Close the display
+  window). The display menu also has **Cast to another device…**. Closing or reloading the app stops a cast and
+  closes the display window; a cast TV that loses its controller goes black and ends the cast after a few seconds.
+
 ### Phones and tablets
 
 Press **Present** and choose:
@@ -129,6 +158,17 @@ publicly. Each church adds its own licensed copy:
 - Plain text: each hymn starts with `# 73 Holy, Holy, Holy`, stanzas separated by empty lines.
 
 To ship a hymnbook with the app, put the JSON in `data/hymns/` and list it in `data/hymns/index.json`.
+
+### Find lyrics online
+
+**Hymns → ⋯ → Find lyrics online** searches public lyric sites (LRCLIB and Lyrics.ovh) for a title, a first line
+or any words (add “by singer” to narrow it). Songs already on the device are shown first. Online results are
+ranked with a match label and a preview, so you can pick the right one; if an AI key is set, **Ask AI to help
+identify** can also suggest which songs the words belong to (the lyrics always come from the lyric sites, never
+from AI). The chosen words are split into stanzas and a chorus (shown as the slides they will become), can be
+corrected, and are kept **offline** in a book (Praise Choruses by default) with **Add and put on Next**.
+If nothing is found, links to other sites and a paste box are offered. Song words belong to their owners: check
+that your church’s CCLI (or other) licence covers showing them.
 
 ### Hymn music (offline)
 
@@ -193,7 +233,7 @@ css/                         app.css (control UI), stage.css (projector + monito
 js/app.js                    tabs, Present, display menu, shortcuts, service worker
 js/core/                     render (text fitting), live (Next/Live), link (display connections),
                              wire (network protocol), books (reference parser), bibledata, db, settings, ui
-js/tabs/                     bible, hymns, slides, video, web, screen (PC view), plan, settings
+js/tabs/                     bible, hymns, banners (ai.js), slides, video, web, screen (PC view), plan, tools, settings
 js/lib/                      pdf (pdf.js wrapper), pptx renderer, screen capture, subtitles
 js/display/display.js        projector renderer (also used for "this device" and Cast)
 data/bibles/<id>/            info.json + 01.json … 66.json per translation
@@ -205,7 +245,9 @@ js/core/hymnmusic.js         music controller: this device, or the PC display wh
 js/core/bannerframe.js       banner slides on the display (palettes, countdown, corner clock)
 js/core/church.js            church details, Sabbath date and offline sunset times
 js/core/ai.js                optional online AI (text, background pictures, model lists)
-js/tabs/ai.js                Banners tab (make, saved, pre-service loop, topics)
+js/tabs/ai.js                Banners tab (make, saved, pre-service loop, topics, Ask AI)
+js/tabs/ai-full.js           the “full banner” AI picture maker
+js/core/lyrics.js            online lyrics finder: sources, ranking, stanza/chorus detection
 data/topics/topics.json      key verses for the 28 Fundamental Beliefs and sermon topics
 js/lib/smf.js                MIDI file reader/writer and section joining
 vendor/spessasynth/          SpessaSynth (Apache 2.0)
@@ -229,12 +271,14 @@ tools/                       build.py, build_bibles.py, build_hymn_music.py, bui
 The **Tools** tab (under More) adds:
 
 - Stage / confidence monitor window (current + next item + timer)
-- Lower-third / overlay window suitable for OBS browser source
+- Lower thirds: **Set as Next** for the projector, or **Show on stream overlay** (a separate window for OBS)
 - Service timer and countdown presets (5/10/20 min)
-- Responsive readings
-- Communion / Ordinance of Humility step-through slides
+- Responsive readings (Leader / People in the accent colour) — click to put on Next, double-click to show at once
+- Communion / Ordinance of Humility as one four-slide sequence: Present, then → for each step
 - Streaming overlay window
-- Experimental live captions via browser speech recognition
+- Experimental live captions via browser speech recognition, on the display's caption line over whatever is showing
+
+Like every tab, Tools slides go to the green **Next** screen first; Present (F5) shows them.
 
 Offering banners (verse + giving QR code) are in **Banners**. Children’s story templates were intentionally left out.
 
@@ -273,8 +317,17 @@ Claude — text only), paste your key and press **Test key**: it shows the model
 choose a text and a picture model (or leave both on Automatic). If a model is retired, SDA Sabbath picks a
 current one by itself and remembers it.
 
-- **AI picture (online)** in Banners → Make makes a **background picture without text**; the banner words stay
-  sharp on top. The picture is saved on the device, so it works offline afterwards.
+- Banners → Make has **two AI picture makers**:
+  1. **Make background** makes a **background picture without text**; the banner words stay sharp on top.
+  2. **Make full banner…** makes **one finished picture with all your words in it** (church name, heading,
+     message, bottom line, anything else) built around **pictures you attach** (a photo of the church, people, your
+     logo). OpenAI (gpt-image) and Google Gemini accept attached pictures; other providers use the words only.
+     AI can misspell, so the result is shown for checking and can be remade before you use it. The giving QR
+     code is never drawn by AI (the app adds the real one on top).
+  Pictures are saved on the device, so they work offline afterwards.
+- **Ask AI** in Banners → Topics answers a question in **three slide-sized ways** (a short answer, an answer with
+  the Bible’s own words, and key points). You choose one, edit it, optionally add an AI or own picture, and press
+  Set as Next. Bible references are checked against the installed Bible and the verse shown is the Bible’s own text.
 - **AI summary (online)** in Banners → Topics writes 2–3 short slides into edit boxes. Every Bible reference is
   checked against the installed Bible (✓ with the verse text, or a warning when it does not exist) and words
   worth a second look are pointed out. Nothing is shown until you press Set as Next and then Present.
