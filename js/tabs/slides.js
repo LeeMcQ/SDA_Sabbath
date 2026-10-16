@@ -275,19 +275,51 @@ export default function create(ctx) {
     deck = { id };
   }
 
+  async function captureFrame(f) {
+    if (f.kind === 'image' && f.src) return f.src;
+    // Render HTML / other frames offscreen and capture
+    const W = f.w || 1920, H = f.h || 1080;
+    const host = document.createElement('div');
+    host.style.cssText = 'position:fixed;left:-10000px;top:0;width:' + W + 'px;height:' + H + 'px;background:#000;overflow:hidden;';
+    document.body.appendChild(host);
+    try {
+      const st = createStage(host, { aspect: W / H, observe: false, placeholderOnly: false });
+      st.applyStyle({ fade: 0, bg: '#000' });
+      await st.show(f);
+      await new Promise((r) => setTimeout(r, 150));
+      const stageEl = st.el;
+      // Capture via SVG foreignObject
+      const clone = stageEl.cloneNode(true);
+      clone.style.transform = 'none';
+      clone.style.width = W + 'px';
+      clone.style.height = H + 'px';
+      const wrap = document.createElement('div');
+      wrap.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+      wrap.style.cssText = 'width:' + W + 'px;height:' + H + 'px;background:#000;';
+      wrap.appendChild(clone);
+      const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '">' +
+        '<foreignObject width="100%" height="100%">' + new XMLSerializer().serializeToString(wrap) + '</foreignObject></svg>';
+      const img = new Image();
+      const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+      const c = document.createElement('canvas');
+      c.width = W; c.height = H;
+      c.getContext('2d').drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+      st.destroy();
+      return await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.88));
+    } finally {
+      host.remove();
+    }
+  }
+
   async function saveSlideAsBanner() {
     if (!deck || !frames || !frames[stagedIndex]) { toast('Open a slide first.', 'err'); return; }
     const f = frames[stagedIndex];
+    toast('Capturing slide…', 'ok', 1500);
     let blob = null;
-    if (f.kind === 'image' && f.src) {
-      blob = f.src;
-    } else {
-      // Capture the currently staged slide from the live preview stage
-      const host = document.querySelector('.stage-host');
-      const canvas = host && host.querySelector('canvas');
-      if (canvas) blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.9));
-    }
-    if (!blob) { toast('Could not capture this slide as an image.', 'err'); return; }
+    try { blob = await captureFrame(f); } catch (e) { console.warn('capture', e); }
+    if (!blob) { toast('Could not capture this slide. Try saving the deck as PDF for a perfect copy.', 'err', 5000); return; }
     const name = (await promptBox('Save as banner', 'Name for this banner', deck.name + ' — slide ' + (stagedIndex + 1))) || (deck.name + ' slide ' + (stagedIndex + 1));
     const id = 'bg-' + Date.now().toString(36);
     await db.put('files', id, { id, kind: 'banner-bg', name, type: 'image/jpeg', size: blob.size || 0, blob, added: Date.now() });
