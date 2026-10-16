@@ -275,32 +275,8 @@ async function refreshChurchLogo() {
 }
 refreshChurchLogo();
 settings.on('change:display', refreshChurchLogo);
-// ------------------------------------------------------------ install banner (highlighted, top of main screen)
-const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-const installBanner = h('div.install-banner', { hidden: true },
-  h('div.ib-text',
-    h('strong', 'Install SDA Sabbath'),
-    h('span', 'Add to your home screen for offline use and full-screen presentation.')),
-  h('button.btn.primary.ib-btn', { type: 'button', onclick: promptInstall }, 'Install now'));
-work.prepend(installBanner);
-
-function showInstallBanner() {
-  if (isStandalone()) { installBanner.hidden = true; return; }
-  installBanner.hidden = false;
-}
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  ctx.installPrompt = e;
-  showInstallBanner();
-  ui.enter(installBanner, 'pop');
-});
-window.addEventListener('appinstalled', () => {
-  ctx.installPrompt = null;
-  installBanner.hidden = true;
-  ui.toast('SDA Sabbath is installed.', 'ok');
-});
-// Hide immediately if already running as installed app
-if (isStandalone()) installBanner.hidden = true;
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); ctx.installPrompt = e; installBtn.hidden = false; ui.enter(installBtn, 'pop'); });
+window.addEventListener('appinstalled', () => { ctx.installPrompt = null; installBtn.hidden = true; ui.toast('SDA Sabbath is installed.', 'ok'); });
 const mq = matchMedia('(max-width: 760px)');
 const syncSearch = () => { searchBtn.hidden = !mq.matches; helpBtn.hidden = mq.matches; };
 mq.addEventListener ? mq.addEventListener('change', syncSearch) : mq.addListener(syncSearch);

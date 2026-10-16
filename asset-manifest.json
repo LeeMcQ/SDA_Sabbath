@@ -1,6 +1,6 @@
 {
-"version": "2409c854f5f3",
-"bytes": 36951118,
+"version": "7c7e4b51e009",
+"bytes": 36949658,
 "files": [
 "index.html",
 "display.html",
@@ -294,9 +294,9 @@
 "index.html": "944de01271cae652",
 "display.html": "8cd7c6329849954d",
 "manifest.webmanifest": "f2aa34a6f92b60be",
-"css/app.css": "b1995a4949ec6b89",
+"css/app.css": "ec648949a0538a39",
 "css/stage.css": "d0d0194659593414",
-"js/app.js": "0280e1bf4bc7c766",
+"js/app.js": "a36af3ff8b7b33f0",
 "js/clickerui.js": "53822136e3da91ca",
 "js/controlbar.js": "8889a02badbfe107",
 "js/display-main.js": "1da3f23c3d4c86b0",
