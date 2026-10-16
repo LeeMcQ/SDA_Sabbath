@@ -51,8 +51,16 @@ built into the display.
 | Alt+1 … Alt+9 | Switch tabs (Bible, Hymns, Banners, Slides, Video, Web, PC view, Plan, Tools) |
 | F (on the projector window) | Full screen on/off |
 
-Presentation clickers send Page Up / Page Down, so they work out of the box — even if the projector
-window has focus.
+Presentation clickers (Logitech, Targus, Norwii and the like) send Page Up / Page Down, so they work out of the
+box, like in PowerPoint or Google Slides:
+- Page Down / Page Up always move the slides, even when the cursor is in a search box, a dropdown has focus, a
+  dialog is open, or the projector window has focus (only a multi-line text box keeps them).
+- In a search box the app focused by itself (Bible reference, hymn search) and that is still empty, the other
+  clicker buttons work too: arrows, “.” (black screen) and Esc. Letters still type normally.
+- With nothing on screen, the clicker’s next button shows what is on the green Next screen.
+- On the last slide of an item, pressing next again within 4 seconds moves on to the item on the Next screen
+  (Bible readings simply continue to the following verses).
+- The clicker’s “start slideshow” button (F5 / Shift+F5) presents; its black-screen button (“.”, B or W) blacks out.
 
 ## Getting started
 

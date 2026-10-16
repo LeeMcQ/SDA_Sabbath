@@ -107,6 +107,7 @@ export default function create(ctx) {
       if (first) first.click();
       if (e.ctrlKey || e.metaKey) setTimeout(() => live.take(), 50);
     } });
+  ['keydown', 'pointerdown', 'blur'].forEach((ev) => q.addEventListener(ev, () => q.classList.remove('quiet-focus')));
   const padBtn = btn('', 'Number pad', () => { keypad.hidden = !keypad.hidden; }, { cls: 'sm', label: '123' });
   const keypad = h('div.keypad', { hidden: true });
   ['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', 'Go'].forEach((k) => keypad.appendChild(h('button', { type: 'button', onclick: () => {
@@ -720,7 +721,7 @@ export default function create(ctx) {
       selectHymn(x, { index });
       return cue;
     },
-    onShow() { if (!hymn && !opening && !ctx.isMobile()) setTimeout(() => q.focus(), 50); opening = false; if (hymn) renderMusic(); },
+    onShow() { if (!hymn && !opening && !ctx.isMobile()) setTimeout(() => { q.classList.add('quiet-focus'); q.focus(); }, 50); opening = false; if (hymn) renderMusic(); },
     /** M key: pause/continue the music, or start it for the live (or selected) hymn. */
     async musicKey() {
       music.unlock();

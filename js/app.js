@@ -396,31 +396,77 @@ function showHelp() {
     ['B  or  .', 'Black screen (press again to return)'], ['L', 'Show logo'], ['Esc  or  C', 'Clear the screen'], ['M', 'Hymn music: play / pause'],
     ['/  or  Ctrl+K', 'Go to a Bible reference or hymn number'], ['Alt+1 … Alt+9', 'Switch tabs'],
     ['Space (video live)', 'Play / pause'], ['F (on the display)', 'Toggle full screen'],
+    ['Clicker', 'Page Down / Page Up work even while typing in a box; with nothing on screen, next shows the Next item'],
   ];
   ui.modal({ title: 'Keyboard and clicker shortcuts', body: h('div.form', rows.map(([k, d]) => [h('label', h('kbd', k)), h('span', d)])) });
 }
 
+// Presentation clickers are keyboards that send Page Down / Page Up (some send arrows, "." or B for black, F5 /
+// Shift+F5 to start and Esc to end). They must work whatever has the keyboard focus, like in PowerPoint:
+//  - Page Down / Page Up mean nothing in a one-line box or a list, so they always move the slides, even when a
+//    search box or a dropdown has the focus, or a dialog is open (only a multi-line text box keeps them).
+//  - A box the app focused by itself (Bible reference, hymn search) that is still empty also lets the other
+//    clicker keys through: arrows, "." (black screen), Esc and Space. Letters still type normally.
+const CLICK_NEXT = new Set(['PageDown']), CLICK_PREV = new Set(['PageUp']);
+const QUIET_KEYS = new Set(['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', '.', 'Escape', ' ']);
+let quietKey = false;
+// Capture phase: see whether the box was focused by the app before the box's own handler clears that mark.
+document.addEventListener('keydown', (e) => {
+  const t = e.target;
+  quietKey = !!(t && t.classList && t.classList.contains('quiet-focus') && t.tagName === 'INPUT' && !t.value);
+}, true);
+const inBigText = (t) => !!(t && (t.isContentEditable || t.tagName === 'TEXTAREA'));
+let endPressAt = 0;
+
+/** Clicker "next" with nothing more in the item on screen (or nothing on screen): show what is Next. */
+function clickerNext() {
+  if (!live.cue) {
+    if (live.staged) { doPresent(); return; }
+    ui.toast('Nothing is selected yet. Pick something in a tab; then the clicker’s next button shows it.', '', 4000);
+    return;
+  }
+  const atEnd = live.cue.deck.kind !== 'video' && live.index >= live.count() - 1 && !live.cue.extend && !live.cue.autoLoop;
+  if (atEnd && live.staged && !live.sameAsLive() && live.staged.id !== live.cue.id) {
+    // Last slide: a second press within 4 seconds moves on to the item waiting on the Next screen.
+    if (Date.now() - endPressAt < 4000) { endPressAt = 0; doPresent(); return; }
+    endPressAt = Date.now();
+    ui.toast('End of “' + live.cue.title + '”. Press next again to show: ' + live.staged.title, '', 4000);
+    return;
+  }
+  live.next();
+}
+
 function handleKey(e, remote) {
   const k = e.key;
+  const t = remote ? null : e.target;
+  const clicker = (CLICK_NEXT.has(k) || CLICK_PREV.has(k)) && !inBigText(t) && !e.ctrlKey && !e.metaKey && !e.altKey;
+  if (clicker) {
+    if (t && t.tagName === 'SELECT') t.blur(); // otherwise the dropdown would also change
+    if (CLICK_NEXT.has(k)) clickerNext(); else live.prev();
+    return true;
+  }
   if (!remote && ui.modalOpen() && k !== 'F5') { if (k === 'Escape') { ui.closeModal(); return true; } return false; }
-  const typing = !remote && isTyping(e);
+  const quiet = !remote && quietKey && QUIET_KEYS.has(k);
+  const typing = !remote && !quiet && isTyping(e);
   const ctrl = e.ctrlKey || e.metaKey;
   if (k === 'F5' || (ctrl && k === 'Enter')) { doPresent(); return true; }
   if (typing) return false;
+  if (quiet && t && t.blur) t.blur();
   if (!remote && ((ctrl && (k === 'k' || k === 'K')) || k === '/')) { quick.focus(); return true; }
-  if (e.altKey && /^[1-9]$/.test(k)) { const t = TABS.filter(Boolean)[+k - 1]; if (t) showTab(t.id); return true; }
+  if (e.altKey && /^[1-9]$/.test(k)) { const tb = TABS.filter(Boolean)[+k - 1]; if (tb) showTab(tb.id); return true; }
   if (ctrl || e.altKey) return false;
   const kind = live.cue && live.cue.deck.kind;
   switch (k) {
-    case 'ArrowRight': case 'ArrowDown': case 'PageDown': live.next(); return true;
-    case 'ArrowLeft': case 'ArrowUp': case 'PageUp': live.prev(); return true;
+    case 'ArrowRight': case 'ArrowDown': live.next(); return true;
+    case 'ArrowLeft': case 'ArrowUp': live.prev(); return true;
     case ' ': if (kind === 'video') live.mediaCmd('toggle'); else live.next(); return true;
     case 'Home': live.go(0); return true;
     case 'End': live.go(live.count() - 1); return true;
     case 'b': case 'B': case '.': live.setBlank('black'); return true;
+    case 'w': case 'W': live.setBlank('black'); return true; // some clickers send W for a "white/blank" screen
     case 'l': case 'L': live.setBlank('logo'); return true;
     case 'Escape': case 'c': case 'C': live.clear(); return true;
-    case 'm': case 'M': getTab('hymns').then((t) => t.musicKey && t.musicKey()); return true;
+    case 'm': case 'M': getTab('hymns').then((tb) => tb.musicKey && tb.musicKey()); return true;
     case '?': showHelp(); return true;
   }
   return false;
