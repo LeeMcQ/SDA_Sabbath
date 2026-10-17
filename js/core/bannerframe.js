@@ -77,7 +77,13 @@ export function bannerEl(f, urlFor) {
   const bg = document.createElement('div');
   bg.className = 'fb-bg';
   const deco = decoCss(f.deco, pal.dark);
-  if (hasImg) bg.style.backgroundImage = 'url("' + urlFor(f.img) + '")';
+  if (hasImg) {
+    bg.style.backgroundImage = 'url("' + urlFor(f.img) + '")';
+    const fit = f.imgFit || 'cover';
+    bg.style.backgroundSize = fit === 'contain' ? 'contain' : fit === 'crop' ? (f.imgZoom || 100) + '%' : 'cover';
+    bg.style.backgroundPosition = f.imgPos || 'center';
+    bg.style.backgroundRepeat = 'no-repeat';
+  }
   else bg.style.background = (deco ? deco + ', ' : '') + 'linear-gradient(135deg, ' + pal.bg[0] + ' 0%, ' + pal.bg[1] + ' 100%)';
   el.appendChild(bg);
   if (hasImg) {

@@ -64,7 +64,7 @@ function newBanner(tpl = 'welcome', extra) {
   const t = TPL[tpl] || TPL.welcome;
   const c = church();
   return Object.assign({ id: null, name: '', tpl, f: Object.assign({}, t.d(c)), x: Object.assign({}, t.x),
-    s: Object.assign({ pal: 'navy', deco: 'none', pos: 'center', font: 'sans', img: null, dim: null }, t.s) }, extra || {});
+    s: Object.assign({ pal: 'navy', deco: 'none', pos: 'center', font: 'sans', img: null, dim: null, imgFit: 'cover', imgPos: 'center', imgZoom: 100 }, t.s) }, extra || {});
 }
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const sig = (b) => JSON.stringify([b.name, b.tpl, b.f, b.x, b.s]);
@@ -201,7 +201,16 @@ export default function create(ctx) {
       const at = nextTime(f.at || c.service, now);
       fr.title = ''; fr.countdown = { at: at ? at.getTime() : Date.now(), done: f.done || 'Welcome' };
     }
-    if (s.img) { const im = await fileBlob(s.img); if (im) { fr.img = im; fr.dim = s.dim == null ? 0.45 : s.dim; } }
+    if (s.img) {
+      const im = await fileBlob(s.img);
+      if (im) {
+        fr.img = im;
+        fr.dim = s.dim == null ? 0.45 : s.dim;
+        fr.imgFit = s.imgFit || 'cover';
+        fr.imgPos = s.imgPos || 'center';
+        fr.imgZoom = s.imgZoom || 100;
+      }
+    }
     if (x.logo) { const lg = await logoBlob(); if (lg) fr.logo = lg; }
     const gu = x.qr ? safeGivingUrl(c.givingUrl) : '';
     if (gu) { try { fr.qr = await qrData(gu); fr.qrLabel = c.givingLabel; } catch (e) { /* no QR */ } }
@@ -417,6 +426,7 @@ export default function create(ctx) {
       h('label', 'Colours'), sw,
       h('label', 'Pattern'), decoSeg,
       h('label', 'Picture'), pictureRow(),
+      cur.s.img ? h('label', 'Picture settings') : null, cur.s.img ? pictureSettings() : null,
       cur.s.img ? h('label', 'Darken picture') : null, cur.s.img ? dimRow() : null,
       h('label', 'Text position'), posSeg,
       h('label', 'Font'), fontSeg);
@@ -560,6 +570,21 @@ export default function create(ctx) {
       oninput: () => { cur.s.dim = +r.value; out.textContent = Math.round(cur.s.dim * 100) + '%'; changed(false); } });
     r.value = cur.s.dim == null ? 0.45 : cur.s.dim;
     return h('div.row', r, out);
+  }
+
+  function pictureSettings() {
+    if (!cur.s.img) return null;
+    const fitSeg = seg([['cover', 'Fill'], ['contain', 'Fit'], ['crop', 'Crop']], cur.s.imgFit || 'cover', (v) => { cur.s.imgFit = v; changed(false); });
+    const posSeg = seg([['center', 'Centre'], ['top', 'Top'], ['bottom', 'Bottom'], ['left', 'Left'], ['right', 'Right']], cur.s.imgPos || 'center', (v) => { cur.s.imgPos = v; changed(false); });
+    const zoomOut = h('span.note', (cur.s.imgZoom || 100) + '%');
+    const zoom = h('input', { type: 'range', min: 80, max: 200, step: 5, 'aria-label': 'Zoom picture', style: { flex: '1', maxWidth: '200px' },
+      oninput: () => { cur.s.imgZoom = +zoom.value; zoomOut.textContent = cur.s.imgZoom + '%'; if ((cur.s.imgFit || 'cover') === 'crop') changed(false); } });
+    zoom.value = cur.s.imgZoom || 100;
+    return h('div.col', { style: { gap: '8px' } },
+      h('div.row.wrap', h('span.note', 'How the picture sits'), fitSeg),
+      h('div.row.wrap', h('span.note', 'Position'), posSeg),
+      h('div.row', h('span.note', 'Zoom'), zoom, zoomOut),
+      h('p.note', 'Fill covers the banner. Fit shows the whole picture. Crop + zoom lets you focus on part of it. Darken keeps the words readable.'));
   }
 
   // ============================================================ SAVED (library)

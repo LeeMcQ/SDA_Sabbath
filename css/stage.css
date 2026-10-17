@@ -100,7 +100,7 @@
 /* Banners (welcome, verse, announcement, offering, countdown …): live text over a palette or picture */
 .f-banner { position: absolute; inset: 0; overflow: hidden; color: var(--b-fg, #fff); font-family: var(--d-font); }
 .f-banner.serif { font-family: "Selah Serif", Georgia, serif; }
-.f-banner .fb-bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+.f-banner .fb-bg { position: absolute; inset: 0; background-size: cover; background-position: center; background-repeat: no-repeat; }
 .f-banner .fb-dim { position: absolute; inset: 0; }
 .f-banner.has-img.dark .fb-in { text-shadow: 0 3px 14px rgba(0,0,0,.55), 0 0 2px rgba(0,0,0,.6); }
 .f-banner.pos-low.has-img .fb-dim { -webkit-mask-image: linear-gradient(to top, #000 0, #000 45%, rgba(0,0,0,.35) 100%); mask-image: linear-gradient(to top, #000 0, #000 45%, rgba(0,0,0,.35) 100%); }
