@@ -313,11 +313,34 @@ export default function create(ctx) {
     cur.updated = now;
     if (!cur.name) cur.name = nameOf(cur);
     nameInp.value = cur.name;
+    // Give this banner its own picture copy so later edits don't change saved ones.
     const copy = clone(cur);
-    const i = lib.findIndex((b) => b.id === cur.id);
+    if (copy.s && copy.s.img) {
+      const srcId = copy.s.img;
+      // Only duplicate if another saved banner already uses this exact picture id.
+      const shared = lib.some((b) => b.id !== copy.id && b.s && b.s.img === srcId);
+      if (shared) {
+        // Mark for async copy; for now keep the id and copy below.
+        copy._needsPicCopy = srcId;
+      }
+    }
+    const i = lib.findIndex((b) => b.id === copy.id);
     if (i >= 0) lib[i] = copy; else lib.unshift(copy);
     savedSig = sig(cur);
     saveLib(); saveDraft(); updateSaveBtn(); renderViewSeg();
+    if (copy._needsPicCopy) {
+      // Duplicate the picture in the background so this banner owns it.
+      (async () => {
+        try {
+          const rec = await db.get('files', copy._needsPicCopy).catch(() => null);
+          if (rec && rec.blob) {
+            const newId = await storePicture(rec.blob, (rec.name || 'Picture') + ' (copy)');
+            const b = lib.find((x) => x.id === copy.id);
+            if (b && b.s) { b.s.img = newId; delete b._needsPicCopy; await saveLib(); if (view === 'library') renderLibrary(); }
+          }
+        } catch (e) { /* keep shared if copy fails */ }
+      })();
+    }
     if (announce) toast('Saved to Saved banners.', 'ok', 2000);
     return copy;
   }
@@ -331,7 +354,9 @@ export default function create(ctx) {
     toast('Added to the pre-service loop (' + loop.items.length + ' item' + (loop.items.length === 1 ? '' : 's') + ').', 'ok');
   }
   function startNew(tpl) {
-    cur = newBanner(tpl || cur.tpl);
+    // Always a fresh banner so editing it cannot change a saved one.
+    cur = newBanner(tpl || 'welcome');
+    cur.id = null;
     savedSig = null;
     nameInp.value = '';
     changed(true);
@@ -506,7 +531,7 @@ export default function create(ctx) {
     const gallery = h('div.bn-gallery');
     row.append(h('div.row.wrap',
       h('button.btn.sm', { type: 'button', onclick: () => inp.click() }, icon('upload'), h('span', 'Choose picture…')),
-      cur.s.img ? h('button.btn.sm', { type: 'button', onclick: () => { cur.s.img = null; changed(true); } }, icon('x'), h('span', 'No picture')) : null,
+      cur.s.img ? h('button.btn.sm', { type: 'button', title: 'Remove the picture from this banner only', onclick: () => { cur.s.img = null; changed(true); } }, icon('x'), h('span', 'No picture')) : null,
       inp), gallery);
     if (ai.hasKey() && ai.canImage()) {
       row.append(h('div.card.bn-aimakers',
@@ -549,11 +574,23 @@ export default function create(ctx) {
         onclick: () => usePicture(f.id) }, h('img', { src: u, alt: f.name || 'Picture', onload: () => setTimeout(() => URL.revokeObjectURL(u), 1000) }));
       const del = h('button.bn-pic-x', { type: 'button', title: 'Delete this picture from this device', 'aria-label': 'Delete picture ' + (f.name || ''),
         onclick: async () => {
-          const used = lib.filter((b) => b.s && b.s.img === f.id).length;
-          if (!(await confirmBox('Delete picture?', used ? 'It is used by ' + used + ' saved banner' + (used === 1 ? '' : 's') + '; they will show plain colours instead.' : 'Delete this picture from this device?', 'Delete', true))) return;
+          const used = lib.filter((b) => b.s && b.s.img === f.id);
+          if (used.length && !(await confirmBox('Delete picture?', 'It is used by ' + used.length + ' saved banner' + (used.length === 1 ? '' : 's') + '. Those banners will keep their own copy.', 'Delete', true))) return;
+          // Give each saved banner that uses it its own copy before deleting.
+          for (const b of used) {
+            try {
+              const rec = await db.get('files', f.id).catch(() => null);
+              if (rec && rec.blob) {
+                const newId = await storePicture(rec.blob, (rec.name || 'Picture') + ' (kept)');
+                b.s.img = newId;
+              }
+            } catch (e) { /* keep the id if copy fails */ }
+          }
+          if (used.length) await saveLib();
           await db.del('files', f.id); blobCache.delete(f.id);
           if (cur.s.img === f.id) cur.s.img = null;
           changed(true);
+          fillGallery(gallery);
         } }, icon('x'));
       gallery.appendChild(h('div.bn-pic-wrap', pick, del));
     });
