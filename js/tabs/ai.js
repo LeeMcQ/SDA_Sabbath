@@ -16,6 +16,7 @@ import { parseRef, refText, SHORT } from '../core/books.js';
 import * as ai from '../core/ai.js';
 import { churchForm } from './church-form.js';
 import { openFullBanner } from './ai-full.js';
+import { createMusicView, musicChip } from './banner-music.js';
 
 // ------------------------------------------------------------ templates
 const TPL = {
@@ -218,23 +219,24 @@ export default function create(ctx) {
   }
   const cueId = (b) => 'banner:' + (b.id || 'draft');
   function bannerCue(b, frame) {
-    return { id: cueId(b), tab: 'ai', title: nameOf(b), sub: 'Banner', deck: { kind: 'banner', frames: [frame] }, index: 0, labels: [TPL[b.tpl].name],
+    return { id: cueId(b), tab: 'ai', title: nameOf(b), sub: 'Banner', withMusic: true, deck: { kind: 'banner', frames: [frame] }, index: 0, labels: [TPL[b.tpl].name],
       plan: b.id ? { tab: 'ai', banner: b.id, label: 'Banner: ' + nameOf(b) } : null };
   }
 
   // ------------------------------------------------------------ layout
   const viewSeg = h('div.seg.bn-views', { role: 'tablist' });
-  const VIEWS = [['make', 'Make'], ['library', 'Saved'], ['loop', 'Loop', 'Pre-service '], ['topics', 'Topics']];
+  const VIEWS = [['make', 'Make'], ['library', 'Saved'], ['loop', 'Loop', 'Pre-service '], ['music', 'Music'], ['topics', 'Topics']];
   function renderViewSeg() {
     clear(viewSeg);
     VIEWS.forEach(([v, label, pre]) => viewSeg.appendChild(h('button', { type: 'button', role: 'tab', 'aria-selected': String(v === view), 'aria-pressed': String(v === view),
       onclick: () => setView(v) }, pre ? [h('span.hide-sm', pre + label.toLowerCase()), h('span.bn-sm', label)] : label, v === 'library' && lib.length ? ' (' + lib.length + ')' : '')));
   }
   const churchBtn = h('button.btn.sm', { type: 'button', title: 'Church name, town, location, service time and giving link', onclick: () => churchDialog() }, icon('pin'), h('span.hide-sm', 'Church details'));
-  const views = { make: h('div.bn-view'), library: h('div.bn-view.scroll.pad'), loop: h('div.bn-view.scroll.pad'), topics: h('div.bn-view') };
+  const views = { make: h('div.bn-view'), library: h('div.bn-view.scroll.pad'), loop: h('div.bn-view.scroll.pad'), music: h('div.bn-view.scroll.pad.mu-view'), topics: h('div.bn-view') };
   const el = h('section.banners',
-    h('div.toolbar', h('h2', 'Banners'), viewSeg, h('div.grow'), churchBtn),
-    views.make, views.library, views.loop, views.topics);
+    h('div.toolbar', h('h2', 'Banners & Music'), viewSeg, h('div.grow'), churchBtn),
+    views.make, views.library, views.loop, views.music, views.topics);
+  const musicView = createMusicView(ctx, views.music);
 
   function setView(v) {
     view = v;
@@ -244,6 +246,7 @@ export default function create(ctx) {
     if (v === 'library') renderLibrary();
     if (v === 'loop') renderLoop();
     if (v === 'topics') renderTopics();
+    if (v === 'music') musicView.show();
   }
 
   function churchDialog() {
@@ -268,6 +271,7 @@ export default function create(ctx) {
         h('button.btn', { type: 'button', title: 'Add to the pre-service loop', onclick: () => addCurToLoop() }, icon('loop'), h('span', 'Add to loop'))),
       h('div.row', nameInp,
         h('button.btn.sm', { type: 'button', title: 'Start a new banner', onclick: () => startNew() }, icon('plus'), h('span', 'New'))),
+      musicChip(ctx, () => setView('music')),
       h('p.note', 'Set as Next puts the banner on the green Next screen; Present (F5) shows it. Text is fitted to the projector, like Bible verses.')));
   views.make.append(h('div.split.banner-split', h('div.pane.bn-edit-pane', editorScroll), previewPane));
 
@@ -713,7 +717,7 @@ export default function create(ctx) {
       if (b) { frames.push(await frameOf(b)); labels.push('At start: ' + short(nameOf(b), 14)); end = len; }
     }
     return { id: 'loop:' + Date.now(), tab: 'ai', title: 'Pre-service loop', sub: len + ' slide' + (len === 1 ? '' : 's') + ' · every ' + secs + ' s',
-      deck: { kind: 'loop', frames, auto: { secs, len, at, end } }, index: 0, labels, autoLoop: true, isLoop: true,
+      deck: { kind: 'loop', frames, auto: { secs, len, at, end } }, index: 0, labels, autoLoop: true, isLoop: true, withMusic: true,
       plan: { tab: 'ai', loop: true, label: 'Pre-service loop' } };
   }
   async function renderLoop() {
@@ -723,6 +727,7 @@ export default function create(ctx) {
     const dl = await decks();
     const c = church();
     box.appendChild(h('p.note.bn-intro', 'Plays before the service: your banners and announcement slides take turns on the screen. It runs on the display itself, so it keeps going if this phone or PC sleeps. Use Next / Previous at any time to move by hand.'));
+    box.appendChild(h('div.row', { style: { marginBottom: '10px' } }, musicChip(ctx, () => setView('music'))));
     const list = h('div.list.bn-loop-list');
     if (!loop.items.length) list.appendChild(h('p.note.pad', 'The loop is empty. Add saved banners or slide decks below.'));
     loop.items.forEach((it, i) => {

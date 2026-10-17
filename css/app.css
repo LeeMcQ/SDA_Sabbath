@@ -712,3 +712,65 @@ google-cast-launcher, .cast-button, [aria-label*="Cast"], button[title*="Cast"],
 .tpl-row.def { border-color: var(--next); }
 .tpl-row .grow { min-width: 0; }
 .chip svg.i { width: 14px; height: 14px; }
+
+/* ---- Rail labels with a phone-length short form ("Banners & Music" → "Banners") */
+.rail button .lbl { text-align: center; line-height: 1.2; }
+.rail button .lbl-short { display: none; }
+@media (max-width: 760px) { .rail button .lbl-long { display: none; } .rail button .lbl-short { display: inline; } }
+
+/* ---- Banners & Music → Music */
+.mu-view { display: flex; flex-direction: column; gap: 14px; max-width: 980px; }
+.mu-view .card { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.mu-view h4 { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 15px; }
+.mu-np { display: flex; gap: 12px; align-items: center; }
+.mu-np > svg.i { width: 34px; height: 34px; padding: 6px; border-radius: 10px; background: var(--raised); color: var(--brass-hi, #d6b257); flex: none; }
+.mu-np-title { font-weight: 800; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mu-bar { flex: 1; height: 5px; border-radius: 3px; background: var(--raised); overflow: hidden; }
+.mu-bar > i { display: block; height: 100%; width: 0; background: var(--next); transition: width .4s linear; }
+.mu-time { min-width: 86px; text-align: right; font-variant-numeric: tabular-nums; }
+.mu-ctrls { gap: 8px; align-items: center; }
+.mu-vol { display: flex; align-items: center; gap: 6px; flex: 1 1 140px; max-width: 220px; color: var(--muted); }
+.mu-vol input { flex: 1; min-width: 80px; }
+.mu-opt { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+.mu-opt input { margin-top: 3px; width: 18px; height: 18px; flex: none; }
+.mu-opt > span { display: flex; flex-direction: column; gap: 2px; }
+.mu-list { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.mu-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.mu-row:last-child { border-bottom: 0; }
+.mu-row.now { background: color-mix(in srgb, var(--next) 14%, var(--panel)); box-shadow: inset 3px 0 0 var(--next); }
+.mu-row.over { box-shadow: inset 0 2px 0 var(--next); }
+.mu-row.dragging { opacity: .5; }
+.mu-row input[type=checkbox] { width: 18px; height: 18px; flex: none; }
+.mu-n { width: 22px; text-align: right; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; flex: none; }
+.mu-main { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; border: 0; background: transparent; color: inherit; text-align: left; padding: 4px; border-radius: 8px; }
+.mu-main:hover { background: var(--raised); }
+.mu-main svg.i { flex: none; color: var(--muted); }
+.mu-help ul { margin: 4px 0 0 18px; padding: 0; display: grid; gap: 3px; }
+.mu-fails { margin: 0; padding-left: 18px; display: grid; gap: 8px; }
+.mu-chip { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 6px 12px; border-radius: 999px; border: 1px dashed var(--line); background: transparent; color: var(--muted); font-size: 13px; font-weight: 600; }
+.mu-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mu-chip:hover { color: var(--text); border-style: solid; }
+.mu-chip.on { color: var(--text); border: 1px solid var(--next); background: color-mix(in srgb, var(--next) 12%, transparent); }
+.mu-chip svg.i { width: 16px; height: 16px; flex: none; }
+@media (max-width: 760px) { .mu-time { min-width: 0; } .mu-vol { max-width: none; } }
+
+/* ---- Small player for YouTube / SoundCloud banner music (their players must stay visible) */
+.emb-mini { position: fixed; right: 12px; bottom: calc(12px + var(--bar-on, 0) * 64px); z-index: 60; width: 280px; border-radius: 12px; overflow: hidden;
+  background: var(--panel); border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+.emb-mini[hidden] { display: none; }
+.emb-head { display: flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; font-size: 12px; font-weight: 700; }
+.emb-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.emb-btn { border: 0; background: transparent; color: var(--muted); width: 26px; height: 24px; border-radius: 6px; }
+.emb-btn:hover { background: var(--raised); color: var(--text); }
+.emb-frame { aspect-ratio: 16 / 9; background: #000; }
+.emb-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+.emb-mini.tiny { width: 200px; }
+@media (max-width: 760px) { .emb-mini { width: 200px; right: 8px; bottom: calc(70px + var(--bar-on, 0) * 60px); } }
+
+/* ---- Web & PC: two parts in one tab */
+.webpc-seg button { display: inline-flex; align-items: center; gap: 6px; }
+.webpc-seg svg.i { width: 16px; height: 16px; }
+.webpc-part { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.webpc-part[hidden] { display: none; }
+.webpc-part > .toolbar { border-top: 0; }
+.webpc-part > .toolbar > h2 { display: none; }

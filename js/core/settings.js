@@ -4,7 +4,7 @@ import { emitter, lowPowerDevice } from './util.js';
 const KEY = 'selah.settings.v1'; // kept from the app's first name: existing settings carry over
 
 export const DEFAULTS = {
-  app: { theme: 'dark', railSide: 'left', monitors: true, lowPower: null, lastTab: 'bible', clickerKeys: true },
+  app: { theme: 'dark', railSide: 'left', monitors: true, lowPower: null, lastTab: 'bible', clickerKeys: true, webPart: 'web' },
   display: {
     font: 'sans', fg: '#ffffff', bg: '#000000', accent: '#f2cf7a', shadow: true, align: 'center',
     pad: 96, minFont: 58, maxFont: 150, fade: 250, transition: 'fade', aspect: 'auto',
@@ -26,6 +26,9 @@ export const DEFAULTS = {
   companion: { url: '', pin: '' },
   // Presentation clicker: buttons taught in Clicker setup ({next:['key:F14'], prev:[…], black:[…], present:[…], clear:[…]}).
   clicker: { map: {} },
+  // Background music for banners (Banners & Music → Music). auto: start when a banner or the pre-service
+  // loop goes on screen; fade: fade out when something else goes on screen.
+  bannerMusic: { auto: true, fade: true, fadeSec: 3, volume: 0.7, shuffle: false, repeat: 'all' },
   ai: { provider: 'openai', apiKey: '', model: '', imageModel: '', auto: {} },
   // The church's details, used by Banners (name, town, sunset times, service countdown, giving QR code).
   church: { name: '', town: '', lat: null, lon: null, service: '09:30', givingUrl: '', givingLabel: '' },

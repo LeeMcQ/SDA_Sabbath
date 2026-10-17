@@ -315,8 +315,8 @@ export default function create(ctx) {
     if (!next || isAudio(next) && bgMode) return;
     select(next).then(() => { const st = ctx.stagedOf('video'); if (st && st.itemId === next.id) live.take(st); });
   });
-  bgAudio.on('ended', () => {
-    if (!settings.v.video.autoNext) return;
+  bgAudio.on('ended', (owner) => {
+    if (owner !== 'video' || !settings.v.video.autoNext) return;
     const i = items.findIndex((x) => x.name === bgAudio.title);
     const next = items[i + 1] || (settings.v.video.repeat === 'all' ? items[0] : null);
     if (next && isAudio(next)) select(next).then(() => { const st = ctx.stagedOf('video'); if (st && st.run) st.run(); });
