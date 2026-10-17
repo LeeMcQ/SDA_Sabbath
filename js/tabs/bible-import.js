@@ -29,11 +29,42 @@ export function importBibleDialog(onDone) {
   const PRESETS = [['NIV', 'New International Version'], ['ESV', 'English Standard Version'], ['NKJV', 'New King James Version']];
   const presets = h('div.row.wrap', { style: { gap: '6px' } }, h('span.note', 'Quick fill:'),
     PRESETS.map(([a, n]) => h('button.btn.sm', { type: 'button', onclick: () => { abbr.value = a; name.value = n; lang.value = 'en'; } }, a)));
+  // Where the Bible files can be downloaded. The button saves the file to the Downloads folder;
+  // then choose it below. (Check that your church may use the translation.)
+  const RAW = 'https://raw.githubusercontent.com/Amosamevor/bible-json/main/versions/en/';
+  const PAGE = 'https://github.com/Amosamevor/Bible-json/tree/main/versions/en';
+  const GET = [['NIV', 'NEW INTERNATIONAL VERSION.json'], ['ESV', 'ENGLISH STANDARD VERSION.json'], ['NKJV', 'NEW KING JAMES VERSION.json']];
+  const gets = h('div.col', { style: { gap: '6px' } },
+    h('b', 'Download a Bible file'),
+    h('div.row.wrap', { style: { gap: '6px' } }, GET.map(([a, f]) => {
+      const bt = h('button.btn.sm', { type: 'button' }, a + ' (download)');
+      bt.onclick = async () => {
+        bt.disabled = true; bt.textContent = 'Downloading ' + a + '…';
+        try {
+          const r = await fetch(RAW + encodeURIComponent(f));
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          const blob = await r.blob();
+          const u = URL.createObjectURL(blob);
+          const aEl = h('a', { href: u, download: a + '.json' });
+          document.body.appendChild(aEl); aEl.click(); aEl.remove();
+          setTimeout(() => URL.revokeObjectURL(u), 10000);
+          bt.textContent = a + ' saved — now choose ' + a + '.json below';
+          abbr.value = a; name.value = PRESETS.find((x) => x[0] === a)[1]; lang.value = 'en';
+        } catch (e) {
+          bt.textContent = a + ' failed (' + e.message + ')';
+          window.open(RAW + encodeURIComponent(f), '_blank', 'noopener');
+        }
+        bt.disabled = false;
+      };
+      return bt;
+    })),
+    h('p.note', 'Needs internet. The file goes to your Downloads folder; then press “Choose file” below and pick it. ',
+      h('a', { href: PAGE, target: '_blank', rel: 'noopener' }, 'See all files on GitHub'), '.'));
   modal({
     title: 'Add a Bible translation',
     body: h('div.col',
       h('p.note.warn', 'Only add translations your church is licensed to use. NIV is © Biblica, ESV is © Crossway, NKJV is © Thomas Nelson, and the 1975 Xhosa Bible is © Bible Society of South Africa. The app cannot include them; choose a file you are licensed to use (see Supported below).'),
-      presets,
+      gets, presets,
       file, h('div.form', h('label', 'Short name'), abbr, h('label', 'Full name'), name, h('label', 'Language (book names)'), lang), status),
     actions: [{ label: 'Cancel' }, {
       label: 'Add Bible', primary: true, onclick: async () => {
