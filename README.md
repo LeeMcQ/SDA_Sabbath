@@ -11,8 +11,7 @@ Progressive Web App: install it once and it runs with **no internet**, on old PC
 │ Banners│                                                         │ Black · Logo · Clear     │
 │ Slides │                                                         │                          │
 │ Video  │                                                         │                          │
-│ Web    │                                                         │                          │
-│ PC view│                                                         │                          │
+│ Web&PC │                                                         │                          │
 │ Plan   │                                                         │                          │
 └────────┴─────── control bar while something is live (adapts to Bible / hymn / video …) ─────┘
 ```
@@ -28,10 +27,9 @@ Nothing reaches the projector until **Present** (F5 or Ctrl+Enter). Each tab kee
 | **Hymns** | Type the number or words. Title slide, one stanza per slide, chorus repeated automatically, choose which stanzas to sing (1, 2, 4). Jump to any stanza from the control bar. Edit or add hymns; import or export hymnbooks. |
 | **Slides** | PDF, PowerPoint (.pptx) and pictures. Converted once on import and kept offline. Speaker notes shown to the operator. Auto-advance loop for announcements. |
 | **Video** | VLC-style player: playlist with auto-next and repeat, speed 0.25×–4×, A-B repeat, loop, frame step, fade in/out, volume boost to 200 %, 10-band equaliser with presets, fit/fill/stretch, zoom, rotate, mirror, brightness/contrast/colour/hue, .srt/.vtt subtitles, snapshots. Music can play **in the background** while lyrics stay on screen. |
-| **Web** | **Mirror a tab** — the projector shows exactly that browser tab, without the mouse pointer (scroll/zoom it from SDA Sabbath in Chrome). **Embed** — YouTube and embeddable sites load directly on the display. |
-| **PC view** | Share the whole screen, one window (e.g. PowerPoint or a Bible app) or a tab; see it live inside SDA Sabbath. **Freeze** keeps the last picture up while you work privately. The **mini controller** floats on top of other programs. |
+| **Web & PC** | Two parts in one tab. **Web page:** *Mirror a tab* — the projector shows exactly that browser tab, without the mouse pointer (scroll/zoom it from SDA Sabbath in Chrome); *Embed* — YouTube and embeddable sites load directly on the display. **PC screen:** share the whole screen, one window (e.g. PowerPoint or a Bible app) or a tab; see it live inside SDA Sabbath. **Freeze** keeps the last picture up while you work privately. The **mini controller** floats on top of other programs. |
 | **Plan** | Prepare the order of service at home (one-tap Divine Service, Sabbath School and Vespers templates, or **your own templates**: build a plan once, then ⋯ → Save as template, with or without its hymns and readings, and make it the default for new plans). Type in the Add box — “hymn 73”, “Amazing grace”, “John 3:16-18”, a slide deck, video or banner name — and pick a suggestion, or use **Add media…** (Bible verse ranges and whole chapters, hymns and choruses by number or words, slides, video, banners, web pages; new files can be added right there). Attach or change the media of each part while it keeps its name (“Opening Hymn — Hymn 73”), rename parts, add who leads them, drag parts into order, see progress and what is **On screen**, undo a removal, copy the order as text, export it, and step through it in church with **Next part** (it becomes Next; Present shows it). |
-| **Banners** | Welcome, verse, announcement, offering (with giving QR code), countdown and Sabbath-sunset banners drawn live on the display; a self-running pre-service loop; key verses for the 28 Fundamental Beliefs and sermon topics. See [Banners](#banners). |
+| **Banners & Music** | Welcome, verse, announcement, offering (with giving QR code), countdown and Sabbath-sunset banners drawn live on the display; a self-running pre-service loop; **background music** that starts with the banners and fades out when something else goes on screen; key verses for the 28 Fundamental Beliefs and sermon topics. See [Banners](#banners) and [Banner music](#banner-music). |
 | **Settings** | Fonts (Atkinson Hyperlegible, serif), colours, background picture, logo, margins, text sizes, fade/cut, 4:3 projectors, light/dark theme, tabs left or right, low-power mode, backups, Bibles, church details, online AI. |
 
 **Live translation** (sermon → captions in another language) is planned; the caption line is already
@@ -48,7 +46,7 @@ built into the display.
 | L | Logo |
 | Esc or C | Clear the screen |
 | / or Ctrl+K | Go to a reference or hymn number |
-| Alt+1 … Alt+9 | Switch tabs (Bible, Hymns, Banners, Slides, Video, Web, PC view, Plan, Tools) |
+| Alt+1 … Alt+9 | Switch tabs (Bible, Hymns, Banners & Music, Slides, Video, Web & PC, Plan, Tools, Settings) |
 | F (on the projector window) | Full screen on/off |
 
 Presentation clickers (Logitech, Targus, Norwii and the like) send Page Up / Page Down, so they work out of the
@@ -233,7 +231,7 @@ css/                         app.css (control UI), stage.css (projector + monito
 js/app.js                    tabs, Present, display menu, shortcuts, service worker
 js/core/                     render (text fitting), live (Next/Live), link (display connections),
                              wire (network protocol), books (reference parser), bibledata, db, settings, ui
-js/tabs/                     bible, hymns, banners (ai.js), slides, video, web, screen (PC view), plan, tools, settings
+js/tabs/                     bible, hymns, banners & music (ai.js, banner-music.js), slides, video, web & PC (webpc.js: web.js + screen.js), plan, tools, settings
 js/lib/                      pdf (pdf.js wrapper), pptx renderer, screen capture, subtitles
 js/display/display.js        projector renderer (also used for "this device" and Cast)
 data/bibles/<id>/            info.json + 01.json … 66.json per translation
@@ -245,7 +243,8 @@ js/core/hymnmusic.js         music controller: this device, or the PC display wh
 js/core/bannerframe.js       banner slides on the display (palettes, countdown, corner clock)
 js/core/church.js            church details, Sabbath date and offline sunset times
 js/core/ai.js                optional online AI (text, background pictures, model lists)
-js/tabs/ai.js                Banners tab (make, saved, pre-service loop, topics, Ask AI)
+js/tabs/ai.js                Banners & Music tab (make, saved, pre-service loop, music, topics, Ask AI)
+js/core/bgmusic.js           Banner music: music list, players (files, MIDI, streams, YouTube, SoundCloud), start/fade rules
 js/tabs/ai-full.js           the “full banner” AI picture maker
 js/core/lyrics.js            online lyrics finder: sources, ranking, stanza/chorus detection
 data/topics/topics.json      key verses for the 28 Fundamental Beliefs and sermon topics
@@ -309,6 +308,24 @@ Like every other tab, nothing in **Banners** reaches the projector until **Prese
   topics can be added to the service plan.
 
 Service plans can link banners, the pre-service loop and topic verses (Plan → Add media… → Banner).
+
+## Banner music
+
+**Banners & Music → Music** keeps a list of background music for the banners and the pre-service loop.
+
+- **When a banner or the pre-service loop goes on screen** the music fades in and plays the list (shuffle, repeat
+  all / one / once). **When something else goes on screen** (hymn, Bible, slides, video) it fades out (1–8 s).
+  Both rules can be switched off; Play, Pause, Next, Previous, Fade out and Stop are always in the Music view and
+  in the bottom bar.
+- **Music files** are kept on the device and play offline: MP3, M4A/AAC, WAV, OGG, Opus, FLAC, WebM, the sound of
+  MP4/MOV videos, **AIFF** (converted to WAV when added) and **MIDI** (played with the hymn instruments). Formats
+  browsers cannot play (WMA, AMR, APE …) are refused with a note to convert them (Audacity or VLC).
+- **Online links**: internet radio streams (Icecast/Shoutcast, `.m3u`, `.pls`, HLS `.m3u8`), direct links to music
+  files, **YouTube** videos and playlists and **SoundCloud** (these play in a small player in the corner, as
+  their terms require). Spotify, Apple Music, Deezer and similar open in their own window: they do not allow other
+  apps to play their music. Streams that start with `http://` are blocked by browsers on the https site.
+- The music plays from the control PC's speakers (or the sound system connected to it). Only play music your
+  church may play in public.
 
 ## Online AI (optional)
 

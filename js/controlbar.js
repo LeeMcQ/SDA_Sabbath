@@ -90,19 +90,25 @@ export function createControlBar(el, getTab) {
   function renderAudio(st) {
     audioBox.hidden = !bgAudio.active;
     if (!bgAudio.active) { clear(audioBox); audioUi = null; return; }
-    if (!audioUi) {
+    const hasQueue = !!bgAudio.queue;
+    if (!audioUi || audioUi.hasQueue !== hasQueue) {
       clear(audioBox);
-      const playB = btn('pause', 'Play / pause audio', () => bgAudio.toggle(), { cls: 'sm' });
+      const playB = btn('pause', 'Play / pause the music', () => bgAudio.toggle(), { cls: 'sm' });
       const tm = h('span.tm.cb-sub', '');
       const ttl = h('span.cb-sub.trunc', { style: { maxWidth: '140px' } }, bgAudio.title);
-      audioBox.append(icon('music'), ttl, playB, tm,
-        btn('fade', 'Fade out audio', () => bgAudio.fadeOut(3000), { cls: 'sm' }),
-        btn('stop', 'Stop audio', () => bgAudio.stop(), { cls: 'sm' }));
-      audioUi = { playB, tm, ttl };
+      audioBox.append(icon('music'), ttl,
+        hasQueue ? btn('prev', 'Previous piece', () => bgAudio.queue && bgAudio.queue.prev(), { cls: 'sm' }) : '',
+        playB,
+        hasQueue ? btn('next', 'Next piece', () => bgAudio.queue && bgAudio.queue.next(), { cls: 'sm' }) : '',
+        tm,
+        btn('fade', 'Fade out the music', () => bgAudio.fadeOut(3000), { cls: 'sm' }),
+        btn('stop', 'Stop the music', () => bgAudio.stop(), { cls: 'sm' }));
+      audioUi = { playB, tm, ttl, hasQueue };
     }
     if (st) {
       audioUi.ttl.textContent = st.title;
-      audioUi.tm.textContent = fmtTime(st.time) + ' / ' + fmtTime(st.dur);
+      audioUi.ttl.title = st.title;
+      audioUi.tm.textContent = st.live || !st.dur ? 'Live' : fmtTime(st.time) + ' / ' + fmtTime(st.dur);
       audioUi.playB.replaceChildren(icon(st.paused ? 'play' : 'pause'));
     }
   }

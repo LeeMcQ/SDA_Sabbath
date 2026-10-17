@@ -30,6 +30,20 @@ def collect():
     return files
 
 
+# The oldest js/app.js this repository accepts. Editing an old copy of the app (for example in another
+# tool or session) and pushing it would silently undo newer work, so the build stops instead.
+MIN_APP_VERSION = (1, 3, 0)
+
+
+def check_app_version():
+    src = open(os.path.join(ROOT, 'js', 'app.js'), encoding='utf-8').read()
+    m = re.search(r"export const VERSION = '(\d+)\.(\d+)\.(\d+)'", src)
+    v = tuple(int(x) for x in m.groups()) if m else (0, 0, 0)
+    if v < MIN_APP_VERSION:
+        raise SystemExit('js/app.js is an older copy (version %s, this repository is at %s or newer).\n'
+                         'Get the latest main (git pull) and make the change on top of it.' % ('.'.join(map(str, v)), '.'.join(map(str, MIN_APP_VERSION))))
+
+
 def check_syntax():
     """Refuse to stamp a build when any app script has a syntax error (it would break a tab for everyone)."""
     import shutil
@@ -49,6 +63,7 @@ def check_syntax():
 
 
 def main():
+    check_app_version()
     check_syntax()
     if '--bibles' in sys.argv:
         subprocess.check_call([sys.executable, os.path.join(ROOT, 'tools', 'build_bibles.py'), '--licensed'])

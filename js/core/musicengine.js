@@ -189,6 +189,34 @@ export class MusicEngine {
     this._state();
   }
 
+  /** Play any MIDI file (banner background music) with the same instruments. bytes: Uint8Array. */
+  async playMidi(bytes, { title = 'MIDI', volume } = {}, onProgress) {
+    await this.init(onProgress);
+    clearTimeout(this._idleT); clearTimeout(this._fadeT); this._fadeT = null;
+    if (this.ctx.state !== 'running') await this.ctx.resume();
+    const seq = this.seq;
+    if (this.playing) { seq.pause(); this.synth.stopAll(true); }
+    this.arr = { sections: [], duration: 0 };
+    this.req = { title, n: null, book: null };
+    this.synth.setSystemParameter('interpolationType', 2);
+    this.synth.setSystemParameter('voiceCap', 256);
+    this.gain.gain.cancelScheduledValues(this.ctx.currentTime);
+    if (volume != null) this.volume = volume;
+    this.gain.gain.setValueAtTime(this.volume, this.ctx.currentTime);
+    this.setKey(0);
+    const buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+    seq.loadNewSongList([{ binary: buf, fileName: title + '.mid' }]);
+    seq.playbackRate = this.rate = 1;
+    seq.currentTime = 0;
+    seq.play();
+    this.playing = true; this.paused = false;
+    const arr = this.arr;
+    const grab = () => { if (this.arr === arr && isFinite(seq.duration) && seq.duration > 0) arr.duration = seq.duration; };
+    setTimeout(grab, 200); setTimeout(grab, 1200);
+    this._startTicker();
+    this._state();
+  }
+
   _startTicker() {
     clearInterval(this._tick);
     this._tick = setInterval(() => { if (this.playing) this._state(); else clearInterval(this._tick); }, 250);
