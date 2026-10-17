@@ -310,8 +310,8 @@ export function createDisplay(root, { post, self = false } = {}) {
       case 'fullscreen':
         try {
           const el = document.documentElement;
-          if (el.requestFullscreen) el.requestFullscreen({ navigationUI: 'hide' });
-          else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+          const r = el.requestFullscreen ? el.requestFullscreen({ navigationUI: 'hide' }) : el.webkitRequestFullscreen ? el.webkitRequestFullscreen() : null;
+          if (r && r.catch) r.catch(() => { /* the browser wants a click on the display first */ });
         } catch (e) { /* needs a user gesture */ }
         break;
     }
