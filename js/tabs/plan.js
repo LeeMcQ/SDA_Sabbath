@@ -3,7 +3,7 @@
 // passage, hymn or chorus, slides, a video, a web page or a banner.
 import { h, clear, uid, readText, download, debounce } from '../core/util.js';
 import { icon } from '../core/icons.js';
-import { btn, menu, toast, promptBox, confirmBox, modal, closeModal, activatable, emptyState } from '../core/ui.js';
+import { btn, menu, toast, promptBox, confirmBox, modal, closeModal, activatable, emptyState, toggle } from '../core/ui.js';
 import { db } from '../core/db.js';
 import { parseRef, refText, EN } from '../core/books.js';
 import { getInfo, versesFor, listTranslations } from '../core/bibledata.js';
@@ -57,6 +57,8 @@ export default function create(ctx) {
     { label: 'New plan…', icon: 'plus', onclick: newPlan },
     { label: 'Rename', icon: 'edit', onclick: renamePlan, disabled: !plan },
     { label: 'Duplicate this plan', icon: 'copy', onclick: duplicatePlan, disabled: !plan },
+    { label: 'Save as template…', icon: 'save', onclick: saveAsTemplate, disabled: !plan || !plan.items.length },
+    { label: 'Templates…', icon: 'star', onclick: manageTemplates },
     { label: 'Copy the order of service (text)', icon: 'copy', onclick: copyOrder, disabled: !plan },
     { label: 'Mark all as not shown', icon: 'reload', onclick: () => { if (plan) { plan.items.forEach((i) => { i.done = false; }); save(); render(); } }, disabled: !plan },
     { label: plan && plan.autoAdvance ? 'Auto-advance: on' : 'Auto-advance: off', icon: 'next', onclick: toggleAuto, disabled: !plan },
@@ -121,19 +123,117 @@ export default function create(ctx) {
   const save = () => { if (plan) { plan.updated = Date.now(); return db.put('plans', plan.id, plan); } };
 
   const today = () => 'Sabbath ' + new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  // ------------------------------------------------------------ templates (ready-made and your own)
+  // Keys: 'b:<name>' for the ready-made orders above, 'c:<id>' for templates saved on this device.
+  let myTpls = [];
+  let defTpl = 'b:Divine Service';
+  async function loadTpls() {
+    const r = await db.get('kv', 'plan-templates').catch(() => null);
+    myTpls = r && Array.isArray(r.list) ? r.list.filter((t) => t && t.id && typeof t.name === 'string' && Array.isArray(t.items)) : [];
+    defTpl = (r && r.def) || 'b:Divine Service';
+    if (!tplByKey(defTpl)) defTpl = 'b:Divine Service';
+  }
+  const saveTpls = () => db.put('kv', 'plan-templates', { list: myTpls, def: defTpl });
+  function allTpls() {
+    return myTpls.map((t) => ({ key: 'c:' + t.id, name: t.name, count: t.items.length, mine: true }))
+      .concat(Object.keys(TEMPLATES).map((k) => ({ key: 'b:' + k, name: k, count: TEMPLATES[k].length, mine: false })));
+  }
+  const tplByKey = (key) => allTpls().find((t) => t.key === key) || null;
+  const keyOf = (t) => (/^[bc]:/.test(t) ? t : 'b:' + t);
+
   function makePlan(name, template) {
-    const items = (TEMPLATES[template] || []).map((label) => ({ id: uid(), tab: 'note', heading: true, part: label, label }));
+    const key = keyOf(template || 'b:Empty plan');
+    let items;
+    if (key.startsWith('c:')) {
+      const t = myTpls.find((x) => 'c:' + x.id === key);
+      items = t ? JSON.parse(JSON.stringify(t.items)) : [];
+      items.forEach((it) => { it.id = uid(); delete it.done; });
+    } else items = (TEMPLATES[key.slice(2)] || []).map((label) => ({ id: uid(), tab: 'note', heading: true, part: label, label }));
     return { id: uid(), name, items, updated: Date.now() };
+  }
+
+  /** Save the open plan as a template: its parts, who leads them and (if wanted) the media attached. */
+  function saveAsTemplate() {
+    if (!plan) return;
+    const base = plan.name.replace(/^Sabbath\s+\d{1,2}\s+\w+\.?$/i, '').trim();
+    const name = h('input.field', { value: base || 'Our Divine Service', placeholder: 'e.g. Our Divine Service, Communion Sabbath' });
+    let keep = true, makeDef = !myTpls.length;
+    const same = () => myTpls.find((t) => low(t.name) === low(name.value.trim()));
+    const note = h('p.note', '');
+    const paintNote = () => { note.textContent = same() ? 'A template with this name exists — it will be updated.' : ''; };
+    name.addEventListener('input', paintNote);
+    const body = h('div.col', { style: { gap: '10px' } },
+      h('p.note', 'New plans can start from this order: ' + plan.items.length + ' part' + (plan.items.length === 1 ? '' : 's') + '. Change the template any time by saving again with the same name.'),
+      h('label.muted', 'Template name'), name, note,
+      toggle('Keep the attached media (hymns, readings, slides, videos, banners)', keep, (v) => { keep = v; }, 'Off: only the part names and who leads them'),
+      toggle('Use it for new plans (default)', makeDef, (v) => { makeDef = v; }));
+    paintNote();
+    modal({ title: 'Save as template', body, actions: [{ label: 'Cancel' }, { label: 'Save template', primary: true, onclick: async () => {
+      const nm = name.value.trim();
+      if (!nm) { toast('Give the template a name.', 'err'); return false; }
+      if (TEMPLATES[nm]) { toast('“' + nm + '” is a ready-made order. Choose another name.', 'err'); return false; }
+      const items = plan.items.map((it) => {
+        const c = JSON.parse(JSON.stringify(it));
+        delete c.done; delete c.id;
+        if (!keep && !c.heading) { const t = titleOf(it); MEDIA_KEYS.forEach((k) => { delete c[k]; }); Object.assign(c, { tab: 'note', heading: true, part: t, label: t }); }
+        return c;
+      });
+      const old = same();
+      if (old) Object.assign(old, { name: nm, items, updated: Date.now() });
+      else myTpls.unshift({ id: uid(), name: nm, items, updated: Date.now() });
+      const t = old || myTpls[0];
+      if (makeDef) defTpl = 'c:' + t.id;
+      await saveTpls();
+      render();
+      toast((old ? 'Template updated: ' : 'Template saved: ') + nm + (makeDef ? ' (default for new plans)' : '') + '.', 'ok', 3500);
+      return true;
+    } }] });
+    setTimeout(() => { name.focus(); name.select(); }, 40);
+  }
+
+  /** List of templates: choose the default, rename or delete your own. */
+  function manageTemplates() {
+    const list = h('div.col.tpl-list');
+    const paint = () => {
+      clear(list);
+      allTpls().forEach((t) => {
+        const isDef = t.key === defTpl;
+        list.appendChild(h('div.tpl-row' + (isDef ? '.def' : ''),
+          h('span.grow', h('div.trunc', h('b', t.name), isDef ? h('span.pi-badge.next', { style: { marginLeft: '8px' } }, 'Default') : null),
+            h('div.note', t.count + ' part' + (t.count === 1 ? '' : 's') + (t.mine ? ' · yours' : ' · ready-made'))),
+          h('div.row', { style: { gap: '4px' } },
+            isDef ? null : h('button.btn.sm', { type: 'button', title: 'Start new plans from this template', onclick: async () => { defTpl = t.key; await saveTpls(); paint(); render(); } }, icon('star'), h('span', 'Make default')),
+            h('button.btn.sm', { type: 'button', title: 'Make a new plan from this template now', onclick: async () => { closeModal(); await createFromTemplate(t.key); } }, icon('plus'), h('span.hide-sm', 'New plan')),
+            t.mine ? btn('edit', 'Rename', async () => {
+              const tt = myTpls.find((x) => 'c:' + x.id === t.key);
+              const n = await promptBox('Rename template', 'Name', tt.name);
+              if (n && n.trim() && !TEMPLATES[n.trim()]) { tt.name = n.trim(); await saveTpls(); }
+              manageTemplates();
+            }, { cls: 'sm' }) : null,
+            t.mine ? btn('trash', 'Delete', async () => {
+              const ok = await confirmBox('Delete template?', 'Delete the template “' + t.name + '”? Plans made from it stay.', 'Delete', true);
+              if (ok) { myTpls = myTpls.filter((x) => 'c:' + x.id !== t.key); if (defTpl === t.key) defTpl = 'b:Divine Service'; await saveTpls(); render(); }
+              manageTemplates();
+            }, { cls: 'sm' }) : null)));
+      });
+    };
+    paint();
+    modal({ title: 'Plan templates', body: h('div.col', { style: { gap: '10px' } },
+      h('p.note', 'New plans start from the default template. To make your own: build a plan the way your church does it, then Plan options (⋯) → Save as template.'),
+      list), actions: [{ label: 'Close' }] });
   }
   async function storeNew(p) { await db.put('plans', p.id, p); await db.put('kv', 'plan-current', p.id); await load(); }
 
   async function newPlan() {
     const body = h('div.col');
     const name = h('input.field', { value: today() });
-    let tpl = 'Divine Service';
+    let tpl = defTpl;
     const tplList = h('div.row.wrap');
-    Object.keys(TEMPLATES).forEach((k) => tplList.appendChild(h('button.chip', { type: 'button', 'aria-pressed': String(k === tpl), onclick: (e) => { tpl = k; Array.from(tplList.children).forEach((c) => c.setAttribute('aria-pressed', String(c === e.currentTarget))); } }, k)));
-    body.append(h('label.muted', 'Name'), name, h('label.muted', 'Start from'), tplList);
+    allTpls().forEach((t) => tplList.appendChild(h('button.chip', { type: 'button', 'aria-pressed': String(t.key === tpl), title: t.count + ' parts' + (t.key === defTpl ? ' · default' : ''),
+      onclick: (e) => { tpl = t.key; Array.from(tplList.children).forEach((c) => c.setAttribute('aria-pressed', String(c === e.currentTarget))); } },
+      t.key === defTpl ? icon('star') : null, t.name)));
+    body.append(h('label.muted', 'Name'), name, h('label.muted', 'Start from'), tplList,
+      h('button.btn.sm', { type: 'button', style: { alignSelf: 'flex-start' }, onclick: () => manageTemplates() }, icon('edit'), h('span', 'Manage templates…')));
     modal({ title: 'New service plan', body, actions: [{ label: 'Cancel' }, { label: 'Create', primary: true, onclick: () => storeNew(makePlan(name.value.trim() || 'Service', tpl)) }] });
   }
   async function renamePlan() { const n = await promptBox('Rename plan', 'Name', plan.name); if (n && n.trim()) { plan.name = n.trim(); await save(); await load(); } }
@@ -295,10 +395,11 @@ export default function create(ctx) {
     // No plan yet: nothing to step through, so no Next / Previous item buttons.
     nextBtn.hidden = prevBtn.hidden = planSel.hidden = !plan;
     if (!plan) {
-      listEl.appendChild(emptyState('plan', 'No service plan yet', 'Prepare the order of service before Sabbath: Bible readings, hymns, slides and videos in the order you need them. Start from a ready-made order:',
-        { label: 'Divine Service', icon: 'plus', primary: true, onclick: () => createFromTemplate('Divine Service') }));
+      const dt = tplByKey(defTpl) || tplByKey('b:Divine Service');
+      listEl.appendChild(emptyState('plan', 'No service plan yet', 'Prepare the order of service before Sabbath: Bible readings, hymns, slides and videos in the order you need them. Start from a ready-made order or one of your own:',
+        { label: dt.name, icon: 'plus', primary: true, onclick: () => createFromTemplate(dt.key) }));
       const alt = h('div.row.wrap.plan-tpls');
-      Object.keys(TEMPLATES).filter((k) => k !== 'Divine Service' && k !== 'Empty plan').forEach((k) => alt.appendChild(h('button.btn', { type: 'button', onclick: () => createFromTemplate(k) }, k)));
+      allTpls().filter((t) => t.key !== dt.key && t.key !== 'b:Empty plan').forEach((t) => alt.appendChild(h('button.btn', { type: 'button', onclick: () => createFromTemplate(t.key) }, t.mine ? icon('star') : null, h('span', t.name))));
       alt.appendChild(h('button.btn', { type: 'button', onclick: newPlan }, icon('plus'), h('span', 'New plan…')));
       listEl.lastChild.appendChild(alt);
       return;
@@ -695,6 +796,6 @@ export default function create(ctx) {
     onShow() { render(); },
     open() { return null; },
   };
-  const ready = load();
+  const ready = loadTpls().catch(() => {}).then(load);
   return api;
 }
