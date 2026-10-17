@@ -326,6 +326,8 @@ export default function create(ctx) {
   let offMedia = null;
   const api = {
     el,
+    /** Add files from another tab (Plan): resolves once they are in the playlist. */
+    async importFiles(files) { await ready; const before = new Set(items.map((x) => x.id)); await addFiles(files); return items.filter((x) => !before.has(x.id)); },
     async open({ item }) {
       await ready;
       await ctx.showTab('video');

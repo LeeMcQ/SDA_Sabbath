@@ -699,6 +699,14 @@ export default function create(ctx) {
       order.forEach((b) => b.hymns.forEach((x) => { if (x.n === n) out.push({ n: x.n, t: x.t, book: b.short || b.name, bookId: b.id }); }));
       return out;
     },
+    /** Hymns and choruses in every book (the open book first) whose number, title or words match. */
+    searchAll(qq, k = 20) {
+      const out = [];
+      const order = [book].concat(books.filter((b) => b !== book)).filter(Boolean);
+      for (const b of order) for (const x of b.hymns) { if (matches(x, qq)) { out.push({ n: x.n, t: x.t, book: b.short || b.name, bookId: b.id }); if (out.length >= k) return out; } }
+      return out;
+    },
+    whenReady() { return ready; },
     search(qq, k = 5) {
       const out = [];
       if (!book) return out;
