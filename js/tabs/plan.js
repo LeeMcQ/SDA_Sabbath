@@ -275,7 +275,45 @@ export default function create(ctx) {
     if (it.tab === 'ai') return it.loop ? 'Pre-service loop' : it.topic ? 'Bible verses' + (it.tr ? ' · ' + it.tr.toUpperCase() : '') : 'Banner';
     return (KIND_NAME[it.tab] || '') + (it.tab === 'bible' && it.tr ? ' · ' + it.tr.toUpperCase() : '');
   }
+  const KIND_COLOR = { bible: '#3b82f6', hymns: '#8b5cf6', slides: '#f59e0b', video: '#ef4444', web: '#06b6d4', ai: '#10b981', note: '#6b7280' };
   const ICONS = { bible: 'bible', hymns: 'hymn', slides: 'slides', video: 'video', web: 'web', ai: 'banner' };
+  function kindColor(it) { return KIND_COLOR[it.heading ? 'note' : it.tab] || KIND_COLOR.note; }
+
+  function previewTile(it) {
+    const col = kindColor(it);
+    const tile = h('div.pi-tile', { style: { background: col + '22', borderColor: col }, title: kindText(it) || 'Part' });
+    if (it.heading) {
+      tile.appendChild(h('span.pi-tile-t', '—'));
+      return tile;
+    }
+    if (it.tab === 'bible') {
+      tile.appendChild(h('span.pi-tile-t', it.ref || 'Bible'));
+    } else if (it.tab === 'hymns') {
+      tile.appendChild(h('span.pi-tile-t', it.n ? String(it.n) : '♪'));
+      tile.appendChild(h('span.pi-tile-s', 'Hymn'));
+    } else if (it.tab === 'slides') {
+      tile.appendChild(h('span.pi-tile-t', icon('slides')));
+      // Fill with first-slide thumbnail when available.
+      if (it.deck) {
+        db.get('renders', it.deck + '/0').then((r) => {
+          if (r && r.thumb) {
+            const u = URL.createObjectURL(r.thumb);
+            tile.textContent = '';
+            tile.appendChild(h('img', { src: u, alt: '', onload: () => setTimeout(() => URL.revokeObjectURL(u), 2000) }));
+          }
+        }).catch(() => {});
+      }
+    } else if (it.tab === 'video') {
+      tile.appendChild(h('span.pi-tile-t', icon('video')));
+    } else if (it.tab === 'ai') {
+      tile.appendChild(h('span.pi-tile-t', icon('banner')));
+    } else if (it.tab === 'web') {
+      tile.appendChild(h('span.pi-tile-t', icon('web')));
+    } else {
+      tile.appendChild(h('span.pi-tile-t', icon(itemIcon(it))));
+    }
+    return tile;
+  }
   const itemIcon = (it) => (it.heading ? 'info' : it.loop ? 'loop' : ICONS[it.tab] || 'info');
 
   // Which plan item is on the screen now (so the row can say "On screen"), and which was put on Next.
@@ -410,9 +448,10 @@ export default function create(ctx) {
       const isNext = !now && !it.heading && live.staged && shownCue.get(it.id) === live.staged.id;
       const more = btn('more', 'More for this part', (e) => { e.stopPropagation(); itemMenu(more, it, i); }, { cls: 'sm' });
       const media = mediaLabel(it);
-      const row = h('div.plan-item' + (i === cur ? '.cur' : '') + (it.done ? '.done' : '') + (now ? '.now' : '') + (it.heading ? '.is-head' : ''), {
+      const row = h('div.plan-item.kind-' + (it.heading ? 'note' : it.tab) + (i === cur ? '.cur' : '') + (it.done ? '.done' : '') + (now ? '.now' : '') + (it.heading ? '.is-head' : ''), {
         draggable: 'true', 'data-id': it.id,
         title: it.heading ? 'Use Attach to add media to this part' : 'Click: put on Next · Double-click: present now',
+        style: { '--kind': kindColor(it) },
         onclick: () => select(i),
         ondblclick: () => presentItem(i),
         ondragstart: (e) => { dragFrom = i; try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(i)); } catch (x) { /* */ } },
@@ -422,6 +461,7 @@ export default function create(ctx) {
         ondragend: () => { dragFrom = -1; listEl.querySelectorAll('.drag-over').forEach((x) => x.classList.remove('drag-over')); },
       },
       h('span.pi-n', String(i + 1)),
+      previewTile(it),
       h('div', { style: { minWidth: 0 } },
         h('div.pi-t', icon(itemIcon(it)), h('span.trunc', titleOf(it)),
           now ? h('span.pi-badge.live', 'On screen') : isNext ? h('span.pi-badge.next', 'Next') : null,

@@ -308,8 +308,12 @@ input[type=range] { accent-color: var(--next); }
 .web-frame { flex: 1; min-height: 240px; border: 0; background: #fff; width: 100%; }
 .cap-prev { position: relative; flex: 1; min-height: 200px; background: #000; }
 .cap-prev video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
-.plan-item { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line); min-height: 52px; }
+.plan-item { display: grid; grid-template-columns: 28px 52px 1fr auto; gap: 10px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); min-height: 56px; border-left: 3px solid var(--kind, transparent); }
 .plan-item .pi-n { color: var(--faint); font-weight: 700; text-align: right; }
+.plan-item .pi-tile { width: 52px; height: 40px; border-radius: 6px; border: 1px solid; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; flex: none; }
+.plan-item .pi-tile img { width: 100%; height: 100%; object-fit: cover; }
+.plan-item .pi-tile-t { font-size: 11px; font-weight: 700; line-height: 1.1; text-align: center; max-width: 48px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-item .pi-tile-s { font-size: 9px; opacity: .7; }
 .plan-item .pi-t { font-weight: 700; }
 .plan-item .pi-s { color: var(--muted); font-size: 13px; }
 .plan-item.cur { background: var(--next-soft); box-shadow: inset 3px 0 0 var(--next); }
@@ -635,7 +639,7 @@ google-cast-launcher, .cast-button, [aria-label*="Cast"], button[title*="Cast"],
 .plan-bar i { display: block; height: 100%; background: var(--next); border-radius: 99px; transition: width .25s; }
 .plan-open { color: var(--next); }
 .plan-item .pi-t { display: flex; align-items: center; gap: 6px; }
-.plan-item .pi-t svg.i { width: 16px; height: 16px; flex: 0 0 auto; color: var(--muted); }
+.plan-item .pi-t svg.i { width: 16px; height: 16px; flex: 0 0 auto; color: var(--kind, var(--muted)); }
 .plan-item.is-head .pi-t { color: var(--muted); font-weight: 600; }
 .plan-item.now { background: color-mix(in srgb, var(--live, #e5484d) 12%, transparent); box-shadow: inset 3px 0 0 var(--live, #e5484d); }
 .plan-item.drag-over { box-shadow: inset 0 3px 0 var(--next); }
