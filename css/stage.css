@@ -113,7 +113,7 @@
 .fb-title { font-weight: 700; }
 .f-banner.serif .fb-title { font-weight: 600; }
 .fb-text { font-size: .5em; font-weight: 400; line-height: var(--bn-space, 1.32); margin-top: .55em; opacity: .95; }
-.f-banner { position: relative; --bn-size: 1; }
+.f-banner { --bn-size: 1; }
 .f-banner .fb-title, .f-banner .fb-text { transform: scale(var(--bn-size)); transform-origin: center top; }
 .f-banner.bold-title .fb-title { font-weight: 800; }
 .f-banner.italic-title .fb-title { font-style: italic; }

@@ -213,7 +213,7 @@ export default function create(ctx) {
     const fr = { kind: 'banner', tpl: b.tpl, pal: s.pal || 'navy', deco: s.deco || 'none', pos: s.pos || 'center', font: s.font || 'sans',
       kicker: f.kicker || '', title: f.title || '', text: f.text || '', mark: !!x.mark,
       textSize: s.textSize || 100, textBold: !!s.textBold, textItalic: !!s.textItalic, textSpacing: s.textSpacing || 1.24,
-      layout: s.layout || null };
+      layout: s.layout && Object.keys(s.layout).length ? s.layout : null };
     const foot = [b.tpl === 'verse' ? f.refLabel || f.ref : f.foot, x.date ? sabbathDateLine(now) : '', x.sunset ? sabbathSunsetLine(now) : '']
       .map((t) => (t || '').trim()).filter(Boolean);
     fr.foot = foot.join('  ·  ');
@@ -324,19 +324,21 @@ export default function create(ctx) {
     if (!cur.s.layout) cur.s.layout = {};
     parts.forEach((node) => {
       const part = node.dataset.part;
-      if (!cur.s.layout[part]) {
-        // Default: full width, stacked.
+      // Until the user moves something, the template's own layout is kept: the box is only saved on the first drag.
+      const saved = cur.s.layout[part];
+      let box = saved;
+      if (!box) {   // start from where the template put it
         const r = node.getBoundingClientRect(), pr = root.getBoundingClientRect();
-        cur.s.layout[part] = { x: 5, y: part === 'kicker' ? 8 : part === 'title' ? 25 : part === 'text' ? 50 : 80, w: 90, h: 0 };
+        box = { x: Math.max(0, (r.left - pr.left) / pr.width * 100), y: Math.max(0, (r.top - pr.top) / pr.height * 100), w: Math.max(15, r.width / pr.width * 100), h: 0 };
       }
-      const box = cur.s.layout[part];
+      const commit = () => { if (!cur.s.layout[part]) cur.s.layout[part] = box; };
       const handle = h('div.bn-handle', { 'data-part': part, style: { left: box.x + '%', top: box.y + '%', width: box.w + '%' } });
       const grip = h('div.bn-grip', { title: 'Drag to move' });
       const resize = h('div.bn-resize', { title: 'Drag to resize' });
       handle.append(grip, resize);
       // Drag to move.
       grip.addEventListener('pointerdown', (e) => {
-        e.preventDefault(); e.stopPropagation();
+        e.preventDefault(); e.stopPropagation(); commit();
         const pr = root.getBoundingClientRect();
         const sx = e.clientX, sy = e.clientY, ox = box.x, oy = box.y;
         const move = (ev) => {
@@ -350,7 +352,7 @@ export default function create(ctx) {
       });
       // Drag to resize width.
       resize.addEventListener('pointerdown', (e) => {
-        e.preventDefault(); e.stopPropagation();
+        e.preventDefault(); e.stopPropagation(); commit();
         const pr = root.getBoundingClientRect();
         const sx = e.clientX, ow = box.w;
         const move = (ev) => {
