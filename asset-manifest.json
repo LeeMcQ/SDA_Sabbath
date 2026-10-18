@@ -1,6 +1,6 @@
 {
-"version": "af2af3f6e969",
-"bytes": 37532472,
+"version": "2f1c64fea264",
+"bytes": 37532501,
 "files": [
 "index.html",
 "display.html",
@@ -302,7 +302,7 @@
 "manifest.webmanifest": "f2aa34a6f92b60be",
 "css/app.css": "bc4f76c847d3e8c0",
 "css/stage.css": "9ab8dfeb3eca1093",
-"js/app.js": "764058d6f99df686",
+"js/app.js": "e02271e515faa7df",
 "js/clickerui.js": "53822136e3da91ca",
 "js/controlbar.js": "6688133121f06d45",
 "js/display-main.js": "293bfdec24c97b69",
@@ -582,7 +582,7 @@
 "data/hymns/afrikaans.json": "dc4bf6056c1ff485",
 "data/hymns/choruses.json": "d60b74b946792f81",
 "data/hymns/church-1941.json": "33f8773d0195dfd6",
-"data/hymns/index.json": "2fc35c0d3b83b1e2",
+"data/hymns/index.json": "a4660e7dc5645485",
 "data/hymns/malmesbury.json": "1a812f0a662405b4",
 "data/hymns/sabbath-school.json": "e213cb712255fee4",
 "data/hymns/sda-online.json": "0b106084464cc699",
