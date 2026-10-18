@@ -183,6 +183,7 @@ export function menu(anchor, items) {
   if (anchor && anchor.matches && anchor.matches(':focus-visible')) { const fb = m.querySelector('button:not([disabled])'); if (fb) fb.focus(); }
   return m;
 }
+export const menuOpen = () => !!openMenu;
 export function closeMenu() {
   if (!openMenu) return;
   const o = openMenu; openMenu = null;

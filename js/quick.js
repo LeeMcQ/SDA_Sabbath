@@ -33,15 +33,18 @@ export function createQuick({ input, pop, wrap, getTab, showTab }) {
     render();
   }
 
+  const hint = () => h('div.note.quick-hint', h('kbd', 'Enter'), ' selects  ·  ', h('kbd', 'Shift+Enter'), ' presents now');
   function render() {
     clear(pop);
     if (!items.length) {
       pop.appendChild(h('div.note', { style: { padding: '8px 10px' } }, 'Try “John 3:16”, “Ps 23”, “Joh 3:16” or a hymn number like “73”.'));
+      pop.appendChild(hint());
       pop.hidden = false; return;
     }
     items.forEach((it, i) => pop.appendChild(h('button', { type: 'button', role: 'option', 'aria-selected': String(i === sel),
       onmousedown: (e) => { e.preventDefault(); choose(i, e.ctrlKey || e.metaKey); } },
     h('span.k', it.kind), h('span.grow', it.label), it.sub ? h('span.faint', it.sub) : null)));
+    pop.appendChild(hint());
     pop.hidden = false;
   }
 

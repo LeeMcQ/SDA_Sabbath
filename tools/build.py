@@ -62,11 +62,27 @@ def check_syntax():
         raise SystemExit('Syntax error, build stopped:\n  ' + '\n  '.join(bad))
 
 
+def stamp_build():
+    try:
+        build = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'], cwd=ROOT, text=True).strip()
+    except Exception:
+        build = 'dev'
+    app = os.path.join(ROOT, 'js', 'app.js')
+    asrc = open(app, encoding='utf-8').read()
+    asrc = re.sub(r"export const BUILD = '[^']*';", "export const BUILD = '%s';" % build, asrc, count=1)
+    open(app, 'w', encoding='utf-8', newline='\n').write(asrc)
+    return build
+
+
 def main():
     check_app_version()
     check_syntax()
     if '--bibles' in sys.argv:
         subprocess.check_call([sys.executable, os.path.join(ROOT, 'tools', 'build_bibles.py'), '--licensed'])
+    # Stamp the main commit hash into app.js so Settings shows it under the version. This happens before
+    # the files are hashed: otherwise app.js keeps the same hash when only the stamp changes, the service
+    # worker reuses the old copy, and About shows the previous build.
+    build = stamp_build()
     files = collect()
     h = hashlib.sha256()
     total = 0
@@ -86,15 +102,6 @@ def main():
     src = open(sw, encoding='utf-8').read()
     src = re.sub(r"const VERSION = '[^']*';", "const VERSION = '%s';" % version, src, count=1)
     open(sw, 'w', encoding='utf-8', newline='\n').write(src)
-    # Stamp the main commit hash into app.js so Settings shows it under the version.
-    try:
-        build = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'], cwd=ROOT, text=True).strip()
-    except Exception:
-        build = version
-    app = os.path.join(ROOT, 'js', 'app.js')
-    asrc = open(app, encoding='utf-8').read()
-    asrc = re.sub(r"export const BUILD = '[^']*';", "export const BUILD = '%s';" % build, asrc, count=1)
-    open(app, 'w', encoding='utf-8', newline='\n').write(asrc)
     print('SDA Sabbath build %s (%s): %d files, %.1f MB to cache offline' % (version, build, len(files), total / 1048576))
     # Pre-compressed copies for the companion (smaller .exe, faster loads over church Wi-Fi).
     import gzip, shutil
