@@ -1,6 +1,6 @@
 {
-"version": "e2ab4159f54d",
-"bytes": 37412440,
+"version": "16f096d6cf84",
+"bytes": 37413395,
 "files": [
 "index.html",
 "display.html",
@@ -301,7 +301,7 @@
 "manifest.webmanifest": "f2aa34a6f92b60be",
 "css/app.css": "bc4f76c847d3e8c0",
 "css/stage.css": "9ab8dfeb3eca1093",
-"js/app.js": "b7dfdb19e784a3c2",
+"js/app.js": "1704281e5e1e438a",
 "js/clickerui.js": "53822136e3da91ca",
 "js/controlbar.js": "6688133121f06d45",
 "js/display-main.js": "293bfdec24c97b69",
@@ -580,7 +580,7 @@
 "data/bibles/web/info.json": "82f668ae11593d76",
 "data/hymns/afrikaans.json": "dc4bf6056c1ff485",
 "data/hymns/choruses.json": "d60b74b946792f81",
-"data/hymns/church-1941.json": "853a72a2476a5c2d",
+"data/hymns/church-1941.json": "b805ae4ede2f59ac",
 "data/hymns/index.json": "192735bf0b5baa78",
 "data/hymns/malmesbury.json": "1a812f0a662405b4",
 "data/hymns/sda-online.json": "0b106084464cc699",
