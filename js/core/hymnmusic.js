@@ -3,6 +3,7 @@
 import { emitter, debounce } from './util.js';
 import { settings } from './settings.js';
 import { link } from './link.js';
+import { db } from './db.js';
 import { MusicEngine, loadIndex, planSegments, INSTRUMENTS } from './musicengine.js';
 
 export { INSTRUMENTS, planSegments };
@@ -36,8 +37,13 @@ link.on('msg', (m) => {
 
 function setState(s) { music.state = s; music.emit('state', s); }
 
-/** Index entry for a hymn (or null when there is no music for it). */
+/** Index entry for a hymn (or null when there is no music for it). Checks custom MIDI first. */
 music.entry = async (book, n) => {
+  // Custom MIDI assigned via the lyrics finder takes priority.
+  const custom = await db.get('files', 'midi:' + book + ':' + n).catch(() => null);
+  if (custom && custom.blob) {
+    return { f: 'custom', tune: custom.name || 'Custom', ok: false, custom: true, blob: custom.blob };
+  }
   const idx = await loadIndex();
   const b = idx && idx.books[book];
   return (b && b.hymns[String(n)]) || null;

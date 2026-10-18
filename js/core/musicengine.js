@@ -45,6 +45,10 @@ export function loadIndex() {
   return indexP;
 }
 async function midiBytes(book, entry) {
+  // Custom MIDI stored in the database (assigned via lyrics finder).
+  if (entry.custom && entry.blob) {
+    return new Uint8Array(await entry.blob.arrayBuffer());
+  }
   const idx = await loadIndex();
   const b = idx && idx.books[book];
   if (!b) throw new Error('No music for this hymnbook');

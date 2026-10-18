@@ -8,7 +8,7 @@ import { fitsText } from '../core/render.js';
 import { music, INSTRUMENTS } from '../core/hymnmusic.js';
 import { fmtTime } from '../core/util.js';
 import * as ai from '../core/ai.js';
-import { findSongs, lyricsOf, songFromPlain, songText, sourceLinks, matchLabel, splitQuery } from '../core/lyrics.js';
+import { findSongs, lyricsOf, songFromPlain, songText, sourceLinks, matchLabel, splitQuery, findMidi, fetchMidi } from '../core/lyrics.js';
 
 const CHORUS_RE = /^(chorus|refrain|koor|refrein|ikhorasi|c)\s*[:.]?\s*$/i;
 
@@ -523,7 +523,9 @@ export default function create(ctx) {
         const raw = await lyricsOf(c);
         if (picked !== c) return;
         const song = songFromPlain(raw);
-        openDetail({ title: c.title, author: c.artist, text: songText(song), source: c });
+        // Also look for a MIDI file.
+        const midis = await findMidi(c.title).catch(() => []);
+        openDetail({ title: c.title, author: c.artist, text: songText(song), source: c, midis });
       } catch (e) {
         if (picked !== c) return;
         openDetail({ title: c.title, author: c.artist, text: '', error: (e && e.message) || String(e), source: c });
@@ -555,6 +557,20 @@ export default function create(ctx) {
       const bookSel2 = h('select.field', { 'aria-label': 'Add to book' });
       books.forEach((bk) => bookSel2.appendChild(h('option', { value: bk.id }, bk.name)));
       bookSel2.value = books.some((b) => b.id === 'choruses') ? 'choruses' : book ? book.id : (books[0] && books[0].id) || '';
+      // MIDI picker
+      let chosenMidi = (o.midis && o.midis[0]) || null;
+      const midiBox = h('div.col', { style: { gap: '4px' } });
+      if (o.midis && o.midis.length) {
+        midiBox.appendChild(h('span.note', 'MIDI found — pick one to play with this song:'));
+        o.midis.forEach((m) => {
+          const btn = h('button.chip', { type: 'button', 'aria-pressed': String(chosenMidi === m), onclick: () => { chosenMidi = m; midiBox.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b === btn))); } },
+            m.name + ' (' + Math.round(m.score * 100) + '%)');
+          midiBox.appendChild(btn);
+        });
+        midiBox.appendChild(h('button.chip', { type: 'button', onclick: () => { chosenMidi = null; midiBox.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', 'false')); } }, 'No MIDI'));
+      } else {
+        midiBox.appendChild(h('span.note', 'No MIDI found for this title. You can still add the words.'));
+      }
       const doAdd = async (andNext) => {
         const bk = books.find((b) => b.id === bookSel2.value);
         if (!bk) { toast('Choose a book to keep it in.', 'err'); return; }
@@ -568,10 +584,18 @@ export default function create(ctx) {
         bk.hymns.push(nh); bk.hymns.sort((a, b) => a.n - b.n);
         try { await saveBookEdit(nh, true, bk, true); }
         catch (e) { bk.hymns = bk.hymns.filter((x) => x !== nh); toast('Could not save the song: ' + ((e && e.message) || e), 'err', 7000); return; }
+        // Download and store the MIDI if one was chosen.
+        if (chosenMidi && chosenMidi.url) {
+          try {
+            const blob = await fetchMidi(chosenMidi.url);
+            await db.put('files', 'midi:' + bk.id + ':' + num, { id: 'midi:' + bk.id + ':' + num, kind: 'midi', name: chosenMidi.name, blob, added: Date.now() });
+            toast('MIDI “' + chosenMidi.name + '” assigned.', 'ok', 2500);
+          } catch (e) { toast('Words saved, but MIDI could not be downloaded: ' + ((e && e.message) || e), '', 4000); }
+        }
         closeModal();
         if (book !== bk) setBook(bk.id);
         selectHymn(nh);
-        toast('“' + title + '” is saved in ' + bk.name + ' (# ' + num + ') and works offline.' + (andNext ? ' It is on the Next screen.' : ''), 'ok', 4500);
+        toast('“' + title + '” is saved in ' + bk.name + ' (# ' + num + ') and works offline.' + (andNext ? ' It is on the Next screen.' : '') + (chosenMidi ? ' MIDI assigned.' : ''), 'ok', 4500);
       };
       detail.append(
         o.error ? h('p.note.warn', o.error + ' You can paste the words below instead.') : null,
@@ -579,6 +603,7 @@ export default function create(ctx) {
         h('p.note', 'Words from ' + (o.source ? o.source.source : 'you') + '. Fix any mistakes, keep one empty line between stanzas, and start the chorus with a line “Chorus:”.'),
         h('div.form', h('label', 'Title'), titleIn, h('label', 'Singer / author'), authorIn),
         ta, sum, cards,
+        midiBox,
         h('div.form', h('label', 'Keep in'), bookSel2),
         h('p.note', 'Song words belong to their owners. Check that your church’s CCLI (or other) licence covers showing them.'),
         h('div.row.wrap',

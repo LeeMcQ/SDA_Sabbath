@@ -222,7 +222,38 @@ export function songText(p) {
   return parts.join('\n\n');
 }
 
-/** Sites to open when nothing is found (the words can then be pasted). */
+/** Search BitMidi for MIDI files matching a title. Returns {name, url, score}[]. */
+export async function findMidi(title) {
+  const q = String(title || '').trim();
+  if (!q) return [];
+  try {
+    const j = await getJson('https://bitmidi.com/api/midi/search?q=' + encodeURIComponent(q));
+    const results = (j && j.result && j.result.results) || [];
+    return results.slice(0, 8).map((x) => {
+      const name = String(x.name || '').replace(/\.mid$/i, '');
+      const qw = words(q).filter((w) => !STOP.has(w));
+      const nw = new Set(words(name));
+      const hit = qw.length ? qw.filter((w) => nw.has(w)).length / qw.length : 0;
+      return {
+        name,
+        url: 'https://bitmidi.com' + (x.downloadUrl || ''),
+        score: hit,
+        source: 'BitMidi',
+      };
+    }).filter((x) => x.url && x.score >= 0.3).sort((a, b) => b.score - a.score);
+  } catch (e) { return []; }
+}
+
+/** Download a MIDI file as a Blob. */
+export async function fetchMidi(url) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 15000);
+  try {
+    const r = await fetch(url, { signal: ctl.signal });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.blob();
+  } finally { clearTimeout(t); }
+}
 export function sourceLinks(q) {
   const e = encodeURIComponent(q);
   return [
