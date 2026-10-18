@@ -1,6 +1,6 @@
 {
-"version": "84812754388a",
-"bytes": 37415209,
+"version": "711b63859cd4",
+"bytes": 37420126,
 "files": [
 "index.html",
 "display.html",
@@ -290,9 +290,11 @@
 "data/hymns/index.json",
 "data/hymns/malmesbury.json",
 "data/hymns/sda-online.json",
+"data/music/extra.json",
 "data/music/hymnal.sf2",
 "data/music/index.json",
 "data/music/sda-online-midi.zip",
+"data/music/extra/church-1941-642.mid",
 "data/topics/topics.json"
 ],
 "hashes": {
@@ -301,7 +303,7 @@
 "manifest.webmanifest": "f2aa34a6f92b60be",
 "css/app.css": "bc4f76c847d3e8c0",
 "css/stage.css": "9ab8dfeb3eca1093",
-"js/app.js": "8ef2f7aa834c1ab6",
+"js/app.js": "0d35b577f52f152d",
 "js/clickerui.js": "53822136e3da91ca",
 "js/controlbar.js": "6688133121f06d45",
 "js/display-main.js": "293bfdec24c97b69",
@@ -318,12 +320,12 @@
 "js/core/church.js": "3a83dff370cfb4aa",
 "js/core/clicker.js": "0a037e112ed30588",
 "js/core/db.js": "f32183002086b95e",
-"js/core/hymnmusic.js": "7267df3b4c831b28",
+"js/core/hymnmusic.js": "1124118a0ff8718b",
 "js/core/icons.js": "9789d7a9eff4f15b",
 "js/core/link.js": "023d4a324e99297d",
 "js/core/live.js": "36bfa980db1021db",
 "js/core/lyrics.js": "d991513458dad858",
-"js/core/musicengine.js": "98e5238f62ae23f5",
+"js/core/musicengine.js": "861cf521fc203337",
 "js/core/render.js": "5c8d95cd2e97d1ed",
 "js/core/settings.js": "70a2a2c00f1a25ea",
 "js/core/ui.js": "cd691ae9053c3d5f",
@@ -341,7 +343,7 @@
 "js/tabs/bible-import.js": "cc682606786ee755",
 "js/tabs/bible.js": "def2433b3fccb3c3",
 "js/tabs/church-form.js": "bac83f98d685b0ef",
-"js/tabs/hymns.js": "187df6063be7abb4",
+"js/tabs/hymns.js": "8e3cba766660e082",
 "js/tabs/plan.js": "662b3e84b6de8cc3",
 "js/tabs/screen.js": "5f59e366c040e629",
 "js/tabs/settings.js": "030c7f660ef06c00",
@@ -584,9 +586,11 @@
 "data/hymns/index.json": "192735bf0b5baa78",
 "data/hymns/malmesbury.json": "1a812f0a662405b4",
 "data/hymns/sda-online.json": "0b106084464cc699",
+"data/music/extra.json": "3ff5cfb61e840b2b",
 "data/music/hymnal.sf2": "cef698782e44666c",
 "data/music/index.json": "063885ef50ab977a",
 "data/music/sda-online-midi.zip": "1c53a99d13fca753",
+"data/music/extra/church-1941-642.mid": "53ac4e606fe01d5f",
 "data/topics/topics.json": "46398a7ac2f536d1"
 }
 }

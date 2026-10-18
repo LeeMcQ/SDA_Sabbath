@@ -713,7 +713,7 @@ export default function create(ctx) {
     musicInfo = h('span.note.music-info.trunc', info);
     row1.append(musicInfo);
     musicSig = sigOf();
-    if (entry.custom) row1.append(addMidiBtn(true));
+    if (entry.custom && !entry.bundled) row1.append(addMidiBtn(true));
     musicBar.append(row1);
     // Jump to a part while it plays: Intro 1 2 3 …
     if (mine && st.sections && st.sections.length > 1) {
