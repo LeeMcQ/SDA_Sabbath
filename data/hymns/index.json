@@ -32,14 +32,6 @@
     "note": "Short praise and worship choruses (not part of the main hymnals). Lyrics for offline use."
   },
   {
-    "id": "sabbath-school",
-    "name": "Sabbath School (1941)",
-    "short": "SS 1941",
-    "lang": "en",
-    "file": "sabbath-school.json",
-    "note": "134 Sabbath School topic hymns from the 1941 Church Hymnal. Present as slides."
-  },
-  {
     "id": "malmesbury",
     "name": "Malmesbury Praise (offline)",
     "short": "MP",
