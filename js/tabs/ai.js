@@ -201,7 +201,8 @@ export default function create(ctx) {
     const c = church(), f = b.f || {}, x = b.x || {}, s = b.s || {};
     const fr = { kind: 'banner', tpl: b.tpl, pal: s.pal || 'navy', deco: s.deco || 'none', pos: s.pos || 'center', font: s.font || 'sans',
       kicker: f.kicker || '', title: f.title || '', text: f.text || '', mark: !!x.mark,
-      textSize: s.textSize || 100, textBold: !!s.textBold, textItalic: !!s.textItalic, textSpacing: s.textSpacing || 1.24 };
+      textSize: s.textSize || 100, textBold: !!s.textBold, textItalic: !!s.textItalic, textSpacing: s.textSpacing || 1.24,
+      layout: s.layout || null };
     const foot = [b.tpl === 'verse' ? f.refLabel || f.ref : f.foot, x.date ? sabbathDateLine(now) : '', x.sunset ? sabbathSunsetLine(now) : '']
       .map((t) => (t || '').trim()).filter(Boolean);
     fr.foot = foot.join('  ·  ');
@@ -297,8 +298,59 @@ export default function create(ctx) {
     const fr = await frameOf(cur);
     if (my !== previewSeq) return;
     stage.show(fr);
+    addLayoutHandles();
     // Keep the Next screen truthful while editing the banner that is staged.
     if (live.staged && live.staged.id === cueId(cur) && live.staged.tab === 'ai') ctx.setStaged('ai', bannerCue(cur, fr));
+  }
+
+  // Google Slides-style drag and resize on the preview.
+  function addLayoutHandles() {
+    const root = screen.querySelector('.f-banner');
+    if (!root) return;
+    // Remove old handles.
+    root.querySelectorAll('.bn-handle').forEach((n) => n.remove());
+    const parts = root.querySelectorAll('[data-part]');
+    if (!cur.s.layout) cur.s.layout = {};
+    parts.forEach((node) => {
+      const part = node.dataset.part;
+      if (!cur.s.layout[part]) {
+        // Default: full width, stacked.
+        const r = node.getBoundingClientRect(), pr = root.getBoundingClientRect();
+        cur.s.layout[part] = { x: 5, y: part === 'kicker' ? 8 : part === 'title' ? 25 : part === 'text' ? 50 : 80, w: 90, h: 0 };
+      }
+      const box = cur.s.layout[part];
+      const handle = h('div.bn-handle', { 'data-part': part, style: { left: box.x + '%', top: box.y + '%', width: box.w + '%' } });
+      const grip = h('div.bn-grip', { title: 'Drag to move' });
+      const resize = h('div.bn-resize', { title: 'Drag to resize' });
+      handle.append(grip, resize);
+      // Drag to move.
+      grip.addEventListener('pointerdown', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const pr = root.getBoundingClientRect();
+        const sx = e.clientX, sy = e.clientY, ox = box.x, oy = box.y;
+        const move = (ev) => {
+          box.x = Math.max(0, Math.min(95, ox + (ev.clientX - sx) / pr.width * 100));
+          box.y = Math.max(0, Math.min(95, oy + (ev.clientY - sy) / pr.height * 100));
+          handle.style.left = box.x + '%'; handle.style.top = box.y + '%';
+          node.style.left = box.x + '%'; node.style.top = box.y + '%';
+        };
+        const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); changed(false); };
+        window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+      });
+      // Drag to resize width.
+      resize.addEventListener('pointerdown', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const pr = root.getBoundingClientRect();
+        const sx = e.clientX, ow = box.w;
+        const move = (ev) => {
+          box.w = Math.max(15, Math.min(100 - box.x, ow + (ev.clientX - sx) / pr.width * 100));
+          handle.style.width = box.w + '%'; node.style.width = box.w + '%';
+        };
+        const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); changed(false); };
+        window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+      });
+      root.appendChild(handle);
+    });
   }
   const schedule = debounce(refreshPreview, 120);
   function changed(rerender) {

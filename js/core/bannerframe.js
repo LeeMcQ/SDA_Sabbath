@@ -98,20 +98,20 @@ export function bannerEl(f, urlFor) {
   }
 
   const inner = document.createElement('div');
-  inner.className = 'fb-in';
+  inner.className = 'fb-in' + (f.layout ? ' has-layout' : '');
   let top = '';
   if (f.logo) top += '<img class="fb-logo" alt="" src="' + esc(urlFor(f.logo)) + '">';
-  if (f.kicker && !f.countdown) top += '<div class="fb-kicker">' + lines(f.kicker) + '</div>';
+  if (f.kicker && !f.countdown) top += '<div class="fb-kicker" data-part="kicker">' + lines(f.kicker) + '</div>';
   let mid;
   if (f.countdown) {
-    mid = '<div class="fb-count-wrap">' + (f.kicker ? '<div class="fb-kicker fb-count-k">' + lines(f.kicker) + '</div>' : '') +
+    mid = '<div class="fb-count-wrap" data-part="count">' + (f.kicker ? '<div class="fb-kicker fb-count-k">' + lines(f.kicker) + '</div>' : '') +
       '<div class="fb-count">0:00</div>' + (f.text ? '<div class="fb-text">' + lines(f.text) + '</div>' : '') + '</div>';
   } else {
     const t = (f.title || '').trim(), x = (f.text || '').trim();
     mid = '<div class="f-body"><div class="f-fit' + (t ? '' : ' only-text') + '">' +
-      (t ? '<div class="fb-title">' + lines(t) + '</div>' : '') + (x ? '<div class="fb-text">' + lines(x) + '</div>' : '') + '</div></div>';
+      (t ? '<div class="fb-title" data-part="title">' + lines(t) + '</div>' : '') + (x ? '<div class="fb-text" data-part="text">' + lines(x) + '</div>' : '') + '</div></div>';
   }
-  const foot = f.foot ? '<div class="fb-footline">' + lines(f.foot) + '</div>' : '';
+  const foot = f.foot ? '<div class="fb-footline" data-part="foot">' + lines(f.foot) + '</div>' : '';
   // A giving QR code gets its own column on the right, large enough to scan from the pews.
   const qr = typeof f.qr === 'string' && /^data:image\/(gif|png);base64,[a-z0-9+/=]+$/i.test(f.qr)
     ? '<div class="fb-qr"><img alt="" src="' + f.qr + '"><span>' + esc(f.qrLabel || 'Scan to give online') + '</span></div>' : '';
@@ -120,6 +120,19 @@ export function bannerEl(f, urlFor) {
     (f.mark ? '<div class="fb-mark">SDA Sabbath</div>' : '');
   if (qr) el.insertAdjacentHTML('beforeend', qr);
   el.appendChild(inner);
+  // Apply custom layout (drag/resize from the editor).
+  if (f.layout) {
+    Object.entries(f.layout).forEach(([part, box]) => {
+      const node = inner.querySelector('[data-part="' + part + '"]');
+      if (!node || !box) return;
+      node.style.position = 'absolute';
+      node.style.left = (box.x || 0) + '%';
+      node.style.top = (box.y || 0) + '%';
+      node.style.width = (box.w || 40) + '%';
+      if (box.h) node.style.height = box.h + '%';
+      node.style.margin = '0';
+    });
+  }
 
   let stop = null;
   if (f.countdown) {
