@@ -46,13 +46,16 @@ const clip = (s, n) => (s.length > n ? s.slice(0, s.lastIndexOf(' ', n) > n * 0.
 export default function create(ctx) {
   const { live } = ctx;
   let plans = [], plan = null, cur = -1;
+  let openTabs = [];        // ids of plans kept open as tabs
+
+  const planSel = h('select.field', { 'aria-label': 'Plan', onchange: () => openPlan(planSel.value) });
+  const tabBar = h('div.plan-tabs');
   let lastAddedId = null;   // new items go below the last one added, so several adds keep their order
 
   const partOf = (it) => it.part || (it.heading ? it.label : '');
   const titleOf = (it) => partOf(it) || it.label || 'Part';
   const mediaLabel = (it) => (it.heading ? '' : partOf(it) ? it.label : '');
 
-  const planSel = h('select.field', { 'aria-label': 'Plan', onchange: () => openPlan(planSel.value) });
   const moreBtn = btn('more', 'Plan options', () => menu(moreBtn, [
     { label: 'New plan…', icon: 'plus', onclick: newPlan },
     { label: 'Rename', icon: 'edit', onclick: renamePlan, disabled: !plan },
@@ -81,6 +84,7 @@ export default function create(ctx) {
   const listEl = h('div');
   const el = h('section',
     h('div.toolbar', h('h2', 'Plan'), planSel, h('div.grow'), prevBtn, nextBtn, moreBtn),
+    tabBar,
     h('div.toolbar.plan-addbar', addWrap, mediaBtn),
     h('div.scroll', { style: { flex: '1' } }, listEl));
 
@@ -106,18 +110,47 @@ export default function create(ctx) {
   async function load() {
     plans = ((await db.all('plans').catch(() => [])) || []).filter(okPlan).map(tidy).sort((a, b) => (b.updated || 0) - (a.updated || 0));
     const curId = await db.get('kv', 'plan-current').catch(() => null);
+    const saved = await db.get('kv', 'plan-tabs').catch(() => null);
+    openTabs = (Array.isArray(saved) ? saved : []).filter((id) => plans.some((p) => p.id === id));
     clear(planSel);
     planSel.hidden = !plans.length;
     plans.forEach((p) => planSel.appendChild(h('option', { value: p.id }, p.name)));
-    if (!plans.length) { plan = null; render(); return; }
+    if (!plans.length) { plan = null; renderTabs(); render(); return; }
     openPlan(plans.some((p) => p.id === curId) ? curId : plans[0].id);
+  }
+
+  function renderTabs() {
+    clear(tabBar);
+    if (!openTabs.length) { tabBar.hidden = true; return; }
+    tabBar.hidden = false;
+    openTabs.forEach((id) => {
+      const p = plans.find((x) => x.id === id);
+      if (!p) return;
+      const tab = h('button.plan-tab' + (plan && plan.id === id ? '.on' : ''), { type: 'button', title: p.name, onclick: () => openPlan(id) },
+        h('span.trunc', p.name));
+      const x = h('button.plan-tab-x', { type: 'button', title: 'Close', onclick: (e) => { e.stopPropagation(); closeTab(id); } }, '×');
+      tab.appendChild(x);
+      tabBar.appendChild(tab);
+    });
   }
 
   function openPlan(id) {
     plan = plans.find((p) => p.id === id) || null;
+    if (plan && !openTabs.includes(id)) openTabs.push(id);
     planSel.value = id; cur = -1; lastAddedId = null;
     db.put('kv', 'plan-current', id);
+    db.put('kv', 'plan-tabs', openTabs);
+    renderTabs();
     render();
+  }
+
+  function closeTab(id) {
+    openTabs = openTabs.filter((x) => x !== id);
+    db.put('kv', 'plan-tabs', openTabs);
+    if (plan && plan.id === id) {
+      const next = openTabs[openTabs.length - 1];
+      if (next) openPlan(next); else { plan = null; renderTabs(); render(); }
+    } else renderTabs();
   }
 
   const save = () => { if (plan) { plan.updated = Date.now(); return db.put('plans', plan.id, plan); } };
