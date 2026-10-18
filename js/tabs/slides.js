@@ -59,16 +59,51 @@ export default function create(ctx) {
 
   function renderLibrary() {
     clear(libList);
+    // Built-in Sabbath School playlist
+    const ssBtn = h('button', { type: 'button', 'aria-pressed': String(!!deck && deck.id === 'ss-playlist'), onclick: () => openSabbathSchool() },
+      icon('hymn'), h('span.grow', h('div.trunc', 'Sabbath School (1941)'), h('div.note', '134 hymns · playlist')));
+    libList.appendChild(ssBtn);
     decks.forEach((d) => libList.appendChild(h('button', { type: 'button', 'aria-pressed': String(!!deck && deck.id === d.id), onclick: () => selectDeck(d.id) },
       icon(d.type === 'pdf' ? 'slides' : d.type === 'pptx' ? 'present' : d.type === 'web' ? 'web' : 'snapshot'),
       h('span.grow', h('div.trunc', d.name), h('div.note', d.count + (d.count === 1 ? ' slide' : ' slides') + ' · ' + d.type.toUpperCase())))));
   }
 
+  async function openSabbathSchool() {
+    const r = await fetch('data/hymns/sabbath-school.json');
+    const book = await r.json();
+    const frames = [];
+    const esc = (s) => String(s || '').replace(/[&<>]/g, (c) => ({ '&': '&', '<': '<', '>': '>' }[c]));
+    book.hymns.forEach((hy) => {
+      // Title slide
+      frames.push({ kind: 'text', variant: 'title', refPos: 'none',
+        html: '<span class="hn">' + hy.n + '</span>' + esc(hy.t) });
+      // Verse slides
+      (hy.v || []).forEach((lines, i) => {
+        frames.push({ kind: 'text', variant: 'hymn', lines: true, refPos: 'bottom',
+          html: lines.map((l) => '<span class="ln">' + esc(l) + '</span>').join(''),
+          foot: hy.n + '  ' + hy.t, footR: 'Verse ' + (i + 1) + ' of ' + hy.v.length });
+      });
+      // Chorus if present
+      if (hy.c && hy.c.length) {
+        frames.push({ kind: 'text', variant: 'hymn', lines: true, cls: 'is-chorus', refPos: 'bottom',
+          html: hy.c.map((l) => '<span class="ln">' + esc(l) + '</span>').join(''),
+          foot: hy.n + '  ' + hy.t, footR: 'Chorus' });
+      }
+    });
+    deck = { id: 'ss-playlist', name: 'Sabbath School (1941)', type: 'playlist', count: frames.length };
+    frames_ss = frames;
+    stagedIndex = 0;
+    renderLibrary();
+    renderDeck();
+    stageAt(0);
+  }
+  let frames_ss = null;
+
   async function selectDeck(id) {
     deck = decks.find((d) => d.id === id) || null;
     stagedIndex = 0;
     urls.splice(0).forEach((u) => URL.revokeObjectURL(u));
-    frames = null; thumbs = [];
+    frames = null; thumbs = []; frames_ss = null;
     renderLibrary();
     if (!deck) { renderDeck(); return; }
     if (deck.type === 'pptx') {
@@ -94,19 +129,19 @@ export default function create(ctx) {
     if (io) { io.disconnect(); io = null; }
     notes.hidden = true;
     head.hidden = !deck; deckMenuBtn.hidden = !deck; saveBannerBtn.hidden = !deck;
-    if (!deck) { head.textContent = ''; info.textContent = ''; grid.appendChild(emptyState('slides', decks.length ? 'No slide deck open' : 'No slides yet', decks.length ? 'Pick a deck from the library.' : 'Add a PDF, PowerPoint, pictures, or a Google Slides / web link.', null, { style: { gridColumn: '1/-1' } })); return; }
+    const useFrames = deck && deck.type === 'playlist' ? frames_ss : frames;
+    if (!deck || !useFrames) { head.textContent = ''; info.textContent = ''; grid.appendChild(emptyState('slides', decks.length ? 'No slide deck open' : 'No slides yet', decks.length ? 'Pick a deck from the library.' : 'Add a PDF, PowerPoint, pictures, or a Google Slides / web link.', null, { style: { gridColumn: '1/-1' } })); return; }
     head.textContent = deck.name;
-    info.textContent = deck.count + ' slides' + (deck.size ? ' · ' + fmtBytes(deck.size) : '');
-    // Thumbnails for PowerPoint slides are drawn lazily as they scroll into view.
+    info.textContent = useFrames.length + ' slides';
     if ('IntersectionObserver' in window) io = new IntersectionObserver((ents) => ents.forEach((e) => { if (e.isIntersecting) { drawThumb(e.target); io.unobserve(e.target); } }), { root: grid.parentNode, rootMargin: '200px' });
-    frames.forEach((f, i) => {
+    useFrames.forEach((f, i) => {
       const t = h('button.thumb', { type: 'button', 'aria-pressed': String(i === stagedIndex), 'data-i': i, title: 'Slide ' + (i + 1) + ' — double-click to present',
         onclick: () => { stageAt(i); if (isLiveDeck()) live.go(i); },
         ondblclick: () => { stageAt(i); live.take(); } });
-      if (deck.type !== 'pptx' && thumbs[i]) { const u = URL.createObjectURL(thumbs[i]); urls.push(u); t.appendChild(h('img', { src: u, alt: '', loading: 'lazy' })); }
+      if (deck.type !== 'pptx' && deck.type !== 'playlist' && thumbs[i]) { const u = URL.createObjectURL(thumbs[i]); urls.push(u); t.appendChild(h('img', { src: u, alt: '', loading: 'lazy' })); }
       t.appendChild(h('span.n', String(i + 1)));
       grid.appendChild(t);
-      if (deck.type === 'pptx') { if (io) io.observe(t); else drawThumb(t); }
+      if (deck.type === 'pptx' || deck.type === 'playlist') { if (io) io.observe(t); else drawThumb(t); }
     });
   }
 
@@ -117,25 +152,27 @@ export default function create(ctx) {
     t.insertBefore(host, t.firstChild);
     const st = createStage(host, { placeholderOnly: true, aspect: 16 / 9 });
     st.applyStyle({ fade: 0, bg: '#000' });
-    st.show(frames[i]);
+    const useFrames = deck && deck.type === 'playlist' ? frames_ss : frames;
+    st.show(useFrames[i]);
   }
 
   const isLiveDeck = () => live.cue && live.cue.tab === 'slides' && deck && live.cue.deckId === deck.id;
 
   function stageAt(i) {
-    if (!deck || !frames || !frames.length) { ctx.setStaged('slides', null); return; }
-    stagedIndex = Math.max(0, Math.min(i, frames.length - 1));
+    const useFrames = deck && deck.type === 'playlist' ? frames_ss : frames;
+    if (!deck || !useFrames || !useFrames.length) { ctx.setStaged('slides', null); return; }
+    stagedIndex = Math.max(0, Math.min(i, useFrames.length - 1));
     const fit = settings.v.slides.fit;
-    const fr = frames.map((f) => (f.kind === 'image' ? Object.assign({}, f, { fit }) : f));
+    const fr = useFrames.map((f) => (f.kind === 'image' ? Object.assign({}, f, { fit }) : f));
     const cue = {
       id: 'slides:' + deck.id, tab: 'slides', title: deck.name, sub: deck.type.toUpperCase(),
-      deck: { kind: deck.type === 'pptx' ? 'html' : deck.type === 'web' ? 'web' : 'image', frames: fr }, index: stagedIndex, deckId: deck.id,
+      deck: { kind: deck.type === 'pptx' || deck.type === 'playlist' ? 'html' : deck.type === 'web' ? 'web' : 'image', frames: fr }, index: stagedIndex, deckId: deck.id,
       labels: fr.map((_, k) => String(k + 1)),
       plan: { tab: 'slides', deck: deck.id, label: deck.name },
     };
     ctx.setStaged('slides', cue);
     Array.prototype.forEach.call(grid.children, (c, k) => c.setAttribute && c.classList.contains('thumb') && c.setAttribute('aria-pressed', String(k === stagedIndex)));
-    const f = frames[stagedIndex];
+    const f = useFrames[stagedIndex];
     notes.hidden = !(f && f.notes);
     if (f && f.notes) notes.textContent = 'Speaker notes: ' + f.notes;
   }
