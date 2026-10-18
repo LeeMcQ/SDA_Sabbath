@@ -75,14 +75,18 @@ const nameOf = (b) => b.name || short((TPL[b.tpl] || TPL.blank).name + (b.f.titl
 export default function create(ctx) {
   const { live, settings, link } = ctx;
   let lib = [];             // saved banners
+  let groups = [];          // {id, name}
   let loop = { items: [], secs: 8, count: true, at: '', end: '' };
   let cur = newBanner();    // banner in the editor
   let savedSig = null;      // sig(cur) when it was last saved (null = never)
   let view = 'make';
   let topics = null;
+  let libFilter = '';       // group id to show, or '' for all
+  let libQuery = '';        // search text
 
   // ------------------------------------------------------------ storage
   const saveLib = () => db.put('kv', 'banners', lib);
+  const saveGroups = () => db.put('kv', 'banner-groups', groups);
   const saveLoop = () => db.put('kv', 'banner-loop', loop);
   const saveDraft = debounce(() => db.put('kv', 'banner-draft', { cur, savedSig }).catch(() => {}), 500);
 
@@ -107,6 +111,8 @@ export default function create(ctx) {
   async function load() {
     const raw = await db.get('kv', 'banners').catch(() => null);
     lib = (Array.isArray(raw) ? raw : []).map(repair).filter((b) => b && b.id);
+    const gr = await db.get('kv', 'banner-groups').catch(() => null);
+    groups = (Array.isArray(gr) ? gr : []).filter((g) => g && g.id && g.name);
     const lp = await db.get('kv', 'banner-loop').catch(() => null);
     if (isObj(lp)) {
       loop.items = (Array.isArray(lp.items) ? lp.items : []).filter((it) => isObj(it) && (it.t === 'banner' || it.t === 'deck') && typeof it.id === 'string');
@@ -647,15 +653,53 @@ export default function create(ctx) {
     destroyMinis();
     const box = views.library;
     clear(box);
-    if (!lib.length) {
-      box.appendChild(emptyState('banner', 'No saved banners yet', 'Make a banner and press Save, or Add to loop / Add to plan.', { label: 'Make a banner', icon: 'plus', primary: true, onclick: () => setView('make') }));
+    // Toolbar: search, group filter, new group
+    const qIn = h('input.field.sm', { type: 'search', placeholder: 'Search banners…', value: libQuery, 'aria-label': 'Search banners',
+      oninput: (e) => { libQuery = e.target.value; renderLibrary(); } });
+    const gSel = h('select.field.sm', { 'aria-label': 'Group', onchange: (e) => { libFilter = e.target.value; renderLibrary(); } },
+      h('option', { value: '' }, 'All groups'));
+    groups.forEach((g) => gSel.appendChild(h('option', { value: g.id }, g.name)));
+    gSel.value = libFilter;
+    const newGrp = h('button.btn.sm', { type: 'button', title: 'Create a group', onclick: async () => {
+      const n = await promptBox('New group', 'Name', '');
+      if (!n || !n.trim()) return;
+      groups.push({ id: 'g-' + uid(), name: n.trim() });
+      await saveGroups(); renderLibrary();
+    } }, icon('plus'), h('span', 'New group'));
+    const delGrp = libFilter ? h('button.btn.sm', { type: 'button', title: 'Remove this group', onclick: async () => {
+      const g = groups.find((x) => x.id === libFilter);
+      if (!g || !(await confirmBox('Remove group?', 'Remove “' + g.name + '”? Banners in it stay, just ungrouped.', 'Remove'))) return;
+      groups = groups.filter((x) => x.id !== g.id);
+      lib.forEach((b) => { if (b.group === g.id) delete b.group; });
+      libFilter = '';
+      await saveGroups(); await saveLib(); renderLibrary();
+    } }, icon('trash'), h('span', 'Remove group')) : null;
+    box.appendChild(h('div.row.wrap.bn-lib-bar', qIn, gSel, newGrp, delGrp));
+    // Filter
+    const q = libQuery.trim().toLowerCase();
+    let shown = lib.filter((b) => (!libFilter || b.group === libFilter) && (!q || nameOf(b).toLowerCase().includes(q) || (TPL[b.tpl] && TPL[b.tpl].name.toLowerCase().includes(q))));
+    if (!shown.length) {
+      box.appendChild(emptyState('banner', lib.length ? 'No banners match' : 'No saved banners yet', lib.length ? 'Try another group or clear the search.' : 'Make a banner and press Save.', { label: 'Make a banner', icon: 'plus', primary: true, onclick: () => setView('make') }));
       return;
     }
     const grid = h('div.bn-lib');
-    lib.forEach((b) => {
+    shown.forEach((b) => {
       const more = btn('more', 'More', () => menu(more, [
         { label: 'Add to the pre-service loop', icon: 'loop', onclick: () => { if (!loop.items.some((it) => it.t === 'banner' && it.id === b.id)) { loop.items.push({ t: 'banner', id: b.id }); saveLoop(); } toast('Added to the loop.', 'ok'); } },
         { label: 'Add to the service plan', icon: 'plan', onclick: async () => (await ctx.tab('plan')).addItem({ tab: 'ai', banner: b.id, label: 'Banner: ' + nameOf(b) }) },
+        { label: 'Move to group…', icon: 'folder', onclick: async () => {
+          const opts = ['(none)', ...groups.map((g) => g.name)];
+          const pick = await promptBox('Move to group', 'Group name (or blank to remove)', b.group ? (groups.find((g) => g.id === b.group) || {}).name || '' : '');
+          if (pick == null) return;
+          const nm = pick.trim();
+          if (!nm) { delete b.group; }
+          else {
+            let g = groups.find((x) => x.name.toLowerCase() === nm.toLowerCase());
+            if (!g) { g = { id: 'g-' + uid(), name: nm }; groups.push(g); await saveGroups(); }
+            b.group = g.id;
+          }
+          b.updated = Date.now(); await saveLib(); renderLibrary();
+        } },
         { label: 'Rename…', icon: 'edit', onclick: async () => { const n = await promptBox('Rename banner', 'Name', b.name || nameOf(b)); if (n && n.trim()) { b.name = n.trim(); b.updated = Date.now(); if (cur.id === b.id) { cur.name = b.name; nameInp.value = b.name; savedSig = sig(cur); } await saveLib(); renderLibrary(); } } },
         { label: 'Duplicate', icon: 'copy', onclick: async () => { const c = clone(b); c.id = 'b-' + uid(); c.name = nameOf(b) + ' (copy)'; c.created = c.updated = Date.now(); lib.unshift(c); await saveLib(); renderLibrary(); renderViewSeg(); } },
         '-',
@@ -668,11 +712,12 @@ export default function create(ctx) {
           await saveLib(); await saveLoop(); renderLibrary(); renderViewSeg(); updateSaveBtn();
         } },
       ]), { cls: 'sm' });
+      const gName = b.group ? (groups.find((g) => g.id === b.group) || {}).name : '';
       const card = h('div.bn-card',
         mini(frameOf(b)),
         h('div.bn-card-b',
           h('div.bn-card-t.trunc', nameOf(b)),
-          h('div.note', TPL[b.tpl] ? TPL[b.tpl].name : 'Banner', b.updated ? ' · ' + new Date(b.updated).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : ''),
+          h('div.note', TPL[b.tpl] ? TPL[b.tpl].name : 'Banner', gName ? ' · ' + gName : '', b.updated ? ' · ' + new Date(b.updated).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : ''),
           h('div.row.bn-card-a',
             h('button.btn.sm.primary', { type: 'button', onclick: async () => { ctx.setStaged('ai', bannerCue(b, await frameOf(b))); toast('“' + nameOf(b) + '” is Next. Press Present (F5).', 'ok', 2500); } }, icon('next'), h('span', 'Set as Next')),
             h('button.btn.sm', { type: 'button', onclick: () => edit(b) }, icon('edit'), h('span', 'Edit')),

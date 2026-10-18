@@ -549,6 +549,8 @@ google-cast-launcher, .cast-button, [aria-label*="Cast"], button[title*="Cast"],
 .bn-pic-x { position: absolute; top: -7px; right: -7px; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); padding: 0; display: flex; align-items: center; justify-content: center; }
 .bn-pic-x svg.i { width: 12px; height: 12px; }
 .bn-lib { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.bn-lib-bar { gap: 8px; margin-bottom: 10px; }
+.bn-lib-bar .field.sm { max-width: 180px; }
 .bn-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; display: flex; flex-direction: column; }
 .bn-thumb { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; overflow: hidden; flex: none; }
 .bn-thumb > .stage-host { position: absolute; inset: 0; }
