@@ -64,7 +64,9 @@ export function importBibleDialog(onDone) {
   }
   async function renderAo(q) {
     clear(searchBox);
+    if (!aoIndex) searchBox.appendChild(h('p.note', 'Loading Bible list…'));
     const list = await loadAo();
+    clear(searchBox);
     if (!list.length) { searchBox.appendChild(h('p.note', 'Could not load the Bible list. Check your connection.')); return; }
     const qq = (q || '').toLowerCase().trim();
     const hits = list.filter((t) => !qq || t.abbr.toLowerCase().includes(qq) || t.name.toLowerCase().includes(qq) || t.lang.includes(qq)).slice(0, 20);
@@ -79,7 +81,10 @@ export function importBibleDialog(onDone) {
   async function downloadAo(t, bt) {
     bt.disabled = true; const old = bt.textContent; bt.textContent = 'Downloading…';
     try {
-      const r = await fetch(AO + t.link);
+      // Prefer the simple format if the API offers it (smaller, flatter).
+      const link = t.link.replace('/complete.json', '/complete.simple.json');
+      let r = await fetch(AO + link);
+      if (!r.ok) r = await fetch(AO + t.link);
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const blob = await r.blob();
       const u = URL.createObjectURL(blob);
@@ -87,9 +92,9 @@ export function importBibleDialog(onDone) {
       document.body.appendChild(aEl); aEl.click(); aEl.remove();
       setTimeout(() => URL.revokeObjectURL(u), 10000);
       bt.textContent = 'Saved';
-      abbr.value = t.abbr; name.value = t.name; lang.value = t.lang.startsWith('af') ? 'af' : 'en';
-    } catch (e) { bt.textContent = 'Failed'; }
-    setTimeout(() => { bt.disabled = false; bt.textContent = old; }, 2500);
+      abbr.value = t.abbr; name.value = t.name; lang.value = (t.lang || '').startsWith('af') ? 'af' : 'en';
+    } catch (e) { bt.textContent = 'Failed: ' + e.message; }
+    setTimeout(() => { bt.disabled = false; bt.textContent = old; }, 3000);
   }
   renderAo('');
   async function downloadOne(a, f, bt) {
