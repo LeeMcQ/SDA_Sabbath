@@ -77,6 +77,8 @@ export default function create(ctx) {
   let lib = [];             // saved banners
   let groups = [];          // {id, name}
   let loop = { items: [], secs: 8, count: true, at: '', end: '' };
+  let announce = { items: [], secs: 8, count: true, at: '', end: '' };
+  let loopKind = 'pre'; // 'pre' = preservice (with music), 'ann' = announcements (no music)
   let cur = newBanner();    // banner in the editor
   let savedSig = null;      // sig(cur) when it was last saved (null = never)
   let view = 'make';
@@ -88,6 +90,7 @@ export default function create(ctx) {
   const saveLib = () => db.put('kv', 'banners', lib);
   const saveGroups = () => db.put('kv', 'banner-groups', groups);
   const saveLoop = () => db.put('kv', 'banner-loop', loop);
+  const saveAnnounce = () => db.put('kv', 'banner-announce', announce);
   const saveDraft = debounce(() => db.put('kv', 'banner-draft', { cur, savedSig }).catch(() => {}), 500);
 
   // Saved data from older versions or a damaged database: repair what can be used, drop the rest.
@@ -120,6 +123,14 @@ export default function create(ctx) {
       loop.count = lp.count !== false;
       loop.at = /^\d{1,2}:\d{2}$/.test(lp.at || '') ? lp.at : '';
       loop.end = typeof lp.end === 'string' ? lp.end : '';
+    }
+    const an = await db.get('kv', 'banner-announce').catch(() => null);
+    if (isObj(an)) {
+      announce.items = (Array.isArray(an.items) ? an.items : []).filter((it) => isObj(it) && (it.t === 'banner' || it.t === 'deck') && typeof it.id === 'string');
+      announce.secs = [5, 8, 10, 15, 20, 30].includes(+an.secs) ? +an.secs : 8;
+      announce.count = an.count !== false;
+      announce.at = /^\d{1,2}:\d{2}$/.test(an.at || '') ? an.at : '';
+      announce.end = typeof an.end === 'string' ? an.end : '';
     }
     const d = await db.get('kv', 'banner-draft').catch(() => null);
     const dc = d && repair(d.cur);
@@ -233,7 +244,7 @@ export default function create(ctx) {
 
   // ------------------------------------------------------------ layout
   const viewSeg = h('div.seg.bn-views', { role: 'tablist' });
-  const VIEWS = [['make', 'Make'], ['library', 'Saved'], ['loop', 'Loop', 'Pre-service '], ['music', 'Music'], ['topics', 'Topics']];
+  const VIEWS = [['make', 'Make'], ['library', 'Saved'], ['loop', 'Service loop', ''], ['music', 'Music'], ['topics', 'Topics']];
   function renderViewSeg() {
     clear(viewSeg);
     VIEWS.forEach(([v, label, pre]) => viewSeg.appendChild(h('button', { type: 'button', role: 'tab', 'aria-selected': String(v === view), 'aria-pressed': String(v === view),
@@ -276,7 +287,7 @@ export default function create(ctx) {
       screen,
       h('div.row.wrap.bn-actions', nextBtn, saveBtn,
         h('button.btn', { type: 'button', title: 'Add to the current service plan', onclick: () => addCurToPlan() }, icon('plan'), h('span', 'Add to plan')),
-        h('button.btn', { type: 'button', title: 'Add to the pre-service loop', onclick: () => addCurToLoop() }, icon('loop'), h('span', 'Add to loop'))),
+        h('button.btn', { type: 'button', title: 'Add to the current Service loop (Preservice or Announcements)', onclick: () => addCurToLoop() }, icon('loop'), h('span', 'Add to loop'))),
       h('div.row', nameInp,
         h('button.btn.sm', { type: 'button', title: 'Start a new banner', onclick: () => startNew() }, icon('plus'), h('span', 'New'))),
       musicChip(ctx, () => setView('music')),
@@ -412,9 +423,13 @@ export default function create(ctx) {
     (await ctx.tab('plan')).addItem({ tab: 'ai', banner: b.id, label: 'Banner: ' + nameOf(b) });
   }
   function addCurToLoop() {
-    const b = saveCurrent(false);
-    if (!loop.items.some((it) => it.t === 'banner' && it.id === b.id)) { loop.items.push({ t: 'banner', id: b.id }); saveLoop(); }
-    toast('Added to the pre-service loop (' + loop.items.length + ' item' + (loop.items.length === 1 ? '' : 's') + ').', 'ok');
+    const b = cur;
+    if (!b || !b.id) { toast('Save the banner first.'); return; }
+    const L = loopKind === 'ann' ? announce : loop;
+    const saveL = loopKind === 'ann' ? saveAnnounce : saveLoop;
+    const name = loopKind === 'ann' ? 'Announcements' : 'Preservice';
+    if (!L.items.some((it) => it.t === 'banner' && it.id === b.id)) { L.items.push({ t: 'banner', id: b.id }); saveL(); }
+    toast('Added to ' + name + ' (' + L.items.length + ' item' + (L.items.length === 1 ? '' : 's') + ').', 'ok');
   }
   function startNew(tpl) {
     // Always a fresh banner so editing it cannot change a saved one.
@@ -804,10 +819,11 @@ export default function create(ctx) {
     }
     return out;
   }
-  async function loopCue() {
+  async function loopCue(kind = 'pre') {
+    const L = kind === 'ann' ? announce : loop;
     const frames = [], labels = [];
     const dl = await decks();
-    for (const it of loop.items) {
+    for (const it of L.items) {
       if (it.t === 'banner') {
         const b = lib.find((x) => x.id === it.id); if (!b) continue;
         frames.push(await frameOf(b)); labels.push(short(nameOf(b), 18));
@@ -819,17 +835,18 @@ export default function create(ctx) {
     }
     if (!frames.length) return null;
     const len = frames.length;
-    const secs = +loop.secs || 8;
+    const secs = +L.secs || 8;
     let at = null, end = null;
-    if (loop.count) { const t = nextTime(loop.at || church().service); at = t ? t.getTime() : null; }
+    if (L.count) { const t = nextTime(L.at || church().service); at = t ? t.getTime() : null; }
     if (at) frames.forEach((f) => { if (!(f.kind === 'banner' && f.countdown)) f.clock = { at, label: 'Service starts in' }; });
-    if (at && loop.end) {
-      const b = lib.find((x) => x.id === loop.end);
+    if (at && L.end) {
+      const b = lib.find((x) => x.id === L.end);
       if (b) { frames.push(await frameOf(b)); labels.push('At start: ' + short(nameOf(b), 14)); end = len; }
     }
-    return { id: 'loop:' + Date.now(), tab: 'ai', title: 'Pre-service loop', sub: len + ' slide' + (len === 1 ? '' : 's') + ' · every ' + secs + ' s',
-      deck: { kind: 'loop', frames, auto: { secs, len, at, end } }, index: 0, labels, autoLoop: true, isLoop: true, withMusic: true,
-      plan: { tab: 'ai', loop: true, label: 'Pre-service loop' } };
+    const title = kind === 'ann' ? 'Announcements' : 'Preservice';
+    return { id: (kind === 'ann' ? 'ann:' : 'loop:') + Date.now(), tab: 'ai', title, sub: len + ' slide' + (len === 1 ? '' : 's') + ' · every ' + secs + ' s',
+      deck: { kind: 'loop', frames, auto: { secs, len, at, end } }, index: 0, labels, autoLoop: true, isLoop: true, withMusic: kind !== 'ann',
+      plan: { tab: 'ai', loop: true, label: title } };
   }
   async function renderLoop() {
     destroyMinis();
@@ -837,67 +854,85 @@ export default function create(ctx) {
     clear(box);
     const dl = await decks();
     const c = church();
-    box.appendChild(h('p.note.bn-intro', 'Plays before the service: your banners and announcement slides take turns on the screen. It runs on the display itself, so it keeps going if this phone or PC sleeps. Use Next / Previous at any time to move by hand.'));
-    box.appendChild(h('div.row', { style: { marginBottom: '10px' } }, musicChip(ctx, () => setView('music'))));
+    const kind = loopKind;
+    const L = kind === 'ann' ? announce : loop;
+    const saveL = kind === 'ann' ? saveAnnounce : saveLoop;
+    const title = kind === 'ann' ? 'Announcements' : 'Preservice';
+
+    box.appendChild(h('h3', { style: { margin: '0 0 8px' } }, 'Service loop'));
+    const sub = h('div.seg', { role: 'tablist', style: { marginBottom: '10px' } });
+    [['pre', 'Preservice'], ['ann', 'Announcements']].forEach(([k, lab]) => {
+      sub.appendChild(h('button', { type: 'button', role: 'tab', 'aria-selected': String(k === kind), 'aria-pressed': String(k === kind),
+        onclick: () => { loopKind = k; renderLoop(); } }, lab));
+    });
+    box.appendChild(sub);
+
+    box.appendChild(h('p.note.bn-intro', kind === 'ann'
+      ? 'Announcement slides and banners take turns on the screen. No music. It runs on the display itself, so it keeps going if this phone or PC sleeps.'
+      : 'Plays before the service: your banners and announcement slides take turns on the screen, with music. It runs on the display itself, so it keeps going if this phone or PC sleeps.'));
+    if (kind !== 'ann') box.appendChild(h('div.row', { style: { marginBottom: '10px' } }, musicChip(ctx, () => setView('music'))));
+
     const list = h('div.list.bn-loop-list');
-    if (!loop.items.length) list.appendChild(h('p.note.pad', 'The loop is empty. Add saved banners or slide decks below.'));
-    loop.items.forEach((it, i) => {
-      let name = '', kind = '', thumb;
-      if (it.t === 'banner') { const b = lib.find((x) => x.id === it.id); name = b ? nameOf(b) : '(deleted banner)'; kind = 'Banner'; thumb = b ? mini(frameOf(b)) : h('div.bn-thumb'); }
-      else { const d = dl.find((x) => x.id === it.id); name = d ? d.name : '(deleted slides)'; kind = d ? d.count + ' slide' + (d.count === 1 ? '' : 's') : 'Slides'; thumb = h('div.bn-thumb', h('div.bn-thumb-ic', icon('slides'))); }
+    if (!L.items.length) list.appendChild(h('p.note.pad', 'Empty. Add saved banners or slide decks below.'));
+    L.items.forEach((it, i) => {
+      let name = '', kindT = '', thumb;
+      if (it.t === 'banner') { const b = lib.find((x) => x.id === it.id); name = b ? nameOf(b) : '(deleted banner)'; kindT = 'Banner'; thumb = b ? mini(frameOf(b)) : h('div.bn-thumb'); }
+      else { const d = dl.find((x) => x.id === it.id); name = d ? d.name : '(deleted slides)'; kindT = d ? d.count + ' slide' + (d.count === 1 ? '' : 's') : 'Slides'; thumb = h('div.bn-thumb', h('div.bn-thumb-ic', icon('slides'))); }
       list.appendChild(h('div.li.bn-loop-row', thumb,
-        h('div.grow', h('div.trunc', name), h('div.note', kind)),
-        btn('up', 'Move up', () => { if (i > 0) { const t = loop.items[i - 1]; loop.items[i - 1] = it; loop.items[i] = t; saveLoop(); renderLoop(); } }, { cls: 'sm' }),
-        btn('down', 'Move down', () => { if (i < loop.items.length - 1) { const t = loop.items[i + 1]; loop.items[i + 1] = it; loop.items[i] = t; saveLoop(); renderLoop(); } }, { cls: 'sm' }),
-        btn('trash', 'Remove from the loop', () => { loop.items.splice(i, 1); saveLoop(); renderLoop(); }, { cls: 'sm' })));
+        h('div.grow', h('div.trunc', name), h('div.note', kindT)),
+        btn('up', 'Move up', () => { if (i > 0) { const t = L.items[i - 1]; L.items[i - 1] = it; L.items[i] = t; saveL(); renderLoop(); } }, { cls: 'sm' }),
+        btn('down', 'Move down', () => { if (i < L.items.length - 1) { const t = L.items[i + 1]; L.items[i + 1] = it; L.items[i] = t; saveL(); renderLoop(); } }, { cls: 'sm' }),
+        btn('trash', 'Remove', () => { L.items.splice(i, 1); saveL(); renderLoop(); }, { cls: 'sm' })));
     });
     box.appendChild(list);
     box.appendChild(h('div.row.wrap.bn-add',
-      h('button.btn', { type: 'button', onclick: () => pickBanners() }, icon('banner'), h('span', 'Add banners…')),
-      h('button.btn', { type: 'button', onclick: () => pickDecks(dl) }, icon('slides'), h('span', 'Add slides…'))));
+      h('button.btn', { type: 'button', onclick: () => pickBanners(L, saveL) }, icon('banner'), h('span', 'Add banners…')),
+      h('button.btn', { type: 'button', onclick: () => pickDecks(dl, L, saveL) }, icon('slides'), h('span', 'Add slides…'))));
 
-    const secsSeg = seg([5, 8, 10, 15, 20, 30].map((s) => [String(s), s + ' s']), String(loop.secs || 8), (v) => { loop.secs = +v; saveLoop(); });
-    const atInp = h('input.field', { type: 'time', value: loop.at || c.service, 'aria-label': 'Service starts at', style: { width: '130px' },
-      onchange: () => { loop.at = atInp.value; saveLoop(); } });
-    const countChip = h('button.chip', { type: 'button', 'aria-pressed': String(!!loop.count), onclick: () => { loop.count = !loop.count; saveLoop(); renderLoop(); } },
-      loop.count ? icon('check') : null, 'Show “Service starts in” clock');
-    const endSel = h('select.field', { 'aria-label': 'When it is time', onchange: () => { loop.end = endSel.value; saveLoop(); } },
+    const secsSeg = seg([5, 8, 10, 15, 20, 30].map((s) => [String(s), s + ' s']), String(L.secs || 8), (v) => { L.secs = +v; saveL(); });
+    const atInp = h('input.field', { type: 'time', value: L.at || c.service, 'aria-label': 'Service starts at', style: { width: '130px' },
+      onchange: () => { L.at = atInp.value; saveL(); } });
+    const countChip = h('button.chip', { type: 'button', 'aria-pressed': String(!!L.count), onclick: () => { L.count = !L.count; saveL(); renderLoop(); } },
+      L.count ? icon('check') : null, 'Show “Service starts in” clock');
+    const endSel = h('select.field', { 'aria-label': 'When it is time', onchange: () => { L.end = endSel.value; saveL(); } },
       h('option', { value: '' }, 'Keep looping'),
-      lib.map((b) => h('option', { value: b.id, selected: loop.end === b.id }, 'Show: ' + nameOf(b))));
+      lib.map((b) => h('option', { value: b.id, selected: L.end === b.id }, 'Show: ' + nameOf(b))));
     box.appendChild(h('div.form.bn-form',
       h('label', 'Each slide shows for'), secsSeg,
       h('label', 'Countdown'), h('div.row.wrap', countChip),
-      loop.count ? h('label', 'Service starts at') : null, loop.count ? h('div.row', atInp) : null,
-      loop.count ? h('label', 'When it is time') : null, loop.count ? h('div.col', { style: { alignItems: 'flex-start' } }, endSel, h('p.note', 'For example your Welcome banner. The loop stops there.')) : null));
+      L.count ? h('label', 'Service starts at') : null, L.count ? h('div.row', atInp) : null,
+      L.count ? h('label', 'When it is time') : null, L.count ? h('div.col', { style: { alignItems: 'flex-start' } }, endSel, h('p.note', 'For example your Welcome banner. The loop stops there.')) : null));
     box.appendChild(h('div.row.wrap.bn-actions',
-      h('button.btn.primary', { type: 'button', disabled: !loop.items.length, onclick: async () => {
-        const cue = await loopCue();
-        if (!cue) { toast('The loop has nothing to show yet.', 'err'); return; }
-        ctx.setStaged('ai', cue); toast('Loop is Next. Press Present (F5) to start it.', 'ok', 2500);
-      } }, icon('next'), h('span', 'Set loop as Next')),
-      h('button.btn', { type: 'button', disabled: !loop.items.length, onclick: async () => (await ctx.tab('plan')).addItem({ tab: 'ai', loop: true, label: 'Pre-service loop' }) }, icon('plan'), h('span', 'Add to plan'))));
+      h('button.btn.primary', { type: 'button', disabled: !L.items.length, onclick: async () => {
+        const cue = await loopCue(kind);
+        if (!cue) { toast('Nothing to show yet.', 'err'); return; }
+        ctx.setStaged('ai', cue); toast(title + ' is Next. Press Present (F5) to start it.', 'ok', 2500);
+      } }, icon('next'), h('span', 'Set as Next')),
+      h('button.btn', { type: 'button', disabled: !L.items.length, onclick: async () => (await ctx.tab('plan')).addItem({ tab: 'ai', loop: true, label: title }) }, icon('plan'), h('span', 'Add to plan'))));
   }
-  function pickBanners() {
+  function pickBanners(L, saveL) {
     if (!lib.length) { toast('No saved banners yet. Make one and press Save.'); setView('make'); return; }
     const chosen = new Set();
     const list = h('div.list', { style: { maxHeight: '50vh', overflow: 'auto' } });
     lib.forEach((b) => {
-      const inLoop = loop.items.some((it) => it.t === 'banner' && it.id === b.id);
+      const inLoop = L.items.some((it) => it.t === 'banner' && it.id === b.id);
       const row = h('button', { type: 'button', 'aria-pressed': 'false', disabled: inLoop, onclick: () => { if (chosen.has(b.id)) chosen.delete(b.id); else chosen.add(b.id); row.setAttribute('aria-pressed', String(chosen.has(b.id))); } },
-        icon('banner'), h('span.grow', nameOf(b)), inLoop ? h('span.note', 'in the loop') : null);
+        icon('banner'), h('span.grow', nameOf(b)), inLoop ? h('span.note', 'already added') : null);
       list.appendChild(row);
     });
-    modal({ title: 'Add banners to the loop', body: list, actions: [{ label: 'Cancel' }, { label: 'Add', primary: true, onclick: () => {
-      lib.forEach((b) => { if (chosen.has(b.id)) loop.items.push({ t: 'banner', id: b.id }); });
-      saveLoop(); renderLoop();
-    } }] });
+    modal({ title: 'Add banners', body: list, actions: [{ label: 'Add', primary: true, onclick: () => { chosen.forEach((id) => L.items.push({ t: 'banner', id })); saveL(); renderLoop(); closeModal(); } }, { label: 'Cancel' }] });
   }
-  function pickDecks(dl) {
-    if (!dl.length) { toast('No slide decks yet. Add announcement slides in the Slides tab first.'); return; }
+  function pickDecks(dl, L, saveL) {
+    if (!dl.length) { toast('No slide decks yet.'); return; }
+    const chosen = new Set();
     const list = h('div.list', { style: { maxHeight: '50vh', overflow: 'auto' } });
-    dl.forEach((d) => list.appendChild(h('button', { type: 'button', onclick: () => { loop.items.push({ t: 'deck', id: d.id }); saveLoop(); closeModal(); renderLoop(); } },
-      icon('slides'), h('span.grow', d.name), h('span.note', d.count + ' slides'))));
-    modal({ title: 'Add slides to the loop', body: list, actions: [{ label: 'Cancel' }] });
+    dl.forEach((d) => {
+      const inLoop = L.items.some((it) => it.t === 'deck' && it.id === d.id);
+      const row = h('button', { type: 'button', 'aria-pressed': 'false', disabled: inLoop, onclick: () => { if (chosen.has(d.id)) chosen.delete(d.id); else chosen.add(d.id); row.setAttribute('aria-pressed', String(chosen.has(d.id))); } },
+        icon('slides'), h('span.grow', d.name), inLoop ? h('span.note', 'already added') : null);
+      list.appendChild(row);
+    });
+    modal({ title: 'Add slides', body: list, actions: [{ label: 'Add', primary: true, onclick: () => { chosen.forEach((id) => L.items.push({ t: 'deck', id })); saveL(); renderLoop(); closeModal(); } }, { label: 'Cancel' }] });
   }
 
   // ============================================================ TOPICS
@@ -1342,8 +1377,9 @@ export default function create(ctx) {
         if (!b) { toast('That banner is no longer on this device.', 'err'); return null; }
         cue = bannerCue(b, await frameOf(b));
       } else if (item.loop) {
-        cue = await loopCue();
-        if (!cue) { toast('The pre-service loop is empty. Add banners in Banners → Pre-service loop.', 'err'); return null; }
+        const kind = (item.label || '').toLowerCase().includes('announce') ? 'ann' : 'pre';
+        cue = await loopCue(kind);
+        if (!cue) { toast('That loop is empty. Add banners under Service loop.', 'err'); return null; }
       } else if (item.topic) {
         await loadTopics();
         const t = topics.find((x) => x.id === item.topic);
