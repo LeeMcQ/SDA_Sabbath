@@ -112,7 +112,16 @@
 .f-banner .f-fit { max-width: 100%; text-align: center; text-wrap: balance; overflow-wrap: anywhere; line-height: 1.15; }
 .fb-title { font-weight: 700; }
 .f-banner.serif .fb-title { font-weight: 600; }
-.fb-text { font-size: .5em; font-weight: 400; line-height: 1.32; margin-top: .55em; opacity: .95; }
+.fb-text { font-size: .5em; font-weight: 400; line-height: var(--bn-space, 1.32); margin-top: .55em; opacity: .95; }
+.f-banner { --bn-size: 1; }
+.f-banner .fb-title, .f-banner .fb-text { transform: scale(var(--bn-size)); transform-origin: center top; }
+.f-banner.bold-title .fb-title { font-weight: 800; }
+.f-banner.italic-title .fb-title { font-style: italic; }
+.f-banner.pos-right .fb-top { justify-content: flex-end; }
+.f-banner.pos-right .fb-kicker, .f-banner.pos-right .f-fit, .f-banner.pos-right .fb-footline { text-align: right; }
+.f-banner.pos-right .f-body { justify-content: flex-end; padding-left: 22%; }
+.f-banner.pos-top .f-body { align-items: flex-start; }
+.f-banner.pos-top .fb-in { padding-bottom: calc(var(--d-pad-y) * 1.4); }
 .f-fit.only-text .fb-text { font-size: 1em; font-weight: 600; margin-top: 0; }
 .fb-foot { display: flex; align-items: flex-end; justify-content: center; gap: 40px; margin-top: 22px; min-height: 0; }
 .fb-footline { flex: 1 1 auto; font-size: 46px; line-height: 1.25; color: var(--b-accent); text-align: center; font-weight: 700; }

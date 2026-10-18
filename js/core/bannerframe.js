@@ -69,10 +69,13 @@ export function bannerEl(f, urlFor) {
   const hasImg = !!f.img;
   const dark = hasImg ? pal.dark !== false : pal.dark;
   const el = document.createElement('div');
-  el.className = 'f-banner pos-' + (['left', 'low'].includes(f.pos) ? f.pos : 'center') + (f.font === 'serif' ? ' serif' : '') +
+  el.className = 'f-banner pos-' + (['left', 'right', 'low', 'top'].includes(f.pos) ? f.pos : 'center') + (f.font === 'serif' ? ' serif' : '') +
     (dark ? ' dark' : ' light') + (hasImg ? ' has-img' : '') + ' tpl-' + String(f.tpl || 'blank').replace(/[^a-z]/g, '');
   el.style.setProperty('--b-fg', pal.fg);
   el.style.setProperty('--b-accent', pal.accent);
+  if (f.textSize) el.style.setProperty('--bn-size', (f.textSize / 100));
+  if (f.textBold) el.classList.add('bold-title');
+  if (f.textItalic) el.classList.add('italic-title');
 
   const bg = document.createElement('div');
   bg.className = 'fb-bg';

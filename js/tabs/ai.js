@@ -59,7 +59,7 @@ const EXTRAS = [
   ['qr', 'Giving QR code', 'The giving link from Church details'],
   ['mark', '“SDA Sabbath” mark', 'A small app name in the corner'],
 ];
-const POS = [['center', 'Centre'], ['left', 'Left'], ['low', 'Low']];
+const POS = [['center', 'Centre'], ['left', 'Left'], ['right', 'Right'], ['top', 'Top'], ['low', 'Bottom']];
 
 function newBanner(tpl = 'welcome', extra) {
   const t = TPL[tpl] || TPL.welcome;
@@ -101,7 +101,7 @@ export default function create(ctx) {
     if (isObj(b.s)) {
       if (PALETTES[b.s.pal]) out.s.pal = b.s.pal;
       if (DECOS[b.s.deco]) out.s.deco = b.s.deco;
-      if (['center', 'left', 'low'].includes(b.s.pos)) out.s.pos = b.s.pos;
+      if (['center', 'left', 'right', 'top', 'low'].includes(b.s.pos)) out.s.pos = b.s.pos;
       if (['sans', 'serif'].includes(b.s.font)) out.s.font = b.s.font;
       out.s.img = typeof b.s.img === 'string' ? b.s.img : null;
       out.s.dim = typeof b.s.dim === 'number' && isFinite(b.s.dim) ? b.s.dim : null;
@@ -200,7 +200,8 @@ export default function create(ctx) {
   async function frameOf(b, now = new Date()) {
     const c = church(), f = b.f || {}, x = b.x || {}, s = b.s || {};
     const fr = { kind: 'banner', tpl: b.tpl, pal: s.pal || 'navy', deco: s.deco || 'none', pos: s.pos || 'center', font: s.font || 'sans',
-      kicker: f.kicker || '', title: f.title || '', text: f.text || '', mark: !!x.mark };
+      kicker: f.kicker || '', title: f.title || '', text: f.text || '', mark: !!x.mark,
+      textSize: s.textSize || 100, textBold: !!s.textBold, textItalic: !!s.textItalic, textSpacing: s.textSpacing || 1.24 };
     const foot = [b.tpl === 'verse' ? f.refLabel || f.ref : f.foot, x.date ? sabbathDateLine(now) : '', x.sunset ? sabbathSunsetLine(now) : '']
       .map((t) => (t || '').trim()).filter(Boolean);
     fr.foot = foot.join('  ·  ');
@@ -457,6 +458,16 @@ export default function create(ctx) {
     const decoSeg = seg(Object.keys(DECOS).map((k) => [k, DECOS[k]]), cur.s.deco || 'none', (v) => { cur.s.deco = v; changed(false); });
     const posSeg = seg(POS, cur.s.pos || 'center', (v) => { cur.s.pos = v; changed(false); });
     const fontSeg = seg([['sans', 'Clear sans'], ['serif', 'Serif']], cur.s.font || 'sans', (v) => { cur.s.font = v; changed(false); });
+    const boldBtn = h('button.chip', { type: 'button', 'aria-pressed': String(!!cur.s.textBold), title: 'Bold title', onclick: () => { cur.s.textBold = !cur.s.textBold; changed(false); } }, 'B');
+    const italicBtn = h('button.chip', { type: 'button', 'aria-pressed': String(!!cur.s.textItalic), title: 'Italic title', onclick: () => { cur.s.textItalic = !cur.s.textItalic; changed(false); } }, 'I');
+    const sizeOut = h('span.note', (cur.s.textSize || 100) + '%');
+    const sizeR = h('input', { type: 'range', min: 60, max: 160, step: 5, 'aria-label': 'Text size', style: { flex: '1', maxWidth: '180px' },
+      oninput: () => { cur.s.textSize = +sizeR.value; sizeOut.textContent = cur.s.textSize + '%'; changed(false); } });
+    sizeR.value = cur.s.textSize || 100;
+    const spaceOut = h('span.note', (cur.s.textSpacing || 1.24).toFixed(2));
+    const spaceR = h('input', { type: 'range', min: 1.0, max: 1.8, step: 0.04, 'aria-label': 'Line spacing', style: { flex: '1', maxWidth: '180px' },
+      oninput: () => { cur.s.textSpacing = +spaceR.value; spaceOut.textContent = cur.s.textSpacing.toFixed(2); changed(false); } });
+    spaceR.value = cur.s.textSpacing || 1.24;
     const look = h('div.form.bn-form',
       h('label', 'Colours'), sw,
       h('label', 'Pattern'), decoSeg,
@@ -464,7 +475,10 @@ export default function create(ctx) {
       cur.s.img ? h('label', 'Picture settings') : null, cur.s.img ? pictureSettings() : null,
       cur.s.img ? h('label', 'Darken picture') : null, cur.s.img ? dimRow() : null,
       h('label', 'Text position'), posSeg,
-      h('label', 'Font'), fontSeg);
+      h('label', 'Font'), fontSeg,
+      h('label', 'Style'), h('div.row', boldBtn, italicBtn),
+      h('label', 'Text size'), h('div.row', sizeR, sizeOut),
+      h('label', 'Line spacing'), h('div.row', spaceR, spaceOut));
     editorScroll.append(h('h3.bn-h', 'Look'), look);
     if (cur.s.img) decoSeg.querySelectorAll('button').forEach((b) => { b.disabled = true; b.title = 'Patterns are for plain colours (a picture is chosen)'; });
   }
