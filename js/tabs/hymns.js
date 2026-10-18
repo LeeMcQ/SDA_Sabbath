@@ -340,6 +340,8 @@ export default function create(ctx) {
   }
   live.on('go', markCards);
   live.on('live', markCards);
+  // Next follows the live hymn (Verse 2 live → Next is the chorus after it): keep the picked stanza in step.
+  live.on('staged', (s) => { if (s && s === cue && s.index != null) { stagedIndex = s.index; markCards(); } });
 
   // ------------------------------------------------------------ options / editing / import
   function slider(min, max, step, value, fmt, onchange) {
@@ -813,7 +815,7 @@ export default function create(ctx) {
     },
     controls(c) {
       // Jump straight to a stanza: T 1 C 2 C 3 …
-      const box = h('div.row', { style: { flexWrap: 'nowrap', overflowX: 'auto' } });
+      const box = h('div.row.cb-chips', { style: { flexWrap: 'nowrap', overflowX: 'auto', minWidth: 0, flex: '1 1 auto' } });
       const labels = c.labels || [];
       const isCho = (lab) => /^C[a-f]?$/.test(lab);
       const firstCho = labels.findIndex(isCho);
@@ -833,8 +835,8 @@ export default function create(ctx) {
       ctlBox = box; markCtl();
       // Live hymn with offline music: start it from the control bar too.
       if (api.musicFor(c) && !(music.isPlaying() && music.hymnKey === c.hymnKey)) {
-        return h('div.row', { style: { flexWrap: 'nowrap', minWidth: 0 } }, box,
-          h('button.btn.sm', { type: 'button', title: 'Play the music for this hymn (M)', onclick: () => api.musicKey() }, icon('music'), h('span.hide-sm', 'Music')));
+        return h('div.row', { style: { flexWrap: 'nowrap', minWidth: 0, flex: '1 1 auto' } }, box,
+          h('button.btn.sm.cb-music', { type: 'button', title: 'Play the music for this hymn (M)', 'aria-label': 'Play the music for this hymn', style: { flex: 'none' }, onclick: () => api.musicKey() }, icon('music'), h('span.hide-sm', 'Music')));
       }
       return box;
     },
