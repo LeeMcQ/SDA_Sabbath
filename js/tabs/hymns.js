@@ -468,8 +468,12 @@ export default function create(ctx) {
       books.forEach((bk) => bk.hymns.forEach((hy) => { if (hits.length < 6 && matches(hy, text)) hits.push({ bk, hy }); }));
       if (!hits.length) return;
       offBox.appendChild(h('h4', 'Already on this device'));
-      hits.forEach(({ bk, hy }) => offBox.appendChild(h('button.lyr-item', { type: 'button', onclick: () => { closeModal(); if (book !== bk) setBook(bk.id); selectHymn(hy); } },
-        h('div.grow', h('b', hy.n + '  ' + hy.t), h('div.note.trunc', bk.name + ' · ' + hy.v[0][0])), h('span.lyr-go', 'Open'))));
+      hits.forEach(async ({ bk, hy }) => {
+        const hasMusic = await music.entry(bk.id, hy.n).catch(() => null);
+        offBox.appendChild(h('button.lyr-item', { type: 'button', onclick: () => { closeModal(); if (book !== bk) setBook(bk.id); selectHymn(hy); } },
+          h('div.grow', h('div.row', h('b.grow', hy.n + '  ' + hy.t), hasMusic ? h('span.lyr-badge.midi', 'MIDI') : null),
+            h('div.note.trunc', bk.name + ' · ' + hy.v[0][0])), h('span.lyr-go', 'Open')));
+      });
     }
 
     let rankedLast = [];
@@ -478,10 +482,13 @@ export default function create(ctx) {
       clear(resBox);
       if (!list.length) return;
       resBox.appendChild(h('h4', 'Found online'));
-      list.forEach((c) => {
+      list.forEach(async (c) => {
         const lab = matchLabel(c.score);
+        // Check MIDI availability for this title.
+        if (c._midi == null) { const m = await findMidi(c.title).catch(() => []); c._midi = m.length > 0; }
+        const badge = lab + ' · ' + Math.round(c.score * 100) + '%' + (c._midi ? ' · MIDI' : '');
         resBox.appendChild(h('button.lyr-item', { type: 'button', 'aria-pressed': String(picked === c), onclick: () => choose(c) },
-          h('div.grow', h('div.row', h('b.grow.trunc', c.title), h('span.lyr-badge.' + lab.split(' ')[0].toLowerCase(), lab + ' · ' + Math.round(c.score * 100) + '%')),
+          h('div.grow', h('div.row', h('b.grow.trunc', c.title), h('span.lyr-badge.' + lab.split(' ')[0].toLowerCase(), badge)),
             h('div.note.trunc', [c.artist, c.album, c.source + (c.aiPick ? ' · AI suggested' : '')].filter(Boolean).join(' · ')),
             c.preview ? h('div.lyr-prev', c.preview) : null)));
       });
@@ -528,7 +535,9 @@ export default function create(ctx) {
         openDetail({ title: c.title, author: c.artist, text: songText(song), source: c, midis });
       } catch (e) {
         if (picked !== c) return;
-        openDetail({ title: c.title, author: c.artist, text: '', error: (e && e.message) || String(e), source: c });
+        const msg = (e && e.message) || String(e);
+        const is404 = /404|not found|no words/i.test(msg);
+        openDetail({ title: c.title, author: c.artist, text: '', error: is404 ? 'This source returned 404 — no lyrics available. Try another result, or check “Already on this device” above.' : msg, source: c });
       }
     }
     function openPaste(query) {
