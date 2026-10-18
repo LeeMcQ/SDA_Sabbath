@@ -568,7 +568,6 @@ google-cast-launcher, .cast-button, [aria-label*="Cast"], button[title*="Cast"],
 .bn-handle { position: absolute; border: 1px dashed var(--next, #3b82f6); pointer-events: none; z-index: 5; }
 .bn-grip { position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 16px; height: 16px; background: var(--next, #3b82f6); border-radius: 50%; cursor: move; pointer-events: auto; }
 .bn-resize { position: absolute; right: -6px; bottom: -6px; width: 12px; height: 12px; background: #fff; border: 2px solid var(--next, #3b82f6); border-radius: 2px; cursor: ew-resize; pointer-events: auto; }
-.f-banner.has-layout .fb-kicker, .f-banner.has-layout .fb-title, .f-banner.has-layout .fb-text, .f-banner.has-layout .fb-footline { position: absolute; }
 .bn-lib-bar .field.sm { max-width: 180px; }
 .bn-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; display: flex; flex-direction: column; }
 .bn-thumb { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; overflow: hidden; flex: none; }
