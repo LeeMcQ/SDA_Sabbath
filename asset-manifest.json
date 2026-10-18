@@ -1,6 +1,6 @@
 {
-"version": "16f096d6cf84",
-"bytes": 37413395,
+"version": "84812754388a",
+"bytes": 37415209,
 "files": [
 "index.html",
 "display.html",
@@ -301,7 +301,7 @@
 "manifest.webmanifest": "f2aa34a6f92b60be",
 "css/app.css": "bc4f76c847d3e8c0",
 "css/stage.css": "9ab8dfeb3eca1093",
-"js/app.js": "1704281e5e1e438a",
+"js/app.js": "8ef2f7aa834c1ab6",
 "js/clickerui.js": "53822136e3da91ca",
 "js/controlbar.js": "6688133121f06d45",
 "js/display-main.js": "293bfdec24c97b69",
@@ -341,7 +341,7 @@
 "js/tabs/bible-import.js": "cc682606786ee755",
 "js/tabs/bible.js": "def2433b3fccb3c3",
 "js/tabs/church-form.js": "bac83f98d685b0ef",
-"js/tabs/hymns.js": "c1a767eccd41f316",
+"js/tabs/hymns.js": "187df6063be7abb4",
 "js/tabs/plan.js": "662b3e84b6de8cc3",
 "js/tabs/screen.js": "5f59e366c040e629",
 "js/tabs/settings.js": "030c7f660ef06c00",
