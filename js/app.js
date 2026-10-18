@@ -16,7 +16,7 @@ import { clicker, actionFor, sigOfKey, sigOfMouse } from './core/clicker.js';
 import { openClickerSetup, builtinAction } from './clickerui.js';
 
 export const VERSION = '1.3.0';
-export const BUILD = 'e5bc44a';
+export const BUILD = 'cd49bf2';
 
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', load: () => import('./tabs/bible.js') },
