@@ -34,27 +34,11 @@ export function importBibleDialog(onDone) {
   const RAW = 'https://raw.githubusercontent.com/Amosamevor/bible-json/main/versions/en/';
   const PAGE = 'https://github.com/Amosamevor/Bible-json/tree/main/versions/en';
   const GET = [['NIV', 'NEW INTERNATIONAL VERSION.json'], ['ESV', 'ENGLISH STANDARD VERSION.json'], ['NKJV', 'NEW KING JAMES VERSION.json']];
-  // Full index of downloadable Bibles (English + Afrikaans). Search filters this list.
-  const INDEX = [
-    ['ASV', 'American Standard Version', 'AMERICAN STANDARD VERSION.json', 'en'],
-    ['AMP', 'Amplified Bible', 'AMPLIFIED BIBLE.json', 'en'],
-    ['BSB', 'Berean Standard Bible', 'BEREAN STANDARD BIBLE.json', 'en'],
-    ['CSB', 'Christian Standard Bible', 'CHRISTIAN STANDARD BIBLE.json', 'en'],
-    ['CEV', 'Contemporary English Version', 'CONTEMPORARY ENGLISH VERSION.json', 'en'],
-    ['ESV', 'English Standard Version', 'ENGLISH STANDARD VERSION.json', 'en'],
-    ['GNT', 'Good News Translation', 'GOOD NEWS TRANSLATION.json', 'en'],
-    ['KJV', 'King James Bible', 'KING JAMES BIBLE.json', 'en'],
-    ['LSB', 'Legacy Standard Bible', 'LEGACY STANDARD BIBLE.json', 'en'],
-    ['NASB', 'New American Standard Bible', 'NEW AMERICAN STANDARD BIBLE.json', 'en'],
-    ['NET', 'NET Bible', 'NET BIBLE.json', 'en'],
-    ['NIV', 'New International Version', 'NEW INTERNATIONAL VERSION.json', 'en'],
-    ['NKJV', 'New King James Version', 'NEW KING JAMES VERSION.json', 'en'],
-    ['NLT', 'New Living Translation', 'NEW LIVING TRANSLATION.json', 'en'],
-    ['NRSV', 'New Revised Standard Version', 'NEW REVISED STANDARD VERSION.json', 'en'],
-    ['WEB', 'World English Bible', 'WORLD ENGLISH BIBLE.json', 'en'],
-    ['YLT', 'Young\'s Literal Translation', 'YOUNG\'S LITERAL TRANSLATION.json', 'en'],
-    ['AF', 'Afrikaans PWL', 'AFRIKAANS PWL.json', 'af'],
-  ];
+  // Full index from bible.helloao.org (1,200+ translations, public domain / free).
+  const AO = 'https://bible.helloao.org';
+  let aoIndex = null;
+  const searchInp = h('input.field', { type: 'search', placeholder: 'Search 1,200+ Bibles (KJV, Afrikaans, Xhosa…)', 'aria-label': 'Search Bibles', oninput: (e) => renderAo(e.target.value) });
+  const searchBox = h('div.col', { style: { gap: '4px', maxHeight: '200px', overflow: 'auto' } });
   const gets = h('div.col', { style: { gap: '6px' } },
     h('b', 'Download a Bible file'),
     h('div.row.wrap', { style: { gap: '6px' } }, GET.map(([a, f]) => {
@@ -63,27 +47,55 @@ export function importBibleDialog(onDone) {
       return bt;
     })),
     h('label', 'Search all Bibles'),
-    h('input.field', { type: 'search', placeholder: 'Type a name, e.g. NASB, Afrikaans, King James…', 'aria-label': 'Search Bibles', oninput: (e) => renderSearch(e.target.value) }),
-    h('div.col', { id: 'bible-search-results', style: { gap: '4px', maxHeight: '180px', overflow: 'auto' } }));
-  const searchBox = gets.querySelector('#bible-search-results');
-  function renderSearch(q) {
+    searchInp, searchBox,
+    h('p.note', 'Needs internet. The file is saved to Downloads; then choose it below. Public-domain and free Bibles only.'));
+  async function loadAo() {
+    if (aoIndex) return aoIndex;
+    try {
+      const r = await fetch(AO + '/api/available_translations.json');
+      if (!r.ok) throw new Error(r.status);
+      const d = await r.json();
+      aoIndex = (d.translations || []).map((t) => ({
+        id: t.id, abbr: t.shortName || t.id, name: t.englishName || t.name || t.id,
+        lang: t.language || '', link: t.completeTranslationApiLink || ('/api/' + t.id + '/complete.json'),
+      }));
+    } catch (e) { aoIndex = []; }
+    return aoIndex;
+  }
+  async function renderAo(q) {
     clear(searchBox);
+    const list = await loadAo();
+    if (!list.length) { searchBox.appendChild(h('p.note', 'Could not load the Bible list. Check your connection.')); return; }
     const qq = (q || '').toLowerCase().trim();
-    const hits = INDEX.filter(([a, n]) => !qq || a.toLowerCase().includes(qq) || n.toLowerCase().includes(qq)).slice(0, 12);
+    const hits = list.filter((t) => !qq || t.abbr.toLowerCase().includes(qq) || t.name.toLowerCase().includes(qq) || t.lang.includes(qq)).slice(0, 20);
     if (!hits.length) { searchBox.appendChild(h('p.note', 'No Bible matches “' + q + '”.')); return; }
-    hits.forEach(([a, n, f, lang]) => {
+    hits.forEach((t) => {
       const row = h('div.row', { style: { gap: '6px', alignItems: 'center' } },
-        h('span.grow', h('b', a), h('span.note', '  ' + n)),
-        h('button.btn.sm', { type: 'button', onclick: (e) => downloadOne(a, f, e.target, lang) }, 'Download'));
+        h('span.grow', h('b', t.abbr), h('span.note', '  ' + t.name)),
+        h('button.btn.sm', { type: 'button', onclick: (e) => downloadAo(t, e.target) }, 'Download'));
       searchBox.appendChild(row);
     });
   }
-  renderSearch('');
-  async function downloadOne(a, f, bt, langCode) {
-    const raw = langCode === 'af' ? RAW.replace('/en/', '/af/') : RAW;
+  async function downloadAo(t, bt) {
     bt.disabled = true; const old = bt.textContent; bt.textContent = 'Downloading…';
     try {
-      const r = await fetch(raw + encodeURIComponent(f));
+      const r = await fetch(AO + t.link);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const blob = await r.blob();
+      const u = URL.createObjectURL(blob);
+      const aEl = h('a', { href: u, download: t.abbr + '.json' });
+      document.body.appendChild(aEl); aEl.click(); aEl.remove();
+      setTimeout(() => URL.revokeObjectURL(u), 10000);
+      bt.textContent = 'Saved';
+      abbr.value = t.abbr; name.value = t.name; lang.value = t.lang.startsWith('af') ? 'af' : 'en';
+    } catch (e) { bt.textContent = 'Failed'; }
+    setTimeout(() => { bt.disabled = false; bt.textContent = old; }, 2500);
+  }
+  renderAo('');
+  async function downloadOne(a, f, bt) {
+    bt.disabled = true; const old = bt.textContent; bt.textContent = 'Downloading…';
+    try {
+      const r = await fetch(RAW + encodeURIComponent(f));
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const blob = await r.blob();
       const u = URL.createObjectURL(blob);
@@ -91,11 +103,8 @@ export function importBibleDialog(onDone) {
       document.body.appendChild(aEl); aEl.click(); aEl.remove();
       setTimeout(() => URL.revokeObjectURL(u), 10000);
       bt.textContent = a + ' saved';
-      abbr.value = a; name.value = INDEX.find((x) => x[0] === a)?.[1] || a; lang.value = langCode || 'en';
-    } catch (e) {
-      bt.textContent = 'Failed';
-      window.open(raw + encodeURIComponent(f), '_blank', 'noopener');
-    }
+      abbr.value = a; name.value = PRESETS.find((x) => x[0] === a)?.[1] || a; lang.value = 'en';
+    } catch (e) { bt.textContent = 'Failed'; }
     setTimeout(() => { bt.disabled = false; bt.textContent = old; }, 2500);
   }
   modal({
