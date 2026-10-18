@@ -30,9 +30,14 @@ export default function create(ctx) {
   saveBannerBtn.hidden = true;
   const deckMenuBtn = btn('more', 'Deck options', () => deck && menu(deckMenuBtn, [
     { label: 'Make this slide a banner', icon: 'banner', onclick: makeBanner },
-    { label: 'Rename', icon: 'edit', onclick: renameDeck },
+    { label: 'Duplicate this slide', icon: 'copy', onclick: duplicateSlide },
+    { label: 'Delete this slide', icon: 'trash', onclick: deleteSlide },
+    { label: 'Move slide earlier', icon: 'up', onclick: () => moveSlide(-1) },
+    { label: 'Move slide later', icon: 'down', onclick: () => moveSlide(1) },
+    { label: 'Present from this slide', icon: 'present', onclick: () => { stageAt(stagedIndex); live.take(); } },
+    { label: 'Rename deck', icon: 'edit', onclick: renameDeck },
     { label: 'Add to the service plan', icon: 'plan', onclick: addToPlan },
-    { label: 'Delete', icon: 'trash', onclick: deleteDeck },
+    { label: 'Delete deck', icon: 'trash', onclick: deleteDeck },
   ]), { cls: 'sm' });
   const fitSeg = seg([['contain', 'Fit'], ['cover', 'Fill']], settings.v.slides.fit, (v) => { settings.set('slides.fit', v); if (deck) stageAt(stagedIndex); });
 
@@ -275,6 +280,60 @@ export default function create(ctx) {
     deck = { id };
   }
 
+  async function duplicateSlide() {
+    if (!deck || !frames || stagedIndex < 0) return;
+    const src = frames[stagedIndex];
+    if (!src || src.kind !== 'image') { toast('Only picture slides can be duplicated.', 'err'); return; }
+    const rec = await db.get('renders', deck.id + '/' + stagedIndex);
+    if (!rec) return;
+    const newI = deck.count;
+    await db.put('renders', deck.id + '/' + newI, rec);
+    frames.push(src);
+    thumbs.push(rec.thumb || null);
+    deck.count++;
+    await db.put('files', deck.id, deck);
+    renderDeck();
+    stageAt(newI);
+    toast('Slide duplicated.', 'ok', 1500);
+  }
+
+  async function deleteSlide() {
+    if (!deck || !frames || stagedIndex < 0 || deck.count <= 1) { toast('Cannot delete the only slide.', 'err'); return; }
+    if (!(await confirmBox('Delete this slide?', 'Remove slide ' + (stagedIndex + 1) + '?', 'Delete', true))) return;
+    // Shift remaining renders down.
+    for (let i = stagedIndex; i < deck.count - 1; i++) {
+      const next = await db.get('renders', deck.id + '/' + (i + 1));
+      if (next) await db.put('renders', deck.id + '/' + i, next);
+    }
+    await db.del('renders', deck.id + '/' + (deck.count - 1));
+    frames.splice(stagedIndex, 1);
+    thumbs.splice(stagedIndex, 1);
+    deck.count--;
+    await db.put('files', deck.id, deck);
+    stagedIndex = Math.min(stagedIndex, deck.count - 1);
+    renderDeck();
+    stageAt(stagedIndex);
+    toast('Slide deleted.', 'ok', 1500);
+  }
+
+  async function moveSlide(dir) {
+    if (!deck || !frames) return;
+    const to = stagedIndex + dir;
+    if (to < 0 || to >= deck.count) return;
+    // Swap renders in the database.
+    const a = await db.get('renders', deck.id + '/' + stagedIndex);
+    const b = await db.get('renders', deck.id + '/' + to);
+    if (a && b) {
+      await db.put('renders', deck.id + '/' + stagedIndex, b);
+      await db.put('renders', deck.id + '/' + to, a);
+    }
+    // Swap in memory.
+    [frames[stagedIndex], frames[to]] = [frames[to], frames[stagedIndex]];
+    [thumbs[stagedIndex], thumbs[to]] = [thumbs[to], thumbs[stagedIndex]];
+    stagedIndex = to;
+    renderDeck();
+    stageAt(stagedIndex);
+  }
   async function renameDeck() {
     const n = await promptBox('Rename', 'Name', deck.name);
     if (!n) return;

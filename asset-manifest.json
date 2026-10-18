@@ -1,6 +1,6 @@
 {
-"version": "dd6c4a43c375",
-"bytes": 37404847,
+"version": "12e08ea87d63",
+"bytes": 37407435,
 "files": [
 "index.html",
 "display.html",
@@ -301,7 +301,7 @@
 "manifest.webmanifest": "f2aa34a6f92b60be",
 "css/app.css": "514368e6c63b5752",
 "css/stage.css": "d26560baf806c9c2",
-"js/app.js": "3729c6d7e341b8c0",
+"js/app.js": "8f86a180253053bb",
 "js/clickerui.js": "53822136e3da91ca",
 "js/controlbar.js": "6688133121f06d45",
 "js/display-main.js": "293bfdec24c97b69",
@@ -345,7 +345,7 @@
 "js/tabs/plan.js": "662b3e84b6de8cc3",
 "js/tabs/screen.js": "5f59e366c040e629",
 "js/tabs/settings.js": "030c7f660ef06c00",
-"js/tabs/slides.js": "bf34bdd97f580fe4",
+"js/tabs/slides.js": "dfd2c9660ff646e4",
 "js/tabs/tools.js": "afa1a48c3e9d0e84",
 "js/tabs/video.js": "571b5cd35140ac0d",
 "js/tabs/web.js": "e42a98c8d3d7ff45",
