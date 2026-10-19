@@ -383,54 +383,52 @@ export default function create(ctx) {
     ctx.setStaged('ai', bannerCue(cur, fr));
     toast('Banner is Next. Press Present (F5) to show it.', 'ok', 2500);
   }
-  function saveCurrent(announce) {
-    const now = Date.now();
-    if (!cur.id) { cur.id = 'b-' + uid(); cur.created = now; }
-    cur.updated = now;
-    if (!cur.name) cur.name = nameOf(cur);
-    nameInp.value = cur.name;
-    // Give this banner its own picture copy so later edits don't change saved ones.
-    const copy = clone(cur);
-    if (copy.s && copy.s.img) {
-      const srcId = copy.s.img;
-      // Only duplicate if another saved banner already uses this exact picture id.
-      const shared = lib.some((b) => b.id !== copy.id && b.s && b.s.img === srcId);
-      if (shared) {
-        // Mark for async copy; for now keep the id and copy below.
-        copy._needsPicCopy = srcId;
+  async function saveCurrent(announce) {
+    try {
+      const now = Date.now();
+      if (!cur.id) { cur.id = 'b-' + uid(); cur.created = now; }
+      cur.updated = now;
+      if (!cur.name) cur.name = nameOf(cur);
+      nameInp.value = cur.name;
+      const copy = clone(cur);
+      // Give this banner its own picture copy so later edits don't change saved ones.
+      if (copy.s && copy.s.img) {
+        const srcId = copy.s.img;
+        const shared = lib.some((b) => b.id !== copy.id && b.s && b.s.img === srcId);
+        if (shared) {
+          try {
+            const rec = await db.get('files', srcId).catch(() => null);
+            if (rec && rec.blob) {
+              const newId = await storePicture(rec.blob, (rec.name || 'Picture') + ' (copy)');
+              copy.s.img = newId;
+            }
+          } catch (e) { /* keep shared if copy fails */ }
+        }
       }
+      const i = lib.findIndex((b) => b.id === copy.id);
+      if (i >= 0) lib[i] = copy; else lib.unshift(copy);
+      savedSig = sig(cur);
+      await saveLib();
+      saveDraft(); updateSaveBtn(); renderViewSeg();
+      if (announce) toast('Saved.', 'ok', 2000);
+      return copy;
+    } catch (e) {
+      toast('Could not save banner: ' + (e.message || e), 'err', 5000);
+      console.error(e);
+      return null;
     }
-    const i = lib.findIndex((b) => b.id === copy.id);
-    if (i >= 0) lib[i] = copy; else lib.unshift(copy);
-    savedSig = sig(cur);
-    saveLib(); saveDraft(); updateSaveBtn(); renderViewSeg();
-    if (copy._needsPicCopy) {
-      // Duplicate the picture in the background so this banner owns it.
-      (async () => {
-        try {
-          const rec = await db.get('files', copy._needsPicCopy).catch(() => null);
-          if (rec && rec.blob) {
-            const newId = await storePicture(rec.blob, (rec.name || 'Picture') + ' (copy)');
-            const b = lib.find((x) => x.id === copy.id);
-            if (b && b.s) { b.s.img = newId; delete b._needsPicCopy; await saveLib(); if (view === 'library') renderLibrary(); }
-          }
-        } catch (e) { /* keep shared if copy fails */ }
-      })();
-    }
-    if (announce) toast('Saved to Saved banners.', 'ok', 2000);
-    return copy;
   }
   async function addCurToPlan() {
-    const b = saveCurrent(false);
+    const b = await saveCurrent(false);
+    if (!b) return;
     (await ctx.tab('plan')).addItem({ tab: 'ai', banner: b.id, label: 'Banner: ' + nameOf(b) });
   }
-  function addCurToLoop() {
-    const b = cur;
-    if (!b || !b.id) { toast('Save the banner first.'); return; }
+  async function addCurToLoop() {
+    if (!cur.id) { const b = await saveCurrent(false); if (!b) return; }
     const L = loopKind === 'ann' ? announce : loop;
     const saveL = loopKind === 'ann' ? saveAnnounce : saveLoop;
     const name = loopKind === 'ann' ? 'Announcements' : 'Preservice';
-    if (!L.items.some((it) => it.t === 'banner' && it.id === b.id)) { L.items.push({ t: 'banner', id: b.id }); saveL(); }
+    if (!L.items.some((it) => it.t === 'banner' && it.id === cur.id)) { L.items.push({ t: 'banner', id: cur.id }); saveL(); }
     toast('Added to ' + name + ' (' + L.items.length + ' item' + (L.items.length === 1 ? '' : 's') + ').', 'ok');
   }
   function startNew(tpl) {
@@ -770,18 +768,20 @@ export default function create(ctx) {
       const more = btn('more', 'More', () => menu(more, [
         { label: 'Add to the pre-service loop', icon: 'loop', onclick: () => { if (!loop.items.some((it) => it.t === 'banner' && it.id === b.id)) { loop.items.push({ t: 'banner', id: b.id }); saveLoop(); } toast('Added to the loop.', 'ok'); } },
         { label: 'Add to the service plan', icon: 'plan', onclick: async () => (await ctx.tab('plan')).addItem({ tab: 'ai', banner: b.id, label: 'Banner: ' + nameOf(b) }) },
-        { label: 'Move to group…', icon: 'folder', onclick: async () => {
-          const opts = ['(none)', ...groups.map((g) => g.name)];
-          const pick = await promptBox('Move to group', 'Group name (or blank to remove)', b.group ? (groups.find((g) => g.id === b.group) || {}).name || '' : '');
-          if (pick == null) return;
-          const nm = pick.trim();
-          if (!nm) { delete b.group; }
-          else {
-            let g = groups.find((x) => x.name.toLowerCase() === nm.toLowerCase());
-            if (!g) { g = { id: 'g-' + uid(), name: nm }; groups.push(g); await saveGroups(); }
-            b.group = g.id;
-          }
-          b.updated = Date.now(); await saveLib(); renderLibrary();
+        { label: 'Move to group…', icon: 'folder', onclick: () => {
+          const items = [
+            { label: '(No group)', icon: b.group ? '' : 'check', onclick: async () => { delete b.group; b.updated = Date.now(); await saveLib(); renderLibrary(); } },
+            ...groups.map((g) => ({ label: g.name, icon: b.group === g.id ? 'check' : '', onclick: async () => { b.group = g.id; b.updated = Date.now(); await saveLib(); renderLibrary(); } })),
+            '-',
+            { label: 'New group…', icon: 'plus', onclick: async () => {
+              const n = await promptBox('New group', 'Name', '');
+              if (!n || !n.trim()) return;
+              const g = { id: 'g-' + uid(), name: n.trim() };
+              groups.push(g); await saveGroups();
+              b.group = g.id; b.updated = Date.now(); await saveLib(); renderLibrary();
+            } },
+          ];
+          menu(more, items);
         } },
         { label: 'Rename…', icon: 'edit', onclick: async () => { const n = await promptBox('Rename banner', 'Name', b.name || nameOf(b)); if (n && n.trim()) { b.name = n.trim(); b.updated = Date.now(); if (cur.id === b.id) { cur.name = b.name; nameInp.value = b.name; savedSig = sig(cur); } await saveLib(); renderLibrary(); } } },
         { label: 'Duplicate', icon: 'copy', onclick: async () => { const c = clone(b); c.id = 'b-' + uid(); c.name = nameOf(b) + ' (copy)'; c.created = c.updated = Date.now(); lib.unshift(c); await saveLib(); renderLibrary(); renderViewSeg(); } },
