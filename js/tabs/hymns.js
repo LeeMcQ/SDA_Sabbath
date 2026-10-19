@@ -2,7 +2,7 @@
 // present stanza by stanza (chorus repeated automatically).
 import { h, clear, esc, debounce, normalize, readText, download } from '../core/util.js';
 import { icon } from '../core/icons.js';
-import { btn, modal, seg, toggle, menu, toast, confirmBox, closeModal, enter, emptyState } from '../core/ui.js';
+import { btn, modal, seg, toggle, menu, toast, confirmBox, closeModal, enter, emptyState, keepInView } from '../core/ui.js';
 import { db } from '../core/db.js';
 import { fitsText } from '../core/render.js';
 import { music, INSTRUMENTS } from '../core/hymnmusic.js';
@@ -314,10 +314,13 @@ export default function create(ctx) {
     const isLive = live.cue && live.cue.tab === 'hymns' && live.cue.hymnKey === cue.hymnKey;
     cue.cards.forEach((c, i) => {
       const lab = c.p.kind === 'title' ? 'Title' : c.p.kind === 'chorus' ? 'Chorus' : 'Verse ' + c.p.n + (c.sub || '');
+      // Like verses: a click or tap only selects the stanza as Next (also while the hymn is live);
+      // double-click, Enter, Present or F5 puts it on screen.
       const card = h('button.stanza' + (c.p.kind === 'chorus' ? '.chorus' : ''), {
         type: 'button', 'aria-pressed': String(i === cue.index),
-        onclick: () => { stagedIndex = i; cue.index = i; markCards(); ctx.setStaged('hymns', cue); if (isLiveHymn()) live.go(i); },
-        ondblclick: () => { stagedIndex = i; cue.index = i; live.take(cue); },
+        onclick: () => stageStanza(i),
+        ondblclick: () => { stageStanza(i); live.take(cue); },
+        onkeydown: (e) => { if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); stageStanza(i); live.take(cue); } },
       }, h('span.lab', lab), c.lines.map((l) => h('span.ln', l)));
       if (isLive && live.index === i) card.classList.add('live');
       if (i < 10) card.style.setProperty('--i', i);
@@ -326,6 +329,14 @@ export default function create(ctx) {
     if (fresh) enter(grid, 'stagger', 700); // a newly opened hymn: stanzas settle in one after another
   }
   const isLiveHymn = () => live.cue && live.cue.tab === 'hymns' && cue && live.cue.hymnKey === cue.hymnKey;
+  /** Select stanza card i as Next (pick: the "Next follows Live" logic leaves this choice alone). */
+  function stageStanza(i) {
+    if (!cue) return;
+    stagedIndex = i; cue.index = i; markCards();
+    ctx.setStaged('hymns', cue, { pick: true });
+  }
+  // The live stanza card stays in view while the hymn moves on (arrows, F5, clicker, music).
+  const followCard = () => { if (!isLiveHymn() || el.hidden) return; keepInView(grid.children[live.index]); };
   function markCards() {
     Array.prototype.forEach.call(grid.children, (c, i) => {
       const on = !!cue && i === cue.index;
@@ -340,6 +351,8 @@ export default function create(ctx) {
   }
   live.on('go', markCards);
   live.on('live', markCards);
+  live.on('go', followCard);
+  live.on('live', followCard);
   // Next follows the live hymn (Verse 2 live → Next is the chorus after it): keep the picked stanza in step.
   live.on('staged', (s) => { if (s && s === cue && s.index != null) { stagedIndex = s.index; markCards(); } });
 
@@ -792,6 +805,16 @@ export default function create(ctx) {
       return cue;
     },
     onShow() { if (!hymn && !opening && !ctx.isMobile()) setTimeout(() => { q.classList.add('quiet-focus'); q.focus(); }, 50); opening = false; if (hymn) renderMusic(); },
+    /** Number keys: stage stanza n (of the hymn shown here; the title and chorus are reached with the arrows). */
+    numberKey(n, multi) {
+      if (!cue || !cue.labels) return false;
+      if (multi) { n %= 10; if (!n) return true; } // stanzas go up to 9: two quick presses mean the last one
+      const i = cue.labels.findIndex((lab) => lab === String(n) || lab === n + 'a');
+      if (i < 0) { ctx.toast('This hymn has no stanza ' + n + (chosen ? ' selected' : '') + '.', '', 2200); return true; }
+      stageStanza(i);
+      keepInView(grid.children[i]);
+      return true;
+    },
     /** M key: pause/continue the music, or start it for the live (or selected) hymn. */
     async musicKey() {
       music.unlock();
