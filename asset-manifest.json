@@ -1,6 +1,6 @@
 {
-"version": "3e08762c3f52",
-"bytes": 37447324,
+"version": "551f2abe454a",
+"bytes": 37447504,
 "files": [
 "index.html",
 "display.html",
@@ -305,7 +305,7 @@
 "css/app.css": "130a5bd4346f331a",
 "css/stage.css": "412b05e1b5c472f1",
 "js/android-app.js": "22ee1094fee5c223",
-"js/app.js": "203c4a405d8deb99",
+"js/app.js": "c7e19b075e08a2de",
 "js/clickerui.js": "ceb58c892b9c95ba",
 "js/controlbar.js": "015fc21aea219e5d",
 "js/display-main.js": "293bfdec24c97b69",

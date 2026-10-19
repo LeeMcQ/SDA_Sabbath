@@ -16,7 +16,7 @@ import { clicker, actionFor, sigOfKey, sigOfMouse } from './core/clicker.js';
 import { openClickerSetup, builtinAction } from './clickerui.js';
 
 export const VERSION = '1.3.0';
-export const BUILD = 'e018f84';
+export const BUILD = 'd8ce284';
 
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', load: () => import('./tabs/bible.js') },
@@ -167,7 +167,9 @@ async function doPresent() {
   const a = document.activeElement;
   if (a && (a.tagName === 'INPUT' || a.tagName === 'SELECT') && a !== document.body) a.blur();
   // Always present on the extended screen, full screen.
-  if (!link.ready) {
+  // Android app: there is no second window (window.open returns null there), so live.take() asks
+  // where to present instead (This device + HDMI / screen mirroring).
+  if (!link.ready && !NATIVE) {
     const opened = await link.openWindow({ prompt: true });
     if (!opened) return;
     // Wait briefly for the display window to be ready.
