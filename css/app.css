@@ -837,3 +837,26 @@ google-cast-launcher, .cast-button, [aria-label*="Cast"], button[title*="Cast"],
 .webpc-part[hidden] { display: none; }
 .webpc-part > .toolbar { border-top: 0; }
 .webpc-part > .toolbar > h2 { display: none; }
+
+/* ---------- Safe areas (notch, rounded corners, gesture / home bar) ----------
+   viewport-fit=cover lets the app draw edge to edge on phones and tablets; these keep every control clear
+   of the notch and the home bar. env() is 0 on ordinary screens and in the Android app (it pads natively). */
+:root { --sa-t: env(safe-area-inset-top, 0px); --sa-r: env(safe-area-inset-right, 0px); --sa-b: env(safe-area-inset-bottom, 0px); --sa-l: env(safe-area-inset-left, 0px); }
+.app { padding: 0 var(--sa-r) var(--sa-b) var(--sa-l); grid-template-rows: calc(var(--top-h) + var(--sa-t)) minmax(0, 1fr) auto; }
+.topbar { padding-top: var(--sa-t); }
+.toasts { bottom: calc(var(--bar-h) + var(--tab-h) + 18px + var(--sa-b)); }
+.modal-back { padding: max(16px, var(--sa-t)) max(16px, var(--sa-r)) max(16px, var(--sa-b)) max(16px, var(--sa-l)); }
+.emb-mini { right: calc(12px + var(--sa-r)); bottom: calc(12px + var(--bar-on, 0) * 64px + var(--sa-b)); }
+.self-display .self-close { top: calc(10px + var(--sa-t)); right: calc(10px + var(--sa-r)); }
+@media (max-width: 760px) {
+  /* The bottom tab bar takes the home-bar inset itself, so its background reaches the screen edge. */
+  .app, .app.rail-right, .app.no-monitors, .app.rail-right.no-monitors {
+    padding-bottom: 0;
+    grid-template-rows: calc(var(--top-h) + var(--sa-t)) auto minmax(0, 1fr) auto calc(var(--tab-h) + var(--sa-b));
+  }
+  .rail-nav { padding-bottom: var(--sa-b); background: var(--sunk); }
+  .quick.open { top: calc(8px + var(--sa-t)); left: calc(8px + var(--sa-l)); right: calc(8px + var(--sa-r)); }
+  .modal-back { padding: var(--sa-t) 0 0; }
+  .modal { padding-bottom: var(--sa-b); } /* bottom sheets sit on the screen edge */
+  .emb-mini { right: calc(8px + var(--sa-r)); bottom: calc(70px + var(--bar-on, 0) * 60px + var(--sa-b)); }
+}
