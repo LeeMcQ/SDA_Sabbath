@@ -37,10 +37,9 @@ export function createControlBar(el, getTab) {
     } else el.appendChild(h('div.grow'));
     el.append(
       h('div.cb-end',
-        btn('black', 'Black screen', () => live.setBlank('black'), { key: 'B', cls: 'hide-sm' + (live.blank === 'black' ? ' live-on' : '') }),
-        btn('logo', 'Logo', () => live.setBlank('logo'), { key: 'L', cls: 'hide-sm' + (live.blank === 'logo' ? ' live-on' : '') }),
-
-        btn('clear', 'Clear screen', () => live.clear(), { key: 'Esc' })),
+        btn('black', 'Black screen', () => live.setBlank('black'), { key: 'B', cls: live.blank === 'black' ? 'live-on' : '' }),
+        btn('logo', 'Logo', () => live.setBlank('logo'), { key: 'L', cls: live.blank === 'logo' ? 'live-on' : '' }),
+        btn('clear', 'Clear screen', () => live.clear(), { key: 'C' })),
       musicBox,
       audioBox,
     );

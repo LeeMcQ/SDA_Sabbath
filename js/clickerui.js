@@ -12,7 +12,7 @@ export function builtinAction(sig, fromDisplay) {
     if (['PageUp', 'ArrowLeft', 'ArrowUp'].includes(v)) return 'prev';
     if (['b', 'B', '.', 'w', 'W'].includes(v)) return 'black';
     if (v === 'F5') return 'present';
-    if (['Escape', 'c', 'C'].includes(v)) return 'clear';
+    if (['c', 'C'].includes(v)) return 'clear'; // Esc clears only when pressed twice quickly
   }
   if (fromDisplay) return { 'mouse:0': 'next', 'mouse:2': 'prev', 'wheel:down': 'next', 'wheel:up': 'prev' }[sig] || null;
   return null;

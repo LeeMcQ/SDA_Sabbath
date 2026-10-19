@@ -87,11 +87,12 @@ p { margin: 0; }
 .quick-pop button { display: flex; width: 100%; gap: 10px; align-items: baseline; text-align: left; border: 0; background: transparent; padding: 8px 10px; border-radius: var(--r-sm); }
 .quick-pop button[aria-selected="true"], .quick-pop button:hover { background: var(--panel); }
 .quick-pop .k { color: var(--muted); font-size: 12px; min-width: 52px; }
+.quick-pop .quick-hint { padding: 6px 10px 4px; border-top: 1px solid var(--line); margin-top: 4px; font-size: 12px; }
 .spacer { flex: 1; }
 .top-icons { display: flex; gap: 4px; }
 
 .present {
-  display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto auto; column-gap: 12px; align-items: center;
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto auto; column-gap: 12px; align-items: center;
   min-width: 270px; max-width: 380px; height: 50px; padding: 4px 14px 4px 12px; border: 0; border-radius: var(--r);
   background: var(--brass); color: var(--brass-ink); text-align: left; transition: background .12s;
 }
@@ -99,7 +100,7 @@ p { margin: 0; }
 .present:active { transform: translateY(1px); }
 .present .pi { grid-row: 1 / 3; width: 26px; height: 26px; stroke-width: 2.2; }
 .present .pk { font-weight: 700; font-size: var(--fs-lg); line-height: 1.1; }
-.present .pn { grid-column: 2 / 4; font-size: var(--fs-sm); line-height: 1.2; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.present .pn { grid-column: 2 / 4; min-width: 0; font-size: var(--fs-sm); line-height: 1.2; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .present kbd { justify-self: end; border-color: rgba(30,22,6,.5); }
 .present.empty { background: transparent; color: var(--muted); border: 1px dashed var(--line); }
 .present.empty .pn, .present.empty kbd { opacity: 1; }
@@ -361,6 +362,18 @@ input[type=range] { accent-color: var(--next); }
   .hymn-split { grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); }
   .lib-split, .media-split { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
 }
+/* Tablets and small PCs: the top bar shrinks so the Present button always stays on screen. */
+@media (max-width: 1024px) and (min-width: 761px) {
+  .topbar { gap: 8px; padding: 0 8px 0 10px; }
+  .brand span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } /* still read by screen readers */
+  .disp-btn { flex: 0 1 auto; min-width: 0; max-width: 150px; }
+  .quick { flex: 1 1 160px; min-width: 160px; }
+  .spacer { display: none; }
+  .top-icons { flex: none; }
+  .present { flex: 0 1 240px; min-width: 150px; max-width: 240px; column-gap: 8px; padding: 4px 10px; }
+  .present .pi { display: none; }
+  .present .pk { grid-column: 1 / 3; }
+}
 @media (max-width: 900px) and (min-width: 761px) {
   :root { --mon-w: 230px; --rail-w: 72px; }
   .book-grid { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
@@ -423,10 +436,19 @@ input[type=range] { accent-color: var(--next); }
   .bible-split .pane { display: none; }
   .bible-split[data-step="books"] .p-books, .bible-split[data-step="chapters"] .p-chapters, .bible-split[data-step="verses"] .p-verses { display: flex; }
   .crumbs { display: flex; gap: 6px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); overflow-x: auto; min-height: 47px; } /* reserved before the Bible loads: no layout jump */
-  .ctrlbar { padding: 6px 8px; gap: 6px; }
-  .ctrlbar .cb-live { max-width: 40vw; }
+  .ctrlbar { padding: 6px 8px; gap: 6px; flex-wrap: wrap; row-gap: 6px; overflow-x: visible; }
+  .ctrlbar .cb-live { flex: 1 1 0; max-width: none; }
   .ctrlbar .hide-sm { display: none; }
+  .ctrlbar .sep { display: none; }
+  .ctrlbar .cb-end { margin-left: 0; }
+  /* Stanza / translation buttons get their own row on phones, so nothing covers them (Black, Logo, Clear stay on top). */
+  .ctrlbar .cb-type { order: 5; flex: 1 0 100%; }
+  .ctrlbar .cb-type:not(:has(> :not(.hide-sm))) { display: none; }
+  .ctrlbar .audio-mini { order: 6; }
+  .ctrlbar .cb-chips { flex: 1 1 0; }
   .form { grid-template-columns: 1fr; gap: 4px 0; }
+  .form > * { min-width: 0; }
+  .form > .seg { flex-wrap: wrap; max-width: 100%; }
   .form > label { margin-top: 8px; }
   .thumbs { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
   .stanza-grid { grid-template-columns: 1fr 1fr; }

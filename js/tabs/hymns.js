@@ -340,6 +340,8 @@ export default function create(ctx) {
   }
   live.on('go', markCards);
   live.on('live', markCards);
+  // Next follows the live hymn (Verse 2 live → Next is the chorus after it): keep the picked stanza in step.
+  live.on('staged', (s) => { if (s && s === cue && s.index != null) { stagedIndex = s.index; markCards(); } });
 
   // ------------------------------------------------------------ options / editing / import
   function slider(min, max, step, value, fmt, onchange) {
@@ -660,6 +662,25 @@ export default function create(ctx) {
       h('button.btn.sm.icon', { type: 'button', 'aria-label': label + ' up', onclick: onPlus }, icon('plus')));
   }
 
+  /** Attach (or remove) the user's own MIDI file for the open hymn. */
+  function addMidiBtn(has) {
+    const num = hymn.n, bid = book.id;
+    if (has) {
+      return h('button.btn.sm', { type: 'button', title: 'Stop using your MIDI file for this hymn', onclick: async () => {
+        music.stop(); await db.del('files', 'midi:' + bid + ':' + num).catch(() => {}); toast('MIDI file removed.', 'ok', 2000); renderMusic();
+      } }, icon('trash'), h('span', 'Remove my MIDI'));
+    }
+    const inp = h('input', { type: 'file', accept: '.mid,.midi,audio/midi,audio/x-midi', hidden: true, onchange: async () => {
+      const f = inp.files && inp.files[0]; inp.value = '';
+      if (!f) return;
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      if (String.fromCharCode(...bytes.slice(0, 4)) !== 'MThd') { toast('That is not a MIDI file.', 'err', 3000); return; }
+      await db.put('files', 'midi:' + bid + ':' + num, { id: 'midi:' + bid + ':' + num, kind: 'midi', name: f.name.replace(/\.midi?$/i, ''), blob: new Blob([bytes], { type: 'audio/midi' }), added: Date.now() });
+      toast('MIDI added to hymn ' + num + '.', 'ok', 2500); renderMusic();
+    } });
+    return h('span', inp, h('button.btn.sm.primary', { type: 'button', title: 'Choose a .mid file from this device', onclick: () => inp.click() }, icon('plus'), h('span', 'Add MIDI file…')));
+  }
+
   async function renderMusic() {
     if (!hymn || !book) { musicBar.hidden = true; return; }
     const key = cue && cue.hymnKey;
@@ -667,7 +688,13 @@ export default function create(ctx) {
     if (!cue || cue.hymnKey !== key) return; // another hymn was picked meanwhile
     musicEntry = entry;
     clear(musicBar);
-    if (!entry) { musicBar.hidden = true; return; }
+    if (!entry) {
+      // No music for this hymn: let the user attach a MIDI file (kept on this device).
+      musicBar.hidden = false;
+      musicBar.append(h('div.row.wrap', h('span.note', 'No music for this hymn yet.'), addMidiBtn(false),
+        h('a.btn.sm', { href: 'https://www.google.com/search?q=' + encodeURIComponent('"' + hymn.t + '" hymn midi'), target: '_blank', rel: 'noopener' }, 'Find a MIDI online')));
+      return;
+    }
     musicBar.hidden = false;
     const m = S();
     const st = music.state || {};
@@ -688,6 +715,7 @@ export default function create(ctx) {
     musicInfo = h('span.note.music-info.trunc', info);
     row1.append(musicInfo);
     musicSig = sigOf();
+    if (entry.custom && !entry.bundled) row1.append(addMidiBtn(true));
     musicBar.append(row1);
     // Jump to a part while it plays: Intro 1 2 3 …
     if (mine && st.sections && st.sections.length > 1) {
@@ -787,7 +815,7 @@ export default function create(ctx) {
     },
     controls(c) {
       // Jump straight to a stanza: T 1 C 2 C 3 …
-      const box = h('div.row', { style: { flexWrap: 'nowrap', overflowX: 'auto' } });
+      const box = h('div.row.cb-chips', { style: { flexWrap: 'nowrap', overflowX: 'auto', minWidth: 0, flex: '1 1 auto' } });
       const labels = c.labels || [];
       const isCho = (lab) => /^C[a-f]?$/.test(lab);
       const firstCho = labels.findIndex(isCho);
@@ -807,8 +835,8 @@ export default function create(ctx) {
       ctlBox = box; markCtl();
       // Live hymn with offline music: start it from the control bar too.
       if (api.musicFor(c) && !(music.isPlaying() && music.hymnKey === c.hymnKey)) {
-        return h('div.row', { style: { flexWrap: 'nowrap', minWidth: 0 } }, box,
-          h('button.btn.sm', { type: 'button', title: 'Play the music for this hymn (M)', onclick: () => api.musicKey() }, icon('music'), h('span.hide-sm', 'Music')));
+        return h('div.row', { style: { flexWrap: 'nowrap', minWidth: 0, flex: '1 1 auto' } }, box,
+          h('button.btn.sm.cb-music', { type: 'button', title: 'Play the music for this hymn (M)', 'aria-label': 'Play the music for this hymn', style: { flex: 'none' }, onclick: () => api.musicKey() }, icon('music'), h('span.hide-sm', 'Music')));
       }
       return box;
     },

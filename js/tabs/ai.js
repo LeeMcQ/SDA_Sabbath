@@ -243,11 +243,11 @@ export default function create(ctx) {
   }
 
   // ------------------------------------------------------------ layout
-  const viewSeg = h('div.seg.bn-views', { role: 'tablist' });
+  const viewSeg = h('div.seg.bn-views', { role: 'group', 'aria-label': 'Banners & Music views' });
   const VIEWS = [['make', 'Make'], ['library', 'Saved'], ['loop', 'Service loop', ''], ['music', 'Music'], ['topics', 'Topics']];
   function renderViewSeg() {
     clear(viewSeg);
-    VIEWS.forEach(([v, label, pre]) => viewSeg.appendChild(h('button', { type: 'button', role: 'tab', 'aria-selected': String(v === view), 'aria-pressed': String(v === view),
+    VIEWS.forEach(([v, label, pre]) => viewSeg.appendChild(h('button', { type: 'button', 'aria-pressed': String(v === view),
       onclick: () => setView(v) }, pre ? [h('span.hide-sm', pre + label.toLowerCase()), h('span.bn-sm', label)] : label, v === 'library' && lib.length ? ' (' + lib.length + ')' : '')));
   }
   const churchBtn = h('button.btn.sm', { type: 'button', title: 'Church name, town, location, service time and giving link', onclick: () => churchDialog() }, icon('pin'), h('span.hide-sm', 'Church details'));
@@ -862,9 +862,9 @@ export default function create(ctx) {
     const title = kind === 'ann' ? 'Announcements' : 'Preservice';
 
     box.appendChild(h('h3', { style: { margin: '0 0 8px' } }, 'Service loop'));
-    const sub = h('div.seg', { role: 'tablist', style: { marginBottom: '10px' } });
+    const sub = h('div.seg', { role: 'group', 'aria-label': 'Service loop kind', style: { marginBottom: '10px' } });
     [['pre', 'Preservice'], ['ann', 'Announcements']].forEach(([k, lab]) => {
-      sub.appendChild(h('button', { type: 'button', role: 'tab', 'aria-selected': String(k === kind), 'aria-pressed': String(k === kind),
+      sub.appendChild(h('button', { type: 'button', 'aria-pressed': String(k === kind),
         onclick: () => { loopKind = k; renderLoop(); } }, lab));
     });
     box.appendChild(sub);
@@ -943,7 +943,7 @@ export default function create(ctx) {
   const tpTr = h('select.field', { 'aria-label': 'Translation', onchange: () => { if (curTopic) showTopic(curTopic); else if (lastQuery) runTopicSearch(); } });
   const tpList = h('div.tp-list');
   const tpOut = h('div.tp-out.scroll.pad');
-  const askIn = h('input.field.grow', { type: 'search', placeholder: 'Ask a question, e.g. What does the Bible say about the Sabbath?', 'aria-label': 'Ask a question',
+  const askIn = h('input.field.grow', { type: 'search', placeholder: 'Ask a question, e.g. What does the Bible say about the Sabbath?', 'aria-label': 'Ask a question', 'data-free-text': '',
     onkeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); askAi(); } } });
   const askBtn = h('button.btn.primary', { type: 'button', title: 'Online AI answers your question in three ways that fit a slide. You choose one.', onclick: () => askAi() }, icon('sparkle'), h('span', 'Ask AI'));
   views.topics.append(

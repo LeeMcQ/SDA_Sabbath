@@ -2,7 +2,7 @@
 // so the operator sees exactly what the congregation will see.
 import { h, clear, debounce } from './core/util.js';
 import { createStage } from './core/render.js';
-import { live, frameCount } from './core/live.js';
+import { live, frameCount, slideName } from './core/live.js';
 import { link } from './core/link.js';
 import { settings } from './core/settings.js';
 import { icon } from './core/icons.js';
@@ -24,7 +24,7 @@ export function createMonitors(host) {
   const frames = h('div.mon-frames');
   const blackBtn = h('button.btn', { type: 'button', title: 'Black screen (B)', onclick: () => live.setBlank('black') }, icon('black'), h('span', 'Black'));
   const logoBtn = h('button.btn', { type: 'button', title: 'Show logo (L)', onclick: () => live.setBlank('logo') }, icon('logo'), h('span', 'Logo'));
-  const clearBtn = h('button.btn', { type: 'button', title: 'Clear the screen (Esc)', onclick: () => live.clear() }, icon('clear'), h('span', 'Clear'));
+  const clearBtn = h('button.btn', { type: 'button', title: 'Clear the screen (C, or Esc twice)', onclick: () => live.clear() }, icon('clear'), h('span', 'Clear'));
   const actions = h('div.mon-actions', blackBtn, logoBtn, clearBtn);
   const extra = h('div.mon-extra.note', '');
   // Phones with nothing staged or live show this slim strip instead of two empty screens.
@@ -62,7 +62,8 @@ export function createMonitors(host) {
     const same = live.sameAsLive();
     const cue = same ? live.cue : live.staged;
     const idx = same ? live.index : (cue && cue.index);
-    nextTitle.textContent = cue ? (same ? 'Live: ' : '') + cue.title + (cue.sub ? '  ' + cue.sub : '') : '';
+    const part = cue && !same ? slideName(cue, idx) : '';
+    nextTitle.textContent = cue ? (same ? 'Live: ' : '') + cue.title + (part ? ' · ' + part : '') + (cue.sub ? '  ' + cue.sub : '') : '';
     const f = frameOf(cue, idx);
     nextStage.show(f);
     setStream('next', nextScreen, cue && cue.deck.kind === 'stream' ? cue.stream : null);

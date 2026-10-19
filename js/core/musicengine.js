@@ -166,12 +166,12 @@ export class MusicEngine {
   async play(req, onProgress) {
     await this.init(onProgress);
     const idx = await loadIndex();
-    const entry = idx && idx.books[req.book] && idx.books[req.book].hymns[String(req.n)];
+    const entry = (req.entry && req.entry.blob ? req.entry : null) || (idx && idx.books[req.book] && idx.books[req.book].hymns[String(req.n)]);
     if (!entry) throw new Error('No music for hymn ' + req.n);
     clearTimeout(this._idleT); clearTimeout(this._fadeT);
     if (this.ctx.state !== 'running') await this.ctx.resume();
     const smf = parseSMF(await midiBytes(req.book, entry));
-    const segs = req.segs && req.segs.length ? req.segs : [{ from: 0, to: entry.last + 1, label: 'Hymn', kind: 'all', slide: null }];
+    const segs = req.segs && req.segs.length ? req.segs : [{ from: 0, to: entry.last != null ? entry.last + 1 : smf.events.reduce((m, e) => Math.max(m, e.tick), 0) + 1, label: 'Hymn', kind: 'all', slide: null }];
     this.arr = buildArrangement(smf, segs, { channels: channelMap(req.instrument) });
     this.req = req;
     if (req.fx) this.applyEffects(req.fx);

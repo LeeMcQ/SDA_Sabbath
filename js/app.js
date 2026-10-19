@@ -4,7 +4,7 @@ import { icon } from './core/icons.js';
 import { settings } from './core/settings.js';
 import { db, persistStorage } from './core/db.js';
 import { link, listScreens } from './core/link.js';
-import { live } from './core/live.js';
+import { live, slideName } from './core/live.js';
 import { bgAudio } from './core/audio.js';
 import * as ui from './core/ui.js';
 import { createMonitors } from './monitors.js';
@@ -16,7 +16,7 @@ import { clicker, actionFor, sigOfKey, sigOfMouse } from './core/clicker.js';
 import { openClickerSetup, builtinAction } from './clickerui.js';
 
 export const VERSION = '1.3.0';
-export const BUILD = '4272ace';
+export const BUILD = '0d0a755';
 
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', load: () => import('./tabs/bible.js') },
@@ -148,7 +148,8 @@ function updatePresent() {
   presentBtn.classList.toggle('empty', !c);
   presentBtn.classList.toggle('is-live', same);
   presentKey.textContent = same ? 'On screen' : 'Present';
-  $('#presentNext').textContent = c ? (same ? '' : 'Next: ') + c.title + (c.sub ? '  ' + c.sub : '') : 'Nothing selected';
+  const part = c && !same ? slideName(c, c.index) : '';
+  $('#presentNext').textContent = c ? (same ? '' : 'Next: ') + c.title + (part ? ' · ' + part : '') + (c.sub ? '  ' + c.sub : '') : 'Nothing selected';
   presentBtn.title = same ? 'This is already on screen. Press again (F5) to show it from the start.' : 'Present the selected item (F5 or Ctrl+Enter)';
 }
 live.on('staged', updatePresent);
@@ -454,8 +455,9 @@ function showHelp() {
     ['F5  or  Ctrl+Enter', 'Present what is selected (Next → Live)'],
     ['→  ↓  Page Down  Space', 'Next verse / slide / stanza'],
     ['←  ↑  Page Up', 'Previous'], ['Home  End', 'First / last'],
-    ['B  or  .', 'Black screen (press again to return)'], ['L', 'Show logo'], ['Esc  or  C', 'Clear the screen'], ['M', 'Hymn music: play / pause'],
-    ['/  or  Ctrl+K', 'Go to a Bible reference or hymn number'], ['Alt+1 … Alt+9', 'Switch tabs'],
+    ['B  or  .', 'Black screen (press again to return)'], ['L', 'Show logo'], ['C  or  Esc twice', 'Clear the screen'],
+    ['Esc', 'Close a menu or dialog, leave a text box (the screen stays as it is)'], ['M', 'Hymn music: play / pause'],
+    ['/  or  Ctrl+K', 'Go to a Bible reference or hymn number (Enter selects it, Shift+Enter presents it now)'], ['Alt+1 … Alt+9', 'Switch tabs'],
     ['Space (video live)', 'Play / pause'], ['F (on the display)', 'Toggle full screen'],
     ['Clicker', 'Page Down / Page Up work even while typing in a box; with nothing on screen, next shows the Next item'],
   ];
@@ -481,6 +483,16 @@ document.addEventListener('keydown', (e) => {
 }, true);
 const inBigText = (t) => !!(t && (t.isContentEditable || t.tagName === 'TEXTAREA'));
 let endPressAt = 0;
+let escAt = 0;
+const quickInput = $('#quickInput');
+// Boxes where "/" is part of what people type, so it does not jump to Go to there.
+const slashTypes = (t) => {
+  if (!t || !t.tagName) return false;
+  if (t.isContentEditable || t.tagName === 'TEXTAREA') return true;
+  if (t.tagName !== 'INPUT') return false;
+  if (t.dataset && t.dataset.freeText != null) return true;
+  return (t.type || 'text').toLowerCase() !== 'search'; // lookup boxes (Bible reference, Find a hymn …) are type=search
+};
 
 /** Clicker "next" with nothing more in the item on screen (or nothing on screen): show what is Next. */
 function clickerNext() {
@@ -530,9 +542,10 @@ function handleKey(e, remote) {
   const typing = !remote && !quiet && isTyping(e);
   const ctrl = e.ctrlKey || e.metaKey;
   if (k === 'F5' || (ctrl && k === 'Enter')) { doPresent(); return true; }
-  if (typing) return false;
+  // Go to: Ctrl+K works everywhere; "/" too, except where a "/" is real text (notes, banner text, web addresses).
+  if (!remote && t !== quickInput && ((ctrl && !e.altKey && (k === 'k' || k === 'K')) || (k === '/' && !ctrl && !e.altKey && !(typing && slashTypes(t))))) { quick.focus(); return true; }
+  if (typing) { if (k === 'Escape' && t && t.blur && t !== quickInput && !e.defaultPrevented) t.blur(); return false; }
   if (quiet && t && t.blur) t.blur();
-  if (!remote && ((ctrl && (k === 'k' || k === 'K')) || k === '/')) { quick.focus(); return true; }
   if (e.altKey && /^[1-9]$/.test(k)) { const tb = TABS.filter(Boolean)[+k - 1]; if (tb) showTab(tb.id); return true; }
   if (ctrl || e.altKey) return false;
   const kind = live.cue && live.cue.deck.kind;
@@ -545,7 +558,17 @@ function handleKey(e, remote) {
     case 'b': case 'B': case '.': live.setBlank('black'); return true;
     case 'w': case 'W': live.setBlank('black'); return true; // some clickers send W for a "white/blank" screen
     case 'l': case 'L': live.setBlank('logo'); return true;
-    case 'Escape': case 'c': case 'C': live.clear(); return true;
+    case 'c': case 'C': live.clear(); return true;
+    case 'Escape': {
+      // Esc alone never clears the screen (a stray press during a service): it closes menus and leaves boxes.
+      // A second Esc within 600 ms clears, like C.
+      if (!remote && ui.menuOpen()) { ui.closeMenu(); escAt = 0; return true; }
+      if (!live.cue) { escAt = 0; return false; }
+      if (Date.now() - escAt < 600) { escAt = 0; live.clear(); return true; }
+      escAt = Date.now();
+      ui.toast('Press Esc again to clear', '', 1400);
+      return true;
+    }
     case 'm': case 'M': getTab('hymns').then((tb) => tb.musicKey && tb.musicKey()); return true;
     case '?': showHelp(); return true;
   }

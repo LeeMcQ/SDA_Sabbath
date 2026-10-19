@@ -27,10 +27,10 @@ export default function create(ctx) {
   const parts = { web: createWeb(partCtx('web')), screen: createScreen(partCtx('screen')) };
   Object.values(parts).forEach((p) => p.el.classList.add('webpc-part'));
 
-  const tabs = h('div.seg.webpc-seg', { role: 'tablist' });
+  const tabs = h('div.seg.webpc-seg', { role: 'group', 'aria-label': 'Web page or PC screen' });
   const LABELS = { web: ['web', 'Web page', 'Show a web page or mirror a browser tab'], screen: ['pc', 'PC screen', 'Show the whole screen or one program (PowerPoint, a Bible app …)'] };
   function paintTabs() {
-    tabs.replaceChildren(...Object.keys(LABELS).map((k) => h('button', { type: 'button', role: 'tab', title: LABELS[k][2], 'aria-selected': String(k === part), 'aria-pressed': String(k === part), onclick: () => show(k) },
+    tabs.replaceChildren(...Object.keys(LABELS).map((k) => h('button', { type: 'button', title: LABELS[k][2], 'aria-pressed': String(k === part), onclick: () => show(k) },
       icon(LABELS[k][0]), h('span', LABELS[k][1]))));
   }
 
