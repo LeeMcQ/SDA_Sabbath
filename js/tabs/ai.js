@@ -1402,6 +1402,12 @@ export default function create(ctx) {
     },
     /** Saved banners, for the Plan tab's Link dialog. */
     banners() { return lib.map((b) => ({ id: b.id, name: nameOf(b) })); },
+    async bannerThumb(id) {
+      const b = lib.find((x) => x.id === id);
+      if (!b || !b.s || !b.s.img) return null;
+      const blob = await fileBlob(b.s.img).catch(() => null);
+      return blob ? URL.createObjectURL(blob) : null;
+    },
   };
 
   const ready = (async () => {

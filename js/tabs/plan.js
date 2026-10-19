@@ -321,12 +321,13 @@ export default function create(ctx) {
     }
     if (it.tab === 'bible') {
       tile.appendChild(h('span.pi-tile-t', it.ref || 'Bible'));
+      tile.appendChild(h('span.pi-tile-s', 'Verse'));
     } else if (it.tab === 'hymns') {
       tile.appendChild(h('span.pi-tile-t', it.n ? String(it.n) : '♪'));
-      tile.appendChild(h('span.pi-tile-s', 'Hymn'));
+      const short = (it.label || '').replace(/^Hymn\s+\d+\s*[—-]\s*/i, '').slice(0, 12);
+      tile.appendChild(h('span.pi-tile-s', short || 'Hymn'));
     } else if (it.tab === 'slides') {
       tile.appendChild(h('span.pi-tile-t', icon('slides')));
-      // Fill with first-slide thumbnail when available.
       if (it.deck) {
         db.get('renders', it.deck + '/0').then((r) => {
           if (r && r.thumb) {
@@ -338,10 +339,25 @@ export default function create(ctx) {
       }
     } else if (it.tab === 'video') {
       tile.appendChild(h('span.pi-tile-t', icon('video')));
+      const short = (it.label || '').slice(0, 10);
+      if (short) tile.appendChild(h('span.pi-tile-s', short));
     } else if (it.tab === 'ai') {
       tile.appendChild(h('span.pi-tile-t', icon('banner')));
+      const short = (it.label || '').replace(/^Banner:\s*/i, '').slice(0, 10);
+      if (short) tile.appendChild(h('span.pi-tile-s', short));
+      // Try to show banner thumbnail.
+      if (it.banner) {
+        ctx.tab('ai').then((api) => {
+          if (!api || !api.bannerThumb) return;
+          api.bannerThumb(it.banner).then((url) => {
+            if (url) { tile.textContent = ''; tile.appendChild(h('img', { src: url, alt: '' })); }
+          }).catch(() => {});
+        }).catch(() => {});
+      }
     } else if (it.tab === 'web') {
       tile.appendChild(h('span.pi-tile-t', icon('web')));
+      const short = (it.label || '').slice(0, 10);
+      if (short) tile.appendChild(h('span.pi-tile-s', short));
     } else {
       tile.appendChild(h('span.pi-tile-t', icon(itemIcon(it))));
     }

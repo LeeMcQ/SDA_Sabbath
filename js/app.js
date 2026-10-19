@@ -16,7 +16,7 @@ import { clicker, actionFor, sigOfKey, sigOfMouse } from './core/clicker.js';
 import { openClickerSetup, builtinAction } from './clickerui.js';
 
 export const VERSION = '1.3.0';
-export const BUILD = '5fe1721';
+export const BUILD = '4272ace';
 
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', load: () => import('./tabs/bible.js') },
@@ -36,6 +36,7 @@ const work = $('#work');
 const rail = $('#rail');
 const presentBtn = $('#presentBtn');
 const dispBtn = $('#dispBtn');
+const audioBtn = $('#audioBtn');
 const tabs = new Map();      // id -> api (created lazily)
 const loading = new Map();   // id -> promise
 const stagedBy = new Map();  // id -> cue
@@ -343,6 +344,48 @@ function displayMenu(anchor) {
   ui.menu(anchor, items);
 }
 dispBtn.addEventListener('click', () => displayMenu(dispBtn));
+
+// ------------------------------------------------------------ sound output device (desktop)
+let audioSink = '';
+async function listAudioDevices() {
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return [];
+    const devs = await navigator.mediaDevices.enumerateDevices();
+    return devs.filter((d) => d.kind === 'audiooutput');
+  } catch (e) { return []; }
+}
+async function paintAudioBtn() {
+  if (!audioBtn || isMobile()) { if (audioBtn) audioBtn.hidden = true; return; }
+  const devs = await listAudioDevices();
+  if (!devs.length) { audioBtn.hidden = true; return; }
+  audioBtn.hidden = false;
+  const cur = devs.find((d) => d.deviceId === audioSink) || devs[0];
+  const name = (cur && cur.label) ? cur.label.replace(/\s*\(.*\)$/, '') : 'Default';
+  audioBtn.querySelector('.lbl').textContent = name;
+  audioBtn.title = 'Sound output: ' + (cur ? cur.label : 'Default') + '. Click to switch.';
+}
+async function setAudioSink(id) {
+  audioSink = id;
+  try {
+    if (bgAudio.el && bgAudio.el.setSinkId) await bgAudio.el.setSinkId(id);
+    if (window.selah && window.selah.music && window.selah.music.el && window.selah.music.el.setSinkId) await window.selah.music.el.setSinkId(id);
+  } catch (e) { /* device may be busy */ }
+  paintAudioBtn();
+}
+audioBtn && audioBtn.addEventListener('click', async () => {
+  const devs = await listAudioDevices();
+  if (!devs.length) { ui.toast('No sound devices found.', 'err'); return; }
+  const items = devs.map((d) => ({
+    label: d.label || 'Speaker',
+    icon: d.deviceId === audioSink ? 'check' : 'speaker',
+    onclick: () => setAudioSink(d.deviceId),
+  }));
+  ui.menu(audioBtn, items);
+});
+if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+  navigator.mediaDevices.addEventListener('devicechange', paintAudioBtn);
+}
+paintAudioBtn();
 
 live.ensureDisplay = () => new Promise((resolve) => {
   if (!isMobile() && !matchMedia('(pointer: coarse)').matches) { link.openWindow().then(resolve); return; }
