@@ -44,7 +44,7 @@ export function createControlBar(el, getTab) {
       audioBox,
     );
     const lb = el.querySelector('.cb-end .btn[aria-label="Logo"]');
-    if (lb && !live.hasLogo()) { lb.setAttribute('aria-disabled', 'true'); lb.title = 'No logo yet: add a logo picture or church name in Settings → Screen'; }
+    if (lb && !live.hasLogo()) lb.title = 'Show the default logo slide (L). Add your logo in Settings → Screen';
     updateCounter();
     renderAudio();
     renderMusic(true);

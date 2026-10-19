@@ -21,6 +21,27 @@ export function enter(el, cls = 'enter', ms = 600) {
   return el;
 }
 
+/**
+ * Scroll the nearest scrolling box (not the page) so `el` is in view, without moving the keyboard focus.
+ * Smooth only when UI motion is allowed (never with reduced motion). Does nothing when el is already visible.
+ */
+export function keepInView(el, { pad = 8 } = {}) {
+  if (!el || !el.isConnected || !el.getClientRects().length) return;
+  let box = el.parentElement;
+  while (box && box !== document.body) {
+    const cs = getComputedStyle(box);
+    if (/(auto|scroll)/.test(cs.overflowY) && box.scrollHeight > box.clientHeight + 1) break;
+    box = box.parentElement;
+  }
+  if (!box || box === document.body) return;
+  const b = box.getBoundingClientRect(), r = el.getBoundingClientRect();
+  const top = r.top - b.top, bottom = r.bottom - b.top;
+  if (top >= pad && bottom <= box.clientHeight - pad) return;
+  // Out of view: bring it to about a third from the top, so the verses that follow are visible too.
+  const to = Math.max(0, box.scrollTop + top - Math.max(pad, Math.round((box.clientHeight - r.height) / 3)));
+  box.scrollTo({ top: to, behavior: motionOK() ? 'smooth' : 'auto' });
+}
+
 let toastHost;
 export function toast(msg, kind = '', ms = 3200) {
   if (!toastHost) { toastHost = h('div.toasts', { role: 'status', 'aria-live': 'polite' }); document.body.appendChild(toastHost); }

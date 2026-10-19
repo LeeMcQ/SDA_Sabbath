@@ -23,8 +23,8 @@ Nothing reaches the projector until **Present** (F5 or Ctrl+Enter). Each tab kee
 
 | Tab | What you can do |
 |---|---|
-| **Bible** | Type `John 3:16-18`, `Ps 23`, `Joh 3:16` (Afrikaans) or tap book → chapter → verses. KJV, WEB and the Afrikaans 1933/53 Bible are built in; add NIV, ESV, NKJV, Xhosa or any licensed Bible. Two translations side by side (e.g. English + isiXhosa). Text grows to fill the screen; long passages split into readable slides automatically. “Keep reading” shows the next verses when the preacher carries on. Full-text search. |
-| **Hymns** | Type the number or words. Title slide, one stanza per slide, chorus repeated automatically, choose which stanzas to sing (1, 2, 4). Jump to any stanza from the control bar. Edit or add hymns; import or export hymnbooks. |
+| **Bible** | Type `John 3:16-18`, `Ps 23`, `Joh 3:16` (Afrikaans) or tap book → chapter → verses. KJV, WEB and the Afrikaans 1933/53 Bible are built in; add NIV, ESV, NKJV, Xhosa or any licensed Bible. Two translations side by side (e.g. English + isiXhosa). Text grows to fill the screen; long passages split into readable slides automatically. “Keep reading” shows the next verses when the preacher carries on. Full-text search. A row of verse numbers above the verses puts any verse one tap away, and the list keeps the live verse in view. |
+| **Hymns** | Type the number or words. Title slide, one stanza per slide, chorus repeated automatically, choose which stanzas to sing (1, 2, 4). Tap a stanza to make it Next (also while the hymn is on screen); double-tap, Enter or Present shows it. Jump to any stanza from the control bar. Edit or add hymns; import or export hymnbooks. |
 | **Slides** | PDF, PowerPoint (.pptx) and pictures. Converted once on import and kept offline. Speaker notes shown to the operator. Auto-advance loop for announcements. |
 | **Video** | VLC-style player: playlist with auto-next and repeat, speed 0.25×–4×, A-B repeat, loop, frame step, fade in/out, volume boost to 200 %, 10-band equaliser with presets, fit/fill/stretch, zoom, rotate, mirror, brightness/contrast/colour/hue, .srt/.vtt subtitles, snapshots. Music can play **in the background** while lyrics stay on screen. |
 | **Web & PC** | Two parts in one tab. **Web page:** *Mirror a tab* — the projector shows exactly that browser tab, without the mouse pointer (scroll/zoom it from SDA Sabbath in Chrome); *Embed* — YouTube and embeddable sites load directly on the display. **PC screen:** share the whole screen, one window (e.g. PowerPoint or a Bible app) or a tab; see it live inside SDA Sabbath. **Freeze** keeps the last picture up while you work privately. The **mini controller** floats on top of other programs. |
@@ -43,9 +43,11 @@ built into the display.
 | → ↓ Page Down Space | Next verse / stanza / slide (Space plays/pauses a video) |
 | ← ↑ Page Up | Previous |
 | B or . | Black screen (press again to return) |
-| L | Logo |
-| Esc or C | Clear the screen |
+| L | Logo (a default slide with the church name or “Welcome” until you add a logo in Settings → Screen) |
+| C or Esc twice | Clear the screen (one Esc never clears it) |
 | / or Ctrl+K | Go to a reference or hymn number |
+| 1 … 9 | Select that stanza (Hymns) or verse (Bible) as Next; two digits quickly for verse 10 and up. F5 then presents it |
+| Click · double-click · Enter | On a verse, verse number or stanza: select it as Next · present it now · present it now |
 | Alt+1 … Alt+9 | Switch tabs (Bible, Hymns, Banners & Music, Slides, Video, Web & PC, Plan, Tools, Settings) |
 | F (on the projector window) | Full screen on/off |
 

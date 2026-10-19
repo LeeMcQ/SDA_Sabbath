@@ -273,6 +273,17 @@ input[type=range] { accent-color: var(--next); }
 .verse-list .vr:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
 .verse-list .vr.sel:focus-visible { box-shadow: inset 3px 0 0 var(--next), inset 0 0 0 2px var(--focus); }
 .verse-list .vr.live:focus-visible { box-shadow: inset 4px 0 0 var(--live), inset 0 0 0 2px var(--focus); }
+.verse-list .vr.in-live { box-shadow: inset 4px 0 0 var(--live-soft); } /* rest of the live passage (not on screen yet) */
+.verse-list .vr.sel.in-live { background: var(--next-soft); box-shadow: inset 3px 0 0 var(--next); }
+/* Verse-number strip: one row that scrolls sideways (never widens the page) */
+.vstrip { display: flex; gap: 4px; padding: 6px 8px; overflow-x: auto; overflow-y: hidden; min-width: 0; max-width: 100%; flex: none; border-bottom: 1px solid var(--line); scrollbar-width: thin; overscroll-behavior-x: contain; }
+.vstrip[hidden] { display: none; }
+.vstrip button { flex: none; min-width: 34px; height: 32px; padding: 0 6px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--panel); color: var(--text); font-size: var(--fs-sm); font-weight: 700; font-variant-numeric: tabular-nums; }
+.vstrip button:hover { background: var(--raised); }
+.vstrip button[aria-pressed="true"] { border-color: var(--next); background: var(--next-soft); }
+.vstrip button.live, .vstrip button.live[aria-pressed="true"] { background: var(--live-strong); border-color: var(--live-strong); color: #fff; }
+.vstrip button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+@media (pointer: coarse) { .vstrip button { min-width: 42px; height: 40px; } }
 .verse-list .vr b { color: var(--brass-text); min-width: 26px; text-align: right; font-size: 13px; padding-top: 2px; }
 .verse-list .wj { color: var(--wj); }
 .bible-hist { display: flex; gap: 6px; overflow-x: auto; padding: 8px 14px; border-bottom: 1px solid var(--line); scrollbar-width: thin; }

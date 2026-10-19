@@ -132,11 +132,10 @@ export function createMonitors(host) {
 
   // "Same as Live": the Next monitor is showing what is already on screen.
   const markSame = () => nextScreen.classList.toggle('same', live.sameAsLive());
-  // Logo without a logo set would look exactly like Black: say so instead.
+  // Without a logo of its own, Logo shows a default slide (church name or "Welcome"); the tip says where to set one.
   const syncLogo = () => {
-    const has = live.hasLogo();
-    if (has) logoBtn.removeAttribute('aria-disabled'); else logoBtn.setAttribute('aria-disabled', 'true');
-    logoBtn.title = has ? 'Show logo (L)' : 'No logo yet: add a logo picture or church name in Settings → Screen';
+    logoBtn.removeAttribute('aria-disabled');
+    logoBtn.title = live.hasLogo() ? 'Show logo (L)' : 'Show the default logo slide (L). Add your logo in Settings → Screen';
   };
   live.on('staged', renderNext);
   live.on('staged', markSame);
@@ -152,6 +151,7 @@ export function createMonitors(host) {
   live.on('live', renderNext);
   live.on('go', () => { inStep(() => liveStage.show(frameOf(live.cue, live.index))); renderFrames(); markSame(); renderNext(); });
   settings.on('change:display', syncLogo);
+  settings.on('change:church', syncLogo);
   syncLogo();
   live.on('blank', updateBlank);
   live.on('style', applyStyle);

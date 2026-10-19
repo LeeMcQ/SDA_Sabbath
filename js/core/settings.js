@@ -149,5 +149,7 @@ settings.displayStyle = () => {
     font: d.font, fg: d.fg, bg: d.bg, accent: d.accent, shadow: d.shadow, align: d.align, pad: d.pad,
     minFont: d.minFont, maxFont: d.maxFont, fade: settings.lowPower() || d.transition === 'cut' ? 0 : d.fade,
     bgImage: d.bgImage, bgDim: d.bgDim, logo: d.logo, logoText: d.logoText, clearShows: d.clearShows, weight: d.weight,
+    // Default logo slide when no logo is set: the church name from Settings → Church, if any.
+    logoName: ((settings.v.church && settings.v.church.name) || '').trim(),
   };
 };

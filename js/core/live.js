@@ -15,6 +15,7 @@ const restyleNow = () => { if (link.ready) live.sendStyle(); else live.buildStyl
 const restyleSoon = debounce(restyleNow, 180);
 const restyle = () => { pendingStyle = true; restyleSoon(); };
 settings.on('change:display', restyle);
+settings.on('change:church', (p) => { if (p === 'church.name' || p === 'church' || p === '*') restyle(); }); // the default logo slide shows the church name
 settings.on('change:app', (p) => { if (p === 'app.lowPower') restyle(); });
 
 link.on('state', () => {
@@ -63,9 +64,11 @@ live.sendStyle = async () => {
   pendingStyle = false; styleSentFor = link;
 };
 
-live.stage = (cue) => {
+live.stage = (cue, opts) => {
   // The item on screen staged again (a tab switch, a rebuilt cue): Next keeps showing what follows it.
-  if (cue && follow.on && live.cue && follow.ids.has(cue.id)) { live.staged = cue; followLive(); return; }
+  // A slide the operator picked by hand (pick: true, e.g. a stanza of the live hymn) stays as picked.
+  if (cue && follow.on && live.cue && follow.ids.has(cue.id) && !(opts && opts.pick)) { live.staged = cue; followLive(); return; }
+  if (cue && opts && opts.pick) follow.token++; // a "following verses" lookup still running must not replace the pick
   live.staged = cue || null;
   live.emit('staged', live.staged);
 };
@@ -284,6 +287,8 @@ live.prev = async () => {
 
 /** Is a logo picture or church name set? Without one, "Logo" would look exactly like "Black". */
 live.hasLogo = () => !!(settings.v.display.logo || (settings.v.display.logoText || '').trim());
+/** Is the church name set (Settings → Church)? Logo then shows it when no logo of its own is set. */
+live.hasChurchName = () => !!((settings.v.church && settings.v.church.name) || '').trim();
 
 /** Is the staged item exactly what is on screen now (same item, same slide)? */
 live.sameAsLive = () => {
@@ -294,9 +299,10 @@ live.sameAsLive = () => {
 
 /** mode: 'black' | 'logo' | null. Toggles when the same mode is chosen again. */
 live.setBlank = (mode) => {
-  if (mode === 'logo' && live.blank !== 'logo' && !live.hasLogo()) {
-    live.emit('notice', { code: 'nologo', text: 'No logo yet. Add a logo picture or your church name in Settings → Screen, then press Logo again.' });
-    return;
+  // No logo set yet: the display shows a default slide (church name, or the app mark and "Welcome").
+  if (mode === 'logo' && live.blank !== 'logo' && !live.hasLogo() && !live.logoHinted) {
+    live.logoHinted = true; // once per session; the Logo button's tip keeps pointing to Settings
+    live.emit('notice', { code: 'nologo', text: 'Showing the default logo slide. Add your logo picture or church name in Settings → Screen.' });
   }
   if (mode && live.blank === mode) mode = null;
   live.blank = mode;

@@ -48,9 +48,9 @@ export const isMobile = () => matchMedia('(max-width: 760px)').matches;
 // ------------------------------------------------------------ context passed to tabs
 const ctx = {
   live, link, settings, db, bgAudio, ui, toast: ui.toast, isMobile, VERSION, BUILD,
-  setStaged(id, cue) {
+  setStaged(id, cue, opts) {
     stagedBy.set(id, cue || null);
-    if (id === current) live.stage(cue || null);
+    if (id === current) live.stage(cue || null, opts);
   },
   showTab: (id) => showTab(id),
   tab: (id) => getTab(id),
@@ -458,6 +458,8 @@ function showHelp() {
     ['B  or  .', 'Black screen (press again to return)'], ['L', 'Show logo'], ['C  or  Esc twice', 'Clear the screen'],
     ['Esc', 'Close a menu or dialog, leave a text box (the screen stays as it is)'], ['M', 'Hymn music: play / pause'],
     ['/  or  Ctrl+K', 'Go to a Bible reference or hymn number (Enter selects it, Shift+Enter presents it now)'], ['Alt+1 … Alt+9', 'Switch tabs'],
+    ['1 … 9', 'Select that stanza (Hymns) or verse (Bible) as Next; type two digits quickly for verse 10 and up. Then F5 presents it'],
+    ['Click  ·  Double-click  ·  Enter', 'On a verse or stanza: select it as Next  ·  present it now  ·  present it now'],
     ['Space (video live)', 'Play / pause'], ['F (on the display)', 'Toggle full screen'],
     ['Clicker', 'Page Down / Page Up work even while typing in a box; with nothing on screen, next shows the Next item'],
   ];
@@ -493,6 +495,19 @@ const slashTypes = (t) => {
   if (t.dataset && t.dataset.freeText != null) return true;
   return (t.type || 'text').toLowerCase() !== 'search'; // lookup boxes (Bible reference, Find a hymn …) are type=search
 };
+
+// Number keys go to the Bible or Hymns tab on show (or, from another tab, the one whose item is live).
+let digits = '', digitsAt = 0;
+function numberKey(k) {
+  const id = current === 'bible' || current === 'hymns' ? current : live.cue && (live.cue.tab === 'bible' || live.cue.tab === 'hymns') ? live.cue.tab : null;
+  if (!id || !tabs.has(id)) return false;
+  const api = tabs.get(id);
+  if (!api.numberKey) return false;
+  digits = Date.now() - digitsAt < 800 && digits.length < 3 ? digits + k : k;
+  digitsAt = Date.now();
+  if (digits === '0') { digits = ''; return false; }
+  return api.numberKey(+digits, digits.length > 1) !== false;
+}
 
 /** Clicker "next" with nothing more in the item on screen (or nothing on screen): show what is Next. */
 function clickerNext() {
@@ -548,6 +563,8 @@ function handleKey(e, remote) {
   if (quiet && t && t.blur) t.blur();
   if (e.altKey && /^[1-9]$/.test(k)) { const tb = TABS.filter(Boolean)[+k - 1]; if (tb) showTab(tb.id); return true; }
   if (ctrl || e.altKey) return false;
+  // 1–9: stage that stanza (Hymns) or verse (Bible) as Next; F5 then presents it. Two digits quickly = verse 10+.
+  if (!remote && /^[0-9]$/.test(k) && numberKey(k)) return true;
   const kind = live.cue && live.cue.deck.kind;
   switch (k) {
     case 'ArrowRight': case 'ArrowDown': live.next(); return true;
