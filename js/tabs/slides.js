@@ -5,7 +5,7 @@ import { h, clear, uid, fmtBytes } from '../core/util.js';
 import { icon } from '../core/icons.js';
 import { btn, dropzone, menu, toast, confirmBox, promptBox, seg, emptyState } from '../core/ui.js';
 import { db } from '../core/db.js';
-import { createStage } from '../core/render.js';
+import { createStage, renderFrame } from '../core/render.js';
 
 export default function create(ctx) {
   const { settings, live } = ctx;
@@ -26,10 +26,18 @@ export default function create(ctx) {
   const zone = dropzone('Drop PDF, PowerPoint (.pptx) or pictures here, or tap to choose', '.pdf,.pptx,image/*', (files) => importFiles(files));
   const addBtn = btn('plus', 'Add files', () => zone.querySelector('input').click(), { cls: 'sm', label: 'Add' });
   const linkBtn = btn('link', 'Add from link', () => addFromLink(), { cls: 'sm', label: 'Link' });
+  const saveBannerBtn = btn('banner', 'Make the selected slide a banner', () => makeBanner(), { cls: 'sm', label: 'Make banner' });
+  saveBannerBtn.hidden = true;
   const deckMenuBtn = btn('more', 'Deck options', () => deck && menu(deckMenuBtn, [
-    { label: 'Rename', icon: 'edit', onclick: renameDeck },
+    { label: 'Make this slide a banner', icon: 'banner', onclick: makeBanner },
+    { label: 'Duplicate this slide', icon: 'copy', onclick: duplicateSlide },
+    { label: 'Delete this slide', icon: 'trash', onclick: deleteSlide },
+    { label: 'Move slide earlier', icon: 'up', onclick: () => moveSlide(-1) },
+    { label: 'Move slide later', icon: 'down', onclick: () => moveSlide(1) },
+    { label: 'Present from this slide', icon: 'present', onclick: () => { stageAt(stagedIndex); live.take(); } },
+    { label: 'Rename deck', icon: 'edit', onclick: renameDeck },
     { label: 'Add to the service plan', icon: 'plan', onclick: addToPlan },
-    { label: 'Delete', icon: 'trash', onclick: deleteDeck },
+    { label: 'Delete deck', icon: 'trash', onclick: deleteDeck },
   ]), { cls: 'sm' });
   const fitSeg = seg([['contain', 'Fit'], ['cover', 'Fill']], settings.v.slides.fit, (v) => { settings.set('slides.fit', v); if (deck) stageAt(stagedIndex); });
 
@@ -38,7 +46,7 @@ export default function create(ctx) {
     prog,
     h('div.split.lib-split',
       h('div.pane', h('div.pane-h', 'Library'), h('div.scroll', { style: { flex: '1' } }, libList, h('div.pad', zone))),
-      h('div.pane', h('div.pane-h', head, info, deckMenuBtn), h('div.scroll', { style: { flex: '1' } }, grid, notes))));
+      h('div.pane', h('div.pane-h', head, info, saveBannerBtn, deckMenuBtn), h('div.scroll', { style: { flex: '1' } }, grid, notes))));
 
   // ------------------------------------------------------------ library
   async function loadLibrary() {
@@ -85,11 +93,10 @@ export default function create(ctx) {
     clear(grid);
     if (io) { io.disconnect(); io = null; }
     notes.hidden = true;
-    head.hidden = !deck; deckMenuBtn.hidden = !deck;
+    head.hidden = !deck; deckMenuBtn.hidden = !deck; saveBannerBtn.hidden = !deck;
     if (!deck) { head.textContent = ''; info.textContent = ''; grid.appendChild(emptyState('slides', decks.length ? 'No slide deck open' : 'No slides yet', decks.length ? 'Pick a deck from the library.' : 'Add a PDF, PowerPoint, pictures, or a Google Slides / web link.', null, { style: { gridColumn: '1/-1' } })); return; }
     head.textContent = deck.name;
     info.textContent = deck.count + ' slides' + (deck.size ? ' · ' + fmtBytes(deck.size) : '');
-    // Thumbnails for PowerPoint slides are drawn lazily as they scroll into view.
     if ('IntersectionObserver' in window) io = new IntersectionObserver((ents) => ents.forEach((e) => { if (e.isIntersecting) { drawThumb(e.target); io.unobserve(e.target); } }), { root: grid.parentNode, rootMargin: '200px' });
     frames.forEach((f, i) => {
       const t = h('button.thumb', { type: 'button', 'aria-pressed': String(i === stagedIndex), 'data-i': i, title: 'Slide ' + (i + 1) + ' — double-click to present',
@@ -272,6 +279,60 @@ export default function create(ctx) {
     deck = { id };
   }
 
+  async function duplicateSlide() {
+    if (!deck || !frames || stagedIndex < 0) return;
+    const src = frames[stagedIndex];
+    if (!src || src.kind !== 'image') { toast('Only picture slides can be duplicated.', 'err'); return; }
+    const rec = await db.get('renders', deck.id + '/' + stagedIndex);
+    if (!rec) return;
+    const newI = deck.count;
+    await db.put('renders', deck.id + '/' + newI, rec);
+    frames.push(src);
+    thumbs.push(rec.thumb || null);
+    deck.count++;
+    await db.put('files', deck.id, deck);
+    renderDeck();
+    stageAt(newI);
+    toast('Slide duplicated.', 'ok', 1500);
+  }
+
+  async function deleteSlide() {
+    if (!deck || !frames || stagedIndex < 0 || deck.count <= 1) { toast('Cannot delete the only slide.', 'err'); return; }
+    if (!(await confirmBox('Delete this slide?', 'Remove slide ' + (stagedIndex + 1) + '?', 'Delete', true))) return;
+    // Shift remaining renders down.
+    for (let i = stagedIndex; i < deck.count - 1; i++) {
+      const next = await db.get('renders', deck.id + '/' + (i + 1));
+      if (next) await db.put('renders', deck.id + '/' + i, next);
+    }
+    await db.del('renders', deck.id + '/' + (deck.count - 1));
+    frames.splice(stagedIndex, 1);
+    thumbs.splice(stagedIndex, 1);
+    deck.count--;
+    await db.put('files', deck.id, deck);
+    stagedIndex = Math.min(stagedIndex, deck.count - 1);
+    renderDeck();
+    stageAt(stagedIndex);
+    toast('Slide deleted.', 'ok', 1500);
+  }
+
+  async function moveSlide(dir) {
+    if (!deck || !frames) return;
+    const to = stagedIndex + dir;
+    if (to < 0 || to >= deck.count) return;
+    // Swap renders in the database.
+    const a = await db.get('renders', deck.id + '/' + stagedIndex);
+    const b = await db.get('renders', deck.id + '/' + to);
+    if (a && b) {
+      await db.put('renders', deck.id + '/' + stagedIndex, b);
+      await db.put('renders', deck.id + '/' + to, a);
+    }
+    // Swap in memory.
+    [frames[stagedIndex], frames[to]] = [frames[to], frames[stagedIndex]];
+    [thumbs[stagedIndex], thumbs[to]] = [thumbs[to], thumbs[stagedIndex]];
+    stagedIndex = to;
+    renderDeck();
+    stageAt(stagedIndex);
+  }
   async function renameDeck() {
     const n = await promptBox('Rename', 'Name', deck.name);
     if (!n) return;
@@ -284,6 +345,78 @@ export default function create(ctx) {
     await db.del('files', deck.id);
     deck = null; ctx.setStaged('slides', null);
     await loadLibrary();
+  }
+  /** Draw a PowerPoint (HTML) slide to a picture: render it, copy every computed style, and rasterise through SVG. */
+  async function rasterSlide(f) {
+    const W = Math.round(f.w || 960), H = Math.round(f.h || 540);
+    const k = Math.min(2, 1920 / W);
+    const host = document.createElement('div');
+    host.style.cssText = 'position:fixed;left:-20000px;top:0;width:' + W + 'px;height:' + H + 'px;overflow:hidden;';
+    document.body.appendChild(host);
+    try {
+      const cleanup = await renderFrame(host, f, { sw: W, sh: H });
+      const box = host.querySelector('.f-html');
+      if (!box) throw new Error('no slide');
+      box.style.transform = 'none';
+      await new Promise((r) => setTimeout(r, 60));
+      const toData = async (u) => {
+        const b = await (await fetch(u)).blob();
+        return await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(b); });
+      };
+      const clone = box.cloneNode(true);
+      const src = [box, ...box.querySelectorAll('*')], dst = [clone, ...clone.querySelectorAll('*')];
+      for (let i = 0; i < src.length; i++) {
+        const cs = getComputedStyle(src[i]);
+        let css = '';
+        for (const pr of cs) css += pr + ':' + cs.getPropertyValue(pr) + ';';
+        dst[i].setAttribute('style', css);
+        if (dst[i].tagName === 'IMG' && /^blob:/.test(src[i].src)) dst[i].setAttribute('src', await toData(src[i].src));
+        const bg = cs.backgroundImage;
+        const m = bg && bg.match(/url\("?(blob:[^")]+)"?\)/);
+        if (m) dst[i].style.backgroundImage = 'url("' + (await toData(m[1])) + '")';
+      }
+      clone.style.transform = 'none'; clone.style.position = 'static';
+      const xml = new XMLSerializer().serializeToString(clone);
+      const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '"><foreignObject width="100%" height="100%">' +
+        xml + '</foreignObject></svg>';
+      const img = new Image();
+      await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('could not draw the slide')); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
+      const c = document.createElement('canvas');
+      c.width = Math.round(W * k); c.height = Math.round(H * k);
+      const g = c.getContext('2d');
+      g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+      g.drawImage(img, 0, 0, c.width, c.height);
+      if (cleanup) cleanup();
+      return await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.9));
+    } finally { host.remove(); }
+  }
+
+  /** Make the selected slide a banner: a picture banner (PowerPoint slides are drawn to a picture; text only if that fails). */
+  async function makeBanner() {
+    if (!deck || !frames || !frames[stagedIndex]) { toast('Open a slide first.', 'err'); return; }
+    const f = frames[stagedIndex];
+    const name = deck.name + ' – slide ' + (stagedIndex + 1);
+    try {
+      let spec = null;
+      if (f.kind === 'image') {
+        const r = await db.get('renders', deck.id + '/' + stagedIndex);
+        if (r && r.full) spec = { blob: r.full, name };
+      } else if (f.kind === 'html') {
+        let blob = null;
+        try { blob = await rasterSlide(f); } catch (e) { console.warn('raster', e); }
+        if (blob && blob.size > 2000) spec = { blob, name };
+        else {
+          const d = new DOMParser().parseFromString('<div>' + String(f.html || '').replace(/<\/(p|div|h\d|li)>/gi, '$&\n') + '</div>', 'text/html');
+          const lines = (d.body.textContent || '').split('\n').map((x) => x.replace(/\s+/g, ' ').trim()).filter(Boolean);
+          if (lines.length) spec = { title: lines[0], text: lines.slice(1).join('\n'), name };
+        }
+      }
+      if (!spec) { toast('This slide cannot become a banner (web links have no picture). Import it as PDF first.', 'err', 6000); return; }
+      const ai = await ctx.showTab('ai');
+      const b = ai && ai.fromSlide ? ai : await ctx.tab('ai');
+      await b.fromSlide(spec);
+      toast('Slide ' + (stagedIndex + 1) + ' is now a banner. Save it, or set it as Next.', 'ok', 4000);
+    } catch (e) { console.error(e); toast('Could not make a banner: ' + e.message, 'err', 6000); }
   }
   async function addToPlan() { const c = ctx.stagedOf('slides'); if (c) (await ctx.tab('plan')).addItem(c.plan); }
 

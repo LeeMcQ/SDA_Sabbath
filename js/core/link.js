@@ -33,6 +33,7 @@ function setState(kind, ready, label) {
 let displaySid = null;
 function onDisplayMsg(m) {
   if (!m || !m.t) return;
+  if (m.t === 'ack') { if (m.q > link.acked) link.acked = m.q; link.emit('ack'); return; }
   if (m.t === 'hello') {
     if (!m.sid || m.sid !== displaySid) {
       displaySid = m.sid || null;
@@ -51,7 +52,26 @@ window.addEventListener('message', (e) => {
   onDisplayMsg(e.data);
 });
 
-link.send = (msg) => { if (sendImpl) sendImpl(msg); };
+// Messages that change the picture carry a number when the display is on the TV or another computer.
+// The display answers {t:'ack', q} once it has drawn that change, so the Live monitor can follow the
+// real screen instead of running ahead of it.
+const PICTURE_MSGS = new Set(['deck', 'go', 'blank', 'clear']);
+let seq = 0;
+link.acked = 0; link.lastQ = 0;
+link.remote = () => !!link.ready && (link.kind === 'cast' || link.kind === 'socket');
+link.send = (msg) => {
+  if (!sendImpl) return;
+  if (PICTURE_MSGS.has(msg.t) && link.remote()) { msg = Object.assign({}, msg, { q: ++seq }); link.lastQ = seq; }
+  sendImpl(msg);
+};
+/** Resolves when the display has drawn change number q (or after ms, so a lost answer never freezes the monitor). */
+link.whenShown = (q, ms = 1500) => new Promise((res) => {
+  if (!q || link.acked >= q) { res(); return; }
+  let off = null;
+  const done = () => { clearTimeout(t); if (off) off(); res(); };
+  const t = setTimeout(done, ms);
+  off = link.on('ack', () => { if (link.acked >= q) done(); });
+});
 link.aspect = () => {
   const a = settings.v.display.aspect;
   if (typeof a === 'string' && a !== 'auto') { const [x, y] = a.split(':').map(Number); if (x > 0 && y > 0) return x / y; }
@@ -98,10 +118,10 @@ link.openWindow = async ({ prompt = false } = {}) => {
   const url = new URL('display.html', location.href).href;
   // Reuse an already-open display window (e.g. after this control page was reloaded).
   let w = null;
-  const scr = await pickScreen(prompt);
+  const scr = await pickScreen(true); // always prefer the extended screen
   let features = 'popup=yes';
   if (scr) features += ',left=' + scr.availLeft + ',top=' + scr.availTop + ',width=' + scr.availWidth + ',height=' + scr.availHeight + ',fullscreen=yes';
-  else features += ',width=960,height=540';
+  else features += ',width=1920,height=1080,fullscreen=yes';
   if (displayAlive) {
     try { w = window.open('', WIN_NAME, features); } catch (e) { w = null; }
     if (w && !(() => { try { return w.SelahDisplay; } catch (e) { return null; } })()) { try { w.location.href = url; } catch (e) { /* */ } }
@@ -117,6 +137,8 @@ link.openWindow = async ({ prompt = false } = {}) => {
   let tries = 0;
   const ask = () => { if (link.win !== w || link.ready || tries++ > 40) return; sendImpl({ t: 'hello?' }); setTimeout(ask, 250); };
   ask();
+  // Ask the display to go full screen once it is up.
+  setTimeout(() => { try { if (!w.closed) w.postMessage({ t: 'fullscreen' }, location.origin); } catch (e) { /* */ } }, 500);
   if (lastStream) setTimeout(() => link.setStream(lastStream), 600);
   return true;
 };
@@ -185,10 +207,10 @@ link.openCast = async () => {
   try {
     const avail = await req.getAvailability();
     if (!avail.value) {
-      throw new Error('No Chromecast found. For LG Smart View / Miracast, use This device then mirror the screen.');
+      const err = new Error('No cast device found.'); err.name = 'NoCastDevice'; throw err;
     }
   } catch (e) {
-    if (/not supported|not available/i.test(e.message)) { /* older browsers may not support getAvailability */ }
+    if (e.name === 'NotSupportedError' || /not supported|not available/i.test(e.message)) { /* availability cannot be checked here: just try */ }
     else throw e;
   }
   const conn = await req.start();
@@ -236,6 +258,17 @@ link.connectSocket = (base, pin, room = 'main') => {
   setState('socket', false, 'LAN display (' + u.host + ')');
   open();
 };
+
+/** What the stop button says for the current display. */
+link.stopLabel = () => ({ cast: 'Stop casting', window: 'Close the display window', socket: 'Disconnect from the companion', self: 'Exit display' }[link.kind] || 'Close display');
+
+// Closing or reloading the control page stops a cast (the TV goes back to its home screen) and closes the
+// display window, so nothing is left showing an old slide with no one able to control it. A LAN display
+// (companion) is left alone: other controllers, such as the church PC, may still be using it.
+window.addEventListener('pagehide', () => {
+  if (link.kind === 'cast' && castConn) { try { castConn.terminate(); } catch (e) { /* */ } }
+  if (link.kind === 'window' && link.win) { try { link.win.close(); } catch (e) { /* */ } }
+});
 
 link.close = (silent) => {
   clearInterval(pollT); clearTimeout(wsTimer);

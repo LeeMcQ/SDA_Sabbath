@@ -15,6 +15,7 @@ const restyleNow = () => { if (link.ready) live.sendStyle(); else live.buildStyl
 const restyleSoon = debounce(restyleNow, 180);
 const restyle = () => { pendingStyle = true; restyleSoon(); };
 settings.on('change:display', restyle);
+settings.on('change:church', (p) => { if (p === 'church.name' || p === 'church' || p === '*') restyle(); }); // the default logo slide shows the church name
 settings.on('change:app', (p) => { if (p === 'app.lowPower') restyle(); });
 
 link.on('state', () => {
@@ -63,10 +64,49 @@ live.sendStyle = async () => {
   pendingStyle = false; styleSentFor = link;
 };
 
-live.stage = (cue) => {
+live.stage = (cue, opts) => {
+  // The item on screen staged again (a tab switch, a rebuilt cue): Next keeps showing what follows it.
+  // A slide the operator picked by hand (pick: true, e.g. a stanza of the live hymn) stays as picked.
+  if (cue && follow.on && live.cue && follow.ids.has(cue.id) && !(opts && opts.pick)) { live.staged = cue; followLive(); return; }
+  if (cue && opts && opts.pick) follow.token++; // a "following verses" lookup still running must not replace the pick
   live.staged = cue || null;
   live.emit('staged', live.staged);
 };
+
+// ------------------------------------------------------------ Next follows Live
+// After a verse or stanza goes live, Next (and the Present button / F5) shows the one that follows,
+// so pressing F5 moves on instead of showing the same slide again. Only while the staged item is the
+// one on screen (or what follows it): something else the operator picked is never replaced.
+const follow = { on: false, ids: new Set(), token: 0 };
+async function followLive() {
+  const c = live.cue, s = live.staged;
+  const tok = ++follow.token;
+  if (!c || !follow.on || c.deck.kind === 'video' || c.deck.kind === 'stream' || c.deck.kind === 'audio') return;
+  if (!s || !follow.ids.has(s.id)) return; // the operator has picked something else: leave it staged
+  const n = frameCount(c);
+  if (live.index < n - 1) {
+    // More slides in the live item: stage the next one of the same item.
+    const t = s && s.id === c.id ? s : c;
+    t.index = live.index + 1;
+    live.staged = t;
+  } else if (c.extend) {
+    // Last slide of a passage that keeps reading: stage the following verses.
+    let more = null;
+    try { more = await c.extend(1); } catch (e) { more = null; }
+    if (tok !== follow.token || live.cue !== c) return; // moved on meanwhile
+    if (!more) { if (s && s.id === c.id) s.index = live.index; live.emit('staged', live.staged); return; }
+    more.index = 0;
+    follow.ids.add(more.id);
+    live.staged = more;
+  } else {
+    // End of the item: Next shows it as "On screen".
+    const t = s && s.id === c.id ? s : c;
+    t.index = live.index;
+    live.staged = t;
+  }
+  live.emit('staged', live.staged);
+}
+live.followLive = followLive;
 
 
 let streamPumpTimer = null;
@@ -165,16 +205,22 @@ live.take = async (cue) => {
     stopStreamPump();
   }
   if (pendingStyle || !live.style) await live.sendStyle();
+  const wasFollow = follow.on && follow.ids.has(cue.id);
   live.cue = cue;
   live.index = Math.max(0, Math.min(cue.index || 0, frameCount(cue) - 1));
   live.blank = null;
   live.frozen = false;
   live.media = null;
   live.autoPaused = false;
+  // Next follows this item when it was the staged one (the usual Present / F5).
+  follow.on = !!(live.staged && live.staged.id === cue.id);
+  if (!wasFollow || !follow.on) follow.ids = new Set();
+  follow.ids.add(cue.id);
   link.send({ t: 'deck', deck: cue.deck, index: live.index, blank: null });
   live.emit('live', cue);
   live.emit('go', live.index);
   if (cue.onTake) try { cue.onTake(); } catch (e) { console.warn(e); }
+  followLive();
   return true;
 };
 
@@ -183,9 +229,11 @@ live.replace = (cue, index) => {
   if (!live.cue) return;
   live.cue = cue;
   live.index = Math.max(0, Math.min(index == null ? live.index : index, frameCount(cue) - 1));
+  if (follow.on) follow.ids.add(cue.id);
   link.send({ t: 'deck', deck: cue.deck, index: live.index, blank: live.blank });
   live.emit('live', cue);
   live.emit('go', live.index);
+  followLive();
 };
 
 export function frameCount(cue) {
@@ -195,6 +243,15 @@ export function frameCount(cue) {
 }
 live.count = () => frameCount(live.cue);
 
+/** Short name of one slide of an item, for "Next: …" (hymns: Verse 2 / Chorus; Bible: verse numbers). */
+export function slideName(cue, i) {
+  if (!cue || frameCount(cue) < 2 || !cue.labels) return '';
+  const lab = cue.labels[Math.max(0, Math.min(i || 0, cue.labels.length - 1))];
+  if (!lab) return '';
+  if (cue.tab === 'hymns') return lab === 'T' ? 'Title' : /^C[a-f]?$/.test(lab) ? 'Chorus' + lab.slice(1) : 'Verse ' + lab;
+  return cue.tab === 'bible' ? 'v. ' + lab : lab;
+}
+
 live.go = (i) => {
   if (!live.cue) return;
   const n = frameCount(live.cue);
@@ -203,6 +260,7 @@ live.go = (i) => {
   live.index = i;
   if (live.blank === 'black') live.setBlank(null);
   link.send({ t: 'go', index: i });
+  followLive();
   live.emit('go', i);
 };
 
@@ -213,7 +271,7 @@ live.next = async () => {
   if (live.index < frameCount(c) - 1) return live.go(live.index + 1);
   if (c.extend) {
     const more = await c.extend(1);
-    if (more) { live.cue = more; live.index = more.index || 0; link.send({ t: 'deck', deck: more.deck, index: live.index }); live.emit('live', more); live.emit('go', live.index); }
+    if (more) { live.cue = more; live.index = more.index || 0; if (follow.on) follow.ids.add(more.id); link.send({ t: 'deck', deck: more.deck, index: live.index }); live.emit('live', more); live.emit('go', live.index); followLive(); }
   } else if (c.autoLoop) live.go(0);
 };
 
@@ -223,12 +281,14 @@ live.prev = async () => {
   if (live.index > 0) return live.go(live.index - 1);
   if (c.extend) {
     const more = await c.extend(-1);
-    if (more) { live.cue = more; live.index = more.index != null ? more.index : frameCount(more) - 1; link.send({ t: 'deck', deck: more.deck, index: live.index }); live.emit('live', more); live.emit('go', live.index); }
+    if (more) { live.cue = more; live.index = more.index != null ? more.index : frameCount(more) - 1; if (follow.on) follow.ids.add(more.id); link.send({ t: 'deck', deck: more.deck, index: live.index }); live.emit('live', more); live.emit('go', live.index); followLive(); }
   }
 };
 
 /** Is a logo picture or church name set? Without one, "Logo" would look exactly like "Black". */
 live.hasLogo = () => !!(settings.v.display.logo || (settings.v.display.logoText || '').trim());
+/** Is the church name set (Settings → Church)? Logo then shows it when no logo of its own is set. */
+live.hasChurchName = () => !!((settings.v.church && settings.v.church.name) || '').trim();
 
 /** Is the staged item exactly what is on screen now (same item, same slide)? */
 live.sameAsLive = () => {
@@ -239,9 +299,10 @@ live.sameAsLive = () => {
 
 /** mode: 'black' | 'logo' | null. Toggles when the same mode is chosen again. */
 live.setBlank = (mode) => {
-  if (mode === 'logo' && live.blank !== 'logo' && !live.hasLogo()) {
-    live.emit('notice', { code: 'nologo', text: 'No logo yet. Add a logo picture or your church name in Settings → Screen, then press Logo again.' });
-    return;
+  // No logo set yet: the display shows a default slide (church name, or the app mark and "Welcome").
+  if (mode === 'logo' && live.blank !== 'logo' && !live.hasLogo() && !live.logoHinted) {
+    live.logoHinted = true; // once per session; the Logo button's tip keeps pointing to Settings
+    live.emit('notice', { code: 'nologo', text: 'Showing the default logo slide. Add your logo picture or church name in Settings → Screen.' });
   }
   if (mode && live.blank === mode) mode = null;
   live.blank = mode;
@@ -255,6 +316,7 @@ live.clear = () => {
   const mode = settings.v.display.clearShows === 'logo' ? 'logo' : settings.v.display.clearShows === 'black' ? 'black' : null;
   link.send({ t: 'clear', mode });
   live.cue = null; live.index = 0; live.media = null; live.blank = mode;
+  follow.on = false; follow.ids = new Set(); follow.token++;
   live.emit('live', null);
   live.emit('blank', mode);
 };

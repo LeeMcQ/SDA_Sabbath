@@ -2,11 +2,13 @@
 // present stanza by stanza (chorus repeated automatically).
 import { h, clear, esc, debounce, normalize, readText, download } from '../core/util.js';
 import { icon } from '../core/icons.js';
-import { btn, modal, seg, toggle, menu, toast, confirmBox, closeModal, enter, emptyState } from '../core/ui.js';
+import { btn, modal, seg, toggle, menu, toast, confirmBox, closeModal, enter, emptyState, keepInView } from '../core/ui.js';
 import { db } from '../core/db.js';
 import { fitsText } from '../core/render.js';
 import { music, INSTRUMENTS } from '../core/hymnmusic.js';
 import { fmtTime } from '../core/util.js';
+import * as ai from '../core/ai.js';
+import { findSongs, lyricsOf, songFromPlain, songText, sourceLinks, matchLabel, splitQuery, findMidi, fetchMidi } from '../core/lyrics.js';
 
 const CHORUS_RE = /^(chorus|refrain|koor|refrein|ikhorasi|c)\s*[:.]?\s*$/i;
 
@@ -105,6 +107,7 @@ export default function create(ctx) {
       if (first) first.click();
       if (e.ctrlKey || e.metaKey) setTimeout(() => live.take(), 50);
     } });
+  ['keydown', 'pointerdown', 'blur'].forEach((ev) => q.addEventListener(ev, () => q.classList.remove('quiet-focus')));
   const padBtn = btn('', 'Number pad', () => { keypad.hidden = !keypad.hidden; }, { cls: 'sm', label: '123' });
   const keypad = h('div.keypad', { hidden: true });
   ['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', 'Go'].forEach((k) => keypad.appendChild(h('button', { type: 'button', onclick: () => {
@@ -311,10 +314,13 @@ export default function create(ctx) {
     const isLive = live.cue && live.cue.tab === 'hymns' && live.cue.hymnKey === cue.hymnKey;
     cue.cards.forEach((c, i) => {
       const lab = c.p.kind === 'title' ? 'Title' : c.p.kind === 'chorus' ? 'Chorus' : 'Verse ' + c.p.n + (c.sub || '');
+      // Like verses: a click or tap only selects the stanza as Next (also while the hymn is live);
+      // double-click, Enter, Present or F5 puts it on screen.
       const card = h('button.stanza' + (c.p.kind === 'chorus' ? '.chorus' : ''), {
         type: 'button', 'aria-pressed': String(i === cue.index),
-        onclick: () => { stagedIndex = i; cue.index = i; markCards(); ctx.setStaged('hymns', cue); if (isLiveHymn()) live.go(i); },
-        ondblclick: () => { stagedIndex = i; cue.index = i; live.take(cue); },
+        onclick: () => stageStanza(i),
+        ondblclick: () => { stageStanza(i); live.take(cue); },
+        onkeydown: (e) => { if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); stageStanza(i); live.take(cue); } },
       }, h('span.lab', lab), c.lines.map((l) => h('span.ln', l)));
       if (isLive && live.index === i) card.classList.add('live');
       if (i < 10) card.style.setProperty('--i', i);
@@ -323,6 +329,14 @@ export default function create(ctx) {
     if (fresh) enter(grid, 'stagger', 700); // a newly opened hymn: stanzas settle in one after another
   }
   const isLiveHymn = () => live.cue && live.cue.tab === 'hymns' && cue && live.cue.hymnKey === cue.hymnKey;
+  /** Select stanza card i as Next (pick: the "Next follows Live" logic leaves this choice alone). */
+  function stageStanza(i) {
+    if (!cue) return;
+    stagedIndex = i; cue.index = i; markCards();
+    ctx.setStaged('hymns', cue, { pick: true });
+  }
+  // The live stanza card stays in view while the hymn moves on (arrows, F5, clicker, music).
+  const followCard = () => { if (!isLiveHymn() || el.hidden) return; keepInView(grid.children[live.index]); };
   function markCards() {
     Array.prototype.forEach.call(grid.children, (c, i) => {
       const on = !!cue && i === cue.index;
@@ -337,6 +351,10 @@ export default function create(ctx) {
   }
   live.on('go', markCards);
   live.on('live', markCards);
+  live.on('go', followCard);
+  live.on('live', followCard);
+  // Next follows the live hymn (Verse 2 live → Next is the chorus after it): keep the picked stanza in step.
+  live.on('staged', (s) => { if (s && s === cue && s.index != null) { stagedIndex = s.index; markCards(); } });
 
   // ------------------------------------------------------------ options / editing / import
   function slider(min, max, step, value, fmt, onchange) {
@@ -370,14 +388,15 @@ export default function create(ctx) {
     });
   }
 
-  async function saveBookEdit(hy, isNew) {
-    if (book.builtin) {
-      const key = 'overlay:' + book.id;
-      const ov = (await db.get('hymnbooks', key)) || { id: key, overlayOf: book.id, hymns: [] };
+  async function saveBookEdit(hy, isNew, bk = book, quiet = false) {
+    if (bk.builtin) {
+      const key = 'overlay:' + bk.id;
+      const ov = (await db.get('hymnbooks', key)) || { id: key, overlayOf: bk.id, hymns: [] };
       const i = ov.hymns.findIndex((x) => x.n === hy.n);
       if (i >= 0) ov.hymns[i] = hy; else ov.hymns.push(hy);
       await db.put('hymnbooks', key, ov);
-    } else await db.put('hymnbooks', book.id, { id: book.id, name: book.name, short: book.short, lang: book.lang, hymns: book.hymns });
+    } else await db.put('hymnbooks', bk.id, { id: bk.id, name: bk.name, short: bk.short, lang: bk.lang, hymns: bk.hymns });
+    if (quiet) return;
     if (isNew) toast('Hymn ' + hy.n + ' added.', 'ok'); else toast('Hymn ' + hy.n + ' saved.', 'ok');
   }
 
@@ -440,72 +459,194 @@ export default function create(ctx) {
   async function addToPlan() { if (cue) (await ctx.tab('plan')).addItem(cue.plan); }
 
   // ------------------------------------------------------------ online lyrics
+  // Search public lyric sources, show the likeliest songs, let the person pick one, check the words as slides
+  // and keep it offline in a book (Praise Choruses by default) so it can be found again like any other song.
   function findLyrics() {
-    const titleIn = h('input.field', { placeholder: 'Title or first line of hymn / chorus', value: q.value.trim() });
-    const results = h('div.col', { style: { gap: '8px', marginTop: '10px', maxHeight: '55vh', overflow: 'auto' } });
-    const status = h('p.note', '');
+    let aiOn = ai.hasKey();
+    let seq = 0, picked = null;
+    const qIn = h('input.field.grow', { type: 'search', 'aria-label': 'Song to find', placeholder: 'Title, first line or some of the words. Add “by singer” if you know it.', value: q.value.trim(),
+      onkeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); search(); } } });
+    const status = h('p.note.lyr-status', 'Type a song and press Search. Songs already on this device are shown first.');
+    const offBox = h('div.col.lyr-off');
+    const resBox = h('div.col.lyr-res');
+    const detail = h('div.lyr-detail', { hidden: true });
+    const linkBox = h('div.row.wrap.lyr-links', { hidden: true });
+    const aiChip = ai.hasKey()
+      ? h('button.chip', { type: 'button', 'aria-pressed': String(aiOn), title: 'Let AI suggest which songs your words belong to. The lyrics still come from the lyric sites, never from AI.',
+        onclick: () => { aiOn = !aiOn; aiChip.setAttribute('aria-pressed', String(aiOn)); } }, icon('sparkle'), 'Ask AI to help identify')
+      : null;
 
-    function addSourceLinks(qy) {
-      const sources = [
-        { name: 'Hymnary.org', url: 'https://hymnary.org/search?qu=' + encodeURIComponent(qy) },
-        { name: 'Hymnal.net', url: 'https://www.hymnal.net/en/search/all/all/' + encodeURIComponent(qy) },
-        { name: 'SDA Hymnals', url: 'https://sdahymnals.com/?s=' + encodeURIComponent(qy) },
-        { name: 'Open Hymnal', url: 'https://openhymnal.org/search.html?q=' + encodeURIComponent(qy) },
-        { name: 'Hymnary (text)', url: 'https://hymnary.org/text/' + encodeURIComponent(qy.toLowerCase().replace(/\s+/g, '_')) },
-      ];
-      const box = h('div.col', { style: { gap: '6px' } });
-      sources.forEach((s) => {
-        box.appendChild(h('a.btn', { href: s.url, target: '_blank', rel: 'noopener noreferrer' }, s.name + ' ↗'));
+    function offlineMatches(query) {
+      clear(offBox);
+      const { text } = splitQuery(query);
+      const hits = [];
+      books.forEach((bk) => bk.hymns.forEach((hy) => { if (hits.length < 6 && matches(hy, text)) hits.push({ bk, hy }); }));
+      if (!hits.length) return;
+      offBox.appendChild(h('h4', 'Already on this device'));
+      hits.forEach(async ({ bk, hy }) => {
+        const hasMusic = await music.entry(bk.id, hy.n).catch(() => null);
+        offBox.appendChild(h('button.lyr-item', { type: 'button', onclick: () => { closeModal(); if (book !== bk) setBook(bk.id); selectHymn(hy); } },
+          h('div.grow', h('div.row', h('b.grow', hy.n + '  ' + hy.t), hasMusic ? h('span.lyr-badge.midi', 'MIDI') : null),
+            h('div.note.trunc', bk.name + ' · ' + hy.v[0][0])), h('span.lyr-go', 'Open')));
       });
-      return box;
+    }
+
+    let rankedLast = [];
+    function paint(list) {
+      rankedLast = list;
+      clear(resBox);
+      if (!list.length) return;
+      resBox.appendChild(h('h4', 'Found online'));
+      list.forEach(async (c) => {
+        const lab = matchLabel(c.score);
+        // Check MIDI availability for this title.
+        if (c._midi == null) { const m = await findMidi(c.title).catch(() => []); c._midi = m.length > 0; }
+        const badge = lab + ' · ' + Math.round(c.score * 100) + '%' + (c._midi ? ' · MIDI' : '');
+        resBox.appendChild(h('button.lyr-item', { type: 'button', 'aria-pressed': String(picked === c), onclick: () => choose(c) },
+          h('div.grow', h('div.row', h('b.grow.trunc', c.title), h('span.lyr-badge.' + lab.split(' ')[0].toLowerCase(), badge)),
+            h('div.note.trunc', [c.artist, c.album, c.source + (c.aiPick ? ' · AI suggested' : '')].filter(Boolean).join(' · ')),
+            c.preview ? h('div.lyr-prev', c.preview) : null)));
+      });
     }
 
     async function search() {
-      const qy = titleIn.value.trim();
-      if (!qy) { status.textContent = 'Type a title or first line first.'; return; }
-      status.textContent = 'Looking up sources…';
-      clear(results);
-      results.appendChild(h('p.note', 'Open any source below, copy the lyrics, then paste them in the box and click Add. They will be stored in the same format as the choruses.'));
-      results.appendChild(addSourceLinks(qy));
-      const paste = h('textarea.field', {
-        rows: 12,
-        placeholder: 'Paste lyrics here…\n\nStanza 1 line 1\nStanza 1 line 2\n\nChorus:\nChorus line 1\nChorus line 2\n\nStanza 2 line 1…'
-      });
-      results.appendChild(h('label', 'Paste lyrics'));
-      results.appendChild(paste);
-      results.appendChild(h('button.btn.primary', { type: 'button', onclick: () => importPasted(qy, paste.value) }, 'Add to current book'));
-      status.textContent = 'Sources ready. Copy lyrics from any link above, paste, then Add.';
+      const query = qIn.value.trim();
+      if (!query) { status.textContent = 'Type a title, a first line or some words first.'; qIn.focus(); return; }
+      const my = ++seq;
+      picked = null; detail.hidden = true; clear(detail); clear(resBox);
+      offlineMatches(query);
+      renderLinks(query);
+      if (navigator.onLine === false) { status.textContent = 'No internet connection, so online search is not possible. You can still paste the words below.'; openPaste(query); return; }
+      status.textContent = 'Searching the lyric sites' + (aiOn ? ' and asking AI to help identify the song' : '') + '…';
+      let out;
+      try { out = await findSongs(query, { useAi: aiOn, onUpdate: (r) => { if (my === seq) paint(r); } }); }
+      catch (e) { if (my === seq) status.textContent = 'Search failed: ' + ((e && e.message) || e); return; }
+      if (my !== seq) return;
+      paint(out.results);
+      if (out.results.length) status.textContent = out.results.length + ' possible song' + (out.results.length === 1 ? '' : 's') + '. Pick the right one to check the words.';
+      else if (out.errors.length >= 2) status.textContent = 'The lyric sites could not be reached (' + out.errors.join('; ') + '). Check the internet connection, or use the links below and paste the words.';
+      else status.textContent = 'Nothing found for “' + query + '”. Try fewer words, the first line, or use the links below and paste the words.';
+      if (!out.results.length) openPaste(query);
     }
 
-    function importPasted(title, text) {
-      if (!book) { toast('Select a hymnbook first (or create one).', 'err'); return; }
-      if (!String(text || '').trim()) { toast('Paste the lyrics first.', 'err'); return; }
-      const p = parseLyrics(text);
-      if (!p.v.length) { toast('Could not parse any stanzas. Use blank lines between stanzas and “Chorus:” for the refrain.', 'err'); return; }
-      const num = book.hymns.reduce((m, x) => Math.max(m, +x.n || 0), 0) + 1;
-      const nh = { n: num, t: title || 'Untitled', a: '', v: p.v, c: p.c };
-      book.hymns.push(nh);
-      book.hymns.sort((a, b) => a.n - b.n);
-      saveBookEdit(nh, true).then(() => {
-        toast('Added “' + nh.t + '” (# ' + num + ') to ' + book.name, 'ok');
+    function renderLinks(query) {
+      clear(linkBox);
+      linkBox.hidden = false;
+      linkBox.appendChild(h('span.note', 'Not the right song? Look on:'));
+      sourceLinks(query).forEach(([name, url]) => linkBox.appendChild(h('a.btn.sm', { href: url, target: '_blank', rel: 'noopener noreferrer' }, name + ' ↗')));
+      linkBox.appendChild(h('button.btn.sm', { type: 'button', onclick: () => openPaste(query) }, icon('edit'), h('span', 'Paste words')));
+    }
+
+    async function choose(c) {
+      picked = c;
+      paint(rankedLast);
+      openDetail({ title: c.title, author: c.artist, text: '', loading: true, source: c });
+      try {
+        const raw = await lyricsOf(c);
+        if (picked !== c) return;
+        const song = songFromPlain(raw);
+        // Also look for a MIDI file.
+        const midis = await findMidi(c.title).catch(() => []);
+        openDetail({ title: c.title, author: c.artist, text: songText(song), source: c, midis });
+      } catch (e) {
+        if (picked !== c) return;
+        const msg = (e && e.message) || String(e);
+        const is404 = /404|not found|no words/i.test(msg);
+        openDetail({ title: c.title, author: c.artist, text: '', error: is404 ? 'This source returned 404 — no lyrics available. Try another result, or check “Already on this device” above.' : msg, source: c });
+      }
+    }
+    function openPaste(query) {
+      picked = null;
+      openDetail({ title: splitQuery(query || '').text, author: splitQuery(query || '').artist, text: '', paste: true });
+    }
+
+    function openDetail(o) {
+      clear(detail);
+      detail.hidden = false;
+      if (o.loading) { detail.appendChild(h('p.note', 'Getting the words for “' + o.title + '”…')); return; }
+      const titleIn = h('input.field', { value: o.title || '', 'aria-label': 'Song title', placeholder: 'Title' });
+      const authorIn = h('input.field', { value: o.author || '', 'aria-label': 'Singer or author', placeholder: 'Singer or author (optional)' });
+      const ta = h('textarea.field.lyr-ta', { rows: 12, 'aria-label': 'Lyrics', placeholder: 'Stanza 1 line 1\nStanza 1 line 2\n\nChorus:\nChorus line 1\n\nStanza 2 line 1…' });
+      ta.value = o.text || '';
+      const sum = h('p.note.lyr-sum', '');
+      const cards = h('div.lyr-cards');
+      const refresh = () => {
+        const p = parseLyrics(ta.value);
+        sum.textContent = p.v.length || p.c ? p.v.length + ' stanza' + (p.v.length === 1 ? '' : 's') + (p.c ? ' + chorus' : '') + '. Each becomes its own slide; long stanzas are split to fit the screen.' : 'No words yet.';
+        clear(cards);
+        p.v.forEach((s, i) => cards.appendChild(h('div.lyr-card', h('b', 'Stanza ' + (i + 1)), h('div', s.join('\n')))));
+        if (p.c) cards.appendChild(h('div.lyr-card.chorus', h('b', 'Chorus'), h('div', p.c.join('\n'))));
+      };
+      ta.addEventListener('input', debounce(refresh, 150));
+      const bookSel2 = h('select.field', { 'aria-label': 'Add to book' });
+      books.forEach((bk) => bookSel2.appendChild(h('option', { value: bk.id }, bk.name)));
+      bookSel2.value = books.some((b) => b.id === 'choruses') ? 'choruses' : book ? book.id : (books[0] && books[0].id) || '';
+      // MIDI picker
+      let chosenMidi = (o.midis && o.midis[0]) || null;
+      const midiBox = h('div.col', { style: { gap: '4px' } });
+      if (o.midis && o.midis.length) {
+        midiBox.appendChild(h('span.note', 'MIDI found — pick one to play with this song:'));
+        o.midis.forEach((m) => {
+          const btn = h('button.chip', { type: 'button', 'aria-pressed': String(chosenMidi === m), onclick: () => { chosenMidi = m; midiBox.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b === btn))); } },
+            m.name + ' (' + Math.round(m.score * 100) + '%)');
+          midiBox.appendChild(btn);
+        });
+        midiBox.appendChild(h('button.chip', { type: 'button', onclick: () => { chosenMidi = null; midiBox.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', 'false')); } }, 'No MIDI'));
+      } else {
+        midiBox.appendChild(h('span.note', 'No MIDI found for this title. You can still add the words.'));
+      }
+      const doAdd = async (andNext) => {
+        const bk = books.find((b) => b.id === bookSel2.value);
+        if (!bk) { toast('Choose a book to keep it in.', 'err'); return; }
+        const p = parseLyrics(ta.value);
+        if (!p.v.length && !p.c) { toast('There are no words to add yet.', 'err'); return; }
+        const title = titleIn.value.trim() || 'Untitled song';
+        if (bk.hymns.some((x) => normalize(x.t) === normalize(title)) &&
+          !(await confirmBox('Already in this book', '“' + title + '” is already in ' + bk.name + '. Add another copy?', 'Add anyway'))) return;
+        const num = bk.hymns.reduce((m, x) => Math.max(m, +x.n || 0), 0) + 1;
+        const nh = { n: num, t: title, a: authorIn.value.trim(), v: p.v.length ? p.v : [p.c], c: p.v.length ? p.c : null };
+        bk.hymns.push(nh); bk.hymns.sort((a, b) => a.n - b.n);
+        try { await saveBookEdit(nh, true, bk, true); }
+        catch (e) { bk.hymns = bk.hymns.filter((x) => x !== nh); toast('Could not save the song: ' + ((e && e.message) || e), 'err', 7000); return; }
+        // Download and store the MIDI if one was chosen.
+        if (chosenMidi && chosenMidi.url) {
+          try {
+            const blob = await fetchMidi(chosenMidi.url);
+            await db.put('files', 'midi:' + bk.id + ':' + num, { id: 'midi:' + bk.id + ':' + num, kind: 'midi', name: chosenMidi.name, blob, added: Date.now() });
+            toast('MIDI “' + chosenMidi.name + '” assigned.', 'ok', 2500);
+          } catch (e) { toast('Words saved, but MIDI could not be downloaded: ' + ((e && e.message) || e), '', 4000); }
+        }
         closeModal();
+        if (book !== bk) setBook(bk.id);
         selectHymn(nh);
-      }).catch((e) => {
-        // Not saved: take it out again so the list matches what is stored.
-        book.hymns = book.hymns.filter((x) => x !== nh);
-        toast('Could not save the lyrics: ' + ((e && e.message) || e), 'err', 7000);
-      });
+        toast('“' + title + '” is saved in ' + bk.name + ' (# ' + num + ') and works offline.' + (andNext ? ' It is on the Next screen.' : '') + (chosenMidi ? ' MIDI assigned.' : ''), 'ok', 4500);
+      };
+      detail.append(
+        o.error ? h('p.note.warn', o.error + ' You can paste the words below instead.') : null,
+        h('h4', o.paste ? 'Paste the words' : 'Check the words'),
+        h('p.note', 'Words from ' + (o.source ? o.source.source : 'you') + '. Fix any mistakes, keep one empty line between stanzas, and start the chorus with a line “Chorus:”.'),
+        h('div.form', h('label', 'Title'), titleIn, h('label', 'Singer / author'), authorIn),
+        ta, sum, cards,
+        midiBox,
+        h('div.form', h('label', 'Keep in'), bookSel2),
+        h('p.note', 'Song words belong to their owners. Check that your church’s CCLI (or other) licence covers showing them.'),
+        h('div.row.wrap',
+          h('button.btn.primary', { type: 'button', onclick: () => doAdd(true) }, icon('next'), h('span', 'Add and put on Next')),
+          h('button.btn', { type: 'button', onclick: () => doAdd(false) }, icon('plus'), h('span', 'Add to book'))));
+      refresh();
+      detail.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
 
     modal({
       title: 'Find lyrics online', wide: true,
-      body: h('div.col',
-        h('p.note', 'Search public sources for any hymn or chorus. Copy the lyrics and paste them to add offline in the same format as the choruses.'),
-        h('div.row', titleIn, h('button.btn', { type: 'button', onclick: search }, 'Search')),
-        status, results),
+      body: h('div.col.lyr-wrap',
+        h('p.note', 'Finds the words to hymns and choruses on public lyric sites, suggests the likeliest songs, and saves your choice on this device so it works offline.'),
+        h('div.row.wrap', qIn, h('button.btn.primary', { type: 'button', onclick: search }, icon('search'), h('span', 'Search')), aiChip),
+        status, offBox, resBox, linkBox, detail),
       actions: [{ label: 'Close' }],
     });
-    titleIn.focus();
+    qIn.focus();
+    if (qIn.value) search();
   }
 
   // ------------------------------------------------------------ music (offline MIDI accompaniment)
@@ -534,6 +675,25 @@ export default function create(ctx) {
       h('button.btn.sm.icon', { type: 'button', 'aria-label': label + ' up', onclick: onPlus }, icon('plus')));
   }
 
+  /** Attach (or remove) the user's own MIDI file for the open hymn. */
+  function addMidiBtn(has) {
+    const num = hymn.n, bid = book.id;
+    if (has) {
+      return h('button.btn.sm', { type: 'button', title: 'Stop using your MIDI file for this hymn', onclick: async () => {
+        music.stop(); await db.del('files', 'midi:' + bid + ':' + num).catch(() => {}); toast('MIDI file removed.', 'ok', 2000); renderMusic();
+      } }, icon('trash'), h('span', 'Remove my MIDI'));
+    }
+    const inp = h('input', { type: 'file', accept: '.mid,.midi,audio/midi,audio/x-midi', hidden: true, onchange: async () => {
+      const f = inp.files && inp.files[0]; inp.value = '';
+      if (!f) return;
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      if (String.fromCharCode(...bytes.slice(0, 4)) !== 'MThd') { toast('That is not a MIDI file.', 'err', 3000); return; }
+      await db.put('files', 'midi:' + bid + ':' + num, { id: 'midi:' + bid + ':' + num, kind: 'midi', name: f.name.replace(/\.midi?$/i, ''), blob: new Blob([bytes], { type: 'audio/midi' }), added: Date.now() });
+      toast('MIDI added to hymn ' + num + '.', 'ok', 2500); renderMusic();
+    } });
+    return h('span', inp, h('button.btn.sm.primary', { type: 'button', title: 'Choose a .mid file from this device', onclick: () => inp.click() }, icon('plus'), h('span', 'Add MIDI file…')));
+  }
+
   async function renderMusic() {
     if (!hymn || !book) { musicBar.hidden = true; return; }
     const key = cue && cue.hymnKey;
@@ -541,7 +701,13 @@ export default function create(ctx) {
     if (!cue || cue.hymnKey !== key) return; // another hymn was picked meanwhile
     musicEntry = entry;
     clear(musicBar);
-    if (!entry) { musicBar.hidden = true; return; }
+    if (!entry) {
+      // No music for this hymn: let the user attach a MIDI file (kept on this device).
+      musicBar.hidden = false;
+      musicBar.append(h('div.row.wrap', h('span.note', 'No music for this hymn yet.'), addMidiBtn(false),
+        h('a.btn.sm', { href: 'https://www.google.com/search?q=' + encodeURIComponent('"' + hymn.t + '" hymn midi'), target: '_blank', rel: 'noopener' }, 'Find a MIDI online')));
+      return;
+    }
     musicBar.hidden = false;
     const m = S();
     const st = music.state || {};
@@ -562,6 +728,7 @@ export default function create(ctx) {
     musicInfo = h('span.note.music-info.trunc', info);
     row1.append(musicInfo);
     musicSig = sigOf();
+    if (entry.custom && !entry.bundled) row1.append(addMidiBtn(true));
     musicBar.append(row1);
     // Jump to a part while it plays: Intro 1 2 3 …
     if (mine && st.sections && st.sections.length > 1) {
@@ -607,6 +774,14 @@ export default function create(ctx) {
       order.forEach((b) => b.hymns.forEach((x) => { if (x.n === n) out.push({ n: x.n, t: x.t, book: b.short || b.name, bookId: b.id }); }));
       return out;
     },
+    /** Hymns and choruses in every book (the open book first) whose number, title or words match. */
+    searchAll(qq, k = 20) {
+      const out = [];
+      const order = [book].concat(books.filter((b) => b !== book)).filter(Boolean);
+      for (const b of order) for (const x of b.hymns) { if (matches(x, qq)) { out.push({ n: x.n, t: x.t, book: b.short || b.name, bookId: b.id }); if (out.length >= k) return out; } }
+      return out;
+    },
+    whenReady() { return ready; },
     search(qq, k = 5) {
       const out = [];
       if (!book) return out;
@@ -629,7 +804,17 @@ export default function create(ctx) {
       selectHymn(x, { index });
       return cue;
     },
-    onShow() { if (!hymn && !opening && !ctx.isMobile()) setTimeout(() => q.focus(), 50); opening = false; if (hymn) renderMusic(); },
+    onShow() { if (!hymn && !opening && !ctx.isMobile()) setTimeout(() => { q.classList.add('quiet-focus'); q.focus(); }, 50); opening = false; if (hymn) renderMusic(); },
+    /** Number keys: stage stanza n (of the hymn shown here; the title and chorus are reached with the arrows). */
+    numberKey(n, multi) {
+      if (!cue || !cue.labels) return false;
+      if (multi) { n %= 10; if (!n) return true; } // stanzas go up to 9: two quick presses mean the last one
+      const i = cue.labels.findIndex((lab) => lab === String(n) || lab === n + 'a');
+      if (i < 0) { ctx.toast('This hymn has no stanza ' + n + (chosen ? ' selected' : '') + '.', '', 2200); return true; }
+      stageStanza(i);
+      keepInView(grid.children[i]);
+      return true;
+    },
     /** M key: pause/continue the music, or start it for the live (or selected) hymn. */
     async musicKey() {
       music.unlock();
@@ -642,9 +827,18 @@ export default function create(ctx) {
     },
     musicFor(c) { return c && c.tab === 'hymns' && !!(musicSet && book && c.hymnKey && c.hymnKey.startsWith(book.id + ':') && musicSet.has(+c.hymnKey.split(':')[1])); },
     startMusicFor(c) { if (cue && c && cue.hymnKey === c.hymnKey) startMusic(false); },
+    /** Present the hymn and start the music together (used by Plan). */
+    async presentAndPlay(item) {
+      const c = await api.open(item);
+      if (!c) return null;
+      // Give the music bar a moment to resolve the entry, then present and play.
+      await new Promise((r) => setTimeout(r, 80));
+      await startMusic(true);
+      return c;
+    },
     controls(c) {
       // Jump straight to a stanza: T 1 C 2 C 3 …
-      const box = h('div.row', { style: { flexWrap: 'nowrap', overflowX: 'auto' } });
+      const box = h('div.row.cb-chips', { style: { flexWrap: 'nowrap', overflowX: 'auto', minWidth: 0, flex: '1 1 auto' } });
       const labels = c.labels || [];
       const isCho = (lab) => /^C[a-f]?$/.test(lab);
       const firstCho = labels.findIndex(isCho);
@@ -664,8 +858,8 @@ export default function create(ctx) {
       ctlBox = box; markCtl();
       // Live hymn with offline music: start it from the control bar too.
       if (api.musicFor(c) && !(music.isPlaying() && music.hymnKey === c.hymnKey)) {
-        return h('div.row', { style: { flexWrap: 'nowrap', minWidth: 0 } }, box,
-          h('button.btn.sm', { type: 'button', title: 'Play the music for this hymn (M)', onclick: () => api.musicKey() }, icon('music'), h('span.hide-sm', 'Music')));
+        return h('div.row', { style: { flexWrap: 'nowrap', minWidth: 0, flex: '1 1 auto' } }, box,
+          h('button.btn.sm.cb-music', { type: 'button', title: 'Play the music for this hymn (M)', 'aria-label': 'Play the music for this hymn', style: { flex: 'none' }, onclick: () => api.musicKey() }, icon('music'), h('span.hide-sm', 'Music')));
       }
       return box;
     },

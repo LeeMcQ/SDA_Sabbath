@@ -38,7 +38,8 @@ export async function openPip() {
     if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); live.next(); }
     else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); live.prev(); }
     else if (e.key === 'F5' || (e.key === 'Enter' && e.ctrlKey)) { e.preventDefault(); live.take(); }
-    else if (e.key === 'b' || e.key === 'B' || e.key === '.') live.setBlank('black');
+    else if (e.key === 'b' || e.key === 'B' || e.key === '.' || e.key === 'w' || e.key === 'W') live.setBlank('black');
+    else if (e.key === 'Escape') live.clear();
   });
   pw.addEventListener('pagehide', () => { offs.forEach((f) => f()); pw = null; });
   upd();

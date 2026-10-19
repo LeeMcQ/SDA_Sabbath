@@ -203,10 +203,32 @@ export async function parseBibleFile(file) {
         if (Array.isArray(bk.chapters) && Array.isArray(bk.chapters[0])) bk.chapters.forEach((ch, ci) => ch.forEach((t, vi) => put(b, ci + 1, vi + 1, t)));
         else (bk.chapters || []).forEach((ch) => (ch.verses || []).forEach((vs) => put(b, ch.chapter, vs.verse, vs.text)));
       });
+    } else if (j && j.books && j.books[0] && j.books[0].chapters && j.books[0].chapters[0] && j.books[0].chapters[0].chapter) {
+      // bible.helloao.org complete.json: books[].chapters[].chapter.content[]
+      Object.assign(meta, { name: (j.translation && j.translation.englishName) || j.name, abbr: (j.translation && j.translation.shortName) || '', lang: (j.translation && j.translation.language) || '' });
+      j.books.forEach((bk, i) => {
+        const b = bookNo(bk.name || bk.id) || i + 1;
+        (bk.chapters || []).forEach((chWrap) => {
+          const ch = chWrap.chapter || chWrap;
+          const c = ch.number || 1;
+          (ch.content || []).forEach((item) => {
+            if (item.type === 'verse' && item.number) {
+              const t = Array.isArray(item.content) ? item.content.join(' ') : String(item.content || '');
+              put(b, c, item.number, t);
+            }
+          });
+        });
+      });
     } else if (Array.isArray(j) && j[0] && j[0].chapters) { // thiagobodruk
       j.forEach((bk, i) => bk.chapters.forEach((ch, ci) => ch.forEach((t, vi) => put(i + 1, ci + 1, vi + 1, t))));
     } else if (Array.isArray(j) && j[0] && (j[0].book || j[0].book_name) && j[0].verse) {
       j.forEach((x) => put(bookNo(x.book || x.book_name), x.chapter, x.verse, x.text));
+    } else if (j && !Array.isArray(j) && typeof j === 'object' && Object.keys(j).length >= 60 && Object.values(j).every((v) => v && typeof v === 'object')) {
+      // { "Genesis": { "1": { "1": "In the beginning…" } } } (book name → chapter → verse), e.g. the Bible-json collections
+      Object.keys(j).forEach((name, i) => {
+        const b = bookNo(name) || i + 1;
+        Object.keys(j[name]).forEach((c) => Object.keys(j[name][c]).forEach((v) => put(b, parseInt(c, 10), parseInt(v, 10), j[name][c][v])));
+      });
     } else throw new Error('Unknown JSON Bible format.');
   } else { // CSV / TSV: book,chapter,verse,text
     const delim = text.indexOf('\t') >= 0 ? '\t' : ',';

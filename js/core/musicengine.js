@@ -45,6 +45,10 @@ export function loadIndex() {
   return indexP;
 }
 async function midiBytes(book, entry) {
+  // Custom MIDI stored in the database (assigned via lyrics finder).
+  if (entry.custom && entry.blob) {
+    return new Uint8Array(await entry.blob.arrayBuffer());
+  }
   const idx = await loadIndex();
   const b = idx && idx.books[book];
   if (!b) throw new Error('No music for this hymnbook');
@@ -162,12 +166,12 @@ export class MusicEngine {
   async play(req, onProgress) {
     await this.init(onProgress);
     const idx = await loadIndex();
-    const entry = idx && idx.books[req.book] && idx.books[req.book].hymns[String(req.n)];
+    const entry = (req.entry && req.entry.blob ? req.entry : null) || (idx && idx.books[req.book] && idx.books[req.book].hymns[String(req.n)]);
     if (!entry) throw new Error('No music for hymn ' + req.n);
     clearTimeout(this._idleT); clearTimeout(this._fadeT);
     if (this.ctx.state !== 'running') await this.ctx.resume();
     const smf = parseSMF(await midiBytes(req.book, entry));
-    const segs = req.segs && req.segs.length ? req.segs : [{ from: 0, to: entry.last + 1, label: 'Hymn', kind: 'all', slide: null }];
+    const segs = req.segs && req.segs.length ? req.segs : [{ from: 0, to: entry.last != null ? entry.last + 1 : smf.events.reduce((m, e) => Math.max(m, e.tick), 0) + 1, label: 'Hymn', kind: 'all', slide: null }];
     this.arr = buildArrangement(smf, segs, { channels: channelMap(req.instrument) });
     this.req = req;
     if (req.fx) this.applyEffects(req.fx);
@@ -185,6 +189,34 @@ export class MusicEngine {
     seq.currentTime = 0;
     seq.play();
     this.playing = true; this.paused = false;
+    this._startTicker();
+    this._state();
+  }
+
+  /** Play any MIDI file (banner background music) with the same instruments. bytes: Uint8Array. */
+  async playMidi(bytes, { title = 'MIDI', volume } = {}, onProgress) {
+    await this.init(onProgress);
+    clearTimeout(this._idleT); clearTimeout(this._fadeT); this._fadeT = null;
+    if (this.ctx.state !== 'running') await this.ctx.resume();
+    const seq = this.seq;
+    if (this.playing) { seq.pause(); this.synth.stopAll(true); }
+    this.arr = { sections: [], duration: 0 };
+    this.req = { title, n: null, book: null };
+    this.synth.setSystemParameter('interpolationType', 2);
+    this.synth.setSystemParameter('voiceCap', 256);
+    this.gain.gain.cancelScheduledValues(this.ctx.currentTime);
+    if (volume != null) this.volume = volume;
+    this.gain.gain.setValueAtTime(this.volume, this.ctx.currentTime);
+    this.setKey(0);
+    const buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+    seq.loadNewSongList([{ binary: buf, fileName: title + '.mid' }]);
+    seq.playbackRate = this.rate = 1;
+    seq.currentTime = 0;
+    seq.play();
+    this.playing = true; this.paused = false;
+    const arr = this.arr;
+    const grab = () => { if (this.arr === arr && isFinite(seq.duration) && seq.duration > 0) arr.duration = seq.duration; };
+    setTimeout(grab, 200); setTimeout(grab, 1200);
     this._startTicker();
     this._state();
   }

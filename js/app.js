@@ -4,7 +4,7 @@ import { icon } from './core/icons.js';
 import { settings } from './core/settings.js';
 import { db, persistStorage } from './core/db.js';
 import { link, listScreens } from './core/link.js';
-import { live } from './core/live.js';
+import { live, slideName } from './core/live.js';
 import { bgAudio } from './core/audio.js';
 import * as ui from './core/ui.js';
 import { createMonitors } from './monitors.js';
@@ -12,19 +12,21 @@ import { createControlBar } from './controlbar.js';
 import { createQuick } from './quick.js';
 import { createDisplay } from './display/display.js';
 import { openPip, pipSupported } from './pip.js';
+import { clicker, actionFor, sigOfKey, sigOfMouse } from './core/clicker.js';
+import { openClickerSetup, builtinAction } from './clickerui.js';
 
-export const VERSION = '1.1.0';
+export const VERSION = '1.3.0';
+export const BUILD = 'e018f84';
 
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', load: () => import('./tabs/bible.js') },
   { id: 'hymns', label: 'Hymns', icon: 'hymn', load: () => import('./tabs/hymns.js') },
+  { id: 'ai', label: 'Banners & Music', short: 'Banners', icon: 'banner', load: () => import('./tabs/ai.js') }, // id kept from the first version (plans and settings refer to it)
   { id: 'slides', label: 'Slides', icon: 'slides', load: () => import('./tabs/slides.js') },
   { id: 'video', label: 'Video', icon: 'video', load: () => import('./tabs/video.js') },
-  { id: 'web', label: 'Web', icon: 'web', load: () => import('./tabs/web.js') },
-  { id: 'screen', label: 'PC view', icon: 'pc', load: () => import('./tabs/screen.js') },
+  { id: 'web', label: 'Web & PC', icon: 'web', load: () => import('./tabs/webpc.js') }, // the web page and PC screen parts in one tab
   { id: 'plan', label: 'Plan', icon: 'plan', load: () => import('./tabs/plan.js') },
   { id: 'tools', label: 'Tools', icon: 'grid', load: () => import('./tabs/tools.js') },
-  { id: 'ai', label: 'Banners', icon: 'banner', load: () => import('./tabs/ai.js') }, // id kept from the first version (plans and settings refer to it)
   null,
   { id: 'settings', label: 'Settings', icon: 'settings', load: () => import('./tabs/settings.js') },
 ];
@@ -34,6 +36,7 @@ const work = $('#work');
 const rail = $('#rail');
 const presentBtn = $('#presentBtn');
 const dispBtn = $('#dispBtn');
+const audioBtn = $('#audioBtn');
 const tabs = new Map();      // id -> api (created lazily)
 const loading = new Map();   // id -> promise
 const stagedBy = new Map();  // id -> cue
@@ -46,10 +49,10 @@ const NATIVE = !!window.SDA_NATIVE;
 
 // ------------------------------------------------------------ context passed to tabs
 const ctx = {
-  live, link, settings, db, bgAudio, ui, toast: ui.toast, isMobile, VERSION,
-  setStaged(id, cue) {
+  live, link, settings, db, bgAudio, ui, toast: ui.toast, isMobile, VERSION, BUILD,
+  setStaged(id, cue, opts) {
     stagedBy.set(id, cue || null);
-    if (id === current) live.stage(cue || null);
+    if (id === current) live.stage(cue || null, opts);
   },
   showTab: (id) => showTab(id),
   tab: (id) => getTab(id),
@@ -59,7 +62,10 @@ const ctx = {
 };
 window.selah = ctx; // handy for debugging from the console (name kept for existing scripts)
 
+// Old names still work (saved plans, links, the last tab used): PC view is now part of Web & PC.
+const ALIAS = { screen: 'web' };
 async function getTab(id) {
+  if (ALIAS[id]) { const api = await getTab(ALIAS[id]); if (id === 'screen' && api.show) api.show('screen'); return api; }
   if (tabs.has(id)) return tabs.get(id);
   if (loading.has(id)) return loading.get(id);
   const def = TABS.find((t) => t && t.id === id);
@@ -78,6 +84,7 @@ async function getTab(id) {
 }
 
 async function showTab(id) {
+  if (ALIAS[id]) { const api = await showTab(ALIAS[id]); if (id === 'screen' && api && api.show) api.show('screen'); return api; }
   // While the Plan tab opens an item in another tab, stay on the Plan.
   if (ctx.hold && id !== ctx.hold) return getTab(id);
   if (current === id && tabs.has(id)) return tabs.get(id);
@@ -100,13 +107,13 @@ async function showTab(id) {
 }
 
 // ------------------------------------------------------------ rail
-// On phones only five buttons fit comfortably: Bible, Hymns, Plan, Slides and More (the rest).
-const MORE_TABS = ['video', 'web', 'screen', 'tools', 'settings'];
-const MORE_MENU = ['ai', ...MORE_TABS];
+// On phones only five buttons fit comfortably: Bible, Hymns, Banners, Slides, Plan and More (the rest).
+const MORE_TABS = ['video', 'web', 'tools', 'settings'];
+const MORE_MENU = MORE_TABS; // Banners has its own button in the rail (never repeated in this menu)
 TABS.forEach((t, i) => {
   if (!t) { rail.appendChild(h('div.rail-gap')); return; }
-  const b = h('button' + (MORE_TABS.includes(t.id) ? '.more-tab' : ''), { type: 'button', role: 'tab', 'aria-selected': 'false', 'data-tab': t.id, title: t.label + (i < 7 ? '  (Alt+' + (i + 1) + ')' : ''), onclick: () => showTab(t.id) },
-    icon(t.icon), h('span', t.label), h('span.tally'));
+  const b = h('button' + (MORE_TABS.includes(t.id) ? '.more-tab' : ''), { type: 'button', role: 'tab', 'aria-selected': 'false', 'data-tab': t.id, title: t.label + (i < 9 ? '  (Alt+' + (i + 1) + ')' : ''), onclick: () => showTab(t.id) },
+    icon(t.icon), t.short ? h('span.lbl', h('span.lbl-long', t.label), h('span.lbl-short', t.short)) : h('span', t.label), h('span.tally'));
   railBtns.set(t.id, b);
   rail.appendChild(b);
 });
@@ -143,7 +150,8 @@ function updatePresent() {
   presentBtn.classList.toggle('empty', !c);
   presentBtn.classList.toggle('is-live', same);
   presentKey.textContent = same ? 'On screen' : 'Present';
-  $('#presentNext').textContent = c ? (same ? '' : 'Next: ') + c.title + (c.sub ? '  ' + c.sub : '') : 'Nothing selected';
+  const part = c && !same ? slideName(c, c.index) : '';
+  $('#presentNext').textContent = c ? (same ? '' : 'Next: ') + c.title + (part ? ' · ' + part : '') + (c.sub ? '  ' + c.sub : '') : 'Nothing selected';
   presentBtn.title = same ? 'This is already on screen. Press again (F5) to show it from the start.' : 'Present the selected item (F5 or Ctrl+Enter)';
 }
 live.on('staged', updatePresent);
@@ -158,6 +166,17 @@ async function doPresent() {
   persistStorage();
   const a = document.activeElement;
   if (a && (a.tagName === 'INPUT' || a.tagName === 'SELECT') && a !== document.body) a.blur();
+  // Always present on the extended screen, full screen.
+  if (!link.ready) {
+    const opened = await link.openWindow({ prompt: true });
+    if (!opened) return;
+    // Wait briefly for the display window to be ready.
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  // Ask the display window to go full screen.
+  if (link.kind === 'window' && link.win && !link.win.closed) {
+    try { link.win.postMessage({ t: 'fullscreen' }, location.origin); } catch (e) { /* */ }
+  }
   const ok = await live.take();
   if (ok) { presentBtn.classList.add('flash'); setTimeout(() => presentBtn.classList.remove('flash'), 260); }
 }
@@ -176,7 +195,16 @@ function updateDispBtn() {
   dispBtn.querySelector('.lbl-s').textContent = !link.kind ? 'No display' : !link.ready ? 'Connecting' : (isLive ? 'Live · ' : 'Ready · ') + (SHORT_KIND[link.kind] || 'Screen');
   dispBtn.setAttribute('aria-label', 'Display: ' + full + (isLive ? ', something is live' : '') + '. Choose where to present');
 }
+// A one-tap stop button beside the display button whenever something is connected (cast, window, TV …).
+const dispStop = h('button.disp-stop', { type: 'button', hidden: true, onclick: () => { const was = link.kind; link.close(); ui.toast(was === 'cast' ? 'Casting stopped.' : 'Display closed.', 'ok', 2000); } }, icon('x'));
+dispBtn.after(dispStop);
+function updateDispStop() {
+  dispStop.hidden = !link.kind;
+  const t = link.stopLabel();
+  dispStop.title = t; dispStop.setAttribute('aria-label', t);
+}
 link.on('state', updateDispBtn);
+link.on('state', updateDispStop);
 link.on('hello', updateDispBtn);
 live.on('live', updateDispBtn);
 link.on('blocked', () => ui.toast('The browser blocked the display window. Allow pop-ups for this site, then press Present again.', 'err', 7000));
@@ -215,25 +243,152 @@ function companionDialog() {
   });
 }
 
+const onWindows = () => /Windows/i.test((navigator.userAgentData && navigator.userAgentData.platform) || navigator.userAgent);
+const onAndroid = () => /Android/i.test(navigator.userAgent);
+
+/** Cast through the browser (Chromecast, Google TV, Android TV). Explains the other ways when it fails. */
+function startCast() {
+  return link.openCast().catch((e) => {
+    // The person closed the browser's cast picker: nothing to report.
+    if (e && (e.name === 'AbortError' || e.name === 'NotAllowedError')) return false;
+    castHelp(e);
+    return false;
+  });
+}
+
+function castHelp(e) {
+  const asked = !e; // opened from “TV not found? Help…”
+  const noDevice = !e || e.name === 'NoCastDevice' || e.name === 'NotFoundError' || /no screens|not available|not found/i.test((e && e.message) || '');
+  const steps = h('div.col', { style: { gap: '10px' } });
+  steps.appendChild(h('p', asked
+    ? 'Browser casting only works with Chromecast, Google TV and Android TV. Most other TVs (Samsung, LG, Hisense and projectors with “Screen mirroring”) use Miracast instead, which a web page cannot reach directly. These ways work with them:'
+    : noDevice
+    ? 'The browser found no cast device. Browser casting only works with Chromecast, Google TV and Android TV. Most other TVs (Samsung, LG, Hisense and projectors with “Screen mirroring”) use Miracast instead, which a web page cannot reach directly.'
+    : 'Casting failed: ' + ((e && e.message) || e) + '.'));
+  const opt = (ic, title, desc, fn) => h('button', { type: 'button', onclick: () => { ui.closeModal(); fn(); } },
+    icon(ic), h('div.grow', h('div', { style: { fontWeight: 700 } }, title), h('div.note', desc)));
+  const list = h('div.list');
+  if (onWindows()) list.appendChild(opt('pc', 'Connect to a wireless display (Windows)', 'Windows connects to Miracast TVs and projectors itself. The TV then becomes a second screen for SDA Sabbath. Recommended.', wirelessDialog));
+  list.appendChild(opt('link', 'SDA Sabbath companion', 'Best for a smart TV with a web browser: the TV opens the companion address and this device controls it over Wi-Fi.', companionDialog));
+  if (onAndroid()) list.appendChild(opt('phone', 'Use this phone as the screen, then mirror it', 'Open your phone’s Smart View / Screen Cast / Screen mirroring from the quick settings and pick the TV. The TV shows the phone screen.', () => link.openSelf(createDisplay)));
+  else list.appendChild(opt('phone', 'Use this device as the screen', 'Full screen here, for an HDMI cable or the device’s own screen mirroring.', () => link.openSelf(createDisplay)));
+  list.appendChild(opt('cast', 'Try casting again', 'Make sure the TV and this device are on the same Wi-Fi and the TV is on.', () => startCast()));
+  steps.appendChild(list);
+  ui.modal({ title: asked ? 'TV not found? Other ways to connect' : noDevice ? 'No cast device found' : 'Casting failed', body: steps, actions: [{ label: 'Close' }], wide: true });
+}
+
+/**
+ * Windows' own "Connect to a wireless display" (Miracast): Windows connects to the TV or projector and treats it
+ * as a second screen; SDA Sabbath then opens its display window there like on any extended screen.
+ */
+function wirelessDialog() {
+  const status = h('p.note.wd-status', 'Waiting for the wireless display…');
+  let before = null, sd = null;
+  const watch = async () => {
+    if (sd || !('getScreenDetails' in window)) return;
+    try {
+      sd = await window.getScreenDetails();
+      before = sd.screens.length;
+      status.textContent = 'Screens now: ' + before + '. Connect the TV in the Windows panel; it shows up here when it is ready.';
+      sd.addEventListener('screenschange', () => {
+        const n = sd.screens.length;
+        if (n > before) {
+          const s2 = sd.screens.find((x) => x !== sd.currentScreen);
+          status.textContent = 'Found: ' + ((s2 && s2.label) || 'a new screen') + '. Make sure Windows is set to Extend, then press Present on it.';
+          status.classList.add('ok');
+          goBtn.classList.add('primary');
+        } else status.textContent = 'Screens now: ' + n + '.';
+        before = n;
+      });
+    } catch (err) { /* permission refused: the steps still work */ }
+  };
+  const castLink = h('a.btn.primary', { href: 'ms-settings-connectabledevices:devicediscovery', onclick: () => { watch(); } }, icon('cast'), h('span', 'Open Windows “Connect”'));
+  const dispLink = h('a.btn', { href: 'ms-settings:display', onclick: () => { watch(); } }, icon('pc'), h('span', 'Open Display settings'));
+  const goBtn = h('button.btn', { type: 'button', onclick: async () => {
+    ui.closeModal();
+    if ('getScreenDetails' in window) await chooseScreen(); else await link.openWindow();
+  } }, icon('present'), h('span', 'Present on the wireless display'));
+  ui.modal({
+    title: 'Connect to a wireless display (Windows)', wide: true,
+    body: h('div.col.wd', { style: { gap: '10px' } },
+      h('p.note', 'Use this when casting from the browser does not find your TV or projector. Windows connects to it (Miracast) and uses it as a second screen.'),
+      h('ol.wd-steps',
+        h('li', h('b', 'Open the Windows Connect panel'), ' and pick the TV or projector from the list (or press ', h('kbd', 'Windows'), ' + ', h('kbd', 'K'), '). The browser may ask “Open Settings?”: allow it.',
+          h('div.row.wrap', { style: { marginTop: '6px' } }, castLink, dispLink),
+          h('div.note', 'Not listed? Turn on “Screen mirroring” (or open the Screen Mirroring app) on the TV, keep it close, and make sure Wi-Fi is on. In Display settings this is “Connect to a wireless display”.')),
+        h('li', h('b', 'Choose Extend'), ', not Duplicate: in the Connect panel press “Change projection mode” → Extend, or press ', h('kbd', 'Windows'), ' + ', h('kbd', 'P'), ' → Extend. Then the TV shows only the slides, and this screen keeps the controls.'),
+        h('li', h('b', 'Present on it'), '. SDA Sabbath opens its display on the TV. To stop, press the × next to the display button, then Disconnect in the Windows panel.',
+          h('div.row.wrap', { style: { marginTop: '6px' } }, goBtn))),
+      status),
+    actions: [{ label: 'Close' }],
+  });
+  watch();
+}
+
 function displayMenu(anchor) {
   const items = [];
-  if (!NATIVE && (!isMobile() || innerWidth > 900)) {
+  // Connected: stopping and switching come first, so they are easy to find.
+  if (link.kind) {
+    items.push({ label: link.stopLabel() + (link.info.label ? ' (' + link.info.label + ')' : ''), icon: 'x', onclick: () => { link.close(); ui.toast('Display closed.', 'ok', 2000); } });
+    if (link.kind === 'cast') items.push({ label: 'Cast to another device…', icon: 'cast', onclick: () => { link.close(); startCast(); } });
+    items.push('-');
+  }
+  if (!NATIVE && (!isMobile() || innerWidth > 900)) { // Android app: no second window
     items.push({ label: 'Open display on second screen', icon: 'present', onclick: () => link.openWindow() });
     if ('getScreenDetails' in window) items.push({ label: 'Choose screen…', icon: 'pc', onclick: () => chooseScreen() });
   }
   items.push({ label: 'Use this device as the screen', icon: 'phone', onclick: () => link.openSelf(createDisplay) });
-  if (link.canCast()) items.push({ label: 'Cast to a TV or wireless display', icon: 'cast', onclick: () => link.openCast().catch((e) => {
-    const msg = /no screens|not available|cancelled/i.test(e.message)
-      ? 'Cast needs a Chromecast. Your LG TV uses Smart View (Miracast). Tap “Use this device as the screen”, then open Smart View and pick the TV.'
-      : 'Cast failed: ' + e.message;
-    ui.toast(msg, 'err', 8000);
-  }) });
+  if (link.canCast() && link.kind !== 'cast') items.push({ label: 'Cast (Chromecast, Google TV, Android TV)', icon: 'cast', onclick: () => startCast() });
+  if (onWindows()) items.push({ label: 'Connect to a wireless display (Windows)…', icon: 'pc', onclick: wirelessDialog });
   items.push({ label: 'SDA Sabbath companion on the network…', icon: 'link', onclick: companionDialog });
+  if (link.canCast() || onWindows()) items.push({ label: 'TV not found? Help…', icon: 'info', onclick: () => castHelp(null) });
+  items.push({ label: 'Clicker setup and test…', icon: 'settings', onclick: () => clickerSetup() });
   if (pipSupported()) items.push('-', { label: 'Mini controller (stays on top)', icon: 'pip', onclick: () => openPip().catch((e) => ui.toast('The mini controller could not open: ' + e.message, 'err')) });
-  if (link.kind) items.push('-', { label: 'Close display', icon: 'x', onclick: () => { link.close(); } });
   ui.menu(anchor, items);
 }
 dispBtn.addEventListener('click', () => displayMenu(dispBtn));
+
+// ------------------------------------------------------------ sound output device (desktop)
+let audioSink = '';
+async function listAudioDevices() {
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return [];
+    const devs = await navigator.mediaDevices.enumerateDevices();
+    return devs.filter((d) => d.kind === 'audiooutput');
+  } catch (e) { return []; }
+}
+async function paintAudioBtn() {
+  if (!audioBtn || isMobile()) { if (audioBtn) audioBtn.hidden = true; return; }
+  const devs = await listAudioDevices();
+  if (!devs.length) { audioBtn.hidden = true; return; }
+  audioBtn.hidden = false;
+  const cur = devs.find((d) => d.deviceId === audioSink) || devs[0];
+  const name = (cur && cur.label) ? cur.label.replace(/\s*\(.*\)$/, '') : 'Default';
+  audioBtn.querySelector('.lbl').textContent = name;
+  audioBtn.title = 'Sound output: ' + (cur ? cur.label : 'Default') + '. Click to switch.';
+}
+async function setAudioSink(id) {
+  audioSink = id;
+  try {
+    if (bgAudio.el && bgAudio.el.setSinkId) await bgAudio.el.setSinkId(id);
+    if (window.selah && window.selah.music && window.selah.music.el && window.selah.music.el.setSinkId) await window.selah.music.el.setSinkId(id);
+  } catch (e) { /* device may be busy */ }
+  paintAudioBtn();
+}
+audioBtn && audioBtn.addEventListener('click', async () => {
+  const devs = await listAudioDevices();
+  if (!devs.length) { ui.toast('No sound devices found.', 'err'); return; }
+  const items = devs.map((d) => ({
+    label: d.label || 'Speaker',
+    icon: d.deviceId === audioSink ? 'check' : 'speaker',
+    onclick: () => setAudioSink(d.deviceId),
+  }));
+  ui.menu(audioBtn, items);
+});
+if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+  navigator.mediaDevices.addEventListener('devicechange', paintAudioBtn);
+}
+paintAudioBtn();
 
 live.ensureDisplay = () => new Promise((resolve) => {
   if (!NATIVE && !isMobile() && !matchMedia('(pointer: coarse)').matches) { link.openWindow().then(resolve); return; }
@@ -242,7 +397,8 @@ live.ensureDisplay = () => new Promise((resolve) => {
     icon(ic), h('div.grow', h('div', { style: { fontWeight: 700 } }, title), h('div.note', desc)));
   const list = h('div.list',
     opt('phone', 'This device', 'Full screen here. Use with an HDMI adapter or screen mirroring.', () => link.openSelf(createDisplay)),
-    link.canCast() ? opt('cast', 'Cast', 'Chromecast only. For LG Smart View / Miracast, use This device then mirror.', () => link.openCast()) : null,
+    link.canCast() ? opt('cast', 'Cast', 'Chromecast, Google TV or Android TV on the same Wi-Fi.', () => startCast()) : null,
+    onAndroid() ? opt('info', 'My TV is not found', 'Smart View, Miracast and other ways to reach the TV.', () => { castHelp(null); return false; }) : null,
     opt('link', 'SDA Sabbath companion', 'Control a PC or TV on the church network from this phone.', companionDialog),
     !NATIVE && innerWidth > 700 ? opt('present', 'Display window', 'A separate window you can move to a projector.', () => link.openWindow()) : null);
   ui.modal({ title: 'Where should SDA Sabbath present?', body: list, onclose: () => { if (!done) resolve(false); } });
@@ -301,40 +457,163 @@ function showHelp() {
     ['F5  or  Ctrl+Enter', 'Present what is selected (Next → Live)'],
     ['→  ↓  Page Down  Space', 'Next verse / slide / stanza'],
     ['←  ↑  Page Up', 'Previous'], ['Home  End', 'First / last'],
-    ['B  or  .', 'Black screen (press again to return)'], ['L', 'Show logo'], ['Esc  or  C', 'Clear the screen'], ['M', 'Hymn music: play / pause'],
-    ['/  or  Ctrl+K', 'Go to a Bible reference or hymn number'], ['Alt+1 … Alt+7', 'Switch tabs'],
+    ['B  or  .', 'Black screen (press again to return)'], ['L', 'Show logo'], ['C  or  Esc twice', 'Clear the screen'],
+    ['Esc', 'Close a menu or dialog, leave a text box (the screen stays as it is)'], ['M', 'Hymn music: play / pause'],
+    ['/  or  Ctrl+K', 'Go to a Bible reference or hymn number (Enter selects it, Shift+Enter presents it now)'], ['Alt+1 … Alt+9', 'Switch tabs'],
+    ['1 … 9', 'Select that stanza (Hymns) or verse (Bible) as Next; type two digits quickly for verse 10 and up. Then F5 presents it'],
+    ['Click  ·  Double-click  ·  Enter', 'On a verse or stanza: select it as Next  ·  present it now  ·  present it now'],
     ['Space (video live)', 'Play / pause'], ['F (on the display)', 'Toggle full screen'],
+    ['Clicker', 'Page Down / Page Up work even while typing in a box; with nothing on screen, next shows the Next item'],
   ];
-  ui.modal({ title: 'Keyboard and clicker shortcuts', body: h('div.form', rows.map(([k, d]) => [h('label', h('kbd', k)), h('span', d)])) });
+  ui.modal({ title: 'Keyboard and clicker shortcuts', body: h('div.col', h('div.form', rows.map(([k, d]) => [h('label', h('kbd', k)), h('span', d)])),
+    h('div.row', h('button.btn', { type: 'button', onclick: () => { ui.closeModal(); clickerSetup(); } }, icon('settings'), h('span', 'Clicker setup and test…')))) });
 }
+function clickerSetup() { openClickerSetup({ version: VERSION });
+}
+
+// Presentation clickers are keyboards that send Page Down / Page Up (some send arrows, "." or B for black, F5 /
+// Shift+F5 to start and Esc to end). They must work whatever has the keyboard focus, like in PowerPoint:
+//  - Page Down / Page Up mean nothing in a one-line box or a list, so they always move the slides, even when a
+//    search box or a dropdown has the focus, or a dialog is open (only a multi-line text box keeps them).
+//  - A box the app focused by itself (Bible reference, hymn search) that is still empty also lets the other
+//    clicker keys through: arrows, "." (black screen), Esc and Space. Letters still type normally.
+const CLICK_NEXT = new Set(['PageDown']), CLICK_PREV = new Set(['PageUp']);
+const QUIET_KEYS = new Set(['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', '.', 'Escape', ' ']);
+let quietKey = false;
+// Capture phase: see whether the box was focused by the app before the box's own handler clears that mark.
+document.addEventListener('keydown', (e) => {
+  const t = e.target;
+  quietKey = !!(t && t.classList && t.classList.contains('quiet-focus') && t.tagName === 'INPUT' && !t.value);
+}, true);
+const inBigText = (t) => !!(t && (t.isContentEditable || t.tagName === 'TEXTAREA'));
+let endPressAt = 0;
+let escAt = 0;
+const quickInput = $('#quickInput');
+// Boxes where "/" is part of what people type, so it does not jump to Go to there.
+const slashTypes = (t) => {
+  if (!t || !t.tagName) return false;
+  if (t.isContentEditable || t.tagName === 'TEXTAREA') return true;
+  if (t.tagName !== 'INPUT') return false;
+  if (t.dataset && t.dataset.freeText != null) return true;
+  return (t.type || 'text').toLowerCase() !== 'search'; // lookup boxes (Bible reference, Find a hymn …) are type=search
+};
+
+// Number keys go to the Bible or Hymns tab on show (or, from another tab, the one whose item is live).
+let digits = '', digitsAt = 0;
+function numberKey(k) {
+  const id = current === 'bible' || current === 'hymns' ? current : live.cue && (live.cue.tab === 'bible' || live.cue.tab === 'hymns') ? live.cue.tab : null;
+  if (!id || !tabs.has(id)) return false;
+  const api = tabs.get(id);
+  if (!api.numberKey) return false;
+  digits = Date.now() - digitsAt < 800 && digits.length < 3 ? digits + k : k;
+  digitsAt = Date.now();
+  if (digits === '0') { digits = ''; return false; }
+  return api.numberKey(+digits, digits.length > 1) !== false;
+}
+
+/** Clicker "next" with nothing more in the item on screen (or nothing on screen): show what is Next. */
+function clickerNext() {
+  if (!live.cue) {
+    if (live.staged) { doPresent(); return; }
+    ui.toast('Nothing is selected yet. Pick something in a tab; then the clicker’s next button shows it.', '', 4000);
+    return;
+  }
+  const atEnd = live.cue.deck.kind !== 'video' && live.index >= live.count() - 1 && !live.cue.extend && !live.cue.autoLoop;
+  if (atEnd && live.staged && !live.sameAsLive() && live.staged.id !== live.cue.id) {
+    // Last slide: a second press within 4 seconds moves on to the item waiting on the Next screen.
+    if (Date.now() - endPressAt < 4000) { endPressAt = 0; doPresent(); return; }
+    endPressAt = Date.now();
+    ui.toast('End of “' + live.cue.title + '”. Press next again to show: ' + live.staged.title, '', 4000);
+    return;
+  }
+  live.next();
+}
+
+function doAction(act) {
+  if (act === 'next') clickerNext();
+  else if (act === 'prev') live.prev();
+  else if (act === 'black') live.setBlank('black');
+  else if (act === 'present') doPresent();
+  else if (act === 'clear') live.clear();
+}
+// Keys a keyboard sends all the time: never worth a "clicker key not used" hint.
+const PLAIN = /^(Shift|Control|Alt|AltGraph|Meta|OS|CapsLock|NumLock|ScrollLock|Tab|Enter|Backspace|Delete|Insert|ContextMenu|Dead|Compose|F(?:[1-9]|1[0-2])|Home|End|Arrow\w+|Page\w+|Escape|AudioVolume\w+|Print|PrintScreen|Pause)$/;
+let hinted = false;
 
 function handleKey(e, remote) {
   const k = e.key;
+  const t = remote ? null : e.target;
+  const sig = (remote && e.sig) || sigOfKey(e);
+  if (clicker.testing) { if (remote) clicker.emit('event', { sig, from: 'projector window' }); return remote; }
+  // A taught button, or one of the odd keys some clickers send (Browser Forward/Back, media keys, mouse on the projector).
+  const taughtAct = actionFor(sig) || (remote && /^(mouse|wheel):/.test(sig) ? builtinAction(sig, true) : null);
+  if (taughtAct && !inBigText(t)) { if (t && t.tagName === 'SELECT') t.blur(); doAction(taughtAct); return true; }
+  const pager = (CLICK_NEXT.has(k) || CLICK_PREV.has(k)) && !inBigText(t) && !e.ctrlKey && !e.metaKey && !e.altKey;
+  if (pager) {
+    if (t && t.tagName === 'SELECT') t.blur(); // otherwise the dropdown would also change
+    if (CLICK_NEXT.has(k)) clickerNext(); else live.prev();
+    return true;
+  }
   if (!remote && ui.modalOpen() && k !== 'F5') { if (k === 'Escape') { ui.closeModal(); return true; } return false; }
-  const typing = !remote && isTyping(e);
+  const quiet = !remote && quietKey && QUIET_KEYS.has(k);
+  const typing = !remote && !quiet && isTyping(e);
   const ctrl = e.ctrlKey || e.metaKey;
   if (k === 'F5' || (ctrl && k === 'Enter')) { doPresent(); return true; }
-  if (typing) return false;
-  if (!remote && ((ctrl && (k === 'k' || k === 'K')) || k === '/')) { quick.focus(); return true; }
-  if (e.altKey && /^[1-7]$/.test(k)) { const t = TABS.filter(Boolean)[+k - 1]; if (t) showTab(t.id); return true; }
+  // Go to: Ctrl+K works everywhere; "/" too, except where a "/" is real text (notes, banner text, web addresses).
+  if (!remote && t !== quickInput && ((ctrl && !e.altKey && (k === 'k' || k === 'K')) || (k === '/' && !ctrl && !e.altKey && !(typing && slashTypes(t))))) { quick.focus(); return true; }
+  if (typing) { if (k === 'Escape' && t && t.blur && t !== quickInput && !e.defaultPrevented) t.blur(); return false; }
+  if (quiet && t && t.blur) t.blur();
+  if (e.altKey && /^[1-9]$/.test(k)) { const tb = TABS.filter(Boolean)[+k - 1]; if (tb) showTab(tb.id); return true; }
   if (ctrl || e.altKey) return false;
+  // 1–9: stage that stanza (Hymns) or verse (Bible) as Next; F5 then presents it. Two digits quickly = verse 10+.
+  if (!remote && /^[0-9]$/.test(k) && numberKey(k)) return true;
   const kind = live.cue && live.cue.deck.kind;
   switch (k) {
-    case 'ArrowRight': case 'ArrowDown': case 'PageDown': live.next(); return true;
-    case 'ArrowLeft': case 'ArrowUp': case 'PageUp': live.prev(); return true;
+    case 'ArrowRight': case 'ArrowDown': live.next(); return true;
+    case 'ArrowLeft': case 'ArrowUp': live.prev(); return true;
     case ' ': if (kind === 'video') live.mediaCmd('toggle'); else live.next(); return true;
     case 'Home': live.go(0); return true;
     case 'End': live.go(live.count() - 1); return true;
     case 'b': case 'B': case '.': live.setBlank('black'); return true;
+    case 'w': case 'W': live.setBlank('black'); return true; // some clickers send W for a "white/blank" screen
     case 'l': case 'L': live.setBlank('logo'); return true;
-    case 'Escape': case 'c': case 'C': live.clear(); return true;
-    case 'm': case 'M': getTab('hymns').then((t) => t.musicKey && t.musicKey()); return true;
+    case 'c': case 'C': live.clear(); return true;
+    case 'Escape': {
+      // Esc alone never clears the screen (a stray press during a service): it closes menus and leaves boxes.
+      // A second Esc within 600 ms clears, like C.
+      if (!remote && ui.menuOpen()) { ui.closeMenu(); escAt = 0; return true; }
+      if (!live.cue) { escAt = 0; return false; }
+      if (Date.now() - escAt < 600) { escAt = 0; live.clear(); return true; }
+      escAt = Date.now();
+      ui.toast('Press Esc again to clear', '', 1400);
+      return true;
+    }
+    case 'm': case 'M': getTab('hymns').then((tb) => tb.musicKey && tb.musicKey()); return true;
     case '?': showHelp(); return true;
+  }
+  if (!hinted && k && k.length > 1 && !PLAIN.test(k) && !isTyping(e)) {
+    hinted = true;
+    ui.toast(h('span', 'A button sent “' + k + '”, which SDA Sabbath does not use yet. ', h('button.btn.sm', { type: 'button', onclick: () => clickerSetup() }, 'Clicker setup')), '', 9000);
   }
   return false;
 }
+// Mouse “back / forward” side buttons (some clickers send these): change slides instead of leaving the app.
+const onSideButton = (e) => {
+  if (e.button !== 3 && e.button !== 4) return;
+  e.preventDefault();
+  if (clicker.testing) return;
+  const act = actionFor(sigOfMouse(e.button));
+  if (act) doAction(act);
+};
+document.addEventListener('mouseup', onSideButton);
+document.addEventListener('auxclick', (e) => { if (e.button === 3 || e.button === 4) e.preventDefault(); });
+// The keyboard follows the mouse back out of an embedded web page, so the clicker works again.
+document.addEventListener('pointermove', () => {
+  const a = document.activeElement;
+  if (a && a.tagName === 'IFRAME') { a.blur(); window.focus(); }
+}, { passive: true });
 document.addEventListener('keydown', (e) => { if (handleKey(e, false)) e.preventDefault(); });
-live.on('remote-key', (m) => handleKey({ key: m.key, ctrlKey: m.ctrl, metaKey: false, altKey: m.alt, shiftKey: m.shift, target: null }, true));
+live.on('remote-key', (m) => handleKey({ key: m.key, code: m.code, sig: m.sig, ctrlKey: m.ctrl, metaKey: false, altKey: m.alt, shiftKey: m.shift, target: null }, true));
 
 // ------------------------------------------------------------ monitors & control bar
 createMonitors($('#monitors'));
@@ -424,7 +703,7 @@ function registerSW() {
 
 // ------------------------------------------------------------ boot
 const qTab = new URLSearchParams(location.search).get('tab');
-const firstTab = [qTab, settings.v.app.lastTab].find((id) => TABS.some((t) => t && t.id === id)) || 'bible';
+const firstTab = [qTab, settings.v.app.lastTab].map((id) => ALIAS[id] || id).find((id) => TABS.some((t) => t && t.id === id)) || 'bible';
 showTab(firstTab);
 // UI motion starts only after the first load has settled, so nothing animates during start-up.
 const markBooted = () => setTimeout(() => document.documentElement.classList.add('booted'), 300);

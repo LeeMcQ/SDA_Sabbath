@@ -159,7 +159,9 @@ export default function create(ctx) {
         h('button.btn.sm', { type: 'button', onclick: hardUpdate }, icon('reload'), 'Update & refresh'),
         h('span.note', 'Clears the app cache and reloads the latest version.')),
       h('label', 'Reset'), h('button.btn.sm.danger', { type: 'button', onclick: async () => { if (await confirmBox('Reset settings?', 'Return all settings to their defaults? Bibles, slides, hymns and plans stay.', 'Reset', true)) { settings.reset(); rebuild(); } } }, 'Reset settings'),
-      h('label', 'Version'), h('span.note', 'SDA Sabbath ' + ctx.VERSION)));
+      h('label', 'Version'), h('div.col',
+        h('span.note', 'SDA Sabbath ' + ctx.VERSION),
+        h('span.note', { style: { fontFamily: 'monospace', fontSize: '12px' } }, 'main ' + (ctx.BUILD || '—')))));
     if (navigator.storage && navigator.storage.estimate) {
       const e = await navigator.storage.estimate();
       storage.textContent = fmtBytes(e.usage) + ' used of ' + fmtBytes(e.quota) + ' available';

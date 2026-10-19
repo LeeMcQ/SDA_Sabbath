@@ -10,6 +10,9 @@
 import { isBlob, esc } from './util.js';
 import { bannerEl, clockEl } from './bannerframe.js';
 
+/** The app mark (open book), drawn for the default logo slide. */
+const DEFAULT_MARK = '<svg class="logo-mark" viewBox="0 0 64 64" aria-hidden="true"><path d="M7 18.5Q19 14 30 20.5V50Q19 44.5 7 48Z" fill="#c9a44c"/><path d="M57 18.5Q45 14 34 20.5V50Q45 44.5 57 48Z" fill="#ecd48e"/></svg>';
+
 export const STAGE_W = 1920;
 
 /** Defence in depth for imported slide HTML: drop active elements, event handlers and non-http(s)/data URLs. */
@@ -207,6 +210,13 @@ export function createStage(host, opts = {}) {
       const lu = urlFor(s.logoBlob, styleUrls);
       if (lu) { const im = document.createElement('img'); im.src = lu; im.alt = ''; logoEl.appendChild(im); }
       else if (s.logoText) { const d = document.createElement('div'); d.className = 'logo-text'; d.textContent = s.logoText; logoEl.appendChild(d); }
+      else {
+        // No logo set: a calm default slide (the app's open-book mark and the church name, or "Welcome").
+        const d = document.createElement('div'); d.className = 'logo-default';
+        d.innerHTML = DEFAULT_MARK;
+        const t = document.createElement('div'); t.className = 'logo-text'; t.textContent = s.logoName || 'Welcome';
+        d.appendChild(t); logoEl.appendChild(d);
+      }
     },
     /** Show a frame. Renders into the hidden layer, then swaps. */
     async show(frame, extra = {}) {

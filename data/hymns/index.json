@@ -30,5 +30,13 @@
     "lang": "en",
     "file": "choruses.json",
     "note": "Short praise and worship choruses (not part of the main hymnals). Lyrics for offline use."
+  },
+  {
+    "id": "malmesbury",
+    "name": "Malmesbury Praise (offline)",
+    "short": "MP",
+    "lang": "en",
+    "file": "malmesbury.json",
+    "note": "Local hymns from the Malmesbury Praise hymnal (numbered 1–29 and additional 30–48). Lyrics for offline use."
   }
 ]

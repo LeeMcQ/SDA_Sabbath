@@ -2,7 +2,7 @@
 // press Present. Long passages are split into readable slides automatically.
 import { h, clear, esc, debounce } from '../core/util.js';
 import { icon } from '../core/icons.js';
-import { btn, modal, seg, toggle, menu, select, activatable, enter, motionOK, emptyState } from '../core/ui.js';
+import { btn, modal, seg, toggle, menu, select, activatable, enter, motionOK, emptyState, keepInView } from '../core/ui.js';
 import { EN, SHORT, parseRef, refText } from '../core/books.js';
 import { listTranslations, getInfo, versesFor, verseHtml, verseText, search as bibleSearch } from '../core/bibledata.js';
 import { fitsText } from '../core/render.js';
@@ -24,7 +24,7 @@ export default function create(ctx) {
   const searchBtn = btn('search', 'Search the Bible', () => setMode(st.mode === 'search' ? 'browse' : 'search'), { cls: 'sm' });
   const optsBtn = btn('settings', 'Bible display options', () => optionsDialog(), { cls: 'sm' });
   const moreBtn = btn('more', 'More', () => menu(moreBtn, [
-    { label: 'Add a Bible (NIV, Xhosa, …)', icon: 'plus', onclick: () => importBibleDialog(async (id) => { await loadTranslations(); setTr(id); }) },
+    { label: 'Add a Bible (NIV, ESV, NKJV, …)', icon: 'plus', onclick: () => importBibleDialog(async (id) => { await loadTranslations(); setTr(id); }) },
     { label: 'Add this passage to the service plan', icon: 'plan', onclick: addToPlan, disabled: !st.segs },
     { label: 'Clear history', icon: 'trash', onclick: () => { settings.set('bible.history', []); renderHistory(); } },
   ]), { cls: 'sm' });
@@ -40,12 +40,14 @@ export default function create(ctx) {
   const bookGrid = h('div.book-grid');
   const chapGrid = h('div.num-grid');
   const verseList = h('div.verse-list');
+  // 1 2 3 … n: every verse of the chapter one tap away (tap selects it as Next, double-tap presents).
+  const vStrip = h('div.vstrip', { role: 'group', 'aria-label': 'Jump to verse' });
   const chapHead = h('span', 'Chapter');
   const verseHead = h('span.grow.trunc', 'Verses');
   const split = h('div.split.bible-split', { 'data-step': 'books' },
     h('div.pane.p-books', h('div.pane-h', 'Books'), h('div.scroll', bookGrid)),
     h('div.pane.p-chapters', h('div.pane-h', chapHead), h('div.scroll', chapGrid)),
-    h('div.pane.p-verses', h('div.pane-h', verseHead, h('span.faint', { style: { fontWeight: 400 } }, 'Tap · Shift+tap for a range · Double-tap to present')), h('div.scroll', verseList)));
+    h('div.pane.p-verses', h('div.pane-h', verseHead, h('span.faint', { style: { fontWeight: 400 } }, 'Tap · Shift+tap for a range · Double-tap to present')), vStrip, h('div.scroll', verseList)));
 
   // ------------------------------------------------------------ search panel
   const sInput = h('input.field.grow', { type: 'search', placeholder: 'Words to find, e.g. “faith hope love”', onkeydown: (e) => { if (e.key === 'Enter') runSearch(); } });
@@ -121,16 +123,46 @@ export default function create(ctx) {
     const frag = document.createDocumentFragment();
     verses.forEach((v) => {
       const row = h('div.vr', { 'data-v': v.v, html: '<b>' + v.v + '</b><span>' + verseHtml(v.text, { redLetter: false, italics: S().italics }) + '</span>' });
+      // Enter presents the verse at once (like a double-click); Space and a click only select it.
+      row.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target === row && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) { e.preventDefault(); e.stopImmediatePropagation(); presentVerse(book, chap, v.v); } });
       activatable(row);
       row.addEventListener('click', (e) => clickVerse(v.v, e.shiftKey));
-      row.addEventListener('dblclick', () => { selectVerses(book, [{ c1: chap, v1: v.v, c2: chap, v2: v.v }]).then(() => live.take()); });
+      row.addEventListener('dblclick', () => presentVerse(book, chap, v.v));
       frag.appendChild(row);
     });
     verseList.appendChild(frag);
+    renderStrip(verses);
     enter(verseList, 'fade');
     markSelection();
     markLive();
     renderCrumbs();
+  }
+
+  const presentVerse = (book, chap, v) => selectVerses(book, [{ c1: chap, v1: v, c2: chap, v2: v }]).then(() => live.take());
+  function renderStrip(verses) {
+    clear(vStrip);
+    const book = st.book, chap = st.chapter;
+    vStrip.setAttribute('aria-label', 'Jump to verse in ' + info.names[book - 1] + ' ' + chap);
+    const frag = document.createDocumentFragment();
+    verses.forEach((v) => frag.appendChild(h('button', { type: 'button', 'data-v': v.v, tabindex: '-1', 'aria-label': 'Verse ' + v.v, 'aria-pressed': 'false',
+      onclick: (e) => clickVerse(v.v, e.shiftKey),
+      ondblclick: () => presentVerse(book, chap, v.v),
+      onkeydown: (e) => { if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); presentVerse(book, chap, v.v); } } }, String(v.v))));
+    vStrip.appendChild(frag);
+    vStrip.hidden = !verses.length;
+    vStrip.scrollLeft = 0;
+  }
+  // A mouse wheel scrolls the strip sideways (it is one row on every screen size).
+  vStrip.addEventListener('wheel', (e) => {
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX) || vStrip.scrollWidth <= vStrip.clientWidth) return;
+    e.preventDefault(); vStrip.scrollLeft += e.deltaY;
+  }, { passive: false });
+  /** Keep a strip button visible inside the strip (sideways only; the page never moves). */
+  function stripShow(b) {
+    if (!b || vStrip.hidden) return;
+    const l = b.offsetLeft - vStrip.offsetLeft, r = l + b.offsetWidth;
+    if (l >= vStrip.scrollLeft && r <= vStrip.scrollLeft + vStrip.clientWidth) return;
+    vStrip.scrollTo({ left: Math.max(0, l - Math.round(vStrip.clientWidth / 3)), behavior: motionOK() ? 'smooth' : 'auto' });
   }
 
   function clickVerse(v, shift) {
@@ -153,14 +185,61 @@ export default function create(ctx) {
       r.classList.toggle('sel', on);
       r.setAttribute('aria-pressed', String(on));
     }
+    let first = null;
+    for (const b of vStrip.children) {
+      const v = +b.getAttribute('data-v');
+      const on = st.selBook === st.book && (st.segs || []).some((s) => inSeg(s, st.chapter, v));
+      b.setAttribute('aria-pressed', String(on));
+      if (on && !first) first = b;
+    }
+    // One stop for the Tab key: the selected verse (or verse 1); the number keys and the list reach the rest.
+    for (const b of vStrip.children) b.tabIndex = b === (first || vStrip.firstChild) ? 0 : -1;
+    stripShow(first);
   }
+  // Live = the verses on screen now (this slide); the rest of the live passage gets a lighter mark.
   function markLive() {
     const c = live.cue;
     const on = c && c.tab === 'bible' && c.book === st.book && c.trId === st.tr;
+    const cur = on && c.ranges ? [c.ranges[Math.min(live.index, c.ranges.length - 1)]] : on ? c.segs : [];
+    let firstRow = null, firstChip = null;
     for (const r of verseList.children) {
       const v = +r.getAttribute('data-v');
-      r.classList.toggle('live', !!on && c.segs.some((s) => inSeg(s, st.chapter, v)));
+      const isLive = !!on && cur.some((s) => inSeg(s, st.chapter, v));
+      r.classList.toggle('live', isLive);
+      r.classList.toggle('in-live', !!on && !isLive && c.segs.some((s) => inSeg(s, st.chapter, v)));
+      if (isLive && !firstRow) firstRow = r;
     }
+    for (const b of vStrip.children) {
+      const isLive = !!on && cur.some((s) => inSeg(s, st.chapter, +b.getAttribute('data-v')));
+      b.classList.toggle('live', isLive);
+      if (isLive && !firstChip) firstChip = b;
+    }
+    return { row: firstRow, chip: firstChip };
+  }
+  // When the live verse changes (arrows, F5, Next, clicker, a click), the list scrolls so it stays in view.
+  // Focus is never moved; reduced motion jumps instead of gliding.
+  let liveChap = null;
+  async function followLive() {
+    const c = live.cue;
+    if (!c || c.tab !== 'bible' || !info) { markLive(); liveChap = null; return; }
+    const r = c.ranges ? c.ranges[Math.min(live.index, c.ranges.length - 1)] : c.segs[0];
+    // Reading on into the next chapter: the list follows, if it was showing the chapter being read.
+    if (c.book === st.book && c.trId === st.tr && liveChap != null && st.chapter === liveChap && r.c1 !== st.chapter && st.mode === 'browse') {
+      st.chapter = r.c1; renderChapters(); await renderVerses();
+    }
+    liveChap = c.book === st.book ? r.c1 : null;
+    // The reference box and the history chip say what is on screen now (John 3:19–20), not where reading began.
+    if (c.continued && c.book === st.book) {
+      if (document.activeElement !== refInput) refInput.value = refText(info.names, c.book, c.segs);
+      const list = S().history || [];
+      const ref = refText(EN, c.book, c.segs);
+      if (list[0] && list[0].tr === c.trId && list[0].ref !== ref) {
+        settings.set('bible.history', [{ ref, tr: c.trId }].concat(list.slice(1).filter((x) => !(x.ref === ref && x.tr === c.trId))));
+        renderHistory();
+      }
+    }
+    const m = markLive();
+    if (!el.hidden) { keepInView(m.row); stripShow(m.chip); }
   }
   const inSeg = (s, c, v) => {
     const v1 = s.v1 == null ? 1 : s.v1, v2 = s.v2 == null ? 999 : s.v2;
@@ -195,8 +274,8 @@ export default function create(ctx) {
       renderBooks();
       markSelection();
       const row = verseList.querySelector('.vr.sel');
-      if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest', behavior: motionOK() ? 'smooth' : 'auto' });
       if (ctx.isMobile()) setStep('verses');
+      keepInView(row);
     }
     refInput.value = refText(info.names, book, segs);
     const cue = await buildCue(st.tr, book, segs);
@@ -315,6 +394,7 @@ export default function create(ctx) {
       id: 'bible:' + tr + ':' + book + ':' + JSON.stringify(segs), tab: 'bible', title,
       sub: tinfo.abbr + (pinfo ? ' + ' + pinfo.abbr : ''),
       deck: { kind: 'text', frames }, index: 0, labels: groups.map(label),
+      ranges: groups.map((g) => ({ c1: g[0].c, v1: g[0].v, c2: g[g.length - 1].c, v2: g[g.length - 1].v })),
       trId: tr, book, segs, bounds: { first: { c: first.c, v: first.v }, last: { c: last.c, v: last.v } },
       extend: S().continue ? (dir) => extend(tr, book, dir) : null,
       onTake: () => pushHistory(refText(EN, book, segs), tr),
@@ -342,7 +422,7 @@ export default function create(ctx) {
     }
     const cue = await buildCue(tr, book, [{ c1: c, v1, c2: c, v2 }]);
     if (cue && dir < 0) cue.index = cue.deck.frames.length - 1;
-    if (cue) cue.onTake = null;
+    if (cue) { cue.onTake = null; cue.continued = true; }
     return cue;
   }
 
@@ -449,6 +529,15 @@ export default function create(ctx) {
       if (cue) cue.extend = null; // a topic passage does not "keep reading"
       return cue;
     },
+    /** Number keys: select verse n of the chapter shown (two quick digits reach verse 10 and up). */
+    numberKey(n, multi) {
+      if (!info || st.mode !== 'browse') return false;
+      const row = verseList.querySelector('.vr[data-v="' + n + '"]');
+      if (!row) { if (!multi) ctx.toast(info.names[st.book - 1] + ' ' + st.chapter + ' has no verse ' + n + '.', '', 2200); return true; }
+      lastClicked = n;
+      selectVerses(st.book, [{ c1: st.chapter, v1: n, c2: st.chapter, v2: n }]);
+      return true;
+    },
     onShow() { if (!st.segs && !noFocus && !ctx.isMobile()) setTimeout(() => { refInput.classList.add('quiet-focus'); refInput.focus(); }, 50); noFocus = false; },
     controls(cue) {
       if (trList.length < 2) return null;
@@ -465,7 +554,8 @@ export default function create(ctx) {
       return box;
     },
   };
-  live.on('live', markLive);
+  live.on('live', followLive);
+  live.on('go', followLive);
   window.addEventListener('selah-bibles', () => { loadTranslations().then(() => { if (!trList.some((t) => t.id === st.tr) && trList[0]) setTr(trList[0].id); }); });
 
   // Placeholder blocks while the Bibles load (they shimmer unless reduced motion is on).

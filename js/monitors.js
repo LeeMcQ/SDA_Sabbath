@@ -2,7 +2,7 @@
 // so the operator sees exactly what the congregation will see.
 import { h, clear, debounce } from './core/util.js';
 import { createStage } from './core/render.js';
-import { live, frameCount } from './core/live.js';
+import { live, frameCount, slideName } from './core/live.js';
 import { link } from './core/link.js';
 import { settings } from './core/settings.js';
 import { icon } from './core/icons.js';
@@ -24,7 +24,7 @@ export function createMonitors(host) {
   const frames = h('div.mon-frames');
   const blackBtn = h('button.btn', { type: 'button', title: 'Black screen (B)', onclick: () => live.setBlank('black') }, icon('black'), h('span', 'Black'));
   const logoBtn = h('button.btn', { type: 'button', title: 'Show logo (L)', onclick: () => live.setBlank('logo') }, icon('logo'), h('span', 'Logo'));
-  const clearBtn = h('button.btn', { type: 'button', title: 'Clear the screen (Esc)', onclick: () => live.clear() }, icon('clear'), h('span', 'Clear'));
+  const clearBtn = h('button.btn', { type: 'button', title: 'Clear the screen (C, or Esc twice)', onclick: () => live.clear() }, icon('clear'), h('span', 'Clear'));
   const actions = h('div.mon-actions', blackBtn, logoBtn, clearBtn);
   const extra = h('div.mon-extra.note', '');
   // Phones with nothing staged or live show this slim strip instead of two empty screens.
@@ -62,7 +62,8 @@ export function createMonitors(host) {
     const same = live.sameAsLive();
     const cue = same ? live.cue : live.staged;
     const idx = same ? live.index : (cue && cue.index);
-    nextTitle.textContent = cue ? (same ? 'Live: ' : '') + cue.title + (cue.sub ? '  ' + cue.sub : '') : '';
+    const part = cue && !same ? slideName(cue, idx) : '';
+    nextTitle.textContent = cue ? (same ? 'Live: ' : '') + cue.title + (part ? ' · ' + part : '') + (cue.sub ? '  ' + cue.sub : '') : '';
     const f = frameOf(cue, idx);
     nextStage.show(f);
     setStream('next', nextScreen, cue && cue.deck.kind === 'stream' ? cue.stream : null);
@@ -118,7 +119,7 @@ export function createMonitors(host) {
   function applyStyle(s) { nextStage.applyStyle(s); liveStage.applyStyle(s); renderNext(); if (live.cue) renderLive(); }
 
   function updateBlank(mode) {
-    liveStage.setBlank(mode);
+    inStep(() => liveStage.setBlank(mode));
     blackBtn.classList.toggle('live-on', mode === 'black');
     logoBtn.classList.toggle('live-on', mode === 'logo');
   }
@@ -131,19 +132,26 @@ export function createMonitors(host) {
 
   // "Same as Live": the Next monitor is showing what is already on screen.
   const markSame = () => nextScreen.classList.toggle('same', live.sameAsLive());
-  // Logo without a logo set would look exactly like Black: say so instead.
+  // Without a logo of its own, Logo shows a default slide (church name or "Welcome"); the tip says where to set one.
   const syncLogo = () => {
-    const has = live.hasLogo();
-    if (has) logoBtn.removeAttribute('aria-disabled'); else logoBtn.setAttribute('aria-disabled', 'true');
-    logoBtn.title = has ? 'Show logo (L)' : 'No logo yet: add a logo picture or church name in Settings → Screen';
+    logoBtn.removeAttribute('aria-disabled');
+    logoBtn.title = live.hasLogo() ? 'Show logo (L)' : 'Show the default logo slide (L). Add your logo in Settings → Screen';
   };
   live.on('staged', renderNext);
   live.on('staged', markSame);
-  live.on('live', renderLive);
+  // On a TV or another computer, the Live monitor waits until the display says it has drawn the change,
+  // so both change at the same moment.
+  const inStep = (fn) => {
+    if (!link.remote() || !link.lastQ) { fn(); return; }
+    const q = link.lastQ;
+    link.whenShown(q).then(() => { if (q === link.lastQ || !link.remote()) fn(); });
+  };
+  live.on('live', () => inStep(renderLive));
   live.on('live', markSame);
   live.on('live', renderNext);
-  live.on('go', () => { liveStage.show(frameOf(live.cue, live.index)); renderFrames(); markSame(); renderNext(); });
+  live.on('go', () => { inStep(() => liveStage.show(frameOf(live.cue, live.index))); renderFrames(); markSame(); renderNext(); });
   settings.on('change:display', syncLogo);
+  settings.on('change:church', syncLogo);
   syncLogo();
   live.on('blank', updateBlank);
   live.on('style', applyStyle);

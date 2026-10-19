@@ -15,6 +15,8 @@ import { listTranslations, getInfo, versesFor, verseText, search as bibleSearch 
 import { parseRef, refText, SHORT } from '../core/books.js';
 import * as ai from '../core/ai.js';
 import { churchForm } from './church-form.js';
+import { openFullBanner } from './ai-full.js';
+import { createMusicView, musicChip } from './banner-music.js';
 
 // ------------------------------------------------------------ templates
 const TPL = {
@@ -57,13 +59,13 @@ const EXTRAS = [
   ['qr', 'Giving QR code', 'The giving link from Church details'],
   ['mark', '“SDA Sabbath” mark', 'A small app name in the corner'],
 ];
-const POS = [['center', 'Centre'], ['left', 'Left'], ['low', 'Low']];
+const POS = [['center', 'Centre'], ['left', 'Left'], ['right', 'Right'], ['top', 'Top'], ['low', 'Bottom']];
 
 function newBanner(tpl = 'welcome', extra) {
   const t = TPL[tpl] || TPL.welcome;
   const c = church();
   return Object.assign({ id: null, name: '', tpl, f: Object.assign({}, t.d(c)), x: Object.assign({}, t.x),
-    s: Object.assign({ pal: 'navy', deco: 'none', pos: 'center', font: 'sans', img: null, dim: null }, t.s) }, extra || {});
+    s: Object.assign({ pal: 'navy', deco: 'none', pos: 'center', font: 'sans', img: null, dim: null, imgFit: 'cover', imgPos: 'center', imgZoom: 100 }, t.s) }, extra || {});
 }
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const sig = (b) => JSON.stringify([b.name, b.tpl, b.f, b.x, b.s]);
@@ -73,15 +75,22 @@ const nameOf = (b) => b.name || short((TPL[b.tpl] || TPL.blank).name + (b.f.titl
 export default function create(ctx) {
   const { live, settings, link } = ctx;
   let lib = [];             // saved banners
+  let groups = [];          // {id, name}
   let loop = { items: [], secs: 8, count: true, at: '', end: '' };
+  let announce = { items: [], secs: 8, count: true, at: '', end: '' };
+  let loopKind = 'pre'; // 'pre' = preservice (with music), 'ann' = announcements (no music)
   let cur = newBanner();    // banner in the editor
   let savedSig = null;      // sig(cur) when it was last saved (null = never)
   let view = 'make';
   let topics = null;
+  let libFilter = '';       // group id to show, or '' for all
+  let libQuery = '';        // search text
 
   // ------------------------------------------------------------ storage
   const saveLib = () => db.put('kv', 'banners', lib);
+  const saveGroups = () => db.put('kv', 'banner-groups', groups);
   const saveLoop = () => db.put('kv', 'banner-loop', loop);
+  const saveAnnounce = () => db.put('kv', 'banner-announce', announce);
   const saveDraft = debounce(() => db.put('kv', 'banner-draft', { cur, savedSig }).catch(() => {}), 500);
 
   // Saved data from older versions or a damaged database: repair what can be used, drop the rest.
@@ -95,7 +104,7 @@ export default function create(ctx) {
     if (isObj(b.s)) {
       if (PALETTES[b.s.pal]) out.s.pal = b.s.pal;
       if (DECOS[b.s.deco]) out.s.deco = b.s.deco;
-      if (['center', 'left', 'low'].includes(b.s.pos)) out.s.pos = b.s.pos;
+      if (['center', 'left', 'right', 'top', 'low'].includes(b.s.pos)) out.s.pos = b.s.pos;
       if (['sans', 'serif'].includes(b.s.font)) out.s.font = b.s.font;
       out.s.img = typeof b.s.img === 'string' ? b.s.img : null;
       out.s.dim = typeof b.s.dim === 'number' && isFinite(b.s.dim) ? b.s.dim : null;
@@ -105,6 +114,8 @@ export default function create(ctx) {
   async function load() {
     const raw = await db.get('kv', 'banners').catch(() => null);
     lib = (Array.isArray(raw) ? raw : []).map(repair).filter((b) => b && b.id);
+    const gr = await db.get('kv', 'banner-groups').catch(() => null);
+    groups = (Array.isArray(gr) ? gr : []).filter((g) => g && g.id && g.name);
     const lp = await db.get('kv', 'banner-loop').catch(() => null);
     if (isObj(lp)) {
       loop.items = (Array.isArray(lp.items) ? lp.items : []).filter((it) => isObj(it) && (it.t === 'banner' || it.t === 'deck') && typeof it.id === 'string');
@@ -112,6 +123,14 @@ export default function create(ctx) {
       loop.count = lp.count !== false;
       loop.at = /^\d{1,2}:\d{2}$/.test(lp.at || '') ? lp.at : '';
       loop.end = typeof lp.end === 'string' ? lp.end : '';
+    }
+    const an = await db.get('kv', 'banner-announce').catch(() => null);
+    if (isObj(an)) {
+      announce.items = (Array.isArray(an.items) ? an.items : []).filter((it) => isObj(it) && (it.t === 'banner' || it.t === 'deck') && typeof it.id === 'string');
+      announce.secs = [5, 8, 10, 15, 20, 30].includes(+an.secs) ? +an.secs : 8;
+      announce.count = an.count !== false;
+      announce.at = /^\d{1,2}:\d{2}$/.test(an.at || '') ? an.at : '';
+      announce.end = typeof an.end === 'string' ? an.end : '';
     }
     const d = await db.get('kv', 'banner-draft').catch(() => null);
     const dc = d && repair(d.cur);
@@ -192,7 +211,9 @@ export default function create(ctx) {
   async function frameOf(b, now = new Date()) {
     const c = church(), f = b.f || {}, x = b.x || {}, s = b.s || {};
     const fr = { kind: 'banner', tpl: b.tpl, pal: s.pal || 'navy', deco: s.deco || 'none', pos: s.pos || 'center', font: s.font || 'sans',
-      kicker: f.kicker || '', title: f.title || '', text: f.text || '', mark: !!x.mark };
+      kicker: f.kicker || '', title: f.title || '', text: f.text || '', mark: !!x.mark,
+      textSize: s.textSize || 100, textBold: !!s.textBold, textItalic: !!s.textItalic, textSpacing: s.textSpacing || 1.24,
+      layout: s.layout && Object.keys(s.layout).length ? s.layout : null };
     const foot = [b.tpl === 'verse' ? f.refLabel || f.ref : f.foot, x.date ? sabbathDateLine(now) : '', x.sunset ? sabbathSunsetLine(now) : '']
       .map((t) => (t || '').trim()).filter(Boolean);
     fr.foot = foot.join('  ·  ');
@@ -200,7 +221,16 @@ export default function create(ctx) {
       const at = nextTime(f.at || c.service, now);
       fr.title = ''; fr.countdown = { at: at ? at.getTime() : Date.now(), done: f.done || 'Welcome' };
     }
-    if (s.img) { const im = await fileBlob(s.img); if (im) { fr.img = im; fr.dim = s.dim == null ? 0.45 : s.dim; } }
+    if (s.img) {
+      const im = await fileBlob(s.img);
+      if (im) {
+        fr.img = im;
+        fr.dim = s.dim == null ? 0.45 : s.dim;
+        fr.imgFit = s.imgFit || 'cover';
+        fr.imgPos = s.imgPos || 'center';
+        fr.imgZoom = s.imgZoom || 100;
+      }
+    }
     if (x.logo) { const lg = await logoBlob(); if (lg) fr.logo = lg; }
     const gu = x.qr ? safeGivingUrl(c.givingUrl) : '';
     if (gu) { try { fr.qr = await qrData(gu); fr.qrLabel = c.givingLabel; } catch (e) { /* no QR */ } }
@@ -208,23 +238,24 @@ export default function create(ctx) {
   }
   const cueId = (b) => 'banner:' + (b.id || 'draft');
   function bannerCue(b, frame) {
-    return { id: cueId(b), tab: 'ai', title: nameOf(b), sub: 'Banner', deck: { kind: 'banner', frames: [frame] }, index: 0, labels: [TPL[b.tpl].name],
+    return { id: cueId(b), tab: 'ai', title: nameOf(b), sub: 'Banner', withMusic: true, deck: { kind: 'banner', frames: [frame] }, index: 0, labels: [TPL[b.tpl].name],
       plan: b.id ? { tab: 'ai', banner: b.id, label: 'Banner: ' + nameOf(b) } : null };
   }
 
   // ------------------------------------------------------------ layout
-  const viewSeg = h('div.seg.bn-views', { role: 'tablist' });
-  const VIEWS = [['make', 'Make'], ['library', 'Saved'], ['loop', 'Loop', 'Pre-service '], ['topics', 'Topics']];
+  const viewSeg = h('div.seg.bn-views', { role: 'group', 'aria-label': 'Banners & Music views' });
+  const VIEWS = [['make', 'Make'], ['library', 'Saved'], ['loop', 'Service loop', ''], ['music', 'Music'], ['topics', 'Topics']];
   function renderViewSeg() {
     clear(viewSeg);
-    VIEWS.forEach(([v, label, pre]) => viewSeg.appendChild(h('button', { type: 'button', role: 'tab', 'aria-selected': String(v === view), 'aria-pressed': String(v === view),
+    VIEWS.forEach(([v, label, pre]) => viewSeg.appendChild(h('button', { type: 'button', 'aria-pressed': String(v === view),
       onclick: () => setView(v) }, pre ? [h('span.hide-sm', pre + label.toLowerCase()), h('span.bn-sm', label)] : label, v === 'library' && lib.length ? ' (' + lib.length + ')' : '')));
   }
   const churchBtn = h('button.btn.sm', { type: 'button', title: 'Church name, town, location, service time and giving link', onclick: () => churchDialog() }, icon('pin'), h('span.hide-sm', 'Church details'));
-  const views = { make: h('div.bn-view'), library: h('div.bn-view.scroll.pad'), loop: h('div.bn-view.scroll.pad'), topics: h('div.bn-view') };
+  const views = { make: h('div.bn-view'), library: h('div.bn-view.scroll.pad'), loop: h('div.bn-view.scroll.pad'), music: h('div.bn-view.scroll.pad.mu-view'), topics: h('div.bn-view') };
   const el = h('section.banners',
-    h('div.toolbar', h('h2', 'Banners'), viewSeg, h('div.grow'), churchBtn),
-    views.make, views.library, views.loop, views.topics);
+    h('div.toolbar', h('h2', 'Banners & Music'), viewSeg, h('div.grow'), churchBtn),
+    views.make, views.library, views.loop, views.music, views.topics);
+  const musicView = createMusicView(ctx, views.music);
 
   function setView(v) {
     view = v;
@@ -234,6 +265,7 @@ export default function create(ctx) {
     if (v === 'library') renderLibrary();
     if (v === 'loop') renderLoop();
     if (v === 'topics') renderTopics();
+    if (v === 'music') musicView.show();
   }
 
   function churchDialog() {
@@ -255,9 +287,10 @@ export default function create(ctx) {
       screen,
       h('div.row.wrap.bn-actions', nextBtn, saveBtn,
         h('button.btn', { type: 'button', title: 'Add to the current service plan', onclick: () => addCurToPlan() }, icon('plan'), h('span', 'Add to plan')),
-        h('button.btn', { type: 'button', title: 'Add to the pre-service loop', onclick: () => addCurToLoop() }, icon('loop'), h('span', 'Add to loop'))),
+        h('button.btn', { type: 'button', title: 'Add to the current Service loop (Preservice or Announcements)', onclick: () => addCurToLoop() }, icon('loop'), h('span', 'Add to loop'))),
       h('div.row', nameInp,
         h('button.btn.sm', { type: 'button', title: 'Start a new banner', onclick: () => startNew() }, icon('plus'), h('span', 'New'))),
+      musicChip(ctx, () => setView('music')),
       h('p.note', 'Set as Next puts the banner on the green Next screen; Present (F5) shows it. Text is fitted to the projector, like Bible verses.')));
   views.make.append(h('div.split.banner-split', h('div.pane.bn-edit-pane', editorScroll), previewPane));
 
@@ -276,8 +309,61 @@ export default function create(ctx) {
     const fr = await frameOf(cur);
     if (my !== previewSeq) return;
     stage.show(fr);
+    addLayoutHandles();
     // Keep the Next screen truthful while editing the banner that is staged.
     if (live.staged && live.staged.id === cueId(cur) && live.staged.tab === 'ai') ctx.setStaged('ai', bannerCue(cur, fr));
+  }
+
+  // Google Slides-style drag and resize on the preview.
+  function addLayoutHandles() {
+    const root = screen.querySelector('.f-banner');
+    if (!root) return;
+    // Remove old handles.
+    root.querySelectorAll('.bn-handle').forEach((n) => n.remove());
+    const parts = root.querySelectorAll('[data-part]');
+    if (!cur.s.layout) cur.s.layout = {};
+    parts.forEach((node) => {
+      const part = node.dataset.part;
+      // Until the user moves something, the template's own layout is kept: the box is only saved on the first drag.
+      const saved = cur.s.layout[part];
+      let box = saved;
+      if (!box) {   // start from where the template put it
+        const r = node.getBoundingClientRect(), pr = root.getBoundingClientRect();
+        box = { x: Math.max(0, (r.left - pr.left) / pr.width * 100), y: Math.max(0, (r.top - pr.top) / pr.height * 100), w: Math.max(15, r.width / pr.width * 100), h: 0 };
+      }
+      const commit = () => { if (!cur.s.layout[part]) cur.s.layout[part] = box; };
+      const handle = h('div.bn-handle', { 'data-part': part, style: { left: box.x + '%', top: box.y + '%', width: box.w + '%' } });
+      const grip = h('div.bn-grip', { title: 'Drag to move' });
+      const resize = h('div.bn-resize', { title: 'Drag to resize' });
+      handle.append(grip, resize);
+      // Drag to move.
+      grip.addEventListener('pointerdown', (e) => {
+        e.preventDefault(); e.stopPropagation(); commit();
+        const pr = root.getBoundingClientRect();
+        const sx = e.clientX, sy = e.clientY, ox = box.x, oy = box.y;
+        const move = (ev) => {
+          box.x = Math.max(0, Math.min(95, ox + (ev.clientX - sx) / pr.width * 100));
+          box.y = Math.max(0, Math.min(95, oy + (ev.clientY - sy) / pr.height * 100));
+          handle.style.left = box.x + '%'; handle.style.top = box.y + '%';
+          node.style.left = box.x + '%'; node.style.top = box.y + '%';
+        };
+        const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); changed(false); };
+        window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+      });
+      // Drag to resize width.
+      resize.addEventListener('pointerdown', (e) => {
+        e.preventDefault(); e.stopPropagation(); commit();
+        const pr = root.getBoundingClientRect();
+        const sx = e.clientX, ow = box.w;
+        const move = (ev) => {
+          box.w = Math.max(15, Math.min(100 - box.x, ow + (ev.clientX - sx) / pr.width * 100));
+          handle.style.width = box.w + '%'; node.style.width = box.w + '%';
+        };
+        const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); changed(false); };
+        window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+      });
+      root.appendChild(handle);
+    });
   }
   const schedule = debounce(refreshPreview, 120);
   function changed(rerender) {
@@ -297,31 +383,58 @@ export default function create(ctx) {
     ctx.setStaged('ai', bannerCue(cur, fr));
     toast('Banner is Next. Press Present (F5) to show it.', 'ok', 2500);
   }
-  function saveCurrent(announce) {
-    const now = Date.now();
-    if (!cur.id) { cur.id = 'b-' + uid(); cur.created = now; }
-    cur.updated = now;
-    if (!cur.name) cur.name = nameOf(cur);
-    nameInp.value = cur.name;
-    const copy = clone(cur);
-    const i = lib.findIndex((b) => b.id === cur.id);
-    if (i >= 0) lib[i] = copy; else lib.unshift(copy);
-    savedSig = sig(cur);
-    saveLib(); saveDraft(); updateSaveBtn(); renderViewSeg();
-    if (announce) toast('Saved to Saved banners.', 'ok', 2000);
-    return copy;
+  async function saveCurrent(announce) {
+    try {
+      const now = Date.now();
+      if (!cur.id) { cur.id = 'b-' + uid(); cur.created = now; }
+      cur.updated = now;
+      if (!cur.name) cur.name = nameOf(cur);
+      nameInp.value = cur.name;
+      const copy = clone(cur);
+      // Give this banner its own picture copy so later edits don't change saved ones.
+      if (copy.s && copy.s.img) {
+        const srcId = copy.s.img;
+        const shared = lib.some((b) => b.id !== copy.id && b.s && b.s.img === srcId);
+        if (shared) {
+          try {
+            const rec = await db.get('files', srcId).catch(() => null);
+            if (rec && rec.blob) {
+              const newId = await storePicture(rec.blob, (rec.name || 'Picture') + ' (copy)');
+              copy.s.img = newId;
+            }
+          } catch (e) { /* keep shared if copy fails */ }
+        }
+      }
+      const i = lib.findIndex((b) => b.id === copy.id);
+      if (i >= 0) lib[i] = copy; else lib.unshift(copy);
+      savedSig = sig(cur);
+      await saveLib();
+      saveDraft(); updateSaveBtn(); renderViewSeg();
+      if (announce) toast('Saved.', 'ok', 2000);
+      return copy;
+    } catch (e) {
+      toast('Could not save banner: ' + (e.message || e), 'err', 5000);
+      console.error(e);
+      return null;
+    }
   }
   async function addCurToPlan() {
-    const b = saveCurrent(false);
+    const b = await saveCurrent(false);
+    if (!b) return;
     (await ctx.tab('plan')).addItem({ tab: 'ai', banner: b.id, label: 'Banner: ' + nameOf(b) });
   }
-  function addCurToLoop() {
-    const b = saveCurrent(false);
-    if (!loop.items.some((it) => it.t === 'banner' && it.id === b.id)) { loop.items.push({ t: 'banner', id: b.id }); saveLoop(); }
-    toast('Added to the pre-service loop (' + loop.items.length + ' item' + (loop.items.length === 1 ? '' : 's') + ').', 'ok');
+  async function addCurToLoop() {
+    if (!cur.id) { const b = await saveCurrent(false); if (!b) return; }
+    const L = loopKind === 'ann' ? announce : loop;
+    const saveL = loopKind === 'ann' ? saveAnnounce : saveLoop;
+    const name = loopKind === 'ann' ? 'Announcements' : 'Preservice';
+    if (!L.items.some((it) => it.t === 'banner' && it.id === cur.id)) { L.items.push({ t: 'banner', id: cur.id }); saveL(); }
+    toast('Added to ' + name + ' (' + L.items.length + ' item' + (L.items.length === 1 ? '' : 's') + ').', 'ok');
   }
   function startNew(tpl) {
-    cur = newBanner(tpl || cur.tpl);
+    // Always a fresh banner so editing it cannot change a saved one.
+    cur = newBanner(tpl || 'welcome');
+    cur.id = null;
     savedSig = null;
     nameInp.value = '';
     changed(true);
@@ -412,13 +525,27 @@ export default function create(ctx) {
     const decoSeg = seg(Object.keys(DECOS).map((k) => [k, DECOS[k]]), cur.s.deco || 'none', (v) => { cur.s.deco = v; changed(false); });
     const posSeg = seg(POS, cur.s.pos || 'center', (v) => { cur.s.pos = v; changed(false); });
     const fontSeg = seg([['sans', 'Clear sans'], ['serif', 'Serif']], cur.s.font || 'sans', (v) => { cur.s.font = v; changed(false); });
+    const boldBtn = h('button.chip', { type: 'button', 'aria-pressed': String(!!cur.s.textBold), title: 'Bold title', onclick: () => { cur.s.textBold = !cur.s.textBold; changed(false); } }, 'B');
+    const italicBtn = h('button.chip', { type: 'button', 'aria-pressed': String(!!cur.s.textItalic), title: 'Italic title', onclick: () => { cur.s.textItalic = !cur.s.textItalic; changed(false); } }, 'I');
+    const sizeOut = h('span.note', (cur.s.textSize || 100) + '%');
+    const sizeR = h('input', { type: 'range', min: 60, max: 160, step: 5, 'aria-label': 'Text size', style: { flex: '1', maxWidth: '180px' },
+      oninput: () => { cur.s.textSize = +sizeR.value; sizeOut.textContent = cur.s.textSize + '%'; changed(false); } });
+    sizeR.value = cur.s.textSize || 100;
+    const spaceOut = h('span.note', (cur.s.textSpacing || 1.24).toFixed(2));
+    const spaceR = h('input', { type: 'range', min: 1.0, max: 1.8, step: 0.04, 'aria-label': 'Line spacing', style: { flex: '1', maxWidth: '180px' },
+      oninput: () => { cur.s.textSpacing = +spaceR.value; spaceOut.textContent = cur.s.textSpacing.toFixed(2); changed(false); } });
+    spaceR.value = cur.s.textSpacing || 1.24;
     const look = h('div.form.bn-form',
       h('label', 'Colours'), sw,
       h('label', 'Pattern'), decoSeg,
       h('label', 'Picture'), pictureRow(),
+      cur.s.img ? h('label', 'Picture settings') : null, cur.s.img ? pictureSettings() : null,
       cur.s.img ? h('label', 'Darken picture') : null, cur.s.img ? dimRow() : null,
       h('label', 'Text position'), posSeg,
-      h('label', 'Font'), fontSeg);
+      h('label', 'Font'), fontSeg,
+      h('label', 'Style'), h('div.row', boldBtn, italicBtn),
+      h('label', 'Text size'), h('div.row', sizeR, sizeOut),
+      h('label', 'Line spacing'), h('div.row', spaceR, spaceOut));
     editorScroll.append(h('h3.bn-h', 'Look'), look);
     if (cur.s.img) decoSeg.querySelectorAll('button').forEach((b) => { b.disabled = true; b.title = 'Patterns are for plain colours (a picture is chosen)'; });
   }
@@ -474,7 +601,8 @@ export default function create(ctx) {
       try { await usePicture(await storePicture(f, f.name)); } catch (e) { toast('Could not use that picture: ' + e.message, 'err'); }
     } });
     const aiDesc = h('input.field', { placeholder: 'Describe a picture (optional), e.g. mountains at sunrise', 'aria-label': 'Describe the AI picture', style: { flex: '1 1 200px', minWidth: '0' } });
-    const aiBtn = h('button.btn.sm', { type: 'button', title: 'Make a background picture with online AI (no text in it — the banner words stay sharp on top)', onclick: async () => {
+    // Maker 1: a background only. The banner words stay sharp (drawn live by the app) on top of it.
+    const aiBtn = h('button.btn.sm', { type: 'button', title: 'Make a background picture with online AI (no text in it, the banner words stay sharp on top)', onclick: async () => {
       aiBtn.disabled = true; const lbl = aiBtn.lastChild.textContent; aiBtn.lastChild.textContent = 'Making picture…';
       try {
         const desc = aiDesc.value.trim();
@@ -487,16 +615,46 @@ export default function create(ctx) {
         toast('AI picture added. It is saved on this device and works offline from now on.', 'ok', 4000);
       } catch (e) { toast(ai.friendlyAiError(e), 'err', 8000); }
       finally { aiBtn.disabled = false; aiBtn.lastChild.textContent = lbl; }
-    } }, icon('sparkle'), h('span', 'AI picture (online)'));
+    } }, icon('sparkle'), h('span', 'Make background'));
+    // Maker 2: a full finished banner picture with all the words in it, built around the church's own pictures.
+    const fullBtn = h('button.btn.sm', { type: 'button', title: 'Make one finished banner picture with all your words and your own pictures built in', onclick: () => fullBannerDialog() },
+      icon('sparkle'), h('span', 'Make full banner…'));
     const gallery = h('div.bn-gallery');
     row.append(h('div.row.wrap',
       h('button.btn.sm', { type: 'button', onclick: () => inp.click() }, icon('upload'), h('span', 'Choose picture…')),
-      cur.s.img ? h('button.btn.sm', { type: 'button', onclick: () => { cur.s.img = null; changed(true); } }, icon('x'), h('span', 'No picture')) : null,
+      cur.s.img ? h('button.btn.sm', { type: 'button', title: 'Remove the picture from this banner only', onclick: () => { cur.s.img = null; changed(true); } }, icon('x'), h('span', 'No picture')) : null,
       inp), gallery);
-    if (ai.hasKey() && ai.canImage()) row.append(h('div.row.wrap', aiDesc, aiBtn));
-    else row.append(h('p.note', 'Online AI pictures: add a key in Settings → AI (OpenAI, Gemini, Grok, Together or OpenRouter).'));
+    if (ai.hasKey() && ai.canImage()) {
+      row.append(h('div.card.bn-aimakers',
+        h('h4', icon('sparkle'), ' Two online AI picture makers'),
+        h('div.bn-maker', h('b', '1. Background'), h('p.note', 'A picture with no words. Your banner words are drawn sharp on top by the app.'), h('div.row.wrap', aiDesc, aiBtn)),
+        h('div.bn-maker', h('b', '2. Full banner'), h('p.note', 'One finished picture with all your words in it, built around pictures you attach. Check the spelling.'), h('div.row.wrap', fullBtn))));
+    } else row.append(h('p.note', 'Two online AI picture makers (background, and full banner with your words and pictures): add a key in Settings → AI (OpenAI, Gemini, Grok, Together or OpenRouter).'));
     fillGallery(gallery);
     return row;
+  }
+  /** The full-banner maker: opens a dialog pre-filled from the banner being edited. */
+  async function fullBannerDialog() {
+    const c = church();
+    const fr = await frameOf(cur).catch(() => null) || {};
+    const f = cur.f || {};
+    let heading = (fr.title || '').trim();
+    if (cur.tpl === 'countdown') heading = ((f.kicker || 'Our service starts at') + ' ' + (f.at || c.service || '')).trim();
+    const kicker = (fr.kicker || '').trim();
+    openFullBanner({
+      fields: { church: c.name || '', heading, message: fr.text || '', foot: fr.foot || '', extra: kicker && kicker !== c.name && cur.tpl !== 'countdown' ? 'Small top line: "' + kicker + '"' : '', style: TPL[cur.tpl].mood },
+      files: async () => (await db.all('files').catch(() => [])).filter((x) => x.kind === 'banner-bg').sort((a, b) => (b.added || 0) - (a.added || 0)),
+      logo: () => logoBlob(),
+      storePicture: (blob, name) => storePicture(blob, name, {}),
+      onUse: (id) => {
+        const keepQr = !!(cur.x && cur.x.qr);
+        cur = newBanner('picture');
+        cur.s.img = id; cur.s.dim = 0; cur.x = { qr: keepQr }; cur.name = 'AI banner';
+        savedSig = null; nameInp.value = cur.name;
+        changed(true);
+        toast('Full AI banner is ready. Set as Next, or Save it.', 'ok', 4000);
+      },
+    });
   }
   async function fillGallery(gallery) {
     const files = (await db.all('files').catch(() => [])).filter((f) => f.kind === 'banner-bg').sort((a, b) => (b.added || 0) - (a.added || 0));
@@ -507,11 +665,23 @@ export default function create(ctx) {
         onclick: () => usePicture(f.id) }, h('img', { src: u, alt: f.name || 'Picture', onload: () => setTimeout(() => URL.revokeObjectURL(u), 1000) }));
       const del = h('button.bn-pic-x', { type: 'button', title: 'Delete this picture from this device', 'aria-label': 'Delete picture ' + (f.name || ''),
         onclick: async () => {
-          const used = lib.filter((b) => b.s && b.s.img === f.id).length;
-          if (!(await confirmBox('Delete picture?', used ? 'It is used by ' + used + ' saved banner' + (used === 1 ? '' : 's') + '; they will show plain colours instead.' : 'Delete this picture from this device?', 'Delete', true))) return;
+          const used = lib.filter((b) => b.s && b.s.img === f.id);
+          if (used.length && !(await confirmBox('Delete picture?', 'It is used by ' + used.length + ' saved banner' + (used.length === 1 ? '' : 's') + '. Those banners will keep their own copy.', 'Delete', true))) return;
+          // Give each saved banner that uses it its own copy before deleting.
+          for (const b of used) {
+            try {
+              const rec = await db.get('files', f.id).catch(() => null);
+              if (rec && rec.blob) {
+                const newId = await storePicture(rec.blob, (rec.name || 'Picture') + ' (kept)');
+                b.s.img = newId;
+              }
+            } catch (e) { /* keep the id if copy fails */ }
+          }
+          if (used.length) await saveLib();
           await db.del('files', f.id); blobCache.delete(f.id);
           if (cur.s.img === f.id) cur.s.img = null;
           changed(true);
+          fillGallery(gallery);
         } }, icon('x'));
       gallery.appendChild(h('div.bn-pic-wrap', pick, del));
     });
@@ -528,6 +698,21 @@ export default function create(ctx) {
       oninput: () => { cur.s.dim = +r.value; out.textContent = Math.round(cur.s.dim * 100) + '%'; changed(false); } });
     r.value = cur.s.dim == null ? 0.45 : cur.s.dim;
     return h('div.row', r, out);
+  }
+
+  function pictureSettings() {
+    if (!cur.s.img) return null;
+    const fitSeg = seg([['cover', 'Fill'], ['contain', 'Fit'], ['crop', 'Crop']], cur.s.imgFit || 'cover', (v) => { cur.s.imgFit = v; changed(false); });
+    const posSeg = seg([['center', 'Centre'], ['top', 'Top'], ['bottom', 'Bottom'], ['left', 'Left'], ['right', 'Right']], cur.s.imgPos || 'center', (v) => { cur.s.imgPos = v; changed(false); });
+    const zoomOut = h('span.note', (cur.s.imgZoom || 100) + '%');
+    const zoom = h('input', { type: 'range', min: 80, max: 200, step: 5, 'aria-label': 'Zoom picture', style: { flex: '1', maxWidth: '200px' },
+      oninput: () => { cur.s.imgZoom = +zoom.value; zoomOut.textContent = cur.s.imgZoom + '%'; if ((cur.s.imgFit || 'cover') === 'crop') changed(false); } });
+    zoom.value = cur.s.imgZoom || 100;
+    return h('div.col', { style: { gap: '8px' } },
+      h('div.row.wrap', h('span.note', 'How the picture sits'), fitSeg),
+      h('div.row.wrap', h('span.note', 'Position'), posSeg),
+      h('div.row', h('span.note', 'Zoom'), zoom, zoomOut),
+      h('p.note', 'Fill covers the banner. Fit shows the whole picture. Crop + zoom lets you focus on part of it. Darken keeps the words readable.'));
   }
 
   // ============================================================ SAVED (library)
@@ -549,15 +734,55 @@ export default function create(ctx) {
     destroyMinis();
     const box = views.library;
     clear(box);
-    if (!lib.length) {
-      box.appendChild(emptyState('banner', 'No saved banners yet', 'Make a banner and press Save, or Add to loop / Add to plan.', { label: 'Make a banner', icon: 'plus', primary: true, onclick: () => setView('make') }));
+    // Toolbar: search, group filter, new group
+    const qIn = h('input.field.sm', { type: 'search', placeholder: 'Search banners…', value: libQuery, 'aria-label': 'Search banners',
+      oninput: (e) => { libQuery = e.target.value; renderLibrary(); } });
+    const gSel = h('select.field.sm', { 'aria-label': 'Group', onchange: (e) => { libFilter = e.target.value; renderLibrary(); } },
+      h('option', { value: '' }, 'All groups'));
+    groups.forEach((g) => gSel.appendChild(h('option', { value: g.id }, g.name)));
+    gSel.value = libFilter;
+    const newGrp = h('button.btn.sm', { type: 'button', title: 'Create a group', onclick: async () => {
+      const n = await promptBox('New group', 'Name', '');
+      if (!n || !n.trim()) return;
+      groups.push({ id: 'g-' + uid(), name: n.trim() });
+      await saveGroups(); renderLibrary();
+    } }, icon('plus'), h('span', 'New group'));
+    const delGrp = libFilter ? h('button.btn.sm', { type: 'button', title: 'Remove this group', onclick: async () => {
+      const g = groups.find((x) => x.id === libFilter);
+      if (!g || !(await confirmBox('Remove group?', 'Remove “' + g.name + '”? Banners in it stay, just ungrouped.', 'Remove'))) return;
+      groups = groups.filter((x) => x.id !== g.id);
+      lib.forEach((b) => { if (b.group === g.id) delete b.group; });
+      libFilter = '';
+      await saveGroups(); await saveLib(); renderLibrary();
+    } }, icon('trash'), h('span', 'Remove group')) : null;
+    box.appendChild(h('div.row.wrap.bn-lib-bar', qIn, gSel, newGrp, delGrp));
+    // Filter
+    const q = libQuery.trim().toLowerCase();
+    let shown = lib.filter((b) => (!libFilter || b.group === libFilter) && (!q || nameOf(b).toLowerCase().includes(q) || (TPL[b.tpl] && TPL[b.tpl].name.toLowerCase().includes(q))));
+    if (!shown.length) {
+      box.appendChild(emptyState('banner', lib.length ? 'No banners match' : 'No saved banners yet', lib.length ? 'Try another group or clear the search.' : 'Make a banner and press Save.', { label: 'Make a banner', icon: 'plus', primary: true, onclick: () => setView('make') }));
       return;
     }
     const grid = h('div.bn-lib');
-    lib.forEach((b) => {
+    shown.forEach((b) => {
       const more = btn('more', 'More', () => menu(more, [
         { label: 'Add to the pre-service loop', icon: 'loop', onclick: () => { if (!loop.items.some((it) => it.t === 'banner' && it.id === b.id)) { loop.items.push({ t: 'banner', id: b.id }); saveLoop(); } toast('Added to the loop.', 'ok'); } },
         { label: 'Add to the service plan', icon: 'plan', onclick: async () => (await ctx.tab('plan')).addItem({ tab: 'ai', banner: b.id, label: 'Banner: ' + nameOf(b) }) },
+        { label: 'Move to group…', icon: 'folder', onclick: () => {
+          const items = [
+            { label: '(No group)', icon: b.group ? '' : 'check', onclick: async () => { delete b.group; b.updated = Date.now(); await saveLib(); renderLibrary(); } },
+            ...groups.map((g) => ({ label: g.name, icon: b.group === g.id ? 'check' : '', onclick: async () => { b.group = g.id; b.updated = Date.now(); await saveLib(); renderLibrary(); } })),
+            '-',
+            { label: 'New group…', icon: 'plus', onclick: async () => {
+              const n = await promptBox('New group', 'Name', '');
+              if (!n || !n.trim()) return;
+              const g = { id: 'g-' + uid(), name: n.trim() };
+              groups.push(g); await saveGroups();
+              b.group = g.id; b.updated = Date.now(); await saveLib(); renderLibrary();
+            } },
+          ];
+          menu(more, items);
+        } },
         { label: 'Rename…', icon: 'edit', onclick: async () => { const n = await promptBox('Rename banner', 'Name', b.name || nameOf(b)); if (n && n.trim()) { b.name = n.trim(); b.updated = Date.now(); if (cur.id === b.id) { cur.name = b.name; nameInp.value = b.name; savedSig = sig(cur); } await saveLib(); renderLibrary(); } } },
         { label: 'Duplicate', icon: 'copy', onclick: async () => { const c = clone(b); c.id = 'b-' + uid(); c.name = nameOf(b) + ' (copy)'; c.created = c.updated = Date.now(); lib.unshift(c); await saveLib(); renderLibrary(); renderViewSeg(); } },
         '-',
@@ -570,11 +795,12 @@ export default function create(ctx) {
           await saveLib(); await saveLoop(); renderLibrary(); renderViewSeg(); updateSaveBtn();
         } },
       ]), { cls: 'sm' });
+      const gName = b.group ? (groups.find((g) => g.id === b.group) || {}).name : '';
       const card = h('div.bn-card',
         mini(frameOf(b)),
         h('div.bn-card-b',
           h('div.bn-card-t.trunc', nameOf(b)),
-          h('div.note', TPL[b.tpl] ? TPL[b.tpl].name : 'Banner', b.updated ? ' · ' + new Date(b.updated).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : ''),
+          h('div.note', TPL[b.tpl] ? TPL[b.tpl].name : 'Banner', gName ? ' · ' + gName : '', b.updated ? ' · ' + new Date(b.updated).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : ''),
           h('div.row.bn-card-a',
             h('button.btn.sm.primary', { type: 'button', onclick: async () => { ctx.setStaged('ai', bannerCue(b, await frameOf(b))); toast('“' + nameOf(b) + '” is Next. Press Present (F5).', 'ok', 2500); } }, icon('next'), h('span', 'Set as Next')),
             h('button.btn.sm', { type: 'button', onclick: () => edit(b) }, icon('edit'), h('span', 'Edit')),
@@ -595,10 +821,11 @@ export default function create(ctx) {
     }
     return out;
   }
-  async function loopCue() {
+  async function loopCue(kind = 'pre') {
+    const L = kind === 'ann' ? announce : loop;
     const frames = [], labels = [];
     const dl = await decks();
-    for (const it of loop.items) {
+    for (const it of L.items) {
       if (it.t === 'banner') {
         const b = lib.find((x) => x.id === it.id); if (!b) continue;
         frames.push(await frameOf(b)); labels.push(short(nameOf(b), 18));
@@ -610,17 +837,18 @@ export default function create(ctx) {
     }
     if (!frames.length) return null;
     const len = frames.length;
-    const secs = +loop.secs || 8;
+    const secs = +L.secs || 8;
     let at = null, end = null;
-    if (loop.count) { const t = nextTime(loop.at || church().service); at = t ? t.getTime() : null; }
+    if (L.count) { const t = nextTime(L.at || church().service); at = t ? t.getTime() : null; }
     if (at) frames.forEach((f) => { if (!(f.kind === 'banner' && f.countdown)) f.clock = { at, label: 'Service starts in' }; });
-    if (at && loop.end) {
-      const b = lib.find((x) => x.id === loop.end);
+    if (at && L.end) {
+      const b = lib.find((x) => x.id === L.end);
       if (b) { frames.push(await frameOf(b)); labels.push('At start: ' + short(nameOf(b), 14)); end = len; }
     }
-    return { id: 'loop:' + Date.now(), tab: 'ai', title: 'Pre-service loop', sub: len + ' slide' + (len === 1 ? '' : 's') + ' · every ' + secs + ' s',
-      deck: { kind: 'loop', frames, auto: { secs, len, at, end } }, index: 0, labels, autoLoop: true, isLoop: true,
-      plan: { tab: 'ai', loop: true, label: 'Pre-service loop' } };
+    const title = kind === 'ann' ? 'Announcements' : 'Preservice';
+    return { id: (kind === 'ann' ? 'ann:' : 'loop:') + Date.now(), tab: 'ai', title, sub: len + ' slide' + (len === 1 ? '' : 's') + ' · every ' + secs + ' s',
+      deck: { kind: 'loop', frames, auto: { secs, len, at, end } }, index: 0, labels, autoLoop: true, isLoop: true, withMusic: kind !== 'ann',
+      plan: { tab: 'ai', loop: true, label: title } };
   }
   async function renderLoop() {
     destroyMinis();
@@ -628,66 +856,85 @@ export default function create(ctx) {
     clear(box);
     const dl = await decks();
     const c = church();
-    box.appendChild(h('p.note.bn-intro', 'Plays before the service: your banners and announcement slides take turns on the screen. It runs on the display itself, so it keeps going if this phone or PC sleeps. Use Next / Previous at any time to move by hand.'));
+    const kind = loopKind;
+    const L = kind === 'ann' ? announce : loop;
+    const saveL = kind === 'ann' ? saveAnnounce : saveLoop;
+    const title = kind === 'ann' ? 'Announcements' : 'Preservice';
+
+    box.appendChild(h('h3', { style: { margin: '0 0 8px' } }, 'Service loop'));
+    const sub = h('div.seg', { role: 'group', 'aria-label': 'Service loop kind', style: { marginBottom: '10px' } });
+    [['pre', 'Preservice'], ['ann', 'Announcements']].forEach(([k, lab]) => {
+      sub.appendChild(h('button', { type: 'button', 'aria-pressed': String(k === kind),
+        onclick: () => { loopKind = k; renderLoop(); } }, lab));
+    });
+    box.appendChild(sub);
+
+    box.appendChild(h('p.note.bn-intro', kind === 'ann'
+      ? 'Announcement slides and banners take turns on the screen. No music. It runs on the display itself, so it keeps going if this phone or PC sleeps.'
+      : 'Plays before the service: your banners and announcement slides take turns on the screen, with music. It runs on the display itself, so it keeps going if this phone or PC sleeps.'));
+    if (kind !== 'ann') box.appendChild(h('div.row', { style: { marginBottom: '10px' } }, musicChip(ctx, () => setView('music'))));
+
     const list = h('div.list.bn-loop-list');
-    if (!loop.items.length) list.appendChild(h('p.note.pad', 'The loop is empty. Add saved banners or slide decks below.'));
-    loop.items.forEach((it, i) => {
-      let name = '', kind = '', thumb;
-      if (it.t === 'banner') { const b = lib.find((x) => x.id === it.id); name = b ? nameOf(b) : '(deleted banner)'; kind = 'Banner'; thumb = b ? mini(frameOf(b)) : h('div.bn-thumb'); }
-      else { const d = dl.find((x) => x.id === it.id); name = d ? d.name : '(deleted slides)'; kind = d ? d.count + ' slide' + (d.count === 1 ? '' : 's') : 'Slides'; thumb = h('div.bn-thumb', h('div.bn-thumb-ic', icon('slides'))); }
+    if (!L.items.length) list.appendChild(h('p.note.pad', 'Empty. Add saved banners or slide decks below.'));
+    L.items.forEach((it, i) => {
+      let name = '', kindT = '', thumb;
+      if (it.t === 'banner') { const b = lib.find((x) => x.id === it.id); name = b ? nameOf(b) : '(deleted banner)'; kindT = 'Banner'; thumb = b ? mini(frameOf(b)) : h('div.bn-thumb'); }
+      else { const d = dl.find((x) => x.id === it.id); name = d ? d.name : '(deleted slides)'; kindT = d ? d.count + ' slide' + (d.count === 1 ? '' : 's') : 'Slides'; thumb = h('div.bn-thumb', h('div.bn-thumb-ic', icon('slides'))); }
       list.appendChild(h('div.li.bn-loop-row', thumb,
-        h('div.grow', h('div.trunc', name), h('div.note', kind)),
-        btn('up', 'Move up', () => { if (i > 0) { const t = loop.items[i - 1]; loop.items[i - 1] = it; loop.items[i] = t; saveLoop(); renderLoop(); } }, { cls: 'sm' }),
-        btn('down', 'Move down', () => { if (i < loop.items.length - 1) { const t = loop.items[i + 1]; loop.items[i + 1] = it; loop.items[i] = t; saveLoop(); renderLoop(); } }, { cls: 'sm' }),
-        btn('trash', 'Remove from the loop', () => { loop.items.splice(i, 1); saveLoop(); renderLoop(); }, { cls: 'sm' })));
+        h('div.grow', h('div.trunc', name), h('div.note', kindT)),
+        btn('up', 'Move up', () => { if (i > 0) { const t = L.items[i - 1]; L.items[i - 1] = it; L.items[i] = t; saveL(); renderLoop(); } }, { cls: 'sm' }),
+        btn('down', 'Move down', () => { if (i < L.items.length - 1) { const t = L.items[i + 1]; L.items[i + 1] = it; L.items[i] = t; saveL(); renderLoop(); } }, { cls: 'sm' }),
+        btn('trash', 'Remove', () => { L.items.splice(i, 1); saveL(); renderLoop(); }, { cls: 'sm' })));
     });
     box.appendChild(list);
     box.appendChild(h('div.row.wrap.bn-add',
-      h('button.btn', { type: 'button', onclick: () => pickBanners() }, icon('banner'), h('span', 'Add banners…')),
-      h('button.btn', { type: 'button', onclick: () => pickDecks(dl) }, icon('slides'), h('span', 'Add slides…'))));
+      h('button.btn', { type: 'button', onclick: () => pickBanners(L, saveL) }, icon('banner'), h('span', 'Add banners…')),
+      h('button.btn', { type: 'button', onclick: () => pickDecks(dl, L, saveL) }, icon('slides'), h('span', 'Add slides…'))));
 
-    const secsSeg = seg([5, 8, 10, 15, 20, 30].map((s) => [String(s), s + ' s']), String(loop.secs || 8), (v) => { loop.secs = +v; saveLoop(); });
-    const atInp = h('input.field', { type: 'time', value: loop.at || c.service, 'aria-label': 'Service starts at', style: { width: '130px' },
-      onchange: () => { loop.at = atInp.value; saveLoop(); } });
-    const countChip = h('button.chip', { type: 'button', 'aria-pressed': String(!!loop.count), onclick: () => { loop.count = !loop.count; saveLoop(); renderLoop(); } },
-      loop.count ? icon('check') : null, 'Show “Service starts in” clock');
-    const endSel = h('select.field', { 'aria-label': 'When it is time', onchange: () => { loop.end = endSel.value; saveLoop(); } },
+    const secsSeg = seg([5, 8, 10, 15, 20, 30].map((s) => [String(s), s + ' s']), String(L.secs || 8), (v) => { L.secs = +v; saveL(); });
+    const atInp = h('input.field', { type: 'time', value: L.at || c.service, 'aria-label': 'Service starts at', style: { width: '130px' },
+      onchange: () => { L.at = atInp.value; saveL(); } });
+    const countChip = h('button.chip', { type: 'button', 'aria-pressed': String(!!L.count), onclick: () => { L.count = !L.count; saveL(); renderLoop(); } },
+      L.count ? icon('check') : null, 'Show “Service starts in” clock');
+    const endSel = h('select.field', { 'aria-label': 'When it is time', onchange: () => { L.end = endSel.value; saveL(); } },
       h('option', { value: '' }, 'Keep looping'),
-      lib.map((b) => h('option', { value: b.id, selected: loop.end === b.id }, 'Show: ' + nameOf(b))));
+      lib.map((b) => h('option', { value: b.id, selected: L.end === b.id }, 'Show: ' + nameOf(b))));
     box.appendChild(h('div.form.bn-form',
       h('label', 'Each slide shows for'), secsSeg,
       h('label', 'Countdown'), h('div.row.wrap', countChip),
-      loop.count ? h('label', 'Service starts at') : null, loop.count ? h('div.row', atInp) : null,
-      loop.count ? h('label', 'When it is time') : null, loop.count ? h('div.col', { style: { alignItems: 'flex-start' } }, endSel, h('p.note', 'For example your Welcome banner. The loop stops there.')) : null));
+      L.count ? h('label', 'Service starts at') : null, L.count ? h('div.row', atInp) : null,
+      L.count ? h('label', 'When it is time') : null, L.count ? h('div.col', { style: { alignItems: 'flex-start' } }, endSel, h('p.note', 'For example your Welcome banner. The loop stops there.')) : null));
     box.appendChild(h('div.row.wrap.bn-actions',
-      h('button.btn.primary', { type: 'button', disabled: !loop.items.length, onclick: async () => {
-        const cue = await loopCue();
-        if (!cue) { toast('The loop has nothing to show yet.', 'err'); return; }
-        ctx.setStaged('ai', cue); toast('Loop is Next. Press Present (F5) to start it.', 'ok', 2500);
-      } }, icon('next'), h('span', 'Set loop as Next')),
-      h('button.btn', { type: 'button', disabled: !loop.items.length, onclick: async () => (await ctx.tab('plan')).addItem({ tab: 'ai', loop: true, label: 'Pre-service loop' }) }, icon('plan'), h('span', 'Add to plan'))));
+      h('button.btn.primary', { type: 'button', disabled: !L.items.length, onclick: async () => {
+        const cue = await loopCue(kind);
+        if (!cue) { toast('Nothing to show yet.', 'err'); return; }
+        ctx.setStaged('ai', cue); toast(title + ' is Next. Press Present (F5) to start it.', 'ok', 2500);
+      } }, icon('next'), h('span', 'Set as Next')),
+      h('button.btn', { type: 'button', disabled: !L.items.length, onclick: async () => (await ctx.tab('plan')).addItem({ tab: 'ai', loop: true, label: title }) }, icon('plan'), h('span', 'Add to plan'))));
   }
-  function pickBanners() {
+  function pickBanners(L, saveL) {
     if (!lib.length) { toast('No saved banners yet. Make one and press Save.'); setView('make'); return; }
     const chosen = new Set();
     const list = h('div.list', { style: { maxHeight: '50vh', overflow: 'auto' } });
     lib.forEach((b) => {
-      const inLoop = loop.items.some((it) => it.t === 'banner' && it.id === b.id);
+      const inLoop = L.items.some((it) => it.t === 'banner' && it.id === b.id);
       const row = h('button', { type: 'button', 'aria-pressed': 'false', disabled: inLoop, onclick: () => { if (chosen.has(b.id)) chosen.delete(b.id); else chosen.add(b.id); row.setAttribute('aria-pressed', String(chosen.has(b.id))); } },
-        icon('banner'), h('span.grow', nameOf(b)), inLoop ? h('span.note', 'in the loop') : null);
+        icon('banner'), h('span.grow', nameOf(b)), inLoop ? h('span.note', 'already added') : null);
       list.appendChild(row);
     });
-    modal({ title: 'Add banners to the loop', body: list, actions: [{ label: 'Cancel' }, { label: 'Add', primary: true, onclick: () => {
-      lib.forEach((b) => { if (chosen.has(b.id)) loop.items.push({ t: 'banner', id: b.id }); });
-      saveLoop(); renderLoop();
-    } }] });
+    modal({ title: 'Add banners', body: list, actions: [{ label: 'Add', primary: true, onclick: () => { chosen.forEach((id) => L.items.push({ t: 'banner', id })); saveL(); renderLoop(); closeModal(); } }, { label: 'Cancel' }] });
   }
-  function pickDecks(dl) {
-    if (!dl.length) { toast('No slide decks yet. Add announcement slides in the Slides tab first.'); return; }
+  function pickDecks(dl, L, saveL) {
+    if (!dl.length) { toast('No slide decks yet.'); return; }
+    const chosen = new Set();
     const list = h('div.list', { style: { maxHeight: '50vh', overflow: 'auto' } });
-    dl.forEach((d) => list.appendChild(h('button', { type: 'button', onclick: () => { loop.items.push({ t: 'deck', id: d.id }); saveLoop(); closeModal(); renderLoop(); } },
-      icon('slides'), h('span.grow', d.name), h('span.note', d.count + ' slides'))));
-    modal({ title: 'Add slides to the loop', body: list, actions: [{ label: 'Cancel' }] });
+    dl.forEach((d) => {
+      const inLoop = L.items.some((it) => it.t === 'deck' && it.id === d.id);
+      const row = h('button', { type: 'button', 'aria-pressed': 'false', disabled: inLoop, onclick: () => { if (chosen.has(d.id)) chosen.delete(d.id); else chosen.add(d.id); row.setAttribute('aria-pressed', String(chosen.has(d.id))); } },
+        icon('slides'), h('span.grow', d.name), inLoop ? h('span.note', 'already added') : null);
+      list.appendChild(row);
+    });
+    modal({ title: 'Add slides', body: list, actions: [{ label: 'Add', primary: true, onclick: () => { chosen.forEach((id) => L.items.push({ t: 'deck', id })); saveL(); renderLoop(); closeModal(); } }, { label: 'Cancel' }] });
   }
 
   // ============================================================ TOPICS
@@ -696,8 +943,12 @@ export default function create(ctx) {
   const tpTr = h('select.field', { 'aria-label': 'Translation', onchange: () => { if (curTopic) showTopic(curTopic); else if (lastQuery) runTopicSearch(); } });
   const tpList = h('div.tp-list');
   const tpOut = h('div.tp-out.scroll.pad');
+  const askIn = h('input.field.grow', { type: 'search', placeholder: 'Ask a question, e.g. What does the Bible say about the Sabbath?', 'aria-label': 'Ask a question', 'data-free-text': '',
+    onkeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); askAi(); } } });
+  const askBtn = h('button.btn.primary', { type: 'button', title: 'Online AI answers your question in three ways that fit a slide. You choose one.', onclick: () => askAi() }, icon('sparkle'), h('span', 'Ask AI'));
   views.topics.append(
     h('div.toolbar.tp-bar', tpSearch, tpTr, h('button.btn', { type: 'button', onclick: () => runTopicSearch() }, icon('search'), h('span', 'Find'))),
+    h('div.toolbar.tp-bar.tp-ask', icon('sparkle'), askIn, askBtn),
     h('div.split.topics-split', h('div.pane', h('div.scroll', tpList)), h('div.pane', tpOut)));
   let curTopic = null, lastQuery = '';
 
@@ -752,6 +1003,7 @@ export default function create(ctx) {
     if (t) { showTopic(t); return; }
     // No topic: search the chosen Bible for the words.
     curTopic = null; filterTopics();
+    dropAskStage();
     clear(tpOut);
     tpOut.appendChild(h('p.note', 'Searching ' + (tpTr.selectedOptions[0] ? tpTr.selectedOptions[0].textContent : 'the Bible') + ' for “' + q + '”…'));
     const info = await getInfo(tpTr.value || settings.v.bible.primary);
@@ -768,6 +1020,7 @@ export default function create(ctx) {
     if (ctx.isMobile()) tpOut.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   async function showPassages(title, refs, topic) {
+    dropAskStage();
     clear(tpOut);
     const tr = tpTr.value || settings.v.bible.primary;
     const info = await getInfo(tr);
@@ -928,9 +1181,194 @@ export default function create(ctx) {
         } }, icon('banner'), h('span', 'Make a banner')))].filter(Boolean));
   }
 
+
+  // ------------------------------------------------------------ Ask AI: one question, three slide-sized answers
+  // The person picks the answer they prefer (and may edit it), optionally adds a picture, and sets it as a
+  // slide. Bible references in the answers are checked against the installed Bible; a verse shown on a slide
+  // is always the Bible's own words, never AI's wording of it.
+  let askStage = null;
+  const dropAskStage = () => { if (askStage) { try { askStage.destroy(); } catch (e) { /* */ } askStage = null; } };
+  const clampStr = (v, n) => String(v == null ? '' : v).replace(/\r/g, '').trim().slice(0, n);
+  const ASK_LABELS = ['Short answer', 'With the Bible’s own words', 'Key points'];
+
+  async function askAi() {
+    const question = askIn.value.trim();
+    if (!question) { askIn.focus(); return; }
+    await loadTopics().catch(() => {});
+    if (!ai.hasKey() || navigator.onLine === false) {
+      toast(!ai.hasKey() ? 'No AI key yet (Settings → AI), so the Bible and topics were searched instead.' : 'No internet, so the Bible and topics were searched instead.', '', 5000);
+      tpSearch.value = question; runTopicSearch();
+      return;
+    }
+    dropAskStage(); curTopic = null; lastQuery = ''; filterTopics();
+    clear(tpOut);
+    tpOut.appendChild(h('p.note', 'Asking ' + ai.providerName() + '…'));
+    askBtn.disabled = true;
+    let reply;
+    try {
+      reply = await ai.aiText({
+        system: 'You help a Seventh-day Adventist church media team answer questions on a projector slide. Be accurate, warm, simple and faithful to the Bible and to Seventh-day Adventist beliefs. No controversy. Never invent Bible references. Reply with JSON only.',
+        prompt: 'Question: ' + question +
+          '\nGive exactly 3 different ways to answer on one slide:' +
+          '\n1 "Short answer": title (at most 6 words), text (at most 30 words), 0 to 2 Bible references.' +
+          '\n2 "With the Bible’s own words": title (at most 6 words), text = one short lead-in sentence (at most 16 words), and exactly one best Bible reference (one verse or at most 3 verses) in "verses".' +
+          '\n3 "Key points": title (at most 6 words), text = exactly 3 short points of at most 8 words, one per line, each starting with "• ", 0 to 2 Bible references.' +
+          '\nAlso "picture": at most 12 words describing a calm, reverent background scene with no people and no text.' +
+          '\nIf the question is not suitable for church or cannot be answered, reply {"options":[]}.' +
+          '\nReply exactly in this JSON form: {"options":[{"label":"Short answer","title":"…","text":"…","verses":["John 3:16"]},{"label":"…","title":"…","text":"…","verses":["…"]},{"label":"Key points","title":"…","text":"• …\\n• …\\n• …","verses":[]}],"picture":"…"}',
+        maxTokens: 900,
+      });
+    } catch (e) { clear(tpOut); tpOut.appendChild(h('p.note.warn', ai.friendlyAiError(e))); askBtn.disabled = false; return; }
+    askBtn.disabled = false;
+    const j = ai.parseJsonReply(reply);
+    const raw = j && Array.isArray(j.options) ? j.options.filter((o) => o && typeof o === 'object').slice(0, 3) : [];
+    clear(tpOut);
+    if (!raw.length) {
+      tpOut.appendChild(emptyState('search', 'No answer to show', 'The AI could not answer that for a slide. Try asking in other words, or search the topics on the left.'));
+      return;
+    }
+    const tr = tpTr.value || settings.v.bible.primary;
+    const options = [];
+    for (let i = 0; i < raw.length; i++) {
+      const o = raw[i];
+      const refs = (Array.isArray(o.verses) ? o.verses : []).map((x) => String(x).trim()).filter(Boolean).slice(0, i === 1 ? 1 : 2);
+      const ok = [], bad = [];
+      for (const ref of refs) {
+        const v = await versesText(ref, tr).catch(() => null);
+        if (v) ok.push({ ref, label: v.label.replace(/ \([^)]*\)$/, ''), text: v.text }); else bad.push(ref);
+      }
+      let title = clampStr(o.title, 70), text = clampStr(o.text, 420), foot = ok.map((v) => v.label).join('  ·  ');
+      if (i === 1 && ok[0]) {
+        const vt = ok[0].text.length > 260 ? ok[0].text.slice(0, 259).replace(/\s+\S*$/, '') + '…' : ok[0].text;
+        text = (text ? text + '\n\n' : '') + '“' + vt + '”';
+      }
+      options.push({ label: clampStr(o.label, 40) || ASK_LABELS[i] || 'Answer ' + (i + 1), title, text, foot, bad });
+    }
+    const mood = ai.flaggedWords(j.picture).length ? '' : clampStr(j.picture, 160);
+    renderAsk(question, options, mood, tr);
+  }
+
+  function renderAsk(question, options, mood, tr) {
+    dropAskStage();
+    clear(tpOut);
+    let sel = 0;
+    const ab = newBanner('blank');           // the banner for the chosen answer
+    ab.s.pal = 'navy'; ab.s.deco = 'glow';
+    const cards = h('div.col.tp-ask-cards');
+    const stHost = h('div.stage-host');
+    const stScreen = h('div.screen.bn-screen', stHost);
+    askStage = createStage(stHost, { placeholderOnly: true, aspect: link.aspect ? link.aspect() : 16 / 9 });
+    if (live.style) askStage.applyStyle(live.style);
+    stScreen.style.aspectRatio = String(link.aspect ? link.aspect() : 16 / 9);
+    const pre = (o) => { ab.f.title = o.title; ab.f.text = o.text; ab.f.foot = o.foot; };
+    const sync = () => { pre(options[sel]); refresh(); };
+    let seq = 0;
+    async function refresh() {
+      const my = ++seq;
+      const fr = await frameOf(ab).catch(() => null);
+      if (my !== seq || !fr || !askStage) return;
+      askStage.show(fr);
+    }
+    const refreshSoon = debounce(refresh, 150);
+    function drawCards() {
+      clear(cards);
+      options.forEach((o, i) => {
+        const on = i === sel;
+        const ti = h('input.field', { value: o.title, 'aria-label': 'Slide heading', placeholder: 'Heading', style: { width: '100%' }, oninput: () => { o.title = ti.value; if (on) { sync(); } } });
+        const tx = h('textarea.field.bn-ta', { rows: 3, 'aria-label': 'Slide text', oninput: () => { o.text = tx.value; if (on) { sync(); } } });
+        tx.value = o.text;
+        const ft = h('input.field', { value: o.foot, 'aria-label': 'Bible reference line', placeholder: 'Bible reference (bottom line)', style: { width: '100%' }, oninput: () => { o.foot = ft.value; if (on) sync(); } });
+        const flags = ai.flaggedWords(o.title + ' ' + o.text);
+        cards.appendChild(h('div.card.tp-ask-card' + (on ? '.on' : ''), { 'aria-current': on ? 'true' : null },
+          h('div.row', h('span.chip', o.label), h('div.grow'),
+            h('button.btn.sm' + (on ? '.primary' : ''), { type: 'button', 'aria-pressed': String(on), onclick: () => { sel = i; sync(); drawCards(); } }, on ? icon('check') : null, h('span', on ? 'Chosen' : 'Use this one'))),
+          ti, tx, ft,
+          o.bad.length ? h('p.note.warn', 'Not found in the Bible: ' + o.bad.join(', ') + '. Left out of the slide; check it before using.') : null,
+          flags.length ? h('p.note.warn', 'Please read carefully: contains “' + flags.join('”, “') + '”.') : null));
+      });
+    }
+    const dimInfo = h('span.note', '');
+    const picRow = h('div.row.wrap');
+    function drawPic() {
+      clear(picRow);
+      const file = h('input', { type: 'file', accept: 'image/*', hidden: true, onchange: async () => {
+        const f0 = file.files[0]; file.value = '';
+        if (!f0) return;
+        try { await setPic(await storePicture(f0, f0.name)); } catch (e) { toast('Could not use that picture: ' + e.message, 'err'); }
+      } });
+      const aiPic = h('button.btn', { type: 'button', title: 'Make a calm background picture for this answer with online AI (no words in it)', onclick: async () => {
+        aiPic.disabled = true; const lbl = aiPic.lastChild.textContent; aiPic.lastChild.textContent = 'Making picture…';
+        try {
+          const blob = await ai.aiImage((mood || 'A peaceful nature scene, soft light') + '. A wide 16:9 background photograph for a church projector screen. Calm, reverent and uplifting, soft natural light, ' +
+            'simple composition with plenty of open space for text. Absolutely no text, letters, words, numbers, logos, signs or watermarks.');
+          await setPic(await storePicture(blob, 'AI picture ' + new Date().toLocaleDateString()));
+        } catch (e) { toast(ai.friendlyAiError(e), 'err', 8000); }
+        finally { aiPic.disabled = false; aiPic.lastChild.textContent = lbl; }
+      } }, icon('sparkle'), h('span', ai.canImage() ? 'Add AI picture (online)' : 'AI picture (not with this provider)'));
+      aiPic.disabled = !ai.canImage();
+      picRow.append(aiPic, h('button.btn', { type: 'button', onclick: () => file.click() }, icon('upload'), h('span', 'Choose picture…')), file,
+        ab.s.img ? h('button.btn', { type: 'button', onclick: () => { ab.s.img = null; ab.s.dim = null; drawPic(); refresh(); } }, icon('x'), h('span', 'No picture')) : null);
+    }
+    async function setPic(id) {
+      const rec = await db.get('files', id).catch(() => null);
+      ab.s.img = id; ab.s.dim = Math.max(0.35, autoDim(rec && rec.meta && rec.meta.lum));
+      drawPic(); refresh();
+    }
+    async function cue() {
+      const fr = await frameOf(ab);
+      const title = (ab.f.title || ab.f.text || 'Answer').split('\n')[0];
+      return Object.assign(bannerCue(ab, fr), { id: 'banner:ask:' + Date.now(), title: short(title, 50), sub: 'Answer: ' + short(question, 40), plan: null });
+    }
+    function saveAsBanner() {
+      const b = clone(ab);
+      b.id = 'b-' + uid(); b.created = b.updated = Date.now(); b.name = short(question, 50);
+      lib.unshift(b); saveLib(); renderViewSeg();
+      return b;
+    }
+    tpOut.append(
+      h('div.tp-head', h('h3', 'Your question'), h('p', question), h('p.note', 'Three ways to answer on a slide. Pick the one you like, edit it if needed, and add a picture if you wish. Check it before it goes on screen.')),
+      cards,
+      h('h4', 'Picture (optional)'), picRow,
+      h('h4', 'Slide preview'), stScreen,
+      h('div.row.wrap.bn-actions',
+        h('button.btn.primary', { type: 'button', onclick: async () => {
+          const o = options[sel];
+          if (!(o.title || o.text).trim()) { toast('The slide is empty. Choose or write an answer first.', 'err'); return; }
+          ctx.setStaged('ai', await cue()); toast('Answer is Next. Press Present (F5) to show it.', 'ok', 3000);
+        } }, icon('next'), h('span', 'Set as Next')),
+        h('button.btn', { type: 'button', onclick: async () => { const b = saveAsBanner(); (await ctx.tab('plan')).addItem({ tab: 'ai', banner: b.id, label: 'Answer: ' + short(question, 40) }); } }, icon('plan'), h('span', 'Add to plan')),
+        h('button.btn', { type: 'button', onclick: () => { saveAsBanner(); toast('Saved in Banners → Saved.', 'ok', 2500); } }, icon('save'), h('span', 'Save')),
+        h('button.btn', { type: 'button', title: 'Open it in the banner editor to change colours and text position', onclick: () => {
+          cur = clone(ab); cur.id = null; savedSig = null; nameInp.value = ''; setView('make'); changed(true);
+        } }, icon('banner'), h('span', 'Edit as banner')),
+        h('button.btn', { type: 'button', onclick: () => askAi() }, icon('sparkle'), h('span', 'Ask again'))),
+      dimInfo);
+    drawCards(); drawPic(); sync();
+    if (ctx.isMobile()) tpOut.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   // ============================================================ control bar + plan
   const api = {
     el,
+    /** Turn a slide into a banner in the editor: {blob} makes a picture banner, {title,text} a text banner. */
+    async fromSlide({ blob, title, text, name }) {
+      await ready;
+      if (blob) {
+        const id = await storePicture(blob, (name || 'Slide') + '.jpg');
+        cur = newBanner('picture');
+        cur.s.img = id; cur.s.dim = 0; cur.name = name || 'Slide banner';
+      } else {
+        cur = newBanner('announce');
+        cur.f.kicker = ''; cur.f.foot = '';
+        cur.f.title = String(title || '').slice(0, 120);
+        cur.f.text = String(text || '').slice(0, 400);
+        cur.name = name || cur.f.title || 'Slide banner';
+      }
+      savedSig = null; nameInp.value = cur.name;
+      setView('make');
+      changed(true);
+      return cur;
+    },
     onShow() { setPreviewAspect(); if (view === 'make') refreshPreview(); },
     /** Open a plan item: {banner} | {loop} | {topic, tr}. Returns the staged cue. */
     async open(item) {
@@ -941,8 +1379,9 @@ export default function create(ctx) {
         if (!b) { toast('That banner is no longer on this device.', 'err'); return null; }
         cue = bannerCue(b, await frameOf(b));
       } else if (item.loop) {
-        cue = await loopCue();
-        if (!cue) { toast('The pre-service loop is empty. Add banners in Banners → Pre-service loop.', 'err'); return null; }
+        const kind = (item.label || '').toLowerCase().includes('announce') ? 'ann' : 'pre';
+        cue = await loopCue(kind);
+        if (!cue) { toast('That loop is empty. Add banners under Service loop.', 'err'); return null; }
       } else if (item.topic) {
         await loadTopics();
         const t = topics.find((x) => x.id === item.topic);
@@ -963,6 +1402,12 @@ export default function create(ctx) {
     },
     /** Saved banners, for the Plan tab's Link dialog. */
     banners() { return lib.map((b) => ({ id: b.id, name: nameOf(b) })); },
+    async bannerThumb(id) {
+      const b = lib.find((x) => x.id === id);
+      if (!b || !b.s || !b.s.img) return null;
+      const blob = await fileBlob(b.s.img).catch(() => null);
+      return blob ? URL.createObjectURL(blob) : null;
+    },
   };
 
   const ready = (async () => {
