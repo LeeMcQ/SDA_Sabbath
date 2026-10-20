@@ -942,4 +942,15 @@ button.se-sw[aria-pressed="true"] { outline: 2px solid var(--focus, #2f6fe0); ou
   .se-font { max-width: 110px; }
   .banner-split.bn-wide { grid-template-columns: 1fr; }
   .se-hint { display: none; }
+  .bn-tb-row { position: sticky; top: 0; z-index: 8; padding: 6px 8px; }
+  .bn-tb-row > .btn { display: none; }
+  .se-toolbar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; min-height: 0 !important; }
+  .se-toolbar > * { flex: none; }
+  .bn-strip-it { width: 96px; }
+}
+.se-panel { container-type: inline-size; }
+@container (max-width: 330px) {
+  .se-grid { grid-template-columns: 1fr; gap: 3px 0; }
+  .se-grid > label { margin-top: 5px; }
+  .se-grid > span:empty { display: none; }
 }

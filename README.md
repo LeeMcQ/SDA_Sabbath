@@ -246,6 +246,8 @@ js/core/bannerframe.js       banner slides on the display (palettes, countdown, 
 js/core/church.js            church details, Sabbath date and offline sunset times
 js/core/ai.js                optional online AI (text, background pictures, model lists)
 js/tabs/ai.js                Banners & Music tab (make, saved, pre-service loop, music, topics, Ask AI)
+js/tabs/slide-editor.js      Banner slide editor: select, move, resize, rotate, text formatting, arrange, toolbar, format panel
+js/core/slideels.js          Free slide items (text boxes, shapes, lines, pictures): validation and drawing
 js/core/bgmusic.js           Banner music: music list, players (files, MIDI, streams, YouTube, SoundCloud), start/fade rules
 js/tabs/ai-full.js           the “full banner” AI picture maker
 js/core/lyrics.js            online lyrics finder: sources, ranking, stanza/chorus detection
@@ -310,6 +312,39 @@ Like every other tab, nothing in **Banners** reaches the projector until **Prese
   topics can be added to the service plan.
 
 Service plans can link banners, the pre-service loop and topic verses (Plan → Add media… → Banner).
+
+### Editing a banner on the slide (like Google Slides)
+
+**Banners & Music → Make** is a slide editor. The toolbar above the slide and the **Format options** panel work
+like Google Slides:
+
+- **Insert:** text boxes, pictures (upload, paste, or drag a photo onto the slide), 27 shapes (rectangles, ovals,
+  stars, arrows, hearts, speech bubbles, ribbons …), lines and arrows, and **fields** that fill themselves in:
+  `{date}` (the coming Sabbath), `{sunset}`, `{church}`, `{town}`, `{service}`, `{today}`. Pick a tool and drag on
+  the slide to draw, or click for the usual size.
+- **Select and move:** click, Shift/Ctrl-click or drag a box around several items. Drag to move (red guides snap to
+  the slide's edges and centre and to other items; Alt turns snapping off, Shift keeps a straight line). Eight handles
+  resize (Shift keeps proportions), the round handle rotates (Shift: steps of 15°). Arrow keys nudge; Shift+arrow
+  nudges further.
+- **Text:** double-click to type. Font (22 fonts), size, bold, italic, underline, strikethrough, text colour,
+  highlight, alignment, vertical alignment, line and letter spacing, bullets and numbering, indent, clear
+  formatting, text shadow and outline, and autofit (grow the box, or shrink the text to fit). Selected words can be
+  formatted on their own.
+- **Fill and border:** solid colour or gradient, transparent, border colour/weight/dash, rounded corners, drop
+  shadow, transparency.
+- **Pictures:** replace, fill/fit/stretch, crop (zoom and focus), mask with a shape (circle, star …), flip,
+  brightness, contrast, saturation, black & white, blur.
+- **Arrange:** bring to front / send to back, align and space evenly, group (Ctrl+G), lock, rotate 90°, flip,
+  duplicate (Ctrl+D), cut/copy/paste (also between banners), delete, right-click menu, undo/redo (Ctrl+Z / Ctrl+Y).
+- **Animation:** each item can fade, zoom, fly or spin in when the slide appears, with a duration and delay.
+- **Slides:** the strip under the slide adds, duplicates, reorders (drag) and deletes slides; each slide has its own
+  kind, text, colours and picture. Present a banner and the arrow keys or clicker step through its slides; in the
+  Service loop every slide takes its turn.
+- **Background:** a colour set, one colour of your own, or a two-colour gradient at any angle, or a picture.
+
+The ready-made banners (Welcome, Bible verse, …) still fill in their text from the fields in the **Slide** panel.
+Drag or double-click that text on the slide and it turns into ordinary text boxes you can move and format (the date
+and sunset stay live as fields). **Wide** gives the slide more room.
 
 ## Banner music
 
