@@ -217,10 +217,10 @@ export default function create(ctx) {
   }
   const card = (title, ...kids) => h('div.card', h('h3', title), ...kids);
   const slider = (label, min, max, step, val, fmt, on) => {
-    const out = h('span.note', { style: { minWidth: '52px', textAlign: 'right' } }, fmt(val));
-    const r = h('input', { type: 'range', min, max, step, value: val, 'aria-label': label, style: { flex: '1' }, oninput: () => { out.textContent = fmt(+r.value); r.setAttribute('aria-valuetext', fmt(+r.value)); on(+r.value); } });
+    const out = h('span.note', { style: { minWidth: '52px', textAlign: 'right', flex: 'none' } }, fmt(val));
+    const r = h('input', { type: 'range', min, max, step, value: val, 'aria-label': label, style: { flex: '1 1 0', minWidth: '0' }, oninput: () => { out.textContent = fmt(+r.value); r.setAttribute('aria-valuetext', fmt(+r.value)); on(+r.value); } });
     r.value = val;
-    return h('div.row', h('span.note', { style: { minWidth: '86px' } }, label), r, out);
+    return h('div.row', h('span.note', { style: { minWidth: '86px', flex: 'none' } }, label), r, out);
   };
 
   function buildPanel() {
