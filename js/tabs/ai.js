@@ -17,6 +17,8 @@ import * as ai from '../core/ai.js';
 import { churchForm } from './church-form.js';
 import { openFullBanner } from './ai-full.js';
 import { createMusicView, musicChip } from './banner-music.js';
+import { createSlideEditor, colorPop } from './slide-editor.js';
+import { cleanEls, htmlText, okColor } from '../core/slideels.js';
 
 // ------------------------------------------------------------ templates
 const TPL = {
@@ -65,12 +67,19 @@ function newBanner(tpl = 'welcome', extra) {
   const t = TPL[tpl] || TPL.welcome;
   const c = church();
   return Object.assign({ id: null, name: '', tpl, f: Object.assign({}, t.d(c)), x: Object.assign({}, t.x),
-    s: Object.assign({ pal: 'navy', deco: 'none', pos: 'center', font: 'sans', img: null, dim: null, imgFit: 'cover', imgPos: 'center', imgZoom: 100 }, t.s) }, extra || {});
+    s: Object.assign({ pal: 'navy', deco: 'none', pos: 'center', font: 'sans', img: null, dim: null, imgFit: 'cover', imgPos: 'center', imgZoom: 100 }, t.s), els: [], pages: [] }, extra || {});
+}
+/** A further slide of a banner: the same fields as the banner's own first slide. */
+function newSlide(tpl = 'blank') {
+  const b = newBanner(tpl);
+  return { tpl: b.tpl, f: b.f, x: b.x, s: b.s, els: [] };
 }
 const clone = (o) => JSON.parse(JSON.stringify(o));
-const sig = (b) => JSON.stringify([b.name, b.tpl, b.f, b.x, b.s]);
+const sig = (b) => JSON.stringify([b.name, b.tpl, b.f, b.x, b.s, b.els || [], b.pages || []]);
+const slidesOf = (b) => [b].concat(Array.isArray(b.pages) ? b.pages : []);
 const short = (s, n = 48) => { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
-const nameOf = (b) => b.name || short((TPL[b.tpl] || TPL.blank).name + (b.f.title || b.f.kicker ? ': ' + (b.f.title || b.f.kicker) : ''), 60);
+const firstText = (b) => { const e = (b.els || []).find((x) => (x.t === 'text' || x.t === 'shape') && htmlText(x.html)); return e ? htmlText(e.html).split('\n')[0] : ''; };
+const nameOf = (b) => b.name || short((TPL[b.tpl] || TPL.blank).name + (b.f.title || b.f.kicker ? ': ' + (b.f.title || b.f.kicker) : firstText(b) ? ': ' + firstText(b) : ''), 60);
 
 export default function create(ctx) {
   const { live, settings, link } = ctx;
@@ -79,7 +88,9 @@ export default function create(ctx) {
   let loop = { items: [], secs: 8, count: true, at: '', end: '' };
   let announce = { items: [], secs: 8, count: true, at: '', end: '' };
   let loopKind = 'pre'; // 'pre' = preservice (with music), 'ann' = announcements (no music)
-  let cur = newBanner();    // banner in the editor
+  let cur = newBanner();    // banner in the editor (its first slide's fields sit on it; more slides in cur.pages)
+  let pg = 0;               // slide being edited (0 = the banner itself)
+  let sl = cur;             // that slide: {tpl, f, x, s, els}
   let savedSig = null;      // sig(cur) when it was last saved (null = never)
   let view = 'make';
   let topics = null;
@@ -95,20 +106,44 @@ export default function create(ctx) {
 
   // Saved data from older versions or a damaged database: repair what can be used, drop the rest.
   const isObj = (o) => !!o && typeof o === 'object' && !Array.isArray(o);
+  const fin = (v, lo, hi) => typeof v === 'number' && isFinite(v) && v >= lo && v <= hi;
+  function repairSlide(b, out) {
+    if (isObj(b.f)) Object.keys(b.f).forEach((k) => { if (typeof b.f[k] === 'string') out.f[k] = b.f[k]; });
+    if (isObj(b.x)) Object.keys(b.x).forEach((k) => { out.x[k] = !!b.x[k]; });
+    if (isObj(b.s)) {
+      const S = b.s;
+      if (PALETTES[S.pal]) out.s.pal = S.pal;
+      if (DECOS[S.deco]) out.s.deco = S.deco;
+      if (['center', 'left', 'right', 'top', 'low'].includes(S.pos)) out.s.pos = S.pos;
+      if (['sans', 'serif'].includes(S.font)) out.s.font = S.font;
+      out.s.img = typeof S.img === 'string' ? S.img : null;
+      out.s.dim = typeof S.dim === 'number' && isFinite(S.dim) ? S.dim : null;
+      if (['cover', 'contain', 'crop'].includes(S.imgFit)) out.s.imgFit = S.imgFit;
+      if (['center', 'top', 'bottom', 'left', 'right'].includes(S.imgPos)) out.s.imgPos = S.imgPos;
+      if (fin(S.imgZoom, 50, 400)) out.s.imgZoom = S.imgZoom;
+      if (fin(S.textSize, 30, 300)) out.s.textSize = S.textSize;
+      if (fin(S.textSpacing, 0.8, 3)) out.s.textSpacing = S.textSpacing;
+      if (S.textBold) out.s.textBold = true;
+      if (S.textItalic) out.s.textItalic = true;
+      if (S.free) out.s.free = true;
+      ['bgc', 'bgc2', 'fgc', 'acc'].forEach((k) => { if (okColor(S[k])) out.s[k] = okColor(S[k]); });
+      if (fin(S.bga, 0, 360)) out.s.bga = S.bga;
+      if (isObj(S.layout)) {
+        const L = {};
+        Object.keys(S.layout).forEach((k) => { const v = S.layout[k]; if (['kicker', 'title', 'text', 'foot', 'count'].includes(k) && isObj(v) && fin(v.x, -50, 150) && fin(v.y, -50, 150)) L[k] = { x: v.x, y: v.y, w: fin(v.w, 1, 200) ? v.w : 40, h: fin(v.h, 0, 200) ? v.h : 0 }; });
+        if (Object.keys(L).length) out.s.layout = L;
+      }
+    }
+    out.els = cleanEls(b.els);
+    return out;
+  }
   function repair(b) {
     if (!isObj(b) || !TPL[b.tpl]) return null;
     const base = newBanner(b.tpl);
     const out = Object.assign(base, { id: typeof b.id === 'string' ? b.id : null, name: typeof b.name === 'string' ? b.name : '', created: b.created, updated: b.updated });
-    if (isObj(b.f)) Object.keys(b.f).forEach((k) => { if (typeof b.f[k] === 'string') out.f[k] = b.f[k]; });
-    if (isObj(b.x)) Object.keys(b.x).forEach((k) => { out.x[k] = !!b.x[k]; });
-    if (isObj(b.s)) {
-      if (PALETTES[b.s.pal]) out.s.pal = b.s.pal;
-      if (DECOS[b.s.deco]) out.s.deco = b.s.deco;
-      if (['center', 'left', 'right', 'top', 'low'].includes(b.s.pos)) out.s.pos = b.s.pos;
-      if (['sans', 'serif'].includes(b.s.font)) out.s.font = b.s.font;
-      out.s.img = typeof b.s.img === 'string' ? b.s.img : null;
-      out.s.dim = typeof b.s.dim === 'number' && isFinite(b.s.dim) ? b.s.dim : null;
-    }
+    if (typeof b.group === 'string') out.group = b.group;
+    repairSlide(b, out);
+    out.pages = (Array.isArray(b.pages) ? b.pages : []).filter((p) => isObj(p) && TPL[p.tpl]).slice(0, 60).map((p) => repairSlide(p, newSlide(p.tpl)));
     return out;
   }
   async function load() {
@@ -134,7 +169,7 @@ export default function create(ctx) {
     }
     const d = await db.get('kv', 'banner-draft').catch(() => null);
     const dc = d && repair(d.cur);
-    if (dc) { cur = dc; savedSig = typeof d.savedSig === 'string' ? d.savedSig : null; }
+    if (dc) { setDoc(dc); savedSig = typeof d.savedSig === 'string' ? d.savedSig : null; }
     await migrateOldHistory().catch((e) => console.warn('old banners', e));
   }
   // Banners saved by the old Banner tab were pictures in browser storage (about 5 MB, easily full).
@@ -186,9 +221,10 @@ export default function create(ctx) {
     for (let i = 0; i < px.length; i += 4) sum += 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2];
     const lum = sum / (px.length / 4) / 255;
     if (bmp.close) bmp.close();
+    const cw = c.width, ch = c.height;
     c.width = c.height = 0;
     const id = 'bbg-' + uid();
-    await db.put('files', id, { id, kind: 'banner-bg', name: name || 'Picture', type: 'image/jpeg', size: full.size, blob: full, thumb, added: Date.now(), meta: { lum } });
+    await db.put('files', id, { id, kind: 'banner-bg', name: name || 'Picture', type: 'image/jpeg', size: full.size, blob: full, thumb, added: Date.now(), meta: { lum, w: cw, h: ch } });
     blobCache.set(id, full);
     return id;
   }
@@ -208,12 +244,21 @@ export default function create(ctx) {
     return (st && st.logoBlob) || null;
   }
   /** The display frame for a banner (pictures, logo and QR code resolved). */
-  async function frameOf(b, now = new Date()) {
+  const TOKENS = [['{date}', 'Sabbath date'], ['{sunset}', 'Sabbath sunset time'], ['{church}', 'Church name'], ['{town}', 'Town'], ['{service}', 'Service time'], ['{today}', 'Today’s date']];
+  function fieldValues(now) {
+    const c = church();
+    return { date: sabbathDateLine(now), sunset: hasLocation() ? sabbathSunsetLine(now) : '', church: c.name || '', town: c.town || '', service: c.service || '',
+      today: now.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) };
+  }
+  /** Display frames for every slide of a banner. */
+  async function framesOf(b, opt) { const out = []; for (const x of slidesOf(b)) out.push(await frameOf(x, new Date(), opt)); return out; }
+  async function frameOf(b, now = new Date(), opt = {}) {
     const c = church(), f = b.f || {}, x = b.x || {}, s = b.s || {};
     const fr = { kind: 'banner', tpl: b.tpl, pal: s.pal || 'navy', deco: s.deco || 'none', pos: s.pos || 'center', font: s.font || 'sans',
       kicker: f.kicker || '', title: f.title || '', text: f.text || '', mark: !!x.mark,
       textSize: s.textSize || 100, textBold: !!s.textBold, textItalic: !!s.textItalic, textSpacing: s.textSpacing || 1.24,
-      layout: s.layout && Object.keys(s.layout).length ? s.layout : null };
+      layout: s.layout && Object.keys(s.layout).length ? s.layout : null,
+      bgc: s.bgc || '', bgc2: s.bgc2 || '', bga: s.bga == null ? 135 : s.bga, fgc: s.fgc || '', acc: s.acc || '' };
     const foot = [b.tpl === 'verse' ? f.refLabel || f.ref : f.foot, x.date ? sabbathDateLine(now) : '', x.sunset ? sabbathSunsetLine(now) : '']
       .map((t) => (t || '').trim()).filter(Boolean);
     fr.foot = foot.join('  ·  ');
@@ -232,13 +277,28 @@ export default function create(ctx) {
       }
     }
     if (x.logo) { const lg = await logoBlob(); if (lg) fr.logo = lg; }
+    // Free elements: fields such as {date} filled in now, pictures fetched from the database.
+    if (Array.isArray(b.els) && b.els.length) {
+      const fields = fieldValues(now);
+      fr.els = [];
+      for (const e of b.els) {
+        const o = Object.assign({}, e);
+        if (o.html) o.html = o.html.replace(/\{(date|sunset|church|service|today|town)\}/g, (m, k) => esc(fields[k] || ''));
+        if (o.t === 'image' && o.src) o.img = await fileBlob(o.src).catch(() => null);
+        fr.els.push(o);
+      }
+    }
+    if (opt.noAnim) fr.noAnim = true;
     const gu = x.qr ? safeGivingUrl(c.givingUrl) : '';
     if (gu) { try { fr.qr = await qrData(gu); fr.qrLabel = c.givingLabel; } catch (e) { /* no QR */ } }
     return fr;
   }
   const cueId = (b) => 'banner:' + (b.id || 'draft');
-  function bannerCue(b, frame) {
-    return { id: cueId(b), tab: 'ai', title: nameOf(b), sub: 'Banner', withMusic: true, deck: { kind: 'banner', frames: [frame] }, index: 0, labels: [TPL[b.tpl].name],
+  function bannerCue(b, frames, index = 0) {
+    frames = Array.isArray(frames) ? frames : [frames];
+    const n = frames.length;
+    return { id: cueId(b), tab: 'ai', title: nameOf(b), sub: n > 1 ? 'Banner · ' + n + ' slides' : 'Banner', withMusic: true, deck: { kind: 'banner', frames }, index: Math.min(index, n - 1),
+      labels: n > 1 ? frames.map((f, i) => 'Slide ' + (i + 1)) : [TPL[b.tpl].name],
       plan: b.id ? { tab: 'ai', banner: b.id, label: 'Banner: ' + nameOf(b) } : null };
   }
 
@@ -261,7 +321,7 @@ export default function create(ctx) {
     view = v;
     renderViewSeg();
     Object.keys(views).forEach((k) => { views[k].hidden = k !== v; });
-    if (v === 'make') { refreshPreview(); }
+    if (v === 'make') { refreshPreview(); } else if (editor) editor.deselect();
     if (v === 'library') renderLibrary();
     if (v === 'loop') renderLoop();
     if (v === 'topics') renderTopics();
@@ -274,25 +334,169 @@ export default function create(ctx) {
   }
 
   // ============================================================ MAKE
+  let editor = null, stripReady = false;
   const host = h('div.stage-host');
   const screen = h('div.screen.bn-screen', host);
   const stage = createStage(host, { placeholderOnly: true });
   const nameInp = h('input.field', { placeholder: 'Name (for the Saved list)', 'aria-label': 'Banner name', style: { flex: '1 1 160px', minWidth: '0' },
     oninput: () => { cur.name = nameInp.value; changed(false); } });
   const saveBtn = h('button.btn', { type: 'button', onclick: () => saveCurrent(true) }, icon('save'), h('span', 'Save'));
-  const nextBtn = h('button.btn.primary', { type: 'button', title: 'Put this banner on the green Next screen. Press Present (F5) to show it.', onclick: () => setNext() }, icon('next'), h('span', 'Set as Next'));
+  const nextBtn = h('button.btn.primary', { type: 'button', title: 'Put this banner on the green Next screen (from the slide you are on). Press Present (F5) to show it.', onclick: () => setNext() }, icon('next'), h('span', 'Set as Next'));
   const editorScroll = h('div.scroll.pad.bn-editor');
+  const formatScroll = h('div.scroll.pad.bn-format');
+  const strip = h('div.bn-strip', { role: 'listbox', 'aria-label': 'Slides of this banner' });
+  const wideBtn = h('button.btn.sm', { type: 'button', title: 'Bigger slide: make the editing area wider', 'aria-pressed': 'false', onclick: () => setWide(!wide) }, icon('wide'), h('span.hide-sm', 'Wide'));
+  let wide = false;
+  try { wide = localStorage.getItem('selah-bn-wide') === '1'; } catch (e) { /* */ }
+  const sideSeg = h('div.seg.bn-side-seg', { role: 'tablist', 'aria-label': 'Panel' });
+  let side = 'slide';
+  function renderSideSeg() {
+    clear(sideSeg);
+    [['slide', 'Slide'], ['format', 'Format options']].forEach(([k, l]) => sideSeg.appendChild(h('button', { type: 'button', role: 'tab', 'aria-pressed': String(side === k), 'aria-selected': String(side === k), onclick: () => setSide(k) }, l)));
+  }
+  function setSide(k) {
+    side = k; renderSideSeg();
+    editorScroll.hidden = k !== 'slide'; formatScroll.hidden = k !== 'format';
+    if (k === 'format' && !formatScroll.firstChild.childNodes.length) formatScroll.firstChild.replaceChildren(h('p.note', 'Select something on the slide to see its options: size, fill, border, text, picture adjustments, animation and arrange.'));
+  }
+  const editPane = h('div.pane.bn-edit-pane', h('div.bn-side-bar', sideSeg), editorScroll, formatScroll);
   const previewPane = h('div.pane.bn-preview-pane',
     h('div.bn-preview-in',
       screen,
+      strip,
       h('div.row.wrap.bn-actions', nextBtn, saveBtn,
         h('button.btn', { type: 'button', title: 'Add to the current service plan', onclick: () => addCurToPlan() }, icon('plan'), h('span', 'Add to plan')),
         h('button.btn', { type: 'button', title: 'Add to the current Service loop (Preservice or Announcements)', onclick: () => addCurToLoop() }, icon('loop'), h('span', 'Add to loop'))),
       h('div.row', nameInp,
         h('button.btn.sm', { type: 'button', title: 'Start a new banner', onclick: () => startNew() }, icon('plus'), h('span', 'New'))),
       musicChip(ctx, () => setView('music')),
-      h('p.note', 'Set as Next puts the banner on the green Next screen; Present (F5) shows it. Text is fitted to the projector, like Bible verses.')));
-  views.make.append(h('div.split.banner-split', h('div.pane.bn-edit-pane', editorScroll), previewPane));
+      h('p.note', 'Click anything on the slide to change it; double-click text to type. Insert text boxes, pictures, shapes and lines from the toolbar. Right-click for more. Set as Next puts the banner on the green Next screen; Present (F5) shows it.')));
+  const makeSplit = h('div.split.banner-split', editPane, previewPane);
+  const tbRow = h('div.bn-tb-row');
+  views.make.classList.add('bn-make');
+  views.make.append(tbRow, makeSplit);
+  function setWide(v) {
+    wide = v; makeSplit.classList.toggle('bn-wide', v); wideBtn.setAttribute('aria-pressed', String(v));
+    try { localStorage.setItem('selah-bn-wide', v ? '1' : '0'); } catch (e) { /* */ }
+    requestAnimationFrame(() => { stage.fit(); editor.afterRender(); });
+  }
+
+  // ------------------------------------------------------------ the slide being edited, and undo/redo
+  function setDoc(b, keepHistory) {
+    cur = b;
+    if (!Array.isArray(cur.pages)) cur.pages = [];
+    if (!Array.isArray(cur.els)) cur.els = [];
+    pg = 0; sl = cur;
+    if (editor) editor.deselect();
+    if (!keepHistory) hist.reset();
+    if (stripReady) renderStrip();
+  }
+  /** Replace the slide being edited (a new kind of banner for this slide only). */
+  function replaceSlide(nb) {
+    if (pg === 0) { Object.assign(cur, { tpl: nb.tpl, f: nb.f, x: nb.x, s: nb.s, els: nb.els || [] }); sl = cur; }
+    else { cur.pages[pg - 1] = { tpl: nb.tpl, f: nb.f, x: nb.x, s: nb.s, els: nb.els || [] }; sl = cur.pages[pg - 1]; }
+  }
+  const hist = {
+    stack: [], i: -1, t: null,
+    snap() { return JSON.stringify({ d: cur, pg }); },
+    reset() { clearTimeout(this.t); this.t = null; this.stack = [this.snap()]; this.i = 0; },
+    mark(soon) {
+      clearTimeout(this.t);
+      if (soon) { this.t = setTimeout(() => this.push(), 450); return; }
+      this.push();
+    },
+    flush() { if (this.t) { clearTimeout(this.t); this.t = null; this.push(); } },
+    push() {
+      this.t = null;
+      const s = this.snap();
+      if (s === this.stack[this.i]) return;
+      this.stack = this.stack.slice(0, this.i + 1); this.stack.push(s);
+      if (this.stack.length > 120) this.stack.shift();
+      this.i = this.stack.length - 1;
+      if (editor) editor.refreshToolbar();
+    },
+    can(d) { return d < 0 ? this.i > 0 || !!this.t : this.i < this.stack.length - 1; },
+    go(d) {
+      this.flush();
+      const j = this.i + d;
+      if (j < 0 || j >= this.stack.length) return;
+      this.i = j;
+      const o = JSON.parse(this.stack[j]);
+      const keepId = cur.id, keepName = cur.name;
+      const selNow = editor ? editor.selection() : [];
+      cur = o.d; cur.id = keepId; cur.name = keepName; if (!Array.isArray(cur.pages)) cur.pages = [];
+      pg = Math.min(o.pg || 0, cur.pages.length); sl = pg ? cur.pages[pg - 1] : cur;
+      editor.deselect();
+      updateSaveBtn(); saveDraft(); renderEditor(); renderStrip();
+      refreshPreview().then(() => editor.select(selNow));
+    },
+  };
+  function goPage(i) {
+    if (i < 0 || i > cur.pages.length || i === pg) return;
+    editor.deselect();
+    pg = i; sl = i ? cur.pages[i - 1] : cur;
+    renderEditor(); renderStrip(); refreshPreview();
+  }
+
+  // ------------------------------------------------------------ the canvas editor
+  editor = createSlideEditor({
+    screen,
+    stageEl: () => stage.el,
+    slide: () => sl,
+    tokens: TOKENS,
+    commit: (o = {}) => {
+      updateSaveBtn(); saveDraft();
+      hist.mark(!!o.typing);
+      stripThumbSoon();
+      if (o.render === 'now') return o.force ? refreshPreview(true) : refreshPreview();
+      if (o.render === 'soon') schedule();
+      return Promise.resolve();
+    },
+    storeImage: (blob, name) => storePicture(blob, name),
+    pictures: async () => (await db.all('files').catch(() => [])).filter((f) => f.kind === 'banner-bg').sort((a, b) => (b.added || 0) - (a.added || 0))
+      .map((f) => ({ id: f.id, name: f.name, w: f.meta && f.meta.w, h: f.meta && f.meta.h })),
+    undo: () => hist.go(-1), redo: () => hist.go(1),
+    canUndo: () => hist.can(-1), canRedo: () => hist.can(1),
+    canConvert: () => sl.tpl !== 'countdown',
+    convertParts: (list) => convertParts(list),
+    onSelect: (ids) => { if (ids.length) setSide('format'); else if (side === 'format') setSide('slide'); },
+    preview: () => replayAnimations(),
+  });
+  tbRow.append(editor.toolbar, wideBtn);
+  // Undo/redo anywhere in the Make view (text fields keep their own undo).
+  views.make.addEventListener('keydown', (ev) => {
+    const t = ev.target, ctrl = ev.ctrlKey || ev.metaKey;
+    if (!ctrl || ev.altKey) return;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    const k = ev.key.toLowerCase();
+    if (k === 'z' && !ev.shiftKey) { ev.preventDefault(); ev.stopPropagation(); hist.go(-1); }
+    else if (k === 'y' || (k === 'z' && ev.shiftKey)) { ev.preventDefault(); ev.stopPropagation(); hist.go(1); }
+  });
+  formatScroll.appendChild(editor.panel);
+  renderSideSeg(); setSide('slide');
+  if (wide) makeSplit.classList.add('bn-wide');
+  wideBtn.setAttribute('aria-pressed', String(wide));
+
+  /** The template's own lines became text boxes: empty their fields so they aren't drawn twice. */
+  function convertParts(list) {
+    const now = new Date();
+    const date = sl.x.date ? sabbathDateLine(now) : '', sunset = sl.x.sunset && hasLocation() ? sabbathSunsetLine(now) : '';
+    list.forEach(({ part, el }) => {
+      if (part === 'foot') {
+        // Keep the date and sunset lines live: they become {date} and {sunset} fields.
+        if (date) el.html = el.html.split(esc(date)).join('{date}');
+        if (sunset) el.html = el.html.split(esc(sunset)).join('{sunset}');
+        sl.f.foot = ''; sl.f.refLabel = ''; if (sl.tpl === 'verse') sl.f.ref = '';
+      } else sl.f[part] = '';
+    });
+    if (list.some((x) => x.part === 'foot')) { sl.x.date = false; sl.x.sunset = false; }
+    sl.s.free = true;
+    delete sl.s.layout;
+    renderEditor();
+  }
+  function replayAnimations() {
+    frameOf(sl).then((fr) => { stage.show(fr).then(() => editor.afterRender()); });
+  }
 
   function setPreviewAspect() {
     const a = link.aspect ? link.aspect() : 16 / 9;
@@ -302,75 +506,113 @@ export default function create(ctx) {
   live.on('style', (s) => { stage.applyStyle(s); setPreviewAspect(); refreshPreview(); });
   if (link.on) link.on('hello', () => { setPreviewAspect(); refreshPreview(); });
 
-  let previewSeq = 0;
-  async function refreshPreview() {
+  let previewSeq = 0, previewWaiting = false;
+  async function refreshPreview(force) {
     if (view !== 'make') return;
+    if (editor.isEditing() && force !== true) { previewWaiting = true; return; } // never redraw under the user's typing or dragging
+    previewWaiting = false;
     const my = ++previewSeq;
-    const fr = await frameOf(cur);
+    const fr = await frameOf(sl, new Date(), { noAnim: true });
     if (my !== previewSeq) return;
-    stage.show(fr);
-    addLayoutHandles();
+    await stage.show(fr);
+    if (my !== previewSeq) return;
+    editor.afterRender();
     // Keep the Next screen truthful while editing the banner that is staged.
-    if (live.staged && live.staged.id === cueId(cur) && live.staged.tab === 'ai') ctx.setStaged('ai', bannerCue(cur, fr));
+    if (live.staged && live.staged.id === cueId(cur) && live.staged.tab === 'ai') ctx.setStaged('ai', bannerCue(cur, await framesOf(cur), live.staged.index || 0));
+  }
+  setInterval(() => { if (previewWaiting && !editor.isEditing()) refreshPreview(); }, 400);
+
+  // ------------------------------------------------------------ slides strip (several slides per banner)
+  let stripMinis = [];
+  const stripThumbSoon = debounce(() => {
+    const it = strip.querySelector('.bn-strip-it[aria-selected="true"] .stage-host');
+    if (!it || !it._stage) return;
+    frameOf(sl, new Date(), { noAnim: true }).then((f) => it._stage.show(f)).catch(() => {});
+  }, 600);
+  function renderStrip() {
+    stripReady = true;
+    stripMinis.forEach((s) => s.destroy()); stripMinis = [];
+    clear(strip);
+    const slides = slidesOf(cur);
+    slides.forEach((x, i) => {
+      const hostM = h('div.stage-host');
+      const it = h('div.bn-strip-it', { role: 'option', 'aria-selected': String(i === pg), tabindex: '0', draggable: 'true', title: 'Slide ' + (i + 1) + (slides.length > 1 ? ' · drag to reorder · right-click for more' : ''),
+        onclick: () => goPage(i),
+        onkeydown: (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); goPage(i); } if (ev.key === 'Delete') { ev.preventDefault(); deletePage(i); } },
+        oncontextmenu: (ev) => { ev.preventDefault(); pageMenu(it, i); },
+        ondragstart: (ev) => { ev.dataTransfer.setData('text/x-slide', String(i)); ev.dataTransfer.effectAllowed = 'move'; },
+        ondragover: (ev) => { if (Array.from(ev.dataTransfer.types).includes('text/x-slide')) { ev.preventDefault(); it.classList.add('drop'); } },
+        ondragleave: () => it.classList.remove('drop'),
+        ondrop: (ev) => { it.classList.remove('drop'); const from = +ev.dataTransfer.getData('text/x-slide'); if (isFinite(from)) movePage(from, i); } },
+        h('div.bn-strip-th', hostM), h('span.bn-strip-n', String(i + 1)));
+      if (slides.length > 1) it.appendChild(h('button.bn-strip-more', { type: 'button', title: 'Slide options', 'aria-label': 'Slide ' + (i + 1) + ' options', onclick: (ev) => { ev.stopPropagation(); pageMenu(ev.currentTarget, i); } }, icon('more')));
+      strip.appendChild(it);
+      requestAnimationFrame(async () => {
+        const st = createStage(hostM, { placeholderOnly: true, aspect: link.aspect ? link.aspect() : 16 / 9 });
+        hostM._stage = st; stripMinis.push(st);
+        if (live.style) st.applyStyle(live.style);
+        try { st.show(await frameOf(x, new Date(), { noAnim: true })); } catch (e) { /* */ }
+      });
+    });
+    const add = h('button.bn-strip-add', { type: 'button', title: 'New slide', onclick: () => newPageMenu(add) }, icon('plus'), h('span', 'Slide'));
+    strip.appendChild(add);
+  }
+  function plainSlide(x) { return { tpl: x.tpl, f: clone(x.f), x: clone(x.x), s: clone(x.s), els: clone(x.els || []) }; }
+  function newPageMenu(anchor) {
+    menu(anchor, [
+      { label: 'Blank slide', icon: 'plus', onclick: () => addPage(Object.assign(newSlide('blank'), { s: Object.assign(newSlide('blank').s, { pal: sl.s.pal, deco: sl.s.deco, img: sl.s.img, dim: sl.s.dim, bgc: sl.s.bgc, bgc2: sl.s.bgc2, bga: sl.s.bga, fgc: sl.s.fgc, acc: sl.s.acc }) })) },
+      { label: 'Duplicate this slide', icon: 'dup', hint: 'Ctrl+D', onclick: () => addPage(plainSlide(sl)) },
+      '-',
+      ...Object.keys(TPL).filter((k) => k !== 'blank').map((k) => ({ label: TPL[k].name, icon: 'banner', onclick: () => addPage(newSlide(k)) })),
+    ]);
+  }
+  function addPage(x, at = pg + 1) {
+    if (cur.pages.length >= 59) { toast('A banner can have up to 60 slides.', 'err'); return; }
+    // Slide i lives at pages[i-1]; the banner itself is slide 0.
+    cur.pages.splice(at - 1, 0, x);
+    pg = at; sl = cur.pages[at - 1];
+    editor.deselect();
+    changed(true); renderStrip();
+    if (x.tpl === 'verse' && x.f.ref) fetchVerse();
+  }
+  function deletePage(i) {
+    const n = slidesOf(cur).length;
+    if (n < 2) { toast('A banner needs at least one slide.', '', 2500); return; }
+    if (i === 0) { const nx = cur.pages.shift(); Object.assign(cur, { tpl: nx.tpl, f: nx.f, x: nx.x, s: nx.s, els: nx.els || [] }); }
+    else cur.pages.splice(i - 1, 1);
+    pg = Math.min(pg >= i && pg > 0 ? pg - 1 : pg, cur.pages.length); sl = pg ? cur.pages[pg - 1] : cur;
+    editor.deselect();
+    changed(true); renderStrip();
+  }
+  function movePage(from, to) {
+    const all = slidesOf(cur).map(plainSlide);
+    if (from === to || from < 0 || to < 0 || from >= all.length || to >= all.length) return;
+    const [m] = all.splice(from, 1); all.splice(to, 0, m);
+    Object.assign(cur, all[0]); cur.pages = all.slice(1);
+    pg = to; sl = pg ? cur.pages[pg - 1] : cur;
+    editor.deselect();
+    changed(true); renderStrip();
+  }
+  function pageMenu(anchor, i) {
+    const n = slidesOf(cur).length;
+    menu(anchor, [
+      { label: 'Duplicate slide', icon: 'dup', onclick: () => { goPage(i); addPage(plainSlide(sl)); } },
+      { label: 'New slide after this', icon: 'plus', onclick: () => { goPage(i); newPageMenu(anchor); } },
+      { label: 'Move earlier', icon: 'up', disabled: i === 0, onclick: () => movePage(i, i - 1) },
+      { label: 'Move later', icon: 'down', disabled: i >= n - 1, onclick: () => movePage(i, i + 1) },
+      '-',
+      { label: 'Delete slide', icon: 'trash', disabled: n < 2, onclick: () => deletePage(i) },
+    ]);
   }
 
-  // Google Slides-style drag and resize on the preview.
-  function addLayoutHandles() {
-    const root = screen.querySelector('.f-banner');
-    if (!root) return;
-    // Remove old handles.
-    root.querySelectorAll('.bn-handle').forEach((n) => n.remove());
-    const parts = root.querySelectorAll('[data-part]');
-    if (!cur.s.layout) cur.s.layout = {};
-    parts.forEach((node) => {
-      const part = node.dataset.part;
-      // Until the user moves something, the template's own layout is kept: the box is only saved on the first drag.
-      const saved = cur.s.layout[part];
-      let box = saved;
-      if (!box) {   // start from where the template put it
-        const r = node.getBoundingClientRect(), pr = root.getBoundingClientRect();
-        box = { x: Math.max(0, (r.left - pr.left) / pr.width * 100), y: Math.max(0, (r.top - pr.top) / pr.height * 100), w: Math.max(15, r.width / pr.width * 100), h: 0 };
-      }
-      const commit = () => { if (!cur.s.layout[part]) cur.s.layout[part] = box; };
-      const handle = h('div.bn-handle', { 'data-part': part, style: { left: box.x + '%', top: box.y + '%', width: box.w + '%' } });
-      const grip = h('div.bn-grip', { title: 'Drag to move' });
-      const resize = h('div.bn-resize', { title: 'Drag to resize' });
-      handle.append(grip, resize);
-      // Drag to move.
-      grip.addEventListener('pointerdown', (e) => {
-        e.preventDefault(); e.stopPropagation(); commit();
-        const pr = root.getBoundingClientRect();
-        const sx = e.clientX, sy = e.clientY, ox = box.x, oy = box.y;
-        const move = (ev) => {
-          box.x = Math.max(0, Math.min(95, ox + (ev.clientX - sx) / pr.width * 100));
-          box.y = Math.max(0, Math.min(95, oy + (ev.clientY - sy) / pr.height * 100));
-          handle.style.left = box.x + '%'; handle.style.top = box.y + '%';
-          node.style.left = box.x + '%'; node.style.top = box.y + '%';
-        };
-        const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); changed(false); };
-        window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
-      });
-      // Drag to resize width.
-      resize.addEventListener('pointerdown', (e) => {
-        e.preventDefault(); e.stopPropagation(); commit();
-        const pr = root.getBoundingClientRect();
-        const sx = e.clientX, ow = box.w;
-        const move = (ev) => {
-          box.w = Math.max(15, Math.min(100 - box.x, ow + (ev.clientX - sx) / pr.width * 100));
-          handle.style.width = box.w + '%'; node.style.width = box.w + '%';
-        };
-        const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); changed(false); };
-        window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
-      });
-      root.appendChild(handle);
-    });
-  }
   const schedule = debounce(refreshPreview, 120);
   function changed(rerender) {
     updateSaveBtn();
     saveDraft();
+    hist.mark(true);
     if (rerender) renderEditor();
     schedule();
+    stripThumbSoon();
   }
   function updateSaveBtn() {
     const clean = savedSig && savedSig === sig(cur) && cur.id && lib.some((b) => b.id === cur.id);
@@ -379,9 +621,9 @@ export default function create(ctx) {
   }
 
   async function setNext() {
-    const fr = await frameOf(cur);
-    ctx.setStaged('ai', bannerCue(cur, fr));
-    toast('Banner is Next. Press Present (F5) to show it.', 'ok', 2500);
+    const frs = await framesOf(cur);
+    ctx.setStaged('ai', bannerCue(cur, frs, pg));
+    toast(frs.length > 1 ? 'Banner is Next, from slide ' + (pg + 1) + ' of ' + frs.length + '. Press Present (F5); the arrow keys move through the slides.' : 'Banner is Next. Press Present (F5) to show it.', 'ok', 3000);
   }
   async function saveCurrent(announce) {
     try {
@@ -433,15 +675,15 @@ export default function create(ctx) {
   }
   function startNew(tpl) {
     // Always a fresh banner so editing it cannot change a saved one.
-    cur = newBanner(tpl || 'welcome');
+    setDoc(newBanner(tpl || 'welcome'));
     cur.id = null;
     savedSig = null;
     nameInp.value = '';
     changed(true);
-    if (cur.tpl === 'verse') fetchVerse();
+    if (sl.tpl === 'verse') fetchVerse();
   }
   function edit(b) {
-    cur = clone(b); savedSig = sig(cur);
+    setDoc(clone(b)); savedSig = sig(cur);
     nameInp.value = cur.name || '';
     setView('make');
     changed(true);
@@ -457,40 +699,53 @@ export default function create(ctx) {
         icon('pin'), h('div.grow', h('b', 'Add your church’s name once'), h('div.note', 'Banners fill it in, with the date, sunset time and giving QR code.')),
         h('button.btn.sm.primary', { type: 'button', onclick: () => churchDialog() }, 'Church details'))));
     }
+    const nSlides = slidesOf(cur).length;
+    if (nSlides > 1) editorScroll.appendChild(h('div.row.bn-slide-no', h('b', 'Slide ' + (pg + 1) + ' of ' + nSlides), h('span.note', 'Each slide has its own kind, text and look.')));
+    // Insert: the same as the toolbar, for people who look here first.
+    editorScroll.append(h('h3.bn-h', 'Insert'), h('div.row.wrap.bn-insert',
+      h('button.btn.sm', { type: 'button', onclick: () => editor.insertText() }, icon('textbox'), h('span', 'Text box')),
+      h('button.btn.sm', { type: 'button', onclick: () => editor.insertImage() }, icon('image'), h('span', 'Picture')),
+      h('button.btn.sm', { type: 'button', onclick: () => editor.insertShape('round') }, icon('shape'), h('span', 'Shape')),
+      h('button.btn.sm', { type: 'button', onclick: () => editor.insertLine('arrow') }, icon('arrow'), h('span', 'Arrow')),
+      h('button.btn.sm', { type: 'button', onclick: (ev) => newPageMenu(ev.currentTarget) }, icon('plus'), h('span', 'New slide'))));
     // Template chips
     const tplRow = h('div.row.wrap.bn-tpls');
-    Object.keys(TPL).forEach((k) => tplRow.appendChild(h('button.chip', { type: 'button', 'aria-pressed': String(cur.tpl === k), onclick: () => switchTemplate(k) }, TPL[k].name)));
-    editorScroll.append(h('h3.bn-h', 'Kind of banner'), tplRow);
+    Object.keys(TPL).forEach((k) => tplRow.appendChild(h('button.chip', { type: 'button', 'aria-pressed': String(sl.tpl === k), onclick: () => switchTemplate(k) }, TPL[k].name)));
+    editorScroll.append(h('h3.bn-h', nSlides > 1 ? 'Kind of slide' : 'Kind of banner'), tplRow);
 
     // Fields
     const form = h('div.form.bn-form');
-    const t = TPL[cur.tpl];
-    t.fields.forEach((k) => {
+    const t = TPL[sl.tpl];
+    const free = !!sl.s.free;
+    if (free) {
+      editorScroll.appendChild(h('div.card.bn-free', h('b', 'Text is on the slide'), h('p.note', 'This slide’s words are in text boxes now. Click one on the slide to move or format it; double-click to type. Use Insert → Text box to add more.')));
+    }
+    (free ? [] : t.fields).forEach((k) => {
       const F = FIELD[k];
       let label = F.label;
-      if (cur.tpl === 'verse' && k === 'title') label = 'Verse text';
-      if (cur.tpl === 'verse' && k === 'kicker') label = 'Top line';
-      if (cur.tpl === 'countdown' && k === 'kicker') label = 'Above the clock';
+      if (sl.tpl === 'verse' && k === 'title') label = 'Verse text';
+      if (sl.tpl === 'verse' && k === 'kicker') label = 'Top line';
+      if (sl.tpl === 'countdown' && k === 'kicker') label = 'Above the clock';
       if (k === 'ref') {
-        const refInp = h('input.field', { value: cur.f.ref || '', placeholder: 'e.g. Psalm 23:1 or John 3:16', 'aria-label': 'Bible reference', style: { flex: '1 1 160px', minWidth: '0' },
-          oninput: () => { cur.f.ref = refInp.value; fetchVerseSoon(); } });
-        const trSel = h('select.field', { 'aria-label': 'Translation', onchange: () => { cur.f.tr = trSel.value; fetchVerse(); } });
-        trList.forEach((x) => trSel.appendChild(h('option', { value: x.id, selected: x.id === (cur.f.tr || settings.v.bible.primary) }, x.abbr)));
+        const refInp = h('input.field', { value: sl.f.ref || '', placeholder: 'e.g. Psalm 23:1 or John 3:16', 'aria-label': 'Bible reference', style: { flex: '1 1 160px', minWidth: '0' },
+          oninput: () => { sl.f.ref = refInp.value; fetchVerseSoon(); } });
+        const trSel = h('select.field', { 'aria-label': 'Translation', onchange: () => { sl.f.tr = trSel.value; fetchVerse(); } });
+        trList.forEach((x) => trSel.appendChild(h('option', { value: x.id, selected: x.id === (sl.f.tr || settings.v.bible.primary) }, x.abbr)));
         form.append(h('label', label), h('div.row', refInp, trSel));
         return;
       }
       if (k === 'at') {
-        const tm = h('input.field', { type: 'time', value: cur.f.at || c.service, 'aria-label': 'Service starts at', style: { width: '130px' },
-          onchange: () => { cur.f.at = tm.value; changed(false); } });
-        form.append(h('label', label), h('div.row', tm, h('span.note', 'Counts down on the screen; shows “' + (cur.f.done || 'Welcome') + '” at zero.')));
+        const tm = h('input.field', { type: 'time', value: sl.f.at || c.service, 'aria-label': 'Service starts at', style: { width: '130px' },
+          onchange: () => { sl.f.at = tm.value; changed(false); } });
+        form.append(h('label', label), h('div.row', tm, h('span.note', 'Counts down on the screen; shows “' + (sl.f.done || 'Welcome') + '” at zero.')));
         return;
       }
       const inp = F.multi
         ? h('textarea.field.bn-ta', { rows: F.multi, placeholder: F.ph || '', 'aria-label': label })
         : h('input.field', { placeholder: F.ph || '', 'aria-label': label, style: { width: '100%' } });
-      inp.value = cur.f[k] || '';
-      inp.oninput = () => { cur.f[k] = inp.value; changed(false); };
-      if (cur.tpl === 'verse' && k === 'title') inp.dataset.verse = '1';
+      inp.value = sl.f[k] || '';
+      inp.oninput = () => { sl.f[k] = inp.value; changed(false); };
+      if (sl.tpl === 'verse' && k === 'title') inp.dataset.verse = '1';
       form.append(h('label', label), inp);
     });
     if (t.presets) {
@@ -508,9 +763,9 @@ export default function create(ctx) {
       if (k === 'logo' && !hasLogo) why = 'Add a logo picture in Settings → Screen first.';
       if (k === 'sunset' && !hasLocation()) why = 'Add your church’s location in Church details first.';
       if (k === 'qr' && !safeGivingUrl(c.givingUrl)) why = 'Add a giving link in Church details first.';
-      const on = !!cur.x[k] && !why;
+      const on = !!sl.x[k] && !why;
       ex.appendChild(h('button.chip', { type: 'button', 'aria-pressed': String(on), title: why || title, 'aria-disabled': why ? 'true' : null,
-        onclick: () => { if (why) { toast(why, '', 4000); if (k !== 'logo') churchDialog(); return; } cur.x[k] = !cur.x[k]; changed(true); } },
+        onclick: () => { if (why) { toast(why, '', 4000); if (k !== 'logo') churchDialog(); return; } sl.x[k] = !sl.x[k]; changed(true); } },
       on ? icon('check') : null, label));
     });
     editorScroll.append(h('h3.bn-h', 'Also show'), ex);
@@ -519,44 +774,70 @@ export default function create(ctx) {
     const sw = h('div.row.wrap.bn-swatches');
     Object.keys(PALETTES).forEach((k) => {
       const p = PALETTES[k];
-      sw.appendChild(h('button.swatch', { type: 'button', title: p.name, 'aria-label': 'Colours: ' + p.name, 'aria-pressed': String((cur.s.pal || 'navy') === k),
-        style: { background: 'linear-gradient(135deg,' + p.bg[0] + ',' + p.bg[1] + ')', color: p.accent }, onclick: () => { cur.s.pal = k; changed(true); } }, 'Aa'));
+      sw.appendChild(h('button.swatch', { type: 'button', title: p.name, 'aria-label': 'Colours: ' + p.name, 'aria-pressed': String((sl.s.pal || 'navy') === k),
+        style: { background: 'linear-gradient(135deg,' + p.bg[0] + ',' + p.bg[1] + ')', color: p.accent }, onclick: () => { sl.s.pal = k; changed(true); } }, 'Aa'));
     });
-    const decoSeg = seg(Object.keys(DECOS).map((k) => [k, DECOS[k]]), cur.s.deco || 'none', (v) => { cur.s.deco = v; changed(false); });
-    const posSeg = seg(POS, cur.s.pos || 'center', (v) => { cur.s.pos = v; changed(false); });
-    const fontSeg = seg([['sans', 'Clear sans'], ['serif', 'Serif']], cur.s.font || 'sans', (v) => { cur.s.font = v; changed(false); });
-    const boldBtn = h('button.chip', { type: 'button', 'aria-pressed': String(!!cur.s.textBold), title: 'Bold title', onclick: () => { cur.s.textBold = !cur.s.textBold; changed(false); } }, 'B');
-    const italicBtn = h('button.chip', { type: 'button', 'aria-pressed': String(!!cur.s.textItalic), title: 'Italic title', onclick: () => { cur.s.textItalic = !cur.s.textItalic; changed(false); } }, 'I');
-    const sizeOut = h('span.note', (cur.s.textSize || 100) + '%');
+    const decoSeg = seg(Object.keys(DECOS).map((k) => [k, DECOS[k]]), sl.s.deco || 'none', (v) => { sl.s.deco = v; changed(false); });
+    const posSeg = seg(POS, sl.s.pos || 'center', (v) => { sl.s.pos = v; changed(false); });
+    const fontSeg = seg([['sans', 'Clear sans'], ['serif', 'Serif']], sl.s.font || 'sans', (v) => { sl.s.font = v; changed(false); });
+    const boldBtn = h('button.chip', { type: 'button', 'aria-pressed': String(!!sl.s.textBold), title: 'Bold title', onclick: () => { sl.s.textBold = !sl.s.textBold; changed(false); } }, 'B');
+    const italicBtn = h('button.chip', { type: 'button', 'aria-pressed': String(!!sl.s.textItalic), title: 'Italic title', onclick: () => { sl.s.textItalic = !sl.s.textItalic; changed(false); } }, 'I');
+    const sizeOut = h('span.note', (sl.s.textSize || 100) + '%');
     const sizeR = h('input', { type: 'range', min: 60, max: 160, step: 5, 'aria-label': 'Text size', style: { flex: '1', maxWidth: '180px' },
-      oninput: () => { cur.s.textSize = +sizeR.value; sizeOut.textContent = cur.s.textSize + '%'; changed(false); } });
-    sizeR.value = cur.s.textSize || 100;
-    const spaceOut = h('span.note', (cur.s.textSpacing || 1.24).toFixed(2));
+      oninput: () => { sl.s.textSize = +sizeR.value; sizeOut.textContent = sl.s.textSize + '%'; changed(false); } });
+    sizeR.value = sl.s.textSize || 100;
+    const spaceOut = h('span.note', (sl.s.textSpacing || 1.24).toFixed(2));
     const spaceR = h('input', { type: 'range', min: 1.0, max: 1.8, step: 0.04, 'aria-label': 'Line spacing', style: { flex: '1', maxWidth: '180px' },
-      oninput: () => { cur.s.textSpacing = +spaceR.value; spaceOut.textContent = cur.s.textSpacing.toFixed(2); changed(false); } });
-    spaceR.value = cur.s.textSpacing || 1.24;
+      oninput: () => { sl.s.textSpacing = +spaceR.value; spaceOut.textContent = sl.s.textSpacing.toFixed(2); changed(false); } });
+    spaceR.value = sl.s.textSpacing || 1.24;
+    // Background and text colours of your own (beyond the ready-made colour sets).
+    const colBtn = (label, val, onPick, none) => { const b = h('button.btn.sm.se-cb', { type: 'button', onclick: () => colorPop(b, val, onPick, { none: !!none, noneLabel: 'Use the colour set' }) }, h('span.se-sw', { style: { background: val || 'transparent' } }), label); return b; };
+    const bgKind = !sl.s.bgc ? 'set' : sl.s.bgc2 ? 'grad' : 'solid';
+    const bgRow = h('div.col', { style: { gap: '8px' } },
+      seg([['set', 'Colour set'], ['solid', 'One colour'], ['grad', 'Gradient']], bgKind, (v) => {
+        if (v === 'set') { delete sl.s.bgc; delete sl.s.bgc2; }
+        else { sl.s.bgc = sl.s.bgc || PALETTES[sl.s.pal || 'navy'].bg[0]; if (v === 'grad') sl.s.bgc2 = sl.s.bgc2 || PALETTES[sl.s.pal || 'navy'].bg[1]; else delete sl.s.bgc2; }
+        changed(true);
+      }),
+      bgKind !== 'set' ? h('div.row.wrap',
+        colBtn(bgKind === 'grad' ? 'From' : 'Colour', sl.s.bgc, (c) => { if (c) sl.s.bgc = c; changed(true); }),
+        bgKind === 'grad' ? colBtn('To', sl.s.bgc2, (c) => { if (c) sl.s.bgc2 = c; changed(true); }) : null,
+        bgKind === 'grad' ? (() => { const r = h('input', { type: 'range', min: 0, max: 360, step: 5, 'aria-label': 'Gradient angle', style: { maxWidth: '140px' }, oninput: () => { sl.s.bga = +r.value; changed(false); } }); r.value = sl.s.bga == null ? 135 : sl.s.bga; return h('label.row', h('span.note', 'Angle'), r); })() : null) : null,
+      sl.s.img ? h('p.note', 'A picture is chosen, so it shows instead of the background colour.') : null);
+    const txtCols = h('div.row.wrap',
+      colBtn('Text', sl.s.fgc || PALETTES[sl.s.pal || 'navy'].fg, (c) => { if (c) sl.s.fgc = c; else delete sl.s.fgc; changed(true); }, true),
+      colBtn('Accent (top & bottom lines)', sl.s.acc || PALETTES[sl.s.pal || 'navy'].accent, (c) => { if (c) sl.s.acc = c; else delete sl.s.acc; changed(true); }, true));
     const look = h('div.form.bn-form',
       h('label', 'Colours'), sw,
+      h('label', 'Background'), bgRow,
       h('label', 'Pattern'), decoSeg,
       h('label', 'Picture'), pictureRow(),
-      cur.s.img ? h('label', 'Picture settings') : null, cur.s.img ? pictureSettings() : null,
-      cur.s.img ? h('label', 'Darken picture') : null, cur.s.img ? dimRow() : null,
-      h('label', 'Text position'), posSeg,
-      h('label', 'Font'), fontSeg,
-      h('label', 'Style'), h('div.row', boldBtn, italicBtn),
-      h('label', 'Text size'), h('div.row', sizeR, sizeOut),
-      h('label', 'Line spacing'), h('div.row', spaceR, spaceOut));
+      sl.s.img ? h('label', 'Picture settings') : null, sl.s.img ? pictureSettings() : null,
+      sl.s.img ? h('label', 'Darken picture') : null, sl.s.img ? dimRow() : null,
+      free ? null : h('label', 'Text colours'), free ? null : txtCols,
+      free ? null : h('label', 'Text position'), free ? null : posSeg,
+      free ? null : h('label', 'Font'), free ? null : fontSeg,
+      free ? null : h('label', 'Style'), free ? null : h('div.row', boldBtn, italicBtn),
+      free ? null : h('label', 'Text size'), free ? null : h('div.row', sizeR, sizeOut),
+      free ? null : h('label', 'Line spacing'), free ? null : h('div.row', spaceR, spaceOut));
     editorScroll.append(h('h3.bn-h', 'Look'), look);
-    if (cur.s.img) decoSeg.querySelectorAll('button').forEach((b) => { b.disabled = true; b.title = 'Patterns are for plain colours (a picture is chosen)'; });
+    if (sl.s.img) decoSeg.querySelectorAll('button').forEach((b) => { b.disabled = true; b.title = 'Patterns are for plain colours (a picture is chosen)'; });
   }
 
   function switchTemplate(k) {
-    if (k === cur.tpl) return;
-    const keep = { id: null, name: '', s: Object.assign({}, cur.s) };
+    if (k === sl.tpl) return;
+    const keep = { id: null, name: '', s: Object.assign({}, sl.s) };
     const nb = newBanner(k);
     // Keep a chosen picture; take the new kind's colours only when no picture is used.
     if (keep.s.img) { nb.s.img = keep.s.img; nb.s.dim = keep.s.dim; }
-    cur = nb; savedSig = null; nameInp.value = '';
+    ['bgc', 'bgc2', 'bga'].forEach((x) => { if (keep.s[x] != null) nb.s[x] = keep.s[x]; });
+    nb.els = sl.els || [];
+    editor.deselect();
+    if (!cur.pages.length && !nb.els.length) {
+      // A one-slide banner: another kind starts a new banner, so a saved one is never overwritten by accident.
+      setDoc(Object.assign(newBanner(k), { s: nb.s }), true); cur.id = null; cur.name = ''; savedSig = null; nameInp.value = '';
+      hist.mark(false);
+    } else replaceSlide(nb);
     changed(true);
     if (k === 'verse') fetchVerse();
   }
@@ -575,10 +856,10 @@ export default function create(ctx) {
   }
   async function fetchVerse() {
     const my = ++verseSeq;
-    const v = await versesText(cur.f.ref || '', cur.f.tr).catch(() => null);
+    const v = await versesText(sl.f.ref || '', sl.f.tr).catch(() => null);
     if (my !== verseSeq) return;
     if (!v) { changed(false); return; }
-    cur.f.title = v.text; cur.f.refLabel = v.label;
+    sl.f.title = v.text; sl.f.refLabel = v.label;
     const ta = editorScroll.querySelector('textarea[data-verse]');
     if (ta) ta.value = v.text;
     if (v.many) toast('Long passage: only the first 12 verses fit on one banner.', '', 3500);
@@ -588,7 +869,7 @@ export default function create(ctx) {
   async function presetVerse(ref) {
     const v = await versesText(ref, settings.v.bible.primary).catch(() => null);
     if (!v) { toast('That verse is not in the installed Bible.', 'err'); return; }
-    cur.f.text = '“' + v.text + '”\n' + v.label.replace(/ \([^)]*\)$/, '');
+    sl.f.text = '“' + v.text + '”\n' + v.label.replace(/ \([^)]*\)$/, '');
     changed(true);
   }
 
@@ -606,7 +887,7 @@ export default function create(ctx) {
       aiBtn.disabled = true; const lbl = aiBtn.lastChild.textContent; aiBtn.lastChild.textContent = 'Making picture…';
       try {
         const desc = aiDesc.value.trim();
-        const prompt = (desc || TPL[cur.tpl].mood) + '. A wide 16:9 background photograph for a church projector screen. Calm, reverent and uplifting, soft natural light, ' +
+        const prompt = (desc || TPL[sl.tpl].mood) + '. A wide 16:9 background photograph for a church projector screen. Calm, reverent and uplifting, soft natural light, ' +
           'simple composition with plenty of open space for text. Absolutely no text, letters, words, numbers, logos, signs or watermarks.';
         const flags = ai.flaggedWords(desc);
         if (flags.length) { toast('Please describe a picture suitable for church.', 'err'); return; }
@@ -622,7 +903,7 @@ export default function create(ctx) {
     const gallery = h('div.bn-gallery');
     row.append(h('div.row.wrap',
       h('button.btn.sm', { type: 'button', onclick: () => inp.click() }, icon('upload'), h('span', 'Choose picture…')),
-      cur.s.img ? h('button.btn.sm', { type: 'button', title: 'Remove the picture from this banner only', onclick: () => { cur.s.img = null; changed(true); } }, icon('x'), h('span', 'No picture')) : null,
+      sl.s.img ? h('button.btn.sm', { type: 'button', title: 'Remove the picture from this banner only', onclick: () => { sl.s.img = null; changed(true); } }, icon('x'), h('span', 'No picture')) : null,
       inp), gallery);
     if (ai.hasKey() && ai.canImage()) {
       row.append(h('div.card.bn-aimakers',
@@ -637,19 +918,19 @@ export default function create(ctx) {
   async function fullBannerDialog() {
     const c = church();
     const fr = await frameOf(cur).catch(() => null) || {};
-    const f = cur.f || {};
+    const f = sl.f || {};
     let heading = (fr.title || '').trim();
-    if (cur.tpl === 'countdown') heading = ((f.kicker || 'Our service starts at') + ' ' + (f.at || c.service || '')).trim();
+    if (sl.tpl === 'countdown') heading = ((f.kicker || 'Our service starts at') + ' ' + (f.at || c.service || '')).trim();
     const kicker = (fr.kicker || '').trim();
     openFullBanner({
-      fields: { church: c.name || '', heading, message: fr.text || '', foot: fr.foot || '', extra: kicker && kicker !== c.name && cur.tpl !== 'countdown' ? 'Small top line: "' + kicker + '"' : '', style: TPL[cur.tpl].mood },
+      fields: { church: c.name || '', heading, message: fr.text || '', foot: fr.foot || '', extra: kicker && kicker !== c.name && sl.tpl !== 'countdown' ? 'Small top line: "' + kicker + '"' : '', style: TPL[sl.tpl].mood },
       files: async () => (await db.all('files').catch(() => [])).filter((x) => x.kind === 'banner-bg').sort((a, b) => (b.added || 0) - (a.added || 0)),
       logo: () => logoBlob(),
       storePicture: (blob, name) => storePicture(blob, name, {}),
       onUse: (id) => {
-        const keepQr = !!(cur.x && cur.x.qr);
-        cur = newBanner('picture');
-        cur.s.img = id; cur.s.dim = 0; cur.x = { qr: keepQr }; cur.name = 'AI banner';
+        const keepQr = !!(sl.x && sl.x.qr);
+        setDoc(newBanner('picture'));
+        sl.s.img = id; sl.s.dim = 0; sl.x = { qr: keepQr }; cur.name = 'AI banner';
         savedSig = null; nameInp.value = cur.name;
         changed(true);
         toast('Full AI banner is ready. Set as Next, or Save it.', 'ok', 4000);
@@ -661,11 +942,12 @@ export default function create(ctx) {
     clear(gallery);
     files.forEach((f) => {
       const u = URL.createObjectURL(f.thumb || f.blob);
-      const pick = h('button.bn-pic', { type: 'button', title: 'Use ' + (f.name || 'this picture'), 'aria-pressed': String(cur.s.img === f.id),
+      const pick = h('button.bn-pic', { type: 'button', title: 'Use ' + (f.name || 'this picture'), 'aria-pressed': String(sl.s.img === f.id),
         onclick: () => usePicture(f.id) }, h('img', { src: u, alt: f.name || 'Picture', onload: () => setTimeout(() => URL.revokeObjectURL(u), 1000) }));
       const del = h('button.bn-pic-x', { type: 'button', title: 'Delete this picture from this device', 'aria-label': 'Delete picture ' + (f.name || ''),
         onclick: async () => {
-          const used = lib.filter((b) => b.s && b.s.img === f.id);
+          const usesPic = (b) => slidesOf(b).some((x) => (x.s && x.s.img === f.id) || (x.els || []).some((e) => e.src === f.id));
+          const used = lib.filter(usesPic);
           if (used.length && !(await confirmBox('Delete picture?', 'It is used by ' + used.length + ' saved banner' + (used.length === 1 ? '' : 's') + '. Those banners will keep their own copy.', 'Delete', true))) return;
           // Give each saved banner that uses it its own copy before deleting.
           for (const b of used) {
@@ -673,13 +955,13 @@ export default function create(ctx) {
               const rec = await db.get('files', f.id).catch(() => null);
               if (rec && rec.blob) {
                 const newId = await storePicture(rec.blob, (rec.name || 'Picture') + ' (kept)');
-                b.s.img = newId;
+                slidesOf(b).forEach((x) => { if (x.s && x.s.img === f.id) x.s.img = newId; (x.els || []).forEach((e) => { if (e.src === f.id) e.src = newId; }); });
               }
             } catch (e) { /* keep the id if copy fails */ }
           }
           if (used.length) await saveLib();
           await db.del('files', f.id); blobCache.delete(f.id);
-          if (cur.s.img === f.id) cur.s.img = null;
+          slidesOf(cur).forEach((x) => { if (x.s && x.s.img === f.id) x.s.img = null; (x.els || []).forEach((e) => { if (e.src === f.id) e.src = ''; }); });
           changed(true);
           fillGallery(gallery);
         } }, icon('x'));
@@ -688,26 +970,26 @@ export default function create(ctx) {
   }
   async function usePicture(id) {
     const rec = await db.get('files', id).catch(() => null);
-    cur.s.img = id;
-    cur.s.dim = autoDim(rec && rec.meta && rec.meta.lum);
+    sl.s.img = id;
+    sl.s.dim = autoDim(rec && rec.meta && rec.meta.lum);
     changed(true);
   }
   function dimRow() {
-    const out = h('span.note', Math.round((cur.s.dim == null ? 0.45 : cur.s.dim) * 100) + '%');
+    const out = h('span.note', Math.round((sl.s.dim == null ? 0.45 : sl.s.dim) * 100) + '%');
     const r = h('input', { type: 'range', min: 0, max: 0.85, step: 0.05, 'aria-label': 'Darken picture', style: { flex: '1', maxWidth: '240px' },
-      oninput: () => { cur.s.dim = +r.value; out.textContent = Math.round(cur.s.dim * 100) + '%'; changed(false); } });
-    r.value = cur.s.dim == null ? 0.45 : cur.s.dim;
+      oninput: () => { sl.s.dim = +r.value; out.textContent = Math.round(sl.s.dim * 100) + '%'; changed(false); } });
+    r.value = sl.s.dim == null ? 0.45 : sl.s.dim;
     return h('div.row', r, out);
   }
 
   function pictureSettings() {
-    if (!cur.s.img) return null;
-    const fitSeg = seg([['cover', 'Fill'], ['contain', 'Fit'], ['crop', 'Crop']], cur.s.imgFit || 'cover', (v) => { cur.s.imgFit = v; changed(false); });
-    const posSeg = seg([['center', 'Centre'], ['top', 'Top'], ['bottom', 'Bottom'], ['left', 'Left'], ['right', 'Right']], cur.s.imgPos || 'center', (v) => { cur.s.imgPos = v; changed(false); });
-    const zoomOut = h('span.note', (cur.s.imgZoom || 100) + '%');
+    if (!sl.s.img) return null;
+    const fitSeg = seg([['cover', 'Fill'], ['contain', 'Fit'], ['crop', 'Crop']], sl.s.imgFit || 'cover', (v) => { sl.s.imgFit = v; changed(false); });
+    const posSeg = seg([['center', 'Centre'], ['top', 'Top'], ['bottom', 'Bottom'], ['left', 'Left'], ['right', 'Right']], sl.s.imgPos || 'center', (v) => { sl.s.imgPos = v; changed(false); });
+    const zoomOut = h('span.note', (sl.s.imgZoom || 100) + '%');
     const zoom = h('input', { type: 'range', min: 80, max: 200, step: 5, 'aria-label': 'Zoom picture', style: { flex: '1', maxWidth: '200px' },
-      oninput: () => { cur.s.imgZoom = +zoom.value; zoomOut.textContent = cur.s.imgZoom + '%'; if ((cur.s.imgFit || 'cover') === 'crop') changed(false); } });
-    zoom.value = cur.s.imgZoom || 100;
+      oninput: () => { sl.s.imgZoom = +zoom.value; zoomOut.textContent = sl.s.imgZoom + '%'; if ((sl.s.imgFit || 'cover') === 'crop') changed(false); } });
+    zoom.value = sl.s.imgZoom || 100;
     return h('div.col', { style: { gap: '8px' } },
       h('div.row.wrap', h('span.note', 'How the picture sits'), fitSeg),
       h('div.row.wrap', h('span.note', 'Position'), posSeg),
@@ -800,9 +1082,9 @@ export default function create(ctx) {
         mini(frameOf(b)),
         h('div.bn-card-b',
           h('div.bn-card-t.trunc', nameOf(b)),
-          h('div.note', TPL[b.tpl] ? TPL[b.tpl].name : 'Banner', gName ? ' · ' + gName : '', b.updated ? ' · ' + new Date(b.updated).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : ''),
+          h('div.note', TPL[b.tpl] ? TPL[b.tpl].name : 'Banner', slidesOf(b).length > 1 ? ' · ' + slidesOf(b).length + ' slides' : '', gName ? ' · ' + gName : '', b.updated ? ' · ' + new Date(b.updated).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : ''),
           h('div.row.bn-card-a',
-            h('button.btn.sm.primary', { type: 'button', onclick: async () => { ctx.setStaged('ai', bannerCue(b, await frameOf(b))); toast('“' + nameOf(b) + '” is Next. Press Present (F5).', 'ok', 2500); } }, icon('next'), h('span', 'Set as Next')),
+            h('button.btn.sm.primary', { type: 'button', onclick: async () => { ctx.setStaged('ai', bannerCue(b, await framesOf(b))); toast('“' + nameOf(b) + '” is Next. Press Present (F5).', 'ok', 2500); } }, icon('next'), h('span', 'Set as Next')),
             h('button.btn.sm', { type: 'button', onclick: () => edit(b) }, icon('edit'), h('span', 'Edit')),
             more)));
       grid.appendChild(card);
@@ -828,7 +1110,8 @@ export default function create(ctx) {
     for (const it of L.items) {
       if (it.t === 'banner') {
         const b = lib.find((x) => x.id === it.id); if (!b) continue;
-        frames.push(await frameOf(b)); labels.push(short(nameOf(b), 18));
+        const bf = await framesOf(b);
+        bf.forEach((f, i) => { frames.push(f); labels.push(short(nameOf(b), 16) + (bf.length > 1 ? ' ' + (i + 1) : '')); });
       } else if (it.t === 'deck') {
         const d = dl.find((x) => x.id === it.id); if (!d) continue;
         const fs = await deckFrames(d);
@@ -843,7 +1126,7 @@ export default function create(ctx) {
     if (at) frames.forEach((f) => { if (!(f.kind === 'banner' && f.countdown)) f.clock = { at, label: 'Service starts in' }; });
     if (at && L.end) {
       const b = lib.find((x) => x.id === L.end);
-      if (b) { frames.push(await frameOf(b)); labels.push('At start: ' + short(nameOf(b), 14)); end = len; }
+      if (b) { frames.push(await frameOf(b)); labels.push('At start: ' + short(nameOf(b), 14)); end = frames.length - 1; }
     }
     const title = kind === 'ann' ? 'Announcements' : 'Preservice';
     return { id: (kind === 'ann' ? 'ann:' : 'loop:') + Date.now(), tab: 'ai', title, sub: len + ' slide' + (len === 1 ? '' : 's') + ' · every ' + secs + ' s',
@@ -1060,7 +1343,7 @@ export default function create(ctx) {
           ctx.setStaged('ai', cue); toast(cue.title + ' is Next. Press Present (F5).', 'ok', 2500);
         } }, icon('next'), h('span', 'Next')),
         h('button.btn.sm', { type: 'button', title: 'Make a banner with this verse', onclick: () => {
-          cur = newBanner('verse'); cur.f.ref = r; cur.f.tr = tr; savedSig = null; nameInp.value = '';
+          setDoc(newBanner('verse')); sl.f.ref = r; sl.f.tr = tr; savedSig = null; nameInp.value = '';
           setView('make'); changed(true); fetchVerse();
         } }, icon('banner'), h('span', 'Banner'))));
   }
@@ -1176,7 +1459,7 @@ export default function create(ctx) {
         } }, icon('next'), h('span', 'Set as Next')),
         h('button.btn', { type: 'button', title: 'Start a banner from the first slide', onclick: () => {
           const s = slides[0]; if (!s) return;
-          cur = newBanner('blank'); cur.f.title = s.title; cur.f.text = s.text; savedSig = null; nameInp.value = '';
+          setDoc(newBanner('blank')); sl.f.title = s.title; sl.f.text = s.text; savedSig = null; nameInp.value = '';
           setView('make'); changed(true);
         } }, icon('banner'), h('span', 'Make a banner')))].filter(Boolean));
   }
@@ -1339,7 +1622,7 @@ export default function create(ctx) {
         h('button.btn', { type: 'button', onclick: async () => { const b = saveAsBanner(); (await ctx.tab('plan')).addItem({ tab: 'ai', banner: b.id, label: 'Answer: ' + short(question, 40) }); } }, icon('plan'), h('span', 'Add to plan')),
         h('button.btn', { type: 'button', onclick: () => { saveAsBanner(); toast('Saved in Banners → Saved.', 'ok', 2500); } }, icon('save'), h('span', 'Save')),
         h('button.btn', { type: 'button', title: 'Open it in the banner editor to change colours and text position', onclick: () => {
-          cur = clone(ab); cur.id = null; savedSig = null; nameInp.value = ''; setView('make'); changed(true);
+          setDoc(clone(ab)); cur.id = null; savedSig = null; nameInp.value = ''; setView('make'); changed(true);
         } }, icon('banner'), h('span', 'Edit as banner')),
         h('button.btn', { type: 'button', onclick: () => askAi() }, icon('sparkle'), h('span', 'Ask again'))),
       dimInfo);
@@ -1355,14 +1638,14 @@ export default function create(ctx) {
       await ready;
       if (blob) {
         const id = await storePicture(blob, (name || 'Slide') + '.jpg');
-        cur = newBanner('picture');
-        cur.s.img = id; cur.s.dim = 0; cur.name = name || 'Slide banner';
+        setDoc(newBanner('picture'));
+        sl.s.img = id; sl.s.dim = 0; cur.name = name || 'Slide banner';
       } else {
-        cur = newBanner('announce');
-        cur.f.kicker = ''; cur.f.foot = '';
-        cur.f.title = String(title || '').slice(0, 120);
-        cur.f.text = String(text || '').slice(0, 400);
-        cur.name = name || cur.f.title || 'Slide banner';
+        setDoc(newBanner('announce'));
+        sl.f.kicker = ''; sl.f.foot = '';
+        sl.f.title = String(title || '').slice(0, 120);
+        sl.f.text = String(text || '').slice(0, 400);
+        cur.name = name || sl.f.title || 'Slide banner';
       }
       savedSig = null; nameInp.value = cur.name;
       setView('make');
@@ -1370,6 +1653,9 @@ export default function create(ctx) {
       return cur;
     },
     onShow() { setPreviewAspect(); if (view === 'make') refreshPreview(); },
+    onHide() { if (editor) editor.deselect(); },
+    /** For tests and troubleshooting: the banner being edited. */
+    _state: () => ({ cur, pg, sel: editor.selection(), undo: hist.i, editing: editor.isEditing() }),
     /** Open a plan item: {banner} | {loop} | {topic, tr}. Returns the staged cue. */
     async open(item) {
       await ready;
@@ -1377,7 +1663,7 @@ export default function create(ctx) {
       if (item.banner) {
         const b = lib.find((x) => x.id === item.banner);
         if (!b) { toast('That banner is no longer on this device.', 'err'); return null; }
-        cue = bannerCue(b, await frameOf(b));
+        cue = bannerCue(b, await framesOf(b));
       } else if (item.loop) {
         const kind = (item.label || '').toLowerCase().includes('announce') ? 'ann' : 'pre';
         cue = await loopCue(kind);
@@ -1417,15 +1703,17 @@ export default function create(ctx) {
     if (live.style) stage.applyStyle(live.style);
     setPreviewAspect();
     nameInp.value = cur.name || '';
+    hist.reset();
     renderEditor();
+    renderStrip();
     updateSaveBtn();
     setView(view);
   })();
   settings.on('change:church', (path) => {
     // A church name added after starting a banner fills the empty lines that would have shown it.
     if (path === 'church.name') {
-      const c = church(), d = TPL[cur.tpl].d(c);
-      Object.keys(d).forEach((k) => { if (!cur.f[k] && d[k] && c.name && d[k].includes(c.name)) cur.f[k] = d[k]; });
+      const c = church(), d = TPL[sl.tpl].d(c);
+      Object.keys(d).forEach((k) => { if (!sl.f[k] && d[k] && c.name && d[k].includes(c.name)) sl.f[k] = d[k]; });
       saveDraft();
     }
     if (view === 'make') { renderEditor(); schedule(); }

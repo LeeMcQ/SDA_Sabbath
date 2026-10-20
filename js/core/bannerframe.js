@@ -7,6 +7,7 @@
 //         qrLabel?, mark?:bool, countdown?:{at:epochMs, done:'Welcome'}}
 // Any frame may also carry clock:{at, label} for a small "Service starts in 4:32" corner.
 import { esc } from './util.js';
+import { elsLayer, finishEls, okColor } from './slideels.js';
 
 export const PALETTES = {
   navy: { name: 'Navy', bg: ['#1f4068', '#0b1729'], fg: '#ffffff', accent: '#f2cf7a', dark: true },
@@ -71,8 +72,8 @@ export function bannerEl(f, urlFor) {
   const el = document.createElement('div');
   el.className = 'f-banner pos-' + (['left', 'right', 'low', 'top'].includes(f.pos) ? f.pos : 'center') + (f.font === 'serif' ? ' serif' : '') +
     (dark ? ' dark' : ' light') + (hasImg ? ' has-img' : '') + ' tpl-' + String(f.tpl || 'blank').replace(/[^a-z]/g, '');
-  el.style.setProperty('--b-fg', pal.fg);
-  el.style.setProperty('--b-accent', pal.accent);
+  el.style.setProperty('--b-fg', okColor(f.fgc) || pal.fg);
+  el.style.setProperty('--b-accent', okColor(f.acc) || pal.accent);
   if (f.textSize) el.style.setProperty('--bn-size', (f.textSize / 100));
   if (f.textBold) el.classList.add('bold-title');
   if (f.textItalic) el.classList.add('italic-title');
@@ -86,6 +87,12 @@ export function bannerEl(f, urlFor) {
     bg.style.backgroundSize = fit === 'contain' ? 'contain' : fit === 'crop' ? (f.imgZoom || 100) + '%' : 'cover';
     bg.style.backgroundPosition = f.imgPos || 'center';
     bg.style.backgroundRepeat = 'no-repeat';
+  }
+  else if (okColor(f.bgc)) {
+    // Custom background: one colour, or a two-colour gradient at any angle.
+    const c1 = okColor(f.bgc), c2 = okColor(f.bgc2);
+    const ang = isFinite(+f.bga) ? +f.bga : 135;
+    bg.style.background = (deco ? deco + ', ' : '') + (c2 ? 'linear-gradient(' + ang + 'deg, ' + c1 + ' 0%, ' + c2 + ' 100%)' : c1);
   }
   else bg.style.background = (deco ? deco + ', ' : '') + 'linear-gradient(135deg, ' + pal.bg[0] + ' 0%, ' + pal.bg[1] + ' 100%)';
   el.appendChild(bg);
@@ -120,6 +127,8 @@ export function bannerEl(f, urlFor) {
     (f.mark ? '<div class="fb-mark">SDA Sabbath</div>' : '');
   if (qr) el.insertAdjacentHTML('beforeend', qr);
   el.appendChild(inner);
+  // Free elements (text boxes, shapes, lines, pictures) sit above the template's own text.
+  if (Array.isArray(f.els) && f.els.length) el.appendChild(elsLayer(f.els, urlFor, { noAnim: !!f.noAnim }));
   // Apply custom layout (drag/resize from the editor).
   if (f.layout) {
     Object.entries(f.layout).forEach(([part, box]) => {
@@ -146,5 +155,6 @@ export function bannerEl(f, urlFor) {
   const t = (f.title || '').trim(), x = (f.text || '').trim();
   // Short headings may grow large; a heading with a message, or a long verse, stays calmer.
   const maxF = !t ? 130 : x ? 175 : t.length < 40 ? 230 : 170;
-  return { el, maxF, stop };
+  const after = () => { const l = el.querySelector('.fe-layer'); if (l) finishEls(l); };
+  return { el, maxF, stop, after };
 }

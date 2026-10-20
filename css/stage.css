@@ -174,3 +174,34 @@
 .stage .caption:empty { display: none; }
 
 @media (prefers-reduced-motion: reduce) { .stage .layer, .stage .blackout, .stage .logo { transition: none; } }
+
+/* Free slide elements on banners (text boxes, shapes, lines, pictures) */
+.fe-layer { position: absolute; inset: 0; z-index: 3; pointer-events: none; text-shadow: none; }
+.fe { position: absolute; box-sizing: border-box; transform-origin: 50% 50%; }
+.fe-bg, .fe-img { position: absolute; inset: 0; box-sizing: border-box; }
+.fe-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.fe-box { position: relative; box-sizing: border-box; width: 100%; height: 100%; display: flex; flex-direction: column; overflow: visible; }
+.fe-text.grow .fe-box, .fe[style*="height: auto"] .fe-box { height: auto; }
+.fe-box.va-top { justify-content: flex-start; } .fe-box.va-middle { justify-content: center; } .fe-box.va-bottom { justify-content: flex-end; }
+.fe-box[data-shrink] { overflow: hidden; }
+.fe-tx { overflow-wrap: break-word; white-space: pre-wrap; outline: none; min-height: 1em; }
+.fe-tx > div, .fe-tx > p { margin: 0; }
+.fe-tx ul, .fe-tx ol { margin: 0; padding-left: 1.3em; }
+.fe-tx li { margin: 0; }
+.fe-img { overflow: hidden; }
+.fe-img img { width: 100%; height: 100%; display: block; }
+.fe-img.empty { background: repeating-linear-gradient(45deg, rgba(255,255,255,.12) 0 18px, rgba(255,255,255,.04) 18px 36px); }
+.fe-line { pointer-events: none; }
+.fe-line-svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; }
+/* Entry animations */
+.fe-an { animation-fill-mode: both; animation-timing-function: cubic-bezier(.2,.7,.2,1); }
+.fe-an-fade { animation-name: fe-fade; } .fe-an-zoom { animation-name: fe-zoom; } .fe-an-up { animation-name: fe-up; }
+.fe-an-down { animation-name: fe-down; } .fe-an-left { animation-name: fe-left; } .fe-an-right { animation-name: fe-right; } .fe-an-spin { animation-name: fe-spin; }
+@keyframes fe-fade { from { opacity: 0; } }
+@keyframes fe-zoom { from { opacity: 0; scale: .6; } }
+@keyframes fe-up { from { opacity: 0; translate: 0 200px; } }
+@keyframes fe-down { from { opacity: 0; translate: 0 -200px; } }
+@keyframes fe-left { from { opacity: 0; translate: 600px 0; } }
+@keyframes fe-right { from { opacity: 0; translate: -600px 0; } }
+@keyframes fe-spin { from { opacity: 0; rotate: -180deg; scale: .4; } }
+@media (prefers-reduced-motion: reduce) { .fe-an { animation: none !important; } }

@@ -131,6 +131,7 @@ export async function renderFrame(layer, frame, opts = {}) {
     layer.appendChild(b.el);
     const body = b.el.querySelector('.f-body');
     if (body) fitBody(body, 44, b.maxF);
+    if (b.after) b.after();
     if (b.stop) mediaCleanup = b.stop;
     await decodeImgs(b.el);
   } else if (opts.media && !opts.placeholderOnly && (k === 'video' || k === 'stream' || k === 'web')) {
