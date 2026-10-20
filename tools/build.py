@@ -51,6 +51,17 @@ def check_syntax():
     if not node:
         return
     bad = []
+    # sw.js and every app file: leftover merge-conflict markers break the app (and the offline service worker).
+    for base, _, names in os.walk(ROOT):
+        if any(x in base for x in ('.git', 'node_modules', 'vendor', 'companion')): continue
+        for n in names:
+            if n.endswith(('.js', '.css', '.html', '.json')):
+                try: txt = open(os.path.join(base, n), encoding='utf-8').read()
+                except Exception: continue
+                if re.search(r'^(<<<<<<< |>>>>>>> )', txt, re.M): bad.append(os.path.join(base, n) + ': merge conflict markers')
+    sw = os.path.join(ROOT, 'sw.js')
+    r = subprocess.run([node, '--check', sw], capture_output=True, text=True)
+    if r.returncode: bad.append('sw.js: ' + r.stderr.strip().splitlines()[0])
     for base, _, names in os.walk(os.path.join(ROOT, 'js')):
         for n in names:
             if n.endswith('.js'):

@@ -1,10 +1,6 @@
 // SDA Sabbath service worker: installs the whole app (Bibles, hymns, fonts, pdf.js) in one go
 // so it runs with no internet. VERSION is rewritten by tools/build.py on every build.
-<<<<<<< HEAD
-const VERSION = 'f6f0dff1ad15';
-=======
-const VERSION = '245db2ba1539';
->>>>>>> 842b9893eeef668eaede94f604e758aa943b55eb
+const VERSION = '343aa73f8ad9';
 const CACHE = 'selah-' + VERSION; // prefix kept from the first name so old caches are found and removed
 const NETWORK_ONLY = /\/(api|media|ws)(\/|$)/;
 
