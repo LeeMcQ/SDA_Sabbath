@@ -787,9 +787,13 @@ export default function create(ctx) {
         const bs = (await db.get('kv', 'banners').catch(() => null)) || [];
         if (my !== seq) return;
         if (!lq || 'pre-service loop'.includes(lq)) list.appendChild(row('loop', 'Pre-service loop', 'Your banners and announcement slides taking turns', { tab: 'ai', loop: true, label: 'Pre-service loop' }));
-        const shown = (Array.isArray(bs) ? bs : []).filter((b) => b && (!lq || low(b.name || (b.f && b.f.title)).includes(lq)));
+        const grs = (await db.get('kv', 'banner-groups').catch(() => null)) || [];
+        const gname = (b) => { const g = Array.isArray(grs) && b.group && grs.find((x) => x && x.id === b.group); return g ? g.name : ''; };
+        const subOf = (b) => ['Banner', gname(b), Array.isArray(b.pages) && b.pages.length ? (b.pages.length + 1) + ' slides' : ''].filter(Boolean).join(' · ');
+        const shown = (Array.isArray(bs) ? bs : []).filter((b) => b && (!lq || low((b.name || (b.f && b.f.title) || '') + ' ' + gname(b)).includes(lq)))
+          .sort((a, b) => gname(a).localeCompare(gname(b)) || String(a.name || '').localeCompare(String(b.name || '')));
         if (!shown.length && Array.isArray(bs) && !bs.length) list.appendChild(h('p.note', 'No saved banners yet. Make one in the Banners tab and press Save.'));
-        shown.forEach((b) => { const nm = b.name || (b.f && b.f.title) || 'Banner'; list.appendChild(row('banner', nm, 'Banner', { tab: 'ai', banner: b.id, label: 'Banner: ' + nm })); });
+        shown.forEach((b) => { const nm = b.name || (b.f && b.f.title) || 'Banner'; list.appendChild(row('banner', nm, subOf(b), { tab: 'ai', banner: b.id, label: 'Banner: ' + nm })); });
       } else if (kind === 'web') {
         search.placeholder = 'Paste a link: https://…';
         const ok = /^https?:\/\/\S+\.\S+/i.test(q);

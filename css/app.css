@@ -603,14 +603,26 @@ google-cast-launcher, .cast-button, [aria-label*="Cast"], button[title*="Cast"],
 .bn-pic-x { position: absolute; top: -7px; right: -7px; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); padding: 0; display: flex; align-items: center; justify-content: center; }
 .bn-pic-x svg.i { width: 12px; height: 12px; }
 .bn-lib { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
-.bn-lib-bar .field.sm { max-width: 180px; }
+.bn-lib-bar { gap: 8px; margin-bottom: 12px; }
+.bn-lib-bar .field.sm { max-width: 220px; }
+.bn-lib-bar input[type=search] { flex: 1 1 200px; max-width: 320px; }
 .bn-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; display: flex; flex-direction: column; }
 .bn-thumb { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; overflow: hidden; flex: none; }
 .bn-thumb > .stage-host { position: absolute; inset: 0; }
 .bn-thumb-ic { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--faint); }
 .bn-card-b { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .bn-card-t { font-weight: 700; }
-.bn-card-a { margin-top: 6px; flex-wrap: wrap; }
+.bn-card-a { margin-top: 6px; flex-wrap: nowrap; gap: 6px; }
+.bn-card-a .btn.primary { flex: 1 1 auto; min-width: 0; justify-content: center; }
+.bn-card-a .btn.icon { flex: none; }
+.bn-card-a .btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bn-thumb-open { cursor: pointer; }
+.bn-thumb-open:hover { outline: 2px solid #4a86e8; outline-offset: -2px; }
+.bn-thumb-n { position: absolute; right: 6px; bottom: 6px; z-index: 2; display: flex; align-items: center; gap: 3px; font-size: 11px; background: rgba(0,0,0,.7); color: #fff; padding: 2px 6px; border-radius: 4px; }
+.bn-thumb-n svg.i { width: 12px; height: 12px; }
+.bn-card-g .chip { font-size: 11px; padding: 1px 8px; min-height: 0; gap: 4px; }
+.bn-card-g svg.i { width: 12px; height: 12px; }
+.bn-group-row { gap: 6px; } .bn-group-row .field { flex: 1 1 auto; max-width: 260px; }
 .bn-intro { max-width: 720px; margin-bottom: 12px; }
 .bn-loop-list { border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; margin-bottom: 10px; max-width: 760px; }
 .bn-loop-row .bn-thumb { width: 96px; border-radius: var(--r-sm); }

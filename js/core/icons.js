@@ -1,5 +1,6 @@
 // Inline stroke icons (24×24). Kept as path data so no icon font or sprite request is needed.
 const P = {
+  folder: '<path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/>',
   undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
   redo: '<path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>',
   textbox: '<rect x="3" y="4" width="18" height="16" rx="1.5" stroke-dasharray="3 2"/><path d="M8 9h8M12 9v7"/>',

@@ -75,7 +75,7 @@ function newSlide(tpl = 'blank') {
   return { tpl: b.tpl, f: b.f, x: b.x, s: b.s, els: [] };
 }
 const clone = (o) => JSON.parse(JSON.stringify(o));
-const sig = (b) => JSON.stringify([b.name, b.tpl, b.f, b.x, b.s, b.els || [], b.pages || []]);
+const sig = (b) => JSON.stringify([b.name, b.group || '', b.tpl, b.f, b.x, b.s, b.els || [], b.pages || []]);
 const slidesOf = (b) => [b].concat(Array.isArray(b.pages) ? b.pages : []);
 const short = (s, n = 48) => { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
 const firstText = (b) => { const e = (b.els || []).find((x) => (x.t === 'text' || x.t === 'shape') && htmlText(x.html)); return e ? htmlText(e.html).split('\n')[0] : ''; };
@@ -343,6 +343,20 @@ export default function create(ctx) {
   const saveBtn = h('button.btn', { type: 'button', onclick: () => saveCurrent(true) }, icon('save'), h('span', 'Save'));
   const nextBtn = h('button.btn.primary', { type: 'button', title: 'Put this banner on the green Next screen (from the slide you are on). Press Present (F5) to show it.', onclick: () => setNext() }, icon('next'), h('span', 'Set as Next'));
   const editorScroll = h('div.scroll.pad.bn-editor');
+  // Group of the banner being edited (it is saved with the banner).
+  const groupSel = h('select.field.sm', { 'aria-label': 'Group for this banner', onchange: async () => {
+    if (groupSel.value === '+') { const g = await newGroup(); groupSel.value = ''; if (g) { cur.group = g.id; } renderGroupSel(); changed(false); return; }
+    if (groupSel.value) cur.group = groupSel.value; else delete cur.group;
+    changed(false);
+  } });
+  const groupRow = h('label.row.bn-group-row', icon('folder'), h('span.note', 'Group'), groupSel);
+  function renderGroupSel() {
+    clear(groupSel);
+    groupSel.appendChild(h('option', { value: '' }, '(No group)'));
+    groups.forEach((g) => groupSel.appendChild(h('option', { value: g.id }, g.name)));
+    groupSel.appendChild(h('option', { value: '+' }, 'New group…'));
+    groupSel.value = cur.group && groups.some((g) => g.id === cur.group) ? cur.group : '';
+  }
   const formatScroll = h('div.scroll.pad.bn-format');
   const strip = h('div.bn-strip', { role: 'listbox', 'aria-label': 'Slides of this banner' });
   const wideBtn = h('button.btn.sm', { type: 'button', title: 'Bigger slide: make the editing area wider', 'aria-pressed': 'false', onclick: () => setWide(!wide) }, icon('wide'), h('span.hide-sm', 'Wide'));
@@ -369,6 +383,7 @@ export default function create(ctx) {
         h('button.btn', { type: 'button', title: 'Add to the current Service loop (Preservice or Announcements)', onclick: () => addCurToLoop() }, icon('loop'), h('span', 'Add to loop'))),
       h('div.row', nameInp,
         h('button.btn.sm', { type: 'button', title: 'Start a new banner', onclick: () => startNew() }, icon('plus'), h('span', 'New'))),
+      groupRow,
       musicChip(ctx, () => setView('music')),
       h('p.note', 'Click anything on the slide to change it; double-click text to type. Insert text boxes, pictures, shapes and lines from the toolbar. Right-click for more. Set as Next puts the banner on the green Next screen; Present (F5) shows it.')));
   const makeSplit = h('div.split.banner-split', editPane, previewPane);
@@ -390,6 +405,7 @@ export default function create(ctx) {
     if (editor) editor.deselect();
     if (!keepHistory) hist.reset();
     if (stripReady) renderStrip();
+    renderGroupSel();
   }
   /** Replace the slide being edited (a new kind of banner for this slide only). */
   function replaceSlide(nb) {
@@ -632,6 +648,7 @@ export default function create(ctx) {
       cur.updated = now;
       if (!cur.name) cur.name = nameOf(cur);
       nameInp.value = cur.name;
+      if (cur.group && !groups.some((g) => g.id === cur.group)) delete cur.group;
       const copy = clone(cur);
       // Give this banner its own picture copy so later edits don't change saved ones.
       if (copy.s && copy.s.img) {
@@ -677,6 +694,7 @@ export default function create(ctx) {
     // Always a fresh banner so editing it cannot change a saved one.
     setDoc(newBanner(tpl || 'welcome'));
     cur.id = null;
+    if (libFilter && libFilter !== '-' && groups.some((g) => g.id === libFilter)) { cur.group = libFilter; renderGroupSel(); }
     savedSig = null;
     nameInp.value = '';
     changed(true);
@@ -1012,80 +1030,120 @@ export default function create(ctx) {
     });
     return box;
   }
+  /** Every word on every slide of a banner, for searching the Saved list. */
+  function bannerWords(b) {
+    const parts = [nameOf(b)];
+    slidesOf(b).forEach((x) => {
+      parts.push((TPL[x.tpl] || TPL.blank).name);
+      Object.values(x.f || {}).forEach((v) => { if (typeof v === 'string') parts.push(v); });
+      (x.els || []).forEach((e) => { if (e.html) parts.push(htmlText(e.html)); });
+    });
+    const g = b.group && groups.find((x) => x.id === b.group);
+    if (g) parts.push(g.name);
+    return normalize(parts.join(' ')).toLowerCase();
+  }
+  /** Put a saved banner in a group ('' = none); the banner open in the editor follows. */
+  async function setGroup(b, gid) {
+    if (gid) b.group = gid; else delete b.group;
+    b.updated = Date.now();
+    if (cur.id === b.id) { if (gid) cur.group = gid; else delete cur.group; savedSig = sig(cur); saveDraft(); }
+    await saveLib(); renderLibrary(); renderGroupSel();
+  }
+  async function newGroup(name) {
+    const n = name != null ? name : await promptBox('New group', 'Name, e.g. Youth, Announcements, Christmas', '');
+    if (!n || !n.trim()) return null;
+    const ex = groups.find((g) => g.name.toLowerCase() === n.trim().toLowerCase());
+    if (ex) return ex;
+    const g = { id: 'g-' + uid(), name: n.trim().slice(0, 60) };
+    groups.push(g); await saveGroups(); renderGroupSel();
+    return g;
+  }
+  function addToLoopList(L, saveL, b, label) {
+    if (!L.items.some((it) => it.t === 'banner' && it.id === b.id)) { L.items.push({ t: 'banner', id: b.id }); saveL(); toast('Added to ' + label + '.', 'ok'); }
+    else toast('Already in ' + label + '.', '', 2500);
+  }
   function renderLibrary() {
     destroyMinis();
     const box = views.library;
     clear(box);
-    // Toolbar: search, group filter, new group
-    const qIn = h('input.field.sm', { type: 'search', placeholder: 'Search banners…', value: libQuery, 'aria-label': 'Search banners',
-      oninput: (e) => { libQuery = e.target.value; renderLibrary(); } });
+    if (libFilter && libFilter !== '-' && !groups.some((g) => g.id === libFilter)) libFilter = '';
+    // Toolbar: search, group filter, groups
+    const qIn = h('input.field.sm', { type: 'search', placeholder: 'Search banners and their words…', value: libQuery, 'aria-label': 'Search banners',
+      oninput: (e) => { libQuery = e.target.value; renderLibrary(); const n = views.library.querySelector('input[type=search]'); if (n) { n.focus(); n.setSelectionRange(n.value.length, n.value.length); } } });
+    const count = (gid) => lib.filter((b) => (gid === '-' ? !b.group || !groups.some((g) => g.id === b.group) : b.group === gid)).length;
     const gSel = h('select.field.sm', { 'aria-label': 'Group', onchange: (e) => { libFilter = e.target.value; renderLibrary(); } },
-      h('option', { value: '' }, 'All groups'));
-    groups.forEach((g) => gSel.appendChild(h('option', { value: g.id }, g.name)));
+      h('option', { value: '' }, 'All groups (' + lib.length + ')'));
+    groups.forEach((g) => gSel.appendChild(h('option', { value: g.id }, g.name + ' (' + count(g.id) + ')')));
+    if (groups.length) gSel.appendChild(h('option', { value: '-' }, 'Not in a group (' + count('-') + ')'));
     gSel.value = libFilter;
-    const newGrp = h('button.btn.sm', { type: 'button', title: 'Create a group', onclick: async () => {
-      const n = await promptBox('New group', 'Name', '');
+    const newGrp = h('button.btn.sm', { type: 'button', title: 'Create a group', onclick: async () => { const g = await newGroup(); if (g) { libFilter = g.id; renderLibrary(); } } }, icon('plus'), h('span', 'New group'));
+    const g = libFilter && libFilter !== '-' ? groups.find((x) => x.id === libFilter) : null;
+    const renGrp = g ? h('button.btn.sm', { type: 'button', title: 'Rename this group', onclick: async () => {
+      const n = await promptBox('Rename group', 'Name', g.name);
       if (!n || !n.trim()) return;
-      groups.push({ id: 'g-' + uid(), name: n.trim() });
-      await saveGroups(); renderLibrary();
-    } }, icon('plus'), h('span', 'New group'));
-    const delGrp = libFilter ? h('button.btn.sm', { type: 'button', title: 'Remove this group', onclick: async () => {
-      const g = groups.find((x) => x.id === libFilter);
-      if (!g || !(await confirmBox('Remove group?', 'Remove “' + g.name + '”? Banners in it stay, just ungrouped.', 'Remove'))) return;
+      g.name = n.trim().slice(0, 60); await saveGroups(); renderLibrary(); renderGroupSel();
+    } }, icon('edit'), h('span', 'Rename group')) : null;
+    const delGrp = g ? h('button.btn.sm', { type: 'button', title: 'Remove this group', onclick: async () => {
+      if (!(await confirmBox('Remove group?', 'Remove “' + g.name + '”? The ' + count(g.id) + ' banner' + (count(g.id) === 1 ? '' : 's') + ' in it stay, just without a group.', 'Remove'))) return;
       groups = groups.filter((x) => x.id !== g.id);
       lib.forEach((b) => { if (b.group === g.id) delete b.group; });
+      if (cur.group === g.id) { delete cur.group; savedSig = sig(cur); }
       libFilter = '';
-      await saveGroups(); await saveLib(); renderLibrary();
+      await saveGroups(); await saveLib(); renderLibrary(); renderGroupSel();
     } }, icon('trash'), h('span', 'Remove group')) : null;
-    box.appendChild(h('div.row.wrap.bn-lib-bar', qIn, gSel, newGrp, delGrp));
+    box.appendChild(h('div.row.wrap.bn-lib-bar', qIn, gSel, newGrp, renGrp, delGrp));
     // Filter
-    const q = libQuery.trim().toLowerCase();
-    let shown = lib.filter((b) => (!libFilter || b.group === libFilter) && (!q || nameOf(b).toLowerCase().includes(q) || (TPL[b.tpl] && TPL[b.tpl].name.toLowerCase().includes(q))));
+    const q = normalize(libQuery.trim()).toLowerCase();
+    const inGroup = (b) => !libFilter || (libFilter === '-' ? !b.group || !groups.some((x) => x.id === b.group) : b.group === libFilter);
+    const shown = lib.filter((b) => inGroup(b) && (!q || q.split(/\s+/).every((w) => bannerWords(b).includes(w))));
     if (!shown.length) {
-      box.appendChild(emptyState('banner', lib.length ? 'No banners match' : 'No saved banners yet', lib.length ? 'Try another group or clear the search.' : 'Make a banner and press Save.', { label: 'Make a banner', icon: 'plus', primary: true, onclick: () => setView('make') }));
+      box.appendChild(emptyState('banner', lib.length ? 'No banners match' : 'No saved banners yet',
+        lib.length ? (g && !libQuery ? 'This group is empty. Use ••• → Move to group on a banner, or choose this group when you save one.' : 'Try another group or clear the search.') : 'Make a banner and press Save.',
+        { label: 'Make a banner', icon: 'plus', primary: true, onclick: () => setView('make') }));
       return;
     }
     const grid = h('div.bn-lib');
     shown.forEach((b) => {
+      const n = slidesOf(b).length;
       const more = btn('more', 'More', () => menu(more, [
-        { label: 'Add to the pre-service loop', icon: 'loop', onclick: () => { if (!loop.items.some((it) => it.t === 'banner' && it.id === b.id)) { loop.items.push({ t: 'banner', id: b.id }); saveLoop(); } toast('Added to the loop.', 'ok'); } },
+        { label: 'Add to Preservice loop', icon: 'loop', onclick: () => addToLoopList(loop, saveLoop, b, 'Preservice') },
+        { label: 'Add to Announcements loop', icon: 'loop', onclick: () => addToLoopList(announce, saveAnnounce, b, 'Announcements') },
         { label: 'Add to the service plan', icon: 'plan', onclick: async () => (await ctx.tab('plan')).addItem({ tab: 'ai', banner: b.id, label: 'Banner: ' + nameOf(b) }) },
         { label: 'Move to group…', icon: 'folder', onclick: () => {
-          const items = [
-            { label: '(No group)', icon: b.group ? '' : 'check', onclick: async () => { delete b.group; b.updated = Date.now(); await saveLib(); renderLibrary(); } },
-            ...groups.map((g) => ({ label: g.name, icon: b.group === g.id ? 'check' : '', onclick: async () => { b.group = g.id; b.updated = Date.now(); await saveLib(); renderLibrary(); } })),
+          menu(more, [
+            { label: '(No group)', icon: b.group ? '' : 'check', onclick: () => setGroup(b, '') },
+            ...groups.map((gr) => ({ label: gr.name, icon: b.group === gr.id ? 'check' : '', onclick: () => setGroup(b, gr.id) })),
             '-',
-            { label: 'New group…', icon: 'plus', onclick: async () => {
-              const n = await promptBox('New group', 'Name', '');
-              if (!n || !n.trim()) return;
-              const g = { id: 'g-' + uid(), name: n.trim() };
-              groups.push(g); await saveGroups();
-              b.group = g.id; b.updated = Date.now(); await saveLib(); renderLibrary();
-            } },
-          ];
-          menu(more, items);
+            { label: 'New group…', icon: 'plus', onclick: async () => { const gr = await newGroup(); if (gr) setGroup(b, gr.id); } },
+          ]);
         } },
-        { label: 'Rename…', icon: 'edit', onclick: async () => { const n = await promptBox('Rename banner', 'Name', b.name || nameOf(b)); if (n && n.trim()) { b.name = n.trim(); b.updated = Date.now(); if (cur.id === b.id) { cur.name = b.name; nameInp.value = b.name; savedSig = sig(cur); } await saveLib(); renderLibrary(); } } },
-        { label: 'Duplicate', icon: 'copy', onclick: async () => { const c = clone(b); c.id = 'b-' + uid(); c.name = nameOf(b) + ' (copy)'; c.created = c.updated = Date.now(); lib.unshift(c); await saveLib(); renderLibrary(); renderViewSeg(); } },
+        { label: 'Rename…', icon: 'edit', onclick: async () => { const nm = await promptBox('Rename banner', 'Name', b.name || nameOf(b)); if (nm && nm.trim()) { b.name = nm.trim(); b.updated = Date.now(); if (cur.id === b.id) { cur.name = b.name; nameInp.value = b.name; savedSig = sig(cur); } await saveLib(); renderLibrary(); } } },
+        { label: 'Duplicate', icon: 'copy', onclick: async () => { const c = clone(b); c.id = 'b-' + uid(); c.name = nameOf(b) + ' (copy)'; c.created = c.updated = Date.now(); lib.unshift(c); await saveLib(); renderLibrary(); renderViewSeg(); toast('Copied, in the same group.', 'ok', 2000); } },
         '-',
         { label: 'Delete', icon: 'trash', onclick: async () => {
-          if (!(await confirmBox('Delete banner?', 'Delete “' + nameOf(b) + '”?' + (loop.items.some((it) => it.id === b.id) ? ' It is also removed from the pre-service loop.' : ''), 'Delete', true))) return;
+          const inLoops = [loop, announce].some((L) => L.items.some((it) => it.t === 'banner' && it.id === b.id) || L.end === b.id);
+          if (!(await confirmBox('Delete banner?', 'Delete “' + nameOf(b) + '”' + (n > 1 ? ' and its ' + n + ' slides' : '') + '?' + (inLoops ? ' It is also taken out of the Service loop.' : ''), 'Delete', true))) return;
           lib = lib.filter((x) => x.id !== b.id);
-          loop.items = loop.items.filter((it) => !(it.t === 'banner' && it.id === b.id));
-          if (loop.end === b.id) loop.end = '';
+          [loop, announce].forEach((L) => { L.items = L.items.filter((it) => !(it.t === 'banner' && it.id === b.id)); if (L.end === b.id) L.end = ''; });
           if (cur.id === b.id) { cur.id = null; savedSig = null; }
-          await saveLib(); await saveLoop(); renderLibrary(); renderViewSeg(); updateSaveBtn();
+          await saveLib(); await saveLoop(); await saveAnnounce(); renderLibrary(); renderViewSeg(); updateSaveBtn();
         } },
       ]), { cls: 'sm' });
-      const gName = b.group ? (groups.find((g) => g.id === b.group) || {}).name : '';
+      const gName = b.group ? (groups.find((x) => x.id === b.group) || {}).name : '';
+      const thumb = mini(frameOf(b, new Date(), { noAnim: true }));
+      thumb.classList.add('bn-thumb-open');
+      thumb.title = 'Edit this banner';
+      thumb.addEventListener('click', () => edit(b));
+      if (n > 1) thumb.appendChild(h('span.bn-thumb-n', icon('slides'), String(n)));
       const card = h('div.bn-card',
-        mini(frameOf(b)),
+        thumb,
         h('div.bn-card-b',
-          h('div.bn-card-t.trunc', nameOf(b)),
-          h('div.note', TPL[b.tpl] ? TPL[b.tpl].name : 'Banner', slidesOf(b).length > 1 ? ' · ' + slidesOf(b).length + ' slides' : '', gName ? ' · ' + gName : '', b.updated ? ' · ' + new Date(b.updated).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : ''),
+          h('div.bn-card-t.trunc', { title: nameOf(b) }, nameOf(b)),
+          h('div.note', TPL[b.tpl] ? TPL[b.tpl].name : 'Banner', n > 1 ? ' · ' + n + ' slides' : '', b.updated ? ' · ' + new Date(b.updated).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : ''),
+          gName ? h('div.bn-card-g', h('button.chip.sm', { type: 'button', title: 'Show this group', onclick: () => { libFilter = b.group; renderLibrary(); } }, icon('folder'), gName)) : null,
           h('div.row.bn-card-a',
-            h('button.btn.sm.primary', { type: 'button', onclick: async () => { ctx.setStaged('ai', bannerCue(b, await framesOf(b))); toast('“' + nameOf(b) + '” is Next. Press Present (F5).', 'ok', 2500); } }, icon('next'), h('span', 'Set as Next')),
-            h('button.btn.sm', { type: 'button', onclick: () => edit(b) }, icon('edit'), h('span', 'Edit')),
+            h('button.btn.sm.primary', { type: 'button', title: n > 1 ? 'Put all ' + n + ' slides on the Next screen' : 'Put on the Next screen', onclick: async () => { ctx.setStaged('ai', bannerCue(b, await framesOf(b))); toast('“' + nameOf(b) + '” is Next. Press Present (F5).', 'ok', 2500); } }, icon('next'), h('span', 'Set as Next')),
+            h('button.btn.sm.icon', { type: 'button', title: 'Edit', 'aria-label': 'Edit ' + nameOf(b), onclick: () => edit(b) }, icon('edit')),
             more)));
       grid.appendChild(card);
     });
@@ -1704,6 +1762,7 @@ export default function create(ctx) {
     setPreviewAspect();
     nameInp.value = cur.name || '';
     hist.reset();
+    renderGroupSel();
     renderEditor();
     renderStrip();
     updateSaveBtn();

@@ -1400,7 +1400,7 @@ export function createSlideEditor(opts) {
     isEditing: () => !!editing || !!drag,
     selection: () => sel.slice(),
     select,
-    deselect() { if (editing) finishEdit(); sel = []; tool = null; draw(); renderToolbar(); renderPanel(); },
+    deselect() { if (editing) finishEdit(); const had = sel.length; sel = []; tool = null; draw(); renderToolbar(); renderPanel(); if (had && opts.onSelect) opts.onSelect([]); },
     refreshPanel: renderPanelForce,
     refreshToolbar: renderToolbar,
     insertText: () => newText(), insertShape: (k) => newShape(k), insertLine: (a) => newLine(a), insertImage: () => pickImage(false),
