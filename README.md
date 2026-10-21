@@ -84,6 +84,10 @@ file (Bibles, hymns, fonts, PDF engine) downloads in one go; after that SDA Sabb
 2. Press **Present** once. In Chrome/Edge, allow **Window management** when asked — from then on
    the display opens straight onto the projector.
 3. Click the projector screen once so videos may play with sound (not needed once SDA Sabbath is installed).
+4. The projector **stays full screen**. If it ever drops out (Esc on the projector, a clicker's slide-show
+   button, another program), your next key press or click on the control screen, or on the projector, puts it
+   straight back. A double click or F on the projector only goes *into* full screen. To allow leaving full
+   screen, turn off **Settings → Displays → Keep the projector full screen**.
 
 ### 3. The SDA Sabbath companion (optional, recommended for the church PC)
 

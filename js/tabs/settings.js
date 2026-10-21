@@ -98,6 +98,10 @@ export default function create(ctx) {
         link.canCast() ? h('button.btn', { type: 'button', onclick: () => link.openCast().catch((e) => toast(e.message, 'err')) }, icon('cast'), 'Cast') : null,
         link.kind ? h('button.btn.danger', { type: 'button', onclick: () => { link.close(); rebuild(); } }, icon('x'), 'Close display') : null),
       screens,
+      h('div.row', { style: { margin: '6px 0' } }, toggle('Keep the projector full screen', settings.v.display.keepFull !== false, (v) => {
+        settings.set('display.keepFull', v);
+        if (link.kind === 'window' && link.win) { try { link.win.postMessage({ t: 'keepfull', on: v }, location.origin); } catch (e) { /* */ } }
+      }, 'If the projector window leaves full screen (Esc, a clicker button, another window), it goes back to full screen straight away or on your next click or key press here.')),
       h('p.note', 'Tip: in Chrome or Edge, allow “Window management” once and SDA Sabbath opens the display straight onto the projector every time. Click the projector screen once at the start so videos may play with sound (not needed once Selah is installed).'));
     // Phone remote via the companion
     const comp = ctx.companion;

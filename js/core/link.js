@@ -34,6 +34,7 @@ let displaySid = null;
 function onDisplayMsg(m) {
   if (!m || !m.t) return;
   if (m.t === 'ack') { if (m.q > link.acked) link.acked = m.q; link.emit('ack'); return; }
+  if (m.t === 'fs') { link.displayFull = !!m.on; link.emit('fs', link.displayFull); return; }
   if (m.t === 'hello') {
     if (!m.sid || m.sid !== displaySid) {
       displaySid = m.sid || null;
@@ -41,6 +42,8 @@ function onDisplayMsg(m) {
       if (castEnc && castEnc.reset) castEnc.reset();
     }
     link.info.w = m.w; link.info.h = m.h;
+    if (m.full != null) link.displayFull = !!m.full;
+    if (link.kind === 'window' && link.win) { try { link.win.postMessage({ t: 'keepfull', on: settings.v.display.keepFull !== false }, location.origin); } catch (e) { /* */ } }
     if (!link.ready) setState(link.kind, true);
     link.emit('hello', m);
   }
@@ -113,6 +116,19 @@ export async function listScreens() {
   catch (e) { return null; }
 }
 
+/**
+ * Ask the display window to go (back) to full screen. Browsers only allow full screen after a click or key
+ * press; inside one on this control screen, the permission is handed to the display window
+ * (capability delegation), so it works without anyone touching the projector.
+ */
+link.displayFull = null;
+link.fullscreenDisplay = () => {
+  const w = link.win;
+  if (link.kind !== 'window' || !w || w.closed) return false;
+  try { w.postMessage({ t: 'fullscreen' }, { targetOrigin: location.origin, delegate: 'fullscreen' }); return true; }
+  catch (e) { try { w.postMessage({ t: 'fullscreen' }, location.origin); } catch (er) { /* closed */ } return false; }
+};
+
 link.openWindow = async ({ prompt = false } = {}) => {
   link.close(true);
   const url = new URL('display.html', location.href).href;
@@ -120,8 +136,9 @@ link.openWindow = async ({ prompt = false } = {}) => {
   let w = null;
   const scr = await pickScreen(true); // always prefer the extended screen
   let features = 'popup=yes';
-  if (scr) features += ',left=' + scr.availLeft + ',top=' + scr.availTop + ',width=' + scr.availWidth + ',height=' + scr.availHeight + ',fullscreen=yes';
-  else features += ',width=1920,height=1080,fullscreen=yes';
+  // 'fullscreen' opens the window straight in full screen on that screen (Chrome/Edge with Window management allowed).
+  if (scr) features += ',left=' + scr.availLeft + ',top=' + scr.availTop + ',width=' + scr.availWidth + ',height=' + scr.availHeight + ',fullscreen';
+  else features += ',width=1920,height=1080'
   if (displayAlive) {
     try { w = window.open('', WIN_NAME, features); } catch (e) { w = null; }
     if (w && !(() => { try { return w.SelahDisplay; } catch (e) { return null; } })()) { try { w.location.href = url; } catch (e) { /* */ } }

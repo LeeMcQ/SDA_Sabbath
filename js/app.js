@@ -16,7 +16,7 @@ import { clicker, actionFor, sigOfKey, sigOfMouse } from './core/clicker.js';
 import { openClickerSetup, builtinAction } from './clickerui.js';
 
 export const VERSION = '1.3.0';
-export const BUILD = '3aa8d41';
+export const BUILD = '3d45689';
 
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', load: () => import('./tabs/bible.js') },
@@ -171,10 +171,8 @@ async function doPresent() {
     // Wait briefly for the display window to be ready.
     await new Promise((r) => setTimeout(r, 400));
   }
-  // Ask the display window to go full screen.
-  if (link.kind === 'window' && link.win && !link.win.closed) {
-    try { link.win.postMessage({ t: 'fullscreen' }, location.origin); } catch (e) { /* */ }
-  }
+  // Ask the display window to go full screen (this click or key press lets it).
+  if (settings.v.display.keepFull !== false || link.displayFull !== true) link.fullscreenDisplay();
   const ok = await live.take();
   if (ok) { presentBtn.classList.add('flash'); setTimeout(() => presentBtn.classList.remove('flash'), 260); }
 }
@@ -611,6 +609,19 @@ document.addEventListener('pointermove', () => {
   if (a && a.tagName === 'IFRAME') { a.blur(); window.focus(); }
 }, { passive: true });
 document.addEventListener('keydown', (e) => { if (handleKey(e, false)) e.preventDefault(); });
+// Keep the projector full screen: if it dropped out (Esc on the projector, a clicker's slide-show button,
+// another window), the next click or key press on this control screen puts it back.
+let fsAskAt = 0;
+function keepDisplayFull(e) {
+  if (settings.v.display.keepFull === false || link.kind !== 'window' || link.displayFull !== false) return;
+  if (e.type === 'keydown' && (e.key === 'Escape' || /^(Shift|Control|Alt|Meta)$/.test(e.key))) return;
+  const now = Date.now();
+  if (now - fsAskAt < 800) return;
+  fsAskAt = now;
+  link.fullscreenDisplay();
+}
+document.addEventListener('pointerdown', keepDisplayFull, true);
+document.addEventListener('keydown', keepDisplayFull, true);
 live.on('remote-key', (m) => handleKey({ key: m.key, code: m.code, sig: m.sig, ctrlKey: m.ctrl, metaKey: false, altKey: m.alt, shiftKey: m.shift, target: null }, true));
 
 // ------------------------------------------------------------ monitors & control bar

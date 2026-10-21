@@ -22,6 +22,9 @@ function addWin(w) {
 window.addEventListener('message', (e) => {
   if (e.origin !== location.origin || !e.data || !e.data.t) return;
   addWin(e.source);
+  if (e.data.t === 'fullscreen') { if (!isFull()) goFull(); reportFull(); return; }
+  if (e.data.t === 'keepfull') { keepFull = e.data.on !== false; reportFull(); return; }
+  if (e.data.t === 'hello?') setTimeout(reportFull, 0);
   disp.handle(e.data);
 });
 try { addWin(window.opener); } catch (e) { /* */ }
@@ -81,7 +84,13 @@ if (params.get('via') === 'ws') {
 }
 
 // ---------------------------------------------------------------- full screen, keys, wake lock
-const isFull = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+// The projector stays full screen: it never leaves full screen by itself (a double click or the F key
+// only go INTO full screen), and if the browser takes it out (Esc, a clicker's slide-show button), the
+// next key or click here, or on the control screen, puts it back.
+function isFull() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+let keepFull = true;
+let lastFull = null;
+function reportFull() { const on = isFull(); lastFull = on; post({ t: 'fs', on }); }
 async function goFull() {
   const el = document.documentElement;
   try {
@@ -93,7 +102,11 @@ async function goFull() {
     else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
   } catch (e) { /* user must click */ }
 }
-function toggleFull() { if (isFull()) (document.exitFullscreen || document.webkitExitFullscreen).call(document); else goFull(); }
+function toggleFull() { if (isFull()) { if (!keepFull) (document.exitFullscreen || document.webkitExitFullscreen).call(document); } else goFull(); }
+// Any key or click on the projector itself is also allowed to put it back.
+const backToFull = () => { if (keepFull && !isFull() && !params.get('via')) goFull(); };
+document.addEventListener('pointerdown', backToFull, true);
+document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') backToFull(); }, true);
 
 // A clicker in mouse mode: once the projector window is full screen, left click = next, right click = back,
 // scroll = next / back (like a PowerPoint slide show). The first click makes it full screen.
@@ -113,13 +126,16 @@ root.addEventListener('wheel', (e) => {
 }, { passive: false });
 document.addEventListener('mouseup', (e) => { if (e.button === 3 || e.button === 4) { e.preventDefault(); post({ t: 'key', key: '', sig: 'mouse:' + e.button }); } });
 document.addEventListener('auxclick', (e) => { if (e.button === 3 || e.button === 4) e.preventDefault(); });
-root.addEventListener('dblclick', toggleFull);
-document.addEventListener('fullscreenchange', () => disp.hint(false));
+root.addEventListener('dblclick', () => { if (!isFull()) goFull(); else if (!keepFull) toggleFull(); });
+const onFsChange = () => { disp.hint(false); reportFull(); };
+document.addEventListener('fullscreenchange', onFsChange);
+document.addEventListener('webkitfullscreenchange', onFsChange);
 
 const FORWARD = new Set(['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', ' ', 'Home', 'End',
   'b', 'B', '.', 'Escape', 'F5', 'Enter', 'c', 'C', 'l', 'L', 'w', 'W']);
 document.addEventListener('keydown', (e) => {
   if (e.key === 'f' || e.key === 'F') { e.preventDefault(); toggleFull(); return; }
+  if (e.key === 'F11') { e.preventDefault(); if (!isFull()) goFull(); return; } // F11 browser full screen would fight with ours
   // Every key goes to the control screen (it knows the clicker buttons taught in Clicker setup).
   if (/^(Shift|Control|Alt|AltGraph|Meta|CapsLock|F11|F12|Tab)$/.test(e.key)) return;
   if (FORWARD.has(e.key) || e.key.length > 1) { if (e.key !== 'Escape' || !isFull()) e.preventDefault(); }
@@ -140,3 +156,4 @@ if (!params.get('via') && !isFull()) {
   setTimeout(() => { if (!isFull()) goFull(); }, 300);
 }
 disp.sayHello();
+setTimeout(reportFull, 50);
