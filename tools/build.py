@@ -44,6 +44,40 @@ def check_app_version():
                          'Get the latest main (git pull) and make the change on top of it.' % ('.'.join(map(str, v)), '.'.join(map(str, MIN_APP_VERSION))))
 
 
+def check_offline_safe(files):
+    """Everything the app loads must be stored for offline use: every import points at a real file that is
+    in the offline list, and the pages load nothing from the internet."""
+    import re as _re
+    listed = set(files)
+    bad = []
+    imp = _re.compile(r"""(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)['"](\.{1,2}/[^'"?#]+)['"]""")
+    for base, _, names in os.walk(os.path.join(ROOT, 'js')):
+        for n in names:
+            if not n.endswith('.js'):
+                continue
+            path = os.path.join(base, n)
+            src = open(path, encoding='utf-8').read()
+            for m in imp.finditer(src):
+                if m.group(1).endswith('/'):
+                    continue  # built at run time (a tab file name is added)
+                target = os.path.normpath(os.path.join(os.path.dirname(path), m.group(1)))
+                rel = os.path.relpath(target, ROOT).replace(os.sep, '/')
+                if not os.path.exists(target):
+                    bad.append(os.path.relpath(path, ROOT) + ' imports a missing file: ' + m.group(1))
+                elif rel not in listed:
+                    bad.append(os.path.relpath(path, ROOT) + ' imports ' + rel + ', which is not in the offline list')
+    for page in ('index.html', 'display.html'):
+        html = open(os.path.join(ROOT, page), encoding='utf-8').read()
+        for m in _re.finditer(r"""<(?:script|link)[^>]+(?:src|href)=["'](https?:)?//""", html):
+            bad.append(page + ' loads something from the internet: ' + m.group(0)[:80])
+        for m in _re.finditer(r"""<(?:script|link)[^>]+(?:src|href)=["']([^"':]+)["']""", html):
+            f = m.group(1).split('?')[0]
+            if f and not f.startswith('#') and f not in listed:
+                bad.append(page + ' uses ' + f + ', which is not in the offline list')
+    if bad:
+        raise SystemExit('Offline check failed, build stopped:\n  ' + '\n  '.join(bad))
+
+
 def check_syntax():
     """Refuse to stamp a build when any app script has a syntax error (it would break a tab for everyone)."""
     import shutil
@@ -95,6 +129,7 @@ def main():
     # worker reuses the old copy, and About shows the previous build.
     build = stamp_build()
     files = collect()
+    check_offline_safe(files)
     h = hashlib.sha256()
     total = 0
     hashes = {}

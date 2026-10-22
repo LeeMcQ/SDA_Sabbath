@@ -1,6 +1,6 @@
 {
-"version": "35f45f97b318",
-"bytes": 37597509,
+"version": "0e38fa532d16",
+"bytes": 37610010,
 "files": [
 "index.html",
 "display.html",
@@ -8,6 +8,7 @@
 "css/app.css",
 "css/stage.css",
 "js/app.js",
+"js/boot-guard.js",
 "js/clickerui.js",
 "js/controlbar.js",
 "js/display-main.js",
@@ -300,12 +301,13 @@
 "data/topics/topics.json"
 ],
 "hashes": {
-"index.html": "068048cf97c9175f",
+"index.html": "47c180fc22d9b28c",
 "display.html": "8cd7c6329849954d",
 "manifest.webmanifest": "f2aa34a6f92b60be",
-"css/app.css": "6ba42f3b241a5b9d",
+"css/app.css": "60dd1578fb60d866",
 "css/stage.css": "35f7e1d869c23da6",
-"js/app.js": "399810a5958b5dcf",
+"js/app.js": "c56f62ac0ae0dfe8",
+"js/boot-guard.js": "e61e95127ad7b171",
 "js/clickerui.js": "ceb58c892b9c95ba",
 "js/controlbar.js": "015fc21aea219e5d",
 "js/display-main.js": "02cc68701de74095",
@@ -349,7 +351,7 @@
 "js/tabs/hymns.js": "260730189796a853",
 "js/tabs/plan.js": "c60f60543dc640ce",
 "js/tabs/screen.js": "5f59e366c040e629",
-"js/tabs/settings.js": "fa06ae42c6990f8d",
+"js/tabs/settings.js": "d12830ea70fcc170",
 "js/tabs/slide-editor.js": "ed91eb83f8ee14a0",
 "js/tabs/slides.js": "201e73a80f3827bd",
 "js/tabs/tools.js": "afa1a48c3e9d0e84",

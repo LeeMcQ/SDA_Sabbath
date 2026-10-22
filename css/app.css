@@ -966,3 +966,9 @@ button.se-sw[aria-pressed="true"] { outline: 2px solid var(--focus, #2f6fe0); ou
   .se-grid > label { margin-top: 5px; }
   .se-grid > span:empty { display: none; }
 }
+/* Offline mark in the top bar, and the calm panel shown if a tab cannot load */
+.off-mark { flex: none; font-size: 11px; font-weight: 700; letter-spacing: .02em; padding: 2px 8px; border-radius: 999px; background: var(--raised); color: var(--muted); border: 1px solid var(--line); }
+.tab-error { display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow: auto; }
+.tab-error .card { max-width: 560px; padding: 20px; }
+.tab-error h2 { margin: 0 0 8px; }
+.tab-error p { margin: 0 0 10px; }

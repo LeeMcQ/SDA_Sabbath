@@ -78,6 +78,25 @@ included GitHub Pages workflow (repository **Settings → Pages → Source: GitH
 On each church PC or phone, open that address in Chrome or Edge and choose **Install**. Every
 file (Bibles, hymns, fonts, PDF engine) downloads in one go; after that SDA Sabbath works offline.
 
+### Working without internet
+
+SDA Sabbath is built to run a whole service with no internet:
+
+- **Everything is stored on the device** the first time it is opened with internet (keep it open for a minute;
+  Settings → App → Offline shows the progress). An **Offline** mark appears in the top bar when there is no internet.
+- **Updates never break the offline copy.** A new version is downloaded completely while the current one keeps
+  working, and only then takes over. If the download is interrupted, the current version simply stays.
+- **It checks itself.** Every half hour (and when the internet comes back) the app checks that every stored file
+  is there and fetches any that are missing. **Settings → App → Check & repair offline files** does it on demand.
+- **Nothing stops the service.** If one part could not be stored (for example a tab), that tab shows a short
+  message with *Try again* and *Repair offline files*, and every other tab keeps working. If the app itself cannot
+  start, a help page offers *Reload* and *Repair* instead of a blank screen. Internet-only features (AI, online
+  lyrics search, Bible downloads, music streams, web pages) say "you are offline" instead of failing.
+- **Download a fresh copy** (Settings → App) only runs when the internet is really there, so the offline copy is
+  never thrown away by accident.
+- Install SDA Sabbath (browser menu → Install app) and press **Protect data**, so the browser never clears it to
+  free disk space.
+
 ### 2. Projector setup (PC)
 
 1. Connect the projector as an **extended** display (Windows: Win+P → Extend).

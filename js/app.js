@@ -16,19 +16,19 @@ import { clicker, actionFor, sigOfKey, sigOfMouse } from './core/clicker.js';
 import { openClickerSetup, builtinAction } from './clickerui.js';
 
 export const VERSION = '1.3.0';
-export const BUILD = '3d45689';
+export const BUILD = '3916123';
 
 const TABS = [
-  { id: 'bible', label: 'Bible', icon: 'bible', load: () => import('./tabs/bible.js') },
-  { id: 'hymns', label: 'Hymns', icon: 'hymn', load: () => import('./tabs/hymns.js') },
-  { id: 'ai', label: 'Banners & Music', short: 'Banners', icon: 'banner', load: () => import('./tabs/ai.js') }, // id kept from the first version (plans and settings refer to it)
-  { id: 'slides', label: 'Slides', icon: 'slides', load: () => import('./tabs/slides.js') },
-  { id: 'video', label: 'Video', icon: 'video', load: () => import('./tabs/video.js') },
-  { id: 'web', label: 'Web & PC', icon: 'web', load: () => import('./tabs/webpc.js') }, // the web page and PC screen parts in one tab
-  { id: 'plan', label: 'Plan', icon: 'plan', load: () => import('./tabs/plan.js') },
-  { id: 'tools', label: 'Tools', icon: 'grid', load: () => import('./tabs/tools.js') },
+  { id: 'bible', label: 'Bible', icon: 'bible', file: 'bible.js', load: () => import('./tabs/bible.js') },
+  { id: 'hymns', label: 'Hymns', icon: 'hymn', file: 'hymns.js', load: () => import('./tabs/hymns.js') },
+  { id: 'ai', label: 'Banners & Music', short: 'Banners', icon: 'banner', file: 'ai.js', load: () => import('./tabs/ai.js') }, // id kept from the first version (plans and settings refer to it)
+  { id: 'slides', label: 'Slides', icon: 'slides', file: 'slides.js', load: () => import('./tabs/slides.js') },
+  { id: 'video', label: 'Video', icon: 'video', file: 'video.js', load: () => import('./tabs/video.js') },
+  { id: 'web', label: 'Web & PC', icon: 'web', file: 'webpc.js', load: () => import('./tabs/webpc.js') }, // the web page and PC screen parts in one tab
+  { id: 'plan', label: 'Plan', icon: 'plan', file: 'plan.js', load: () => import('./tabs/plan.js') },
+  { id: 'tools', label: 'Tools', icon: 'grid', file: 'tools.js', load: () => import('./tabs/tools.js') },
   null,
-  { id: 'settings', label: 'Settings', icon: 'settings', load: () => import('./tabs/settings.js') },
+  { id: 'settings', label: 'Settings', icon: 'settings', file: 'settings.js', load: () => import('./tabs/settings.js') },
 ];
 
 const appEl = $('#app');
@@ -68,7 +68,9 @@ async function getTab(id) {
   if (loading.has(id)) return loading.get(id);
   const def = TABS.find((t) => t && t.id === id);
   if (!def) throw new Error('No tab ' + id);
-  const p = def.load().then((mod) => {
+  // A part of the app that cannot load (offline and not stored yet, or a damaged download) is tried
+  // once more with a fresh request; it never leaves the whole app stuck.
+  const p = def.load().catch(() => import('./tabs/' + def.file + '?r=' + Date.now())).then((mod) => {
     const api = mod.default(ctx);
     api.el.classList.add('tabpanel');
     api.el.setAttribute('role', 'tabpanel');
@@ -78,8 +80,27 @@ async function getTab(id) {
     return api;
   });
   loading.set(id, p);
+  p.catch(() => loading.delete(id)); // try again next time instead of remembering the failure
   return p;
 }
+/** Shown instead of a tab that could not load: what happened and a way out, never a blank screen. */
+function tabErrorPanel(id, err) {
+  const def = TABS.find((t) => t && t.id === id);
+  const offline = !navigator.onLine;
+  const el = h('section.tab-error',
+    h('div.card',
+      h('h2', (def ? def.label : 'This part') + ' could not open'),
+      h('p', offline
+        ? 'This device is offline and this part of SDA Sabbath is not stored on it yet. The rest of the app still works. Connect to the internet once and open it again; after that it works offline.'
+        : 'Something went wrong while opening it. The rest of the app still works.'),
+      h('p.note', String((err && err.message) || err || '').slice(0, 200)),
+      h('div.row.wrap',
+        h('button.btn.primary', { type: 'button', onclick: () => { el.remove(); errPanels.delete(id); showTab(id); } }, 'Try again'),
+        h('button.btn', { type: 'button', onclick: () => { checkOffline(true); ui.toast('Checking the files stored for offline use…', '', 3000); } }, 'Repair offline files'),
+        h('button.btn', { type: 'button', onclick: () => location.reload() }, 'Reload'))));
+  return el;
+}
+const errPanels = new Map();
 
 async function showTab(id) {
   if (ALIAS[id]) { const api = await showTab(ALIAS[id]); if (id === 'screen' && api && api.show) api.show('screen'); return api; }
@@ -88,7 +109,19 @@ async function showTab(id) {
   if (current === id && tabs.has(id)) return tabs.get(id);
   let api;
   try { api = await getTab(id); }
-  catch (e) { ui.toast('Could not open ' + id + ': ' + e.message, 'err', 6000); console.error(e); return null; }
+  catch (e) {
+    console.error(e);
+    // Show a calm message in place of the tab (the other tabs keep working).
+    if (current && tabs.has(current)) { const prev = tabs.get(current); prev.el.hidden = true; if (prev.onHide) prev.onHide(); }
+    errPanels.forEach((x) => x.remove()); errPanels.clear();
+    const panel = tabErrorPanel(id, e);
+    panel.classList.add('tabpanel');
+    errPanels.set(id, panel); work.appendChild(panel);
+    current = id;
+    railBtns.forEach((b, k) => b.setAttribute('aria-selected', String(k === id)));
+    return null;
+  }
+  errPanels.forEach((x) => x.remove()); errPanels.clear();
   if (current && tabs.has(current)) { const prev = tabs.get(current); prev.el.hidden = true; if (prev.onHide) prev.onHide(); }
   const switching = !!current;
   current = id;
@@ -651,6 +684,52 @@ window.addEventListener('unhandledrejection', (e) => {
   }
 });
 
+// Anything else that fails without being caught (usually a lost internet connection) must never stop
+// the service: it is logged, and a network failure gets one calm explanation instead of a broken screen.
+const NET_ERR = /Failed to fetch|NetworkError|Load failed|network|ERR_INTERNET|ERR_NAME_NOT_RESOLVED|offline|dynamically imported module|Importing a module script failed|AbortError|timed? ?out/i;
+let netShown = 0;
+function quietFailure(err) {
+  const msg = (err && (err.message || err.name)) || String(err || '');
+  if (NET_ERR.test(msg) || !navigator.onLine) {
+    if (Date.now() - netShown > 20000) { netShown = Date.now(); ui.toast(navigator.onLine ? 'Could not reach the internet for that. Everything stored on this device keeps working.' : 'You are offline: that needs the internet. Everything stored on this device keeps working.', '', 6000); }
+    return true;
+  }
+  return false;
+}
+window.addEventListener('unhandledrejection', (e) => { console.warn('Unhandled:', e.reason); if (quietFailure(e.reason)) e.preventDefault(); });
+window.addEventListener('error', (e) => { if (e.error) console.warn('Error:', e.error); quietFailure(e.error || e.message); });
+
+// ------------------------------------------------------------ offline readiness
+// The app must always work without internet. The service worker stores every file; this checks now and
+// then that nothing is missing and fetches what is (when there is internet), and shows an "Offline" mark.
+const offMark = h('span.off-mark', { hidden: true, title: 'No internet. SDA Sabbath keeps working with everything stored on this device.' }, 'Offline');
+document.querySelector('.brand') && document.querySelector('.brand').after(offMark);
+function paintOnline() { offMark.hidden = navigator.onLine; }
+window.addEventListener('online', () => { paintOnline(); checkOffline(true); });
+window.addEventListener('offline', paintOnline);
+paintOnline();
+ctx.offlineHealth = null;
+let healthWarned = false;
+function checkOffline(repair) {
+  const c = navigator.serviceWorker && navigator.serviceWorker.controller;
+  if (!c) return false;
+  c.postMessage({ t: 'check', repair: !!repair && navigator.onLine });
+  return true;
+}
+ctx.checkOffline = checkOffline;
+function onHealth(hh) {
+  ctx.offlineHealth = hh;
+  window.dispatchEvent(new CustomEvent('selah-health', { detail: hh }));
+  if (hh.missingCount > 0 && !navigator.onLine && !healthWarned) {
+    healthWarned = true;
+    ui.toast('Some parts of SDA Sabbath are not stored on this device yet (' + hh.missingCount + ' files). Connect to the internet once with the app open to finish; everything else works.', 'err', 9000);
+  }
+}
+setTimeout(() => checkOffline(true), 15000);
+setInterval(() => { if (navigator.onLine) checkOffline(true); }, 30 * 60000);
+// Ask the browser to keep the stored app and data even when the disk gets full.
+setTimeout(() => { persistStorage(); }, 4000);
+
 // Warn before closing while something is live.
 window.addEventListener('beforeunload', (e) => { if (live.cue && link.kind === 'window') { e.preventDefault(); e.returnValue = ''; } });
 
@@ -704,6 +783,7 @@ function registerSW() {
     navigator.serviceWorker.addEventListener('message', (e) => {
       if (e.data && e.data.t === 'progress') ctx.cacheProgress = e.data;
       if (e.data && e.data.t === 'progress') window.dispatchEvent(new CustomEvent('selah-cache', { detail: e.data }));
+      if (e.data && e.data.t === 'health' && e.data.total != null && e.data.have != null) onHealth(e.data);
     });
   }).catch((e) => console.warn('SW', e));
 }
@@ -711,7 +791,7 @@ function registerSW() {
 // ------------------------------------------------------------ boot
 const qTab = new URLSearchParams(location.search).get('tab');
 const firstTab = [qTab, settings.v.app.lastTab].map((id) => ALIAS[id] || id).find((id) => TABS.some((t) => t && t.id === id)) || 'bible';
-showTab(firstTab);
+showTab(firstTab).finally(() => { window.__selahBooted = true; const bg = document.getElementById('bootGuard'); if (bg) bg.remove(); });
 // UI motion starts only after the first load has settled, so nothing animates during start-up.
 const markBooted = () => setTimeout(() => document.documentElement.classList.add('booted'), 300);
 if (document.readyState === 'complete') markBooted(); else window.addEventListener('load', markBooted, { once: true });

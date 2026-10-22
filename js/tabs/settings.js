@@ -143,8 +143,10 @@ export default function create(ctx) {
     const storage = h('span.note', '…');
     const cache = h('span.note', 'Checking…');
     const onCache = (e) => { cache.textContent = e.detail.done >= e.detail.total ? 'Everything is stored for offline use.' : 'Downloading for offline use: ' + e.detail.done + ' / ' + e.detail.total + ' files'; };
+    const onHealth = () => offlineStatus().then((t) => { cache.textContent = t; });
     window.addEventListener('selah-cache', onCache);
-    box._cleanup = () => window.removeEventListener('selah-cache', onCache);
+    window.addEventListener('selah-health', onHealth);
+    box._cleanup = () => { window.removeEventListener('selah-cache', onCache); window.removeEventListener('selah-health', onHealth); };
     if (ctx.cacheProgress) onCache({ detail: ctx.cacheProgress });
     else offlineStatus().then((t) => { if (cache.textContent === 'Checking…') cache.textContent = t; });
     box.append(h('div.form',
@@ -154,14 +156,16 @@ export default function create(ctx) {
       h('label', 'Low-power mode'), seg([['auto', 'Automatic' + (A.lowPower == null ? (lpNow ? ' (on)' : ' (off)') : '')], ['on', 'On'], ['off', 'Off']], A.lowPower == null ? 'auto' : A.lowPower ? 'on' : 'off', (v) => settings.set('app.lowPower', v === 'auto' ? null : v === 'on')),
       h('label', ''), h('p.note', 'Low-power mode turns off fades and the live video thumbnail, renders slides at 1280 px and shares screens at 15 frames per second — for old PCs and 1–2 GB phones.'),
       h('label', 'Install'), ctx.installPrompt ? h('button.btn', { type: 'button', onclick: async () => { await ctx.promptInstall(); rebuild(); } }, icon('download'), 'Install SDA Sabbath') : h('span.note', window.matchMedia('(display-mode: standalone)').matches ? 'Installed.' : 'Use the browser menu → Install app / Add to Home screen.'),
-      h('label', 'Offline'), cache,
+      h('label', 'Offline'), h('div.col', { style: { gap: '6px' } }, cache,
+        h('div.row.wrap', h('button.btn.sm', { type: 'button', onclick: () => { cache.textContent = 'Checking…'; if (!ctx.checkOffline || !ctx.checkOffline(true)) offlineStatus().then((t) => { cache.textContent = t; }); } }, icon('check'), 'Check & repair offline files'))),
       h('label', 'Storage'), h('div.row.wrap', storage, h('button.btn.sm', { type: 'button', onclick: async () => { const ok = await persistStorage(); toast(ok ? 'SDA Sabbath’s data is protected from automatic clean-up.' : 'The browser did not allow it yet — install Selah first.', ok ? 'ok' : ''); } }, 'Protect data')),
       h('label', 'Backup'), h('div.row.wrap',
         h('button.btn.sm', { type: 'button', onclick: exportBackup }, icon('download'), 'Export settings & plans'),
         h('button.btn.sm', { type: 'button', onclick: importBackup }, icon('upload'), 'Import')),
       h('label', 'Update'), h('div.row.wrap',
-        h('button.btn.sm', { type: 'button', onclick: hardUpdate }, icon('reload'), 'Update & refresh'),
-        h('span.note', 'Clears the app cache and reloads the latest version.')),
+        h('button.btn.sm', { type: 'button', onclick: hardUpdate }, icon('reload'), 'Update now'),
+        h('button.btn.sm', { type: 'button', onclick: freshCopy }, 'Download a fresh copy'),
+        h('span.note', 'Update downloads the new version completely before switching, so the app keeps working offline. A fresh copy is only for when something misbehaves.')),
       h('label', 'Reset'), h('button.btn.sm.danger', { type: 'button', onclick: async () => { if (await confirmBox('Reset settings?', 'Return all settings to their defaults? Bibles, slides, hymns and plans stay.', 'Reset', true)) { settings.reset(); rebuild(); } } }, 'Reset settings'),
       h('label', 'Version'), h('div.col',
         h('span.note', 'SDA Sabbath ' + ctx.VERSION),
@@ -271,30 +275,48 @@ export default function create(ctx) {
       h('p.note', { style: { marginTop: '8px' } }, 'Hymn music: the church\'s own MIDI recordings, played by SpessaSynth (Apache 2.0) with the GeneralUser GS 2.0.3 SoundFont by S. Christian Collins (free to use; schristiancollins.com), using the reverb and chorus levels the author recommends.'));
   });
 
-  // How much of the app is stored for offline use (shown even when the download finished in an earlier visit).
+  /** Is there real internet? (sw.js is never stored offline, so only the server can answer.) */
+  async function reallyOnline() {
+    if (!navigator.onLine) return false;
+    try { const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 6000); const r = await fetch('sw.js?ping=' + Date.now(), { cache: 'no-store', signal: ctl.signal }); clearTimeout(t); return r.ok; } catch (e) { return false; }
+  }
+  // Updating never throws the offline copy away first: the new version is downloaded completely while the
+  // old one keeps working, and only then does it take over.
   async function hardUpdate() {
-    if (!(await confirmBox('Update app?', 'This clears the offline cache and reloads the latest version from the server. Your plans, hymns and settings stay on this device.', 'Update', true))) return;
-    toast('Updating…', '', 3000);
+    if (!(await reallyOnline())) { toast('No internet right now. SDA Sabbath keeps working offline; update when connected.', 'err', 6000); return; }
+    toast('Looking for an update…', '', 3000);
     try {
-      if ('serviceWorker' in navigator) {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(regs.map((r) => r.unregister()));
+      const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null;
+      if (!reg) { location.reload(); return; }
+      await reg.update();
+      const w = reg.installing || reg.waiting;
+      if (w) {
+        toast('Downloading the update… the app restarts by itself when it is complete.', 'ok', 8000);
+        const go = () => { if (reg.waiting) reg.waiting.postMessage({ t: 'skip' }); };
+        if (reg.waiting) go(); else w.addEventListener('statechange', () => { if (w.state === 'installed') go(); else if (w.state === 'redundant') toast('The update could not be downloaded completely. The current version stays; try again later.', 'err', 8000); });
+        return;
       }
-      if (window.caches) {
-        const keys = await caches.keys();
-        await Promise.all(keys.map((k) => caches.delete(k)));
-      }
-    } catch (e) { console.warn('update', e); }
-    // Cache-busting reload
-    const u = new URL(location.href);
-    u.searchParams.set('v', Date.now());
-    location.replace(u.href);
+      if (ctx.checkOffline) ctx.checkOffline(true);
+      toast('You have the latest version. Stored files checked.', 'ok', 4000);
+    } catch (e) { toast('Could not update now: ' + (e.message || e) + '. The current version keeps working.', 'err', 6000); }
+  }
+  async function freshCopy() {
+    if (!(await reallyOnline())) { toast('No internet: the offline copy is kept. Connect first.', 'err', 6000); return; }
+    if (!(await confirmBox('Download a fresh copy?', 'Only if the app misbehaves: this removes the stored app files and downloads them again (about 36 MB). Your plans, hymns, banners and settings stay. Keep the internet on until it finishes.', 'Download again', true))) return;
+    try {
+      const regs = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistrations() : [];
+      await Promise.all(regs.map((r) => r.unregister()));
+      if (window.caches) { const keys = await caches.keys(); await Promise.all(keys.map((k) => caches.delete(k))); }
+    } catch (e) { console.warn('fresh copy', e); }
+    const u = new URL(location.href); u.searchParams.set('v', Date.now()); location.replace(u.href);
   }
 
   async function offlineStatus() {
     try {
       if (!('serviceWorker' in navigator) || !window.isSecureContext) return 'Offline use needs https:// or the SDA Sabbath companion.';
       if (!navigator.serviceWorker.controller || !window.caches) return 'Not stored yet — keep this page open for a minute, or install SDA Sabbath.';
+      const hh = ctx.offlineHealth;
+      if (hh && hh.total) return hh.missingCount ? 'Stored for offline use: ' + hh.have + ' of ' + hh.total + ' files. ' + (navigator.onLine ? 'Fetching the rest…' : 'Connect to the internet once to finish.') : 'Everything is stored for offline use (' + hh.total + ' files).';
       const man = await (await fetch('asset-manifest.json', { cache: 'no-store' })).json();
       const c = await caches.open('selah-' + man.version);
       const have = (await c.keys()).length;
