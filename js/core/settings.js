@@ -2,9 +2,10 @@
 import { emitter, lowPowerDevice } from './util.js';
 
 const KEY = 'selah.settings.v1'; // kept from the app's first name: existing settings carry over
+const AIKEY = 'selah.aikey.session';
 
 export const DEFAULTS = {
-  app: { theme: 'dark', railSide: 'left', monitors: true, lowPower: null, lastTab: 'bible', clickerKeys: true, webPart: 'web' },
+  app: { theme: 'dark', railSide: 'left', monitors: true, lowPower: null, lastTab: 'bible', clickerKeys: true, webPart: 'web', toolsPart: 'service' },
   display: {
     font: 'sans', fg: '#ffffff', bg: '#000000', accent: '#f2cf7a', shadow: true, align: 'center',
     pad: 96, minFont: 58, maxFont: 150, fade: 250, transition: 'fade', aspect: 'auto',
@@ -25,12 +26,28 @@ export const DEFAULTS = {
   video: { volume: 1, autoNext: true, repeat: 'off', fit: 'contain' },
   screen: { cursor: 'never', audio: false },
   companion: { url: '', pin: '' },
+  // Stage screen (confidence monitor) for the people on the platform: what they see by default, the room
+  // code and control PIN for phones/laptops that join, timers and quick messages.
+  stage: {
+    code: '', pin: '', online: false, layout: 'full', featured: 'speaker', warnSec: 120, clock24: true,
+    showNext: true, showPlan: true, showNotes: true, showLive: true, textSize: 1, mirror: false,
+    allowWinControl: true, msgSec: 0, autoPlanTimer: true, preview: true,
+    presets: [], timers: [], turnUrl: '', turnUser: '', turnPass: '', relays: '', hostKey: null,
+  },
+  // Live stream (OBS): lower thirds and the full-slide output, their look, and the OBS connection.
+  stream: {
+    autoBible: true, autoHymns: true, hymnMode: 'lines', autoOther: false, theme: 'classic', pos: 'left', size: 1, bug: false,
+    fullBg: 'stage', accent: '', lowerSec: 8, names: [],
+    obsUrl: 'ws://127.0.0.1:4455', obsPass: '', obsAuto: false, autoScene: false, camScene: '', presScene: 'SDA Sabbath · Presentation',
+    mediaScene: 'camera', studioPreview: true,
+  },
   // Presentation clicker: buttons taught in Clicker setup ({next:['key:F14'], prev:[…], black:[…], present:[…], clear:[…]}).
   clicker: { map: {} },
   // Background music for banners (Banners & Music → Music). auto: start when a banner or the pre-service
   // loop goes on screen; fade: fade out when something else goes on screen.
   bannerMusic: { auto: true, fade: true, fadeSec: 3, volume: 0.7, shuffle: false, repeat: 'all' },
-  ai: { provider: 'openai', apiKey: '', model: '', imageModel: '', auto: {} },
+  // keySession: keep the API key only until this browser tab or window is closed (not saved on the device).
+  ai: { provider: 'openai', apiKey: '', model: '', imageModel: '', auto: {}, keySession: false },
   // The church's details, used by Banners (name, town, sunset times, service countdown, giving QR code).
   church: { name: '', town: '', lat: null, lon: null, service: '09:30', givingUrl: '', givingLabel: '' },
 };
@@ -71,6 +88,8 @@ function load() {
     const raw = JSON.parse(localStorage.getItem(KEY) || '{}');
     v = fixTypes(DEFAULTS, merge(DEFAULTS, raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}));
   } catch (e) { v = merge(DEFAULTS, {}); }
+  // A key kept for this session only lives in sessionStorage, never in the saved settings.
+  if (v.ai.keySession) { try { v.ai.apiKey = sessionStorage.getItem(AIKEY) || ''; } catch (e) { v.ai.apiKey = ''; } }
   // v1.1: the projector margin default grew from 80 to 96 px (safe area for cropping projectors).
   // Move people still on the old default along once; a margin they chose themselves is kept.
   if (!v.app.rev || v.app.rev < 2) {
@@ -100,6 +119,7 @@ export function sanitizeImportedSettings(raw) {
   }
   const out = walk(DEFAULTS, raw, 0);
   if (out.ai) { delete out.ai.apiKey; delete out.ai.auto; }
+  if (out.stream) { delete out.stream.obsPass; if (out.stream.obsUrl && !/^wss?:\/\//i.test(out.stream.obsUrl)) delete out.stream.obsUrl; }
   if (out.church) for (const k of ['lat', 'lon']) if (out.church[k] != null && !(typeof out.church[k] === 'number' && Math.abs(out.church[k]) <= 180)) delete out.church[k];
   if (out.companion && out.companion.url && !/^(https?|wss?):\/\//i.test(out.companion.url)) out.companion.url = '';
   for (const c of ['fg', 'bg', 'accent']) if (out.display && out.display[c] != null && !/^#[0-9a-f]{3,8}$/i.test(out.display[c])) delete out.display[c];
@@ -110,6 +130,8 @@ export function sanitizeImportedSettings(raw) {
 export function exportableSettings(v) {
   const o = JSON.parse(JSON.stringify(v));
   if (o.ai) o.ai.apiKey = '';
+  if (o.stream) o.stream.obsPass = '';
+  if (o.stage) o.stage.hostKey = null;
   return o;
 }
 
@@ -127,7 +149,19 @@ settings.set = (path, value) => {
   settings.emit('change:' + keys[0], path, value);
 };
 
-settings.save = () => { try { localStorage.setItem(KEY, JSON.stringify(settings.v)); } catch (e) { /* private mode */ } };
+settings.save = () => {
+  try {
+    const ai = settings.v.ai || {};
+    if (ai.keySession) {
+      // Session-only key: remembered for this tab, left out of what is saved on the device.
+      try { sessionStorage.setItem(AIKEY, ai.apiKey || ''); } catch (e) { /* */ }
+      localStorage.setItem(KEY, JSON.stringify(Object.assign({}, settings.v, { ai: Object.assign({}, ai, { apiKey: '' }) })));
+    } else {
+      try { sessionStorage.removeItem(AIKEY); } catch (e) { /* */ }
+      localStorage.setItem(KEY, JSON.stringify(settings.v));
+    }
+  } catch (e) { /* private mode */ }
+};
 
 settings.reset = (section) => {
   if (section) settings.v[section] = merge(DEFAULTS[section], {});

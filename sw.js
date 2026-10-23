@@ -1,7 +1,12 @@
 // SDA Sabbath service worker: installs the whole app (Bibles, hymns, fonts, pdf.js) in one go
 // so it runs with no internet. VERSION is rewritten by tools/build.py on every build.
-const VERSION = '0e38fa532d16';
-const CACHE = 'selah-' + VERSION; // prefix kept from the first name so old caches are found and removed
+const VERSION = 'c168ef2426cf';
+// Caches are named per address ('selah-/SDA_Sabbath/|<version>'), so two apps on the same site
+// (for example this one and an older copy under another folder) never delete each other's offline files.
+const SCOPE = new URL(self.registration.scope).pathname;
+const PREFIX = 'selah-' + SCOPE + '|';
+const CACHE = PREFIX + VERSION;
+const LEGACY = /^selah-[0-9a-f]{6,}$/; // the first versions: one shared name, 'selah-<hash>'
 const NETWORK_ONLY = /\/(api|media|ws)(\/|$)/;
 
 async function broadcast(msg) {
@@ -19,10 +24,22 @@ async function fetchRetry(url, opts, tries = 3) {
   }
   throw last || new Error('fetch failed');
 }
-const appCaches = async () => (await caches.keys()).filter((k) => k.startsWith('selah-'));
+const appCaches = async () => (await caches.keys()).filter((k) => k.startsWith(PREFIX));
+/** Old-style caches whose files all belong to this app's address: they are ours to reuse and then remove.
+ *  A cache holding another app's files (or nothing we can recognise) is left alone. */
+async function legacyOwn() {
+  const mine = [];
+  for (const k of (await caches.keys()).filter((n) => LEGACY.test(n))) {
+    try {
+      const reqs = await (await caches.open(k)).keys();
+      if (reqs.length && reqs.every((r) => new URL(r.url).pathname.startsWith(SCOPE))) mine.push(k);
+    } catch (e) { /* unreadable: leave it */ }
+  }
+  return mine;
+}
 /** The file from any stored version (newest first): an older copy is far better than nothing offline. */
 async function fromAnyCache(req, except) {
-  const keys = (await appCaches()).filter((k) => k !== except).reverse();
+  const keys = (await appCaches()).concat(await legacyOwn()).filter((k) => k !== except).reverse();
   for (const k of keys) { const r = await (await caches.open(k)).match(req, { ignoreSearch: true }); if (r) return r; }
   return null;
 }
@@ -49,7 +66,7 @@ self.addEventListener('install', (event) => {
     manifest = man;
     const files = man.files;
     const hashes = man.hashes || {};
-    const older = (await appCaches()).filter((k) => k !== CACHE);
+    const older = (await appCaches()).filter((k) => k !== CACHE).concat(await legacyOwn());
     // A file whose content did not change is copied from the previous version's cache, so an
     // update only downloads what is new (the instruments and hymn music are 18 MB).
     async function unchanged(f) {
@@ -94,7 +111,7 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
-    const keys = await appCaches();
+    const keys = (await appCaches()).concat(await legacyOwn());
     const cache = await caches.open(CACHE);
     const man = await getManifest();
     // Before an old version is removed, anything the new one lacks is copied across.
@@ -151,7 +168,10 @@ self.addEventListener('fetch', (event) => {
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const isPage = req.mode === 'navigate' || /\.html$/.test(url.pathname);
+    // The short address for phones (…/stage) is the stage screen page.
+    const isStage = /\/stage$/.test(url.pathname) || /\/stage\.html$/.test(url.pathname);
     let hit = await cache.match(req, { ignoreSearch: isPage });
+    if (!hit && isStage) hit = await cache.match('stage.html', { ignoreSearch: true });
     if (!hit && isPage) hit = await cache.match(req, { ignoreSearch: true });
     if (!hit && /[?&](v|r)=/.test(url.search)) hit = await cache.match(req, { ignoreSearch: true }); // cache-busting retries
     if (hit) return hit;
@@ -168,7 +188,7 @@ self.addEventListener('fetch', (event) => {
       const old = await fromAnyCache(req, CACHE);
       if (old) return old;
       if (isPage) {
-        const page = await cache.match(/display\.html/.test(url.pathname) ? 'display.html' : 'index.html', { ignoreSearch: true }) || await fromAnyCache('index.html', CACHE);
+        const page = await cache.match(/display\.html/.test(url.pathname) ? 'display.html' : isStage ? 'stage.html' : 'index.html', { ignoreSearch: true }) || await fromAnyCache('index.html', CACHE);
         if (page) return page;
       }
       return new Response('Offline and not stored on this device: ' + url.pathname, { status: 503, headers: { 'Content-Type': 'text/plain' } });

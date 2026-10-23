@@ -30,6 +30,8 @@ Nothing reaches the projector until **Present** (F5 or Ctrl+Enter). Each tab kee
 | **Web & PC** | Two parts in one tab. **Web page:** *Mirror a tab* — the projector shows exactly that browser tab, without the mouse pointer (scroll/zoom it from SDA Sabbath in Chrome); *Embed* — YouTube and embeddable sites load directly on the display. **PC screen:** share the whole screen, one window (e.g. PowerPoint or a Bible app) or a tab; see it live inside SDA Sabbath. **Freeze** keeps the last picture up while you work privately. The **mini controller** floats on top of other programs. |
 | **Plan** | Prepare the order of service at home (one-tap Divine Service, Sabbath School and Vespers templates, or **your own templates**: build a plan once, then ⋯ → Save as template, with or without its hymns and readings, and make it the default for new plans). Type in the Add box — “hymn 73”, “Amazing grace”, “John 3:16-18”, a slide deck, video or banner name — and pick a suggestion, or use **Add media…** (Bible verse ranges and whole chapters, hymns and choruses by number or words, slides, video, banners, web pages; new files can be added right there). Attach or change the media of each part while it keeps its name (“Opening Hymn — Hymn 73”), rename parts, add who leads them, drag parts into order, see progress and what is **On screen**, undo a removal, copy the order as text, export it, and step through it in church with **Next part** (it becomes Next; Present shows it). |
 | **Banners & Music** | Welcome, verse, announcement, offering (with giving QR code), countdown and Sabbath-sunset banners drawn live on the display; a self-running pre-service loop; **background music** that starts with the banners and fades out when something else goes on screen; key verses for the 28 Fundamental Beliefs and sermon topics. See [Banners](#banners) and [Banner music](#banner-music). |
+| **Tools → Stage** | The **second screen for the people on the platform** (confidence monitor): the slide on screen and what comes next, the words in large type, speaker notes, the time, speaker timers, your messages and the order of service — never shown to the congregation. Open it on another monitor, cast it, or let pastors and singers **follow on their own phones and laptops** with a QR code or a short room code. See [Stage screen](#stage-screen). |
+| **Tools → Stream** | **OBS Studio** for the live stream: lower thirds that show the **Bible verse or hymn words automatically** when they go on screen, names and titles, announcements, a scrolling ticker and the church logo; the slides as a full-screen **Presentation** source; **one-click OBS set-up**, automatic scene switching, and start/stop streaming and recording. See [Live stream (OBS)](#live-stream-obs). |
 | **Settings** | Fonts (Atkinson Hyperlegible, serif), colours, background picture, logo, margins, text sizes, fade/cut, 4:3 projectors, light/dark theme, tabs left or right, low-power mode, backups, Bibles, church details, online AI. |
 
 **Live translation** (sermon → captions in another language) is planned; the caption line is already
@@ -126,8 +128,13 @@ What it adds:
 |---|---|
 | **Phone remote** | Phones on the church Wi-Fi open `http://<pc>:7777/remote` (or scan the QR code in Settings → Displays) and enter the PIN. |
 | **TV or second PC as the screen** | Open `http://<pc>:7777/display` in the TV's browser. |
-| **Videos from the PC** | Files in `Videos\Selah` appear in the Video tab on every device, and stream with seeking. |
+| **Videos from the PC** | Files in `Videos\Selah` appear in the Video tab on every device, and stream with seeking. The list needs the PIN, but the files themselves can be opened by anyone on the same Wi-Fi who knows a file’s name, so keep private files out of that folder. |
 | **Exact PowerPoint** | If LibreOffice is installed, .pptx files are converted to PDF so they look exactly as designed. Without it SDA Sabbath uses its built-in renderer (text, pictures, shapes, backgrounds). |
+
+**Safe on the church PC:** only the companion's own pages (opened from its address) may use it without the PIN. A website
+open in a browser on the same PC cannot control the screen or read the PIN, and requests that use an outside domain name
+for this PC are refused (protection against DNS rebinding). Slides that reach a TV or second PC through the companion
+(or Cast) are cleaned before they are drawn.
 
 Options: `--port`, `--media <folder>`, `--pin <NNNN>`, `--no-browser`, `--install`. The PIN and folder
 are remembered in `%APPDATA%\Selah\companion.txt`. Windows asks once to allow network access — allow
@@ -256,7 +263,14 @@ css/                         app.css (control UI), stage.css (projector + monito
 js/app.js                    tabs, Present, display menu, shortcuts, service worker
 js/core/                     render (text fitting), live (Next/Live), link (display connections),
                              wire (network protocol), books (reference parser), bibledata, db, settings, ui
-js/tabs/                     bible, hymns, banners & music (ai.js, banner-music.js), slides, video, web & PC (webpc.js: web.js + screen.js), plan, tools, settings
+js/tabs/                     bible, hymns, banners & music (ai.js, banner-music.js), slides, video, web & PC (webpc.js: web.js + screen.js), plan, tools, stage, settings
+stage.html, js/stage-main.js stage screen (confidence monitor) for the platform; css/stagescreen.css
+js/core/stagehub.js          stage hub: state, timers, messages, plan; stage window, Cast, companion and phone outlets
+js/core/stagenet.js          phones & laptops: room code, WebRTC data channels found through Nostr (Trystero)
+vendor/trystero/             Trystero 0.26 (MIT) with noble-secp256k1 (MIT), bundled as one ES module
+obs.html, js/obs-main.js     OBS Browser Source: lower third (mode=lower) and full slides (mode=full); css/obs.css
+js/core/obsctl.js            obs-websocket 5 client: one-click set-up, scene switching, stream / record status
+js/tabs/stream.js            Tools → Stream (OBS, lower thirds, ticker, look); js/tabs/stage.js: Tools → Stage
 js/lib/                      pdf (pdf.js wrapper), pptx renderer, screen capture, subtitles
 js/display/display.js        projector renderer (also used for "this device" and Cast)
 data/bibles/<id>/            info.json + 01.json … 66.json per translation
@@ -286,7 +300,7 @@ tools/                       build.py, build_bibles.py, build_hymn_music.py, bui
   (`github.com/LeeMcQ/joy-in-the-journey`).
 - Sample hymn words: public domain.
 - Fonts: Atkinson Hyperlegible Next and Source Serif 4 (SIL Open Font License).
-- pdf.js (Apache 2.0), fflate (MIT), qrcode-generator (MIT), SpessaSynth (Apache 2.0).
+- pdf.js (Apache 2.0), fflate (MIT), qrcode-generator (MIT), SpessaSynth (Apache 2.0), Trystero and noble-secp256k1 (MIT).
 - GeneralUser GS 2.0.3 SoundFont by S. Christian Collins — free to use and modify
   (`data/music/GeneralUser-GS-LICENSE.txt`, https://www.schristiancollins.com).
 - Hymn MIDI files: supplied by the church for its own services.
@@ -294,19 +308,133 @@ tools/                       build.py, build_bibles.py, build_hymn_music.py, bui
 
 ## Service tools
 
-The **Tools** tab (under More) adds:
+The **Tools** tab (under More) has three parts, chosen with the buttons at its top:
 
-- Stage / confidence monitor window (current + next item + timer)
-- Lower thirds: **Set as Next** for the projector, or **Show on stream overlay** (a separate window for OBS)
-- Service timer and countdown presets (5/10/20 min)
-- Responsive readings (Leader / People in the accent colour) — click to put on Next, double-click to show at once
-- Communion / Ordinance of Humility as one four-slide sequence: Present, then → for each step
-- Streaming overlay window
-- Experimental live captions via browser speech recognition, on the display's caption line over whatever is showing
+- **Service** — responsive readings (Leader / People in the accent colour; click to put on Next, double-click to show
+  at once), Communion / Ordinance of Humility as one four-slide sequence (Present, then → for each step), a lower third
+  for the projector (**Set as Next**), and experimental live captions via browser speech recognition on the display's
+  caption line.
+- **Stage** — the second screen for the platform: messages, timers, stage screens, phones & laptops. See
+  [Stage screen](#stage-screen).
+- **Stream** — OBS: lower thirds, the slides for a presentation scene, scene switching. See
+  [Live stream (OBS)](#live-stream-obs).
 
-Like every tab, Tools slides go to the green **Next** screen first; Present (F5) shows them.
+Like every tab, Tools slides go to the green **Next** screen first; Present (F5) shows them. Offering banners (verse +
+giving QR code) are in **Banners**. Children’s story templates were intentionally left out.
 
-Offering banners (verse + giving QR code) are in **Banners**. Children’s story templates were intentionally left out.
+## Stage screen
+
+**Tools → Stage** (Tools is under More; Stage is the second button at the top of the tab) runs a second screen for the preacher, worship leaders, singers and band — a
+*confidence monitor*. The congregation never sees it: nothing on it goes to the projector.
+
+```
+┌ ● Stage · Connected ─── 10:42 ──── [ SPEAKER 12:30 ]  [ SERVICE 48:10 ] ─── Talk · ⚙ · ⛶ ┐
+│ ▌ Please wrap up                                                     (message from the desk) │
+│ NOW  Hymn 73 · Verse 2 · 3/7          │ NEXT  Next slide · Chorus                            │
+│ ┌──────────────────────────────┐      │ ┌──────────────────┐                                 │
+│ │  the slide, exactly as the   │      │ │   next slide     │                                 │
+│ │  hall sees it                │      │ └──────────────────┘                                 │
+│ └──────────────────────────────┘      │ ORDER OF SERVICE  Opening hymn ✓ · Scripture ● · …   │
+│ speaker notes (slides)                │                                                      │
+└ Previous · Next · Show Next · Black · Logo · Clear · Start/Pause timer · +1 · −1 (if allowed) ┘
+```
+
+**What it shows**
+
+- **Now** — the slide on the projector (same renderer, so it looks exactly the same), its name and place (Verse 2 · 3/7),
+  Black / Logo state, the time left in a playing video, and **speaker notes** of PowerPoint/PDF slides.
+- **Next** — the next slide of the item on screen, or the item waiting on the green Next screen ("Then: Hymn 73").
+- **Clock and timers** — time of day, the **featured** timer large (green → amber when little time is left → red and
+  counting the overtime as +1:23), and the other timers small.
+- **Messages from the media desk** — a yellow banner ("5 minutes left", "Louder, please"…), optionally flashing, with a
+  soft chime on phones. It stays until cleared or for 10 s – 2 min.
+- **Order of service** — the parts of the open plan, who leads them, planned minutes, what is done, on screen and next.
+
+**Layouts:** *Full* (picture, notes, next, plan), *Words* (the words in very large type — for singers and the preacher),
+*Slides* (current and next picture side by side), *Timer* (one big count-down and the clock). Options: text size,
+show/hide next, plan, notes and picture, 12/24-hour clock, and **mirror** for teleprompter glass.
+
+**Connecting a stage screen — every usual way, plus a link for phones:**
+
+| Way | How |
+|---|---|
+| **Another monitor on this PC** | Tools → Stage → **Open stage screen** (or the **Stage** button in the top bar). It opens full screen on a screen that is neither this one nor the projector; **Choose screen…** picks one. |
+| **Cast** | **Cast stage screen** — Chromecast, Google TV, Android TV (a second cast session, separate from the projector). Miracast TVs: connect them in Windows (Win + K → Extend) and use *Open stage screen*. |
+| **Phones, tablets, laptops (internet)** | Turn on **Phones & laptops**. People scan the **QR code**, or open the short address **leemcq.github.io/SDA_Sabbath/stage** and type the **room code** (e.g. `K7F Q2M`). No app, no account. |
+| **Church network without internet** | With the SDA Sabbath companion running, screens on the church Wi-Fi open `http://<pc>:7777/stage.html?via=lan`. |
+
+How the phone link works: the slides go **directly from the media-desk PC to each phone** over an encrypted WebRTC
+connection. Public Nostr relays are only used for the two devices to find each other, and the room code is also the key
+that encrypts that handshake, so no server ever sees the slides, messages or who is connected. On the church Wi-Fi
+the traffic stays inside the building. Phones connect only to the media desk, never to each other, and pictures are
+shrunk to phone size (videos are never sent). A phone that loses the connection, or a media-desk PC that reloads,
+reconnects by itself. **New code** disconnects everyone; on networks that block direct connections (rare) a TURN server
+can be set under *Connection settings…*.
+
+**Only the real media desk is followed.** The media desk has its own signing key; the QR code (and the OBS addresses)
+carry its fingerprint, and a phone or OBS source accepts slides only from the peer that proves that key. Someone who
+only has the room code cannot show fake slides or stream overlays. A phone that typed the code by hand trusts the first
+media desk that proves a key and remembers it. On the church network each screen sends a private key of its own, so no
+screen can act in another's name.
+
+**Control from the stage (optional):** stage screens only follow, until someone enters the **control PIN** shown in the
+Tools → Stage (⚙ → *Unlock controls*), or you switch on **Control** for that device in *Connected screens*. Then they get
+Previous / Next / Show Next / Black / Logo / Clear and the timer buttons, and the keys → ← Page Up/Down and B work there
+too (a presentation clicker plugged into the stage laptop works). Wrong PINs are limited to five tries a minute for
+the whole media desk (reloading or rejoining does not reset it). Switching **Control** off for a device sticks even if
+it reloads with a saved PIN; **New PIN** takes away control given by PIN (devices you allowed by hand keep it). The stage window on this PC may control by default (a touch screen on the platform).
+
+**Talk back:** every stage screen has **Talk to the media desk** — quick replies ("Ready", "Need 5 more minutes",
+"Microphone problem"…) or typed text. It appears as a notice in SDA Sabbath and in Tools → Stage, with *Reply*.
+
+**Timers:** a *Speaker* count-down and a *Service* stopwatch to start with; add count-downs, stopwatches and
+"ends at 12:00" clocks (up to 8). Start / Pause, Reset, ±1 minute and 5–45 minute presets. One is **featured** large on
+the stage. In the **Plan** tab, ⋯ → **Planned time…** on a part (e.g. Sermon 35 min) starts the featured count-down
+when that part goes on screen. Timers keep running when the app is reloaded, and every screen counts on its own, so a
+phone that sleeps shows the right time when it wakes.
+
+**Messages:** type and Send (Enter), or click a quick message; *Edit* changes the list. The top-bar Stage button shows
+how many stage screens follow, the running timer and a yellow dot while a message is up.
+
+## Live stream (OBS)
+
+**Tools → Stream** (the third button at the top of the Tools tab) feeds OBS Studio. Two Browser Sources follow SDA Sabbath live:
+
+| Source | What it shows |
+|---|---|
+| **SDA Sabbath · Lower third** (transparent, over the camera) | **Automatically:** the reference and verse when a Bible passage goes on screen; the hymn words (or only the title) when a hymn is on screen; optionally other text slides. **By hand:** a name and title ("Pastor … — Guest speaker", saved names one click away), an announcement, a **scrolling ticker**, the **church logo** in the corner. A name shown by hand goes over the automatic words while it is up. **Show overlays on the stream** off hides everything at once. |
+| **SDA Sabbath · Slides** (full screen) | The slides exactly as on the projector, for a "Presentation" scene. **Text over the camera** makes the background see-through, so Bible and hymn text sits over the camera picture. Black, videos, web pages and screen sharing show nothing here (add a Window Capture of the display window for videos). |
+
+**Setting up OBS — two clicks:** in OBS (28 or newer) open **Tools → WebSocket Server Settings**, tick **Enable WebSocket
+server**, and copy the password (**Show Connect Info**). In SDA Sabbath → Tools → Stream: **1. Connect to OBS** (nothing in OBS
+changes yet), **2.** check the camera scene (the scene with your webcam / capture card is picked automatically) and press
+**Set up OBS**. SDA Sabbath adds the lower third on top of your camera scene and creates a **SDA Sabbath · Presentation**
+scene with the slides. Press it again any time to repair or update the sources (a size or CSS you set in OBS is kept;
+choosing another camera scene moves the lower third). OBS on another computer: open SDA Sabbath from the companion on
+that computer (an https page may only reach OBS on the same PC), or set it up by hand.
+
+**By hand:** Tools → Stream → *Set up OBS by hand* → **Copy address**, then in OBS: Sources → + → **Browser** → paste the URL,
+Width 1920, Height 1080. Or drag the **Drag into OBS** button onto the Sources list.
+
+**How OBS follows:** with the SDA Sabbath companion on the church PC, OBS loads the overlays from it
+(`http://localhost:7777/obs.html?via=lan&mode=lower`) and needs no internet. Otherwise the sources follow over the internet
+with the same room code as the stage screens (turned on automatically), peer to peer and encrypted, like phones do.
+
+**OBS control** (when connected): the scene list (click to put a scene on air — in **Studio Mode** into Preview, and you
+press Transition), **Start/Stop streaming** with a pre-flight check (lower third and slides connected, scene on air,
+overlays on), **recording**, stream health while live (connection, dropped frames, reconnecting), and a red
+**● LIVE 0:42:10 / ● REC** mark in the top bar of SDA Sabbath. Names of the people leading today's plan parts are one
+click away under Lower thirds.
+**Follow the slides** switches OBS to the Presentation scene for slides, pictures and banners and back to the camera scene
+for Bible verses, hymns, black and clear (the lower third then carries the words — if automatic words are off, it
+stays on the slides). Videos and screen sharing go to the camera scene, the presentation scene or nowhere (your choice).
+It only switches between those two scenes, so a scene you choose yourself in OBS (pre-service loop, closing card) is
+never taken off air, and picking a scene in OBS pauses following until the next item. While the presentation scene is on
+air, the lower third leaves out the automatic words (the slide already shows them). Renamed scenes are followed.
+**Text over the camera** puts the camera scene underneath the slides in the presentation scene.
+
+**Look:** Classic (dark bar), Light or Minimal (text with shadow only), left or centred, four sizes, accent colour (or the
+projector's), all inside the broadcast-safe area. The tab has a live preview over a checkerboard (= see-through).
 
 ## Banners
 

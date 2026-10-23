@@ -4,6 +4,24 @@
 //   3. the SDA Sabbath companion on the LAN (WebSocket), e.g. a smart-TV browser or second PC
 import { createDisplay } from './display/display.js';
 import { createDecoder, createEncoder } from './core/wire.js';
+import { sanitizeSlideHtml } from './core/render.js';
+import { APP_SCOPE } from './core/util.js';
+
+// Slides that arrive over a network link (the companion on the church network, or Cast) are cleaned before
+// they are drawn: only plain formatting survives, never scripts, frames, event handlers or odd links. The
+// window opened by SDA Sabbath on this PC is the app itself and needs no cleaning.
+function cleanFrame(f) {
+  if (!f || typeof f !== 'object') return;
+  if (typeof f.html === 'string') f.html = sanitizeSlideHtml(f.html);
+  if (Array.isArray(f.cols)) f.cols.forEach((c) => { if (c && typeof c.html === 'string') c.html = sanitizeSlideHtml(c.html); });
+}
+function clean(m) {
+  if (m && m.t === 'deck' && m.deck && typeof m.deck === 'object') {
+    if (Array.isArray(m.deck.frames)) m.deck.frames.forEach(cleanFrame);
+    cleanFrame(m.deck.frame);
+  }
+  return m;
+}
 
 const params = new URLSearchParams(location.search);
 const root = document.getElementById('root');
@@ -30,17 +48,34 @@ window.addEventListener('message', (e) => {
 try { addWin(window.opener); } catch (e) { /* */ }
 // Lets a reloaded control tab find this window again.
 try {
-  const bc = new BroadcastChannel('selah-display');
-  bc.onmessage = (e) => { if (e.data && e.data.t === 'who') bc.postMessage({ t: 'here' }); };
+  const bc = new BroadcastChannel('selah-display:' + APP_SCOPE);
+  bc.onmessage = (e) => {
+    if (!e.data || e.data.t !== 'who') return;
+    bc.postMessage({ t: 'here' });
+    // The control page that opened this window was reloaded: tell it directly, so it takes this window over.
+    try { if (window.opener && !window.opener.closed) window.opener.postMessage({ t: 'here-win' }, location.origin); } catch (er) { /* */ }
+  };
   bc.postMessage({ t: 'here' });
 } catch (e) { /* old browser */ }
+
+// The app that opened this window was closed for good (not just reloaded): close this window too after a
+// few seconds, so no old slide is left on the projector with no one able to change it.
+if (!params.get('via') && window.opener) {
+  let gone = 0;
+  setInterval(() => {
+    let closed = true;
+    try { closed = !window.opener || window.opener.closed; } catch (e) { closed = true; }
+    gone = closed ? gone + 1 : 0;
+    if (gone >= 4) { try { window.close(); } catch (e) { /* */ } }
+  }, 1500);
+}
 
 // 2) Presentation API receiver (Cast / wireless display)
 if (navigator.presentation && navigator.presentation.receiver) {
   navigator.presentation.receiver.connectionList.then((list) => {
     const setup = (conn) => {
       conn.binaryType = 'arraybuffer';
-      const dec = createDecoder((m) => disp.handle(m));
+      const dec = createDecoder((m) => disp.handle(clean(m)));
       const enc = createEncoder((s) => conn.send(s), (b) => conn.send(b));
       outs.add(enc);
       conn.onmessage = (e) => (typeof e.data === 'string' ? dec.text(e.data) : dec.binary(e.data));
@@ -49,14 +84,17 @@ if (navigator.presentation && navigator.presentation.receiver) {
       live++; clearTimeout(endT);
       disp.sayHello();
     };
-    // The controlling app was closed (or lost): clear the screen and end the cast, so the TV does not keep
-    // showing the last slide. A short wait lets a dropped Wi-Fi connection come back first.
+    // The controlling app went away. It may only be reloading (an accidental F5) and come back in a moment, so
+    // the slide stays up for 20 s; if nobody takes the cast over by then, the TV goes black and the cast ends.
     let live = 0, endT = null;
     const endSoon = () => {
       clearTimeout(endT);
       if (live > 0) return;
-      try { disp.handle({ t: 'clear', mode: 'black' }); } catch (e) { /* */ }
-      endT = setTimeout(() => { if (live <= 0) { try { window.close(); } catch (e) { /* */ } } }, 8000);
+      endT = setTimeout(() => {
+        if (live > 0) return;
+        try { disp.handle({ t: 'clear', mode: 'black' }); } catch (e) { /* */ }
+        endT = setTimeout(() => { if (live <= 0) { try { window.close(); } catch (e) { /* */ } } }, 5000);
+      }, 20000);
     };
     list.connections.forEach(setup);
     list.onconnectionavailable = (e) => setup(e.connection);
@@ -70,7 +108,7 @@ if (params.get('via') === 'ws') {
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
     ws = new WebSocket(proto + '//' + location.host + '/ws?role=display&room=' + encodeURIComponent(params.get('room') || 'main') + '&pin=' + encodeURIComponent(params.get('pin') || ''));
     ws.binaryType = 'arraybuffer';
-    const dec = createDecoder((m) => disp.handle(m));
+    const dec = createDecoder((m) => disp.handle(clean(m)));
     ws.onopen = () => {
       wait = 1000;
       enc = createEncoder((s) => ws.send(s), (b) => ws.send(b));

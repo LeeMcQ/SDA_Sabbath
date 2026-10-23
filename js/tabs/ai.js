@@ -208,7 +208,8 @@ export default function create(ctx) {
     c.width = Math.round(bmp.width * sc); c.height = Math.round(bmp.height * sc);
     const g = c.getContext('2d');
     g.drawImage(bmp, 0, 0, c.width, c.height);
-    const full = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.86));
+    // Pictures that can have see-through parts (logos, cut-outs) stay PNG so they don't get a black box.
+    const full = await new Promise((r) => (opts.keepAlpha && /png|webp|gif/.test(blob.type) ? c.toBlob(r, 'image/png') : c.toBlob(r, 'image/jpeg', 0.86)));
     const t = document.createElement('canvas');
     t.width = 192; t.height = 108;
     const tg = t.getContext('2d');
@@ -224,7 +225,7 @@ export default function create(ctx) {
     const cw = c.width, ch = c.height;
     c.width = c.height = 0;
     const id = 'bbg-' + uid();
-    await db.put('files', id, { id, kind: 'banner-bg', name: name || 'Picture', type: 'image/jpeg', size: full.size, blob: full, thumb, added: Date.now(), meta: { lum, w: cw, h: ch } });
+    await db.put('files', id, { id, kind: 'banner-bg', name: name || 'Picture', type: full.type || 'image/jpeg', size: full.size, blob: full, thumb, added: Date.now(), meta: { lum, w: cw, h: ch } });
     blobCache.set(id, full);
     return id;
   }
@@ -358,7 +359,9 @@ export default function create(ctx) {
     groupSel.value = cur.group && groups.some((g) => g.id === cur.group) ? cur.group : '';
   }
   const formatScroll = h('div.scroll.pad.bn-format');
-  const strip = h('div.bn-strip', { role: 'listbox', 'aria-label': 'Slides of this banner' });
+  // The slides are a list box; the "+ Slide" button sits next to it (a list box may only hold its options).
+  const stripList = h('div.bn-strip-list', { role: 'listbox', 'aria-label': 'Slides of this banner' });
+  const strip = h('div.bn-strip', stripList);
   const wideBtn = h('button.btn.sm', { type: 'button', title: 'Bigger slide: make the editing area wider', 'aria-pressed': 'false', onclick: () => setWide(!wide) }, icon('wide'), h('span.hide-sm', 'Wide'));
   let wide = false;
   try { wide = localStorage.getItem('selah-bn-wide') === '1'; } catch (e) { /* */ }
@@ -366,7 +369,7 @@ export default function create(ctx) {
   let side = 'slide';
   function renderSideSeg() {
     clear(sideSeg);
-    [['slide', 'Slide'], ['format', 'Format options']].forEach(([k, l]) => sideSeg.appendChild(h('button', { type: 'button', role: 'tab', 'aria-pressed': String(side === k), 'aria-selected': String(side === k), onclick: () => setSide(k) }, l)));
+    [['slide', 'Slide'], ['format', 'Format options']].forEach(([k, l]) => sideSeg.appendChild(h('button', { type: 'button', role: 'tab', 'aria-selected': String(side === k), onclick: () => setSide(k) }, l)));
   }
   function setSide(k) {
     side = k; renderSideSeg();
@@ -548,7 +551,8 @@ export default function create(ctx) {
   function renderStrip() {
     stripReady = true;
     stripMinis.forEach((s) => s.destroy()); stripMinis = [];
-    clear(strip);
+    clear(stripList);
+    Array.from(strip.children).forEach((c) => { if (c !== stripList) c.remove(); });
     const slides = slidesOf(cur);
     slides.forEach((x, i) => {
       const hostM = h('div.stage-host');
@@ -562,7 +566,7 @@ export default function create(ctx) {
         ondrop: (ev) => { it.classList.remove('drop'); const from = +ev.dataTransfer.getData('text/x-slide'); if (isFinite(from)) movePage(from, i); } },
         h('div.bn-strip-th', hostM), h('span.bn-strip-n', String(i + 1)));
       if (slides.length > 1) it.appendChild(h('button.bn-strip-more', { type: 'button', title: 'Slide options', 'aria-label': 'Slide ' + (i + 1) + ' options', onclick: (ev) => { ev.stopPropagation(); pageMenu(ev.currentTarget, i); } }, icon('more')));
-      strip.appendChild(it);
+      stripList.appendChild(it);
       requestAnimationFrame(async () => {
         const st = createStage(hostM, { placeholderOnly: true, aspect: link.aspect ? link.aspect() : 16 / 9 });
         hostM._stage = st; stripMinis.push(st);
@@ -1381,7 +1385,7 @@ export default function create(ctx) {
       let text = '', label = ref;
       try {
         if (info.books[r.book - 1] && info.books[r.book - 1][1]) {
-          const vs = await versesFor(info.id, r.book, r.segs);
+          const vs = await versesFor(info.id, r.book, r.segs, { english: true });
           text = vs.map((v) => verseText(v.text)).join(' ');
           label = refText(info.names, r.book, r.segs);
         }
@@ -1692,9 +1696,23 @@ export default function create(ctx) {
   const api = {
     el,
     /** Turn a slide into a banner in the editor: {blob} makes a picture banner, {title,text} a text banner. */
-    async fromSlide({ blob, title, text, name }) {
+    async fromSlide({ blob, title, text, name, els, bg }) {
       await ready;
-      if (blob) {
+      if (els && els.length) {
+        // A slide's own pieces: text boxes, shapes and pictures that the slide editor can change.
+        setDoc(newBanner('blank'));
+        sl.f = {}; sl.s.pal = 'black'; sl.s.deco = 'none'; sl.s.free = true;
+        if (bg && bg.color) { sl.s.bgc = bg.color; if (bg.color2) { sl.s.bgc2 = bg.color2; sl.s.bga = bg.angle == null ? 180 : bg.angle; } }
+        if (bg && bg.blob) { sl.s.img = await storePicture(bg.blob, (name || 'Slide') + ' background'); sl.s.dim = 0; sl.s.imgFit = 'cover'; }
+        const out = [];
+        for (const e of els) {
+          const o = Object.assign({ id: 'e' + uid() }, e);
+          if (o._blob) { try { o.src = await storePicture(o._blob, (name || 'Slide') + ' picture', { keepAlpha: true }); } catch (er) { delete o._blob; continue; } }
+          delete o._blob; out.push(o);
+        }
+        sl.els = cleanEls(out);
+        cur.name = name || 'Slide banner';
+      } else if (blob) {
         const id = await storePicture(blob, (name || 'Slide') + '.jpg');
         setDoc(newBanner('picture'));
         sl.s.img = id; sl.s.dim = 0; cur.name = name || 'Slide banner';

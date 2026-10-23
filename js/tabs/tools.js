@@ -1,10 +1,12 @@
-// Service tools: stage monitor, lower thirds, timer, responsive readings,
-// communion sequence, streaming overlay, basic captions.
+// Service tools: lower thirds, responsive readings, communion sequence, streaming overlay, captions
+// The Stage and Stream parts (stage.js, stream.js) are shown in this tab too.
 // Like every other tab, slides from here go to the green Next screen first; Present shows them.
 // Children's story templates intentionally omitted.
 import { h, esc } from '../core/util.js';
 import { icon } from '../core/icons.js';
 import { btn } from '../core/ui.js';
+import createStage from './stage.js';
+import createStream from './stream.js';
 
 const RESPONSIVE = [
   { title: 'Call to Worship', text: 'Leader: O come, let us worship and bow down.\nPeople: Let us kneel before the Lord our maker.\nLeader: For he is our God.\nPeople: And we are the people of his pasture, and the sheep of his hand.' },
@@ -19,18 +21,10 @@ const COMMUNION = [
   { title: 'Closing', text: 'For as often as ye eat this bread, and drink this cup, ye do shew the Lord’s death till he come.\n\n1 Corinthians 11:26' },
 ];
 
-export default function create(ctx) {
+function createService(ctx) {
   const { live, toast: showToast } = ctx;
-  let timerInterval = null;
-  let timerStart = 0;
-  let timerElapsed = 0;
-  let countdownTarget = 0;
-  let isCountdown = false;
-  let stageWin = null;
-  let overlayWin = null;
   let captionRec = null;
 
-  const timerDisplay = h('div', { style: { fontSize: '2.2rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' } }, '00:00');
   const lowerText = h('input.field', { placeholder: 'Lower third text (e.g. John 3:16 or Hymn 73)', style: { width: '100%' } });
   const lowerKind = h('select.field', { 'aria-label': 'Lower third type', style: { width: '140px' } },
     h('option', { value: 'scripture' }, 'Scripture'),
@@ -91,46 +85,6 @@ export default function create(ctx) {
     return b;
   }
 
-  function openStage() {
-    if (stageWin && !stageWin.closed) { stageWin.focus(); return; }
-    stageWin = window.open('', 'sda-stage', 'width=420,height=720,menubar=0,toolbar=0');
-    if (!stageWin) { showToast('Pop-up blocked. Allow pop-ups for the stage monitor.', 'err'); return; }
-    stageWin.document.write(`<!doctype html><html><head><title>Stage Monitor</title>
-      <style>body{margin:0;background:#0d1117;color:#e6edf3;font:15px/1.45 system-ui,sans-serif;padding:16px}
-      h1{font-size:1.1rem;margin:0 0 12px;color:#8b949e} .big{font-size:1.6rem;font-weight:700;margin:8px 0}
-      .time{font-size:2.4rem;font-variant-numeric:tabular-nums;font-weight:700;color:#3fb950}
-      .next{opacity:.75;margin-top:18px}</style></head><body>
-      <h1>Stage / Confidence</h1><div class="time" id="t">--:--</div>
-      <div class="big" id="cur">Waiting…</div><div class="next" id="nxt">Next: —</div></body></html>`);
-    stageWin.document.close();
-    updateStage();
-  }
-
-  function updateStage() {
-    if (!stageWin || stageWin.closed) return;
-    const cur = live.cue;
-    const nxt = live.staged;
-    const tEl = stageWin.document.getElementById('t');
-    const cEl = stageWin.document.getElementById('cur');
-    const nEl = stageWin.document.getElementById('nxt');
-    if (tEl) tEl.textContent = timerDisplay.textContent;
-    if (cEl) cEl.textContent = cur ? (cur.title || 'Live') : '—';
-    if (nEl) nEl.textContent = nxt ? 'Next: ' + (nxt.title || '') : 'Next: —';
-  }
-
-  function openOverlay() {
-    if (overlayWin && !overlayWin.closed) { overlayWin.focus(); return; }
-    overlayWin = window.open('', 'sda-overlay', 'width=1280,height=720,menubar=0,toolbar=0');
-    if (!overlayWin) { showToast('Pop-up blocked for overlay window.', 'err'); return; }
-    overlayWin.document.write(`<!doctype html><html><head><title>Lower Third Overlay</title>
-      <style>html,body{margin:0;height:100%;background:transparent;overflow:hidden}
-      #bar{position:fixed;left:0;right:0;bottom:0;padding:18px 32px;background:rgba(0,0,0,.72);
-      color:#fff;font:22px/1.3 system-ui,sans-serif;display:none;backdrop-filter:blur(4px)}
-      #bar.show{display:block} .kind{font-size:13px;opacity:.7;letter-spacing:.08em;text-transform:uppercase}</style></head>
-      <body><div id="bar"><div class="kind" id="k"></div><div id="txt"></div></div></body></html>`);
-    overlayWin.document.close();
-  }
-
   const KIND_LABEL = { scripture: 'Scripture', hymn: 'Hymn', speaker: 'Speaker', offering: 'Offering', custom: '' };
   /** Projector: the lower-third text as a slide on the Next screen. */
   function stageLower() {
@@ -138,59 +92,6 @@ export default function create(ctx) {
     if (!text) { showToast('Type the lower-third text first.', 'err'); return; }
     stage(textCue('tools:lower:' + text, text, 'Lower third', [{ title: KIND_LABEL[lowerKind.value] || '', text }]), false);
   }
-  /** Streaming: the bar in the separate overlay window (for OBS), not the projector. */
-  function showLowerOnStream() {
-    const text = lowerText.value.trim();
-    if (!text) { showToast('Type the lower-third text first.', 'err'); return; }
-    openOverlay();
-    if (overlayWin && !overlayWin.closed) {
-      const bar = overlayWin.document.getElementById('bar');
-      overlayWin.document.getElementById('k').textContent = KIND_LABEL[lowerKind.value] || '';
-      overlayWin.document.getElementById('txt').textContent = text;
-      bar.classList.add('show');
-      clearTimeout(showLowerOnStream.t);
-      showLowerOnStream.t = setTimeout(() => { if (overlayWin && !overlayWin.closed) bar.classList.remove('show'); }, 12000);
-      showToast('Shown on the stream overlay for 12 seconds.', 'ok');
-    }
-  }
-
-  function tick() {
-    if (isCountdown) {
-      const left = Math.max(0, countdownTarget - Date.now());
-      const s = Math.ceil(left / 1000);
-      const m = Math.floor(s / 60);
-      timerDisplay.textContent = String(m).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
-      if (left <= 0) { clearInterval(timerInterval); timerInterval = null; showToast('Timer finished.', 'ok'); }
-    } else {
-      const s = Math.floor((timerElapsed + (Date.now() - timerStart)) / 1000);
-      const m = Math.floor(s / 60);
-      timerDisplay.textContent = String(m).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
-    }
-    updateStage();
-  }
-
-  function startTimer(secs) {
-    clearInterval(timerInterval);
-    if (secs) {
-      isCountdown = true;
-      countdownTarget = Date.now() + secs * 1000;
-    } else {
-      isCountdown = false;
-      timerStart = Date.now();
-      timerElapsed = 0;
-    }
-    timerInterval = setInterval(tick, 250);
-    tick();
-  }
-
-  function stopTimer() {
-    if (timerInterval) {
-      if (!isCountdown) timerElapsed += Date.now() - timerStart;
-      clearInterval(timerInterval);
-      timerInterval = null;
-    }
-  }
-
   // Captions go on the display's caption line, over whatever is on screen (they never replace a slide).
   // Starting them is the operator's explicit choice, so they show straight away.
   const capPreview = h('p.note', { style: { marginTop: '8px', minHeight: '1.4em' } }, '');
@@ -236,30 +137,13 @@ export default function create(ctx) {
   }
   paintCapBtn();
 
-  const el = h('section',
-    h('div.toolbar', h('h2', 'Service tools'), h('div.grow')),
+  const el = h('section.tools-service',
     h('div.scroll', { style: { flex: '1', padding: '8px 4px' } },
       h('div.card', { style: { marginBottom: '12px', padding: '12px', border: '1px solid var(--line)', borderRadius: '10px' } },
-        h('h3', { style: { margin: '0 0 8px' } }, 'Stage / confidence monitor'),
-        h('p.note', 'Opens a small window showing the current live item, next item, and service timer. Place it on a stage monitor or second laptop.'),
-        btn('present', 'Open stage monitor', openStage, { label: true })),
-      h('div.card', { style: { marginBottom: '12px', padding: '12px', border: '1px solid var(--line)', borderRadius: '10px' } },
-        h('h3', { style: { margin: '0 0 8px' } }, 'Lower third / overlay'),
+        h('h3', { style: { margin: '0 0 8px' } }, 'Lower third on the projector'),
         h('div.row', { style: { gap: '8px', marginBottom: '8px' } }, lowerKind, lowerText),
-        h('div.row.wrap', btn('next', 'Set as Next', stageLower, { label: true, cls: 'primary' }),
-          btn('link', 'Show on stream overlay', showLowerOnStream, { label: true }),
-          btn('x', 'Clear overlay', () => { if (overlayWin && !overlayWin.closed) overlayWin.document.getElementById('bar')?.classList.remove('show'); }, { label: true })),
-        h('p.note', 'Set as Next puts the text on the green Next screen for the projector; Present (F5) shows it. The stream overlay is a separate window for OBS (browser source, transparent background).')),
-      h('div.card', { style: { marginBottom: '12px', padding: '12px', border: '1px solid var(--line)', borderRadius: '10px' } },
-        h('h3', { style: { margin: '0 0 8px' } }, 'Service timer'),
-        timerDisplay,
-        h('div.row', { style: { gap: '6px', marginTop: '8px', flexWrap: 'wrap' } },
-          btn('play', 'Start', () => startTimer(0), { label: true }),
-          btn('stop', 'Stop', stopTimer, { label: true }),
-          btn('reload', 'Reset', () => { stopTimer(); timerElapsed = 0; timerDisplay.textContent = '00:00'; updateStage(); }, { label: true }),
-          btn('clock', '5 min', () => startTimer(300), { label: true }),
-          btn('clock', '10 min', () => startTimer(600), { label: true }),
-          btn('clock', '20 min', () => startTimer(1200), { label: true }))),
+        h('div.row.wrap', btn('next', 'Set as Next', stageLower, { label: true, cls: 'primary' })),
+        h('p.note', 'Set as Next puts the text on the green Next screen for the projector; Present (F5) shows it. Names and announcements for the live stream are under Stream.')),
       h('div.card', { style: { marginBottom: '12px', padding: '12px', border: '1px solid var(--line)', borderRadius: '10px' } },
         h('h3', { style: { margin: '0 0 8px' } }, 'Responsive readings'),
         h('p.note', { style: { marginBottom: '8px' } }, 'Click to put a reading on the green Next screen, then Present (F5). Double-click to show it at once.'),
@@ -274,22 +158,78 @@ export default function create(ctx) {
         h('h3', { style: { margin: '0 0 8px' } }, 'Offering & tithe'),
         h('p.note', 'Offering banners (with a verse and a QR code for online giving) are made in Banners.'),
         h('button.btn', { type: 'button', style: { marginTop: '8px' }, onclick: () => ctx.showTab('ai') }, icon('banner'), h('span', 'Open Banners'))),
-      h('div.card', { style: { marginBottom: '12px', padding: '12px', border: '1px solid var(--line)', borderRadius: '10px' } },
-        h('h3', { style: { margin: '0 0 8px' } }, 'Streaming output'),
-        h('p.note', 'Open the overlay window above, then in OBS add a Browser Source pointing at this page (or the overlay window). Use a transparent background for lower thirds over camera. The main display.html remains the full projector output.'),
-        btn('link', 'Open streaming overlay window', openOverlay, { label: true })),
       h('div.card', { style: { padding: '12px', border: '1px solid var(--line)', borderRadius: '10px' } },
         h('h3', { style: { margin: '0 0 8px' } }, 'Live captions (experimental)'),
         h('p.note', 'Uses the browser’s speech recognition (needs internet in Chrome/Edge). The words appear on the caption line at the bottom of the screen, over whatever is showing. Full multi-language translation remains planned.'),
         capBtn, capPreview)
     ));
 
-  live.on('live', () => { updateStage(); markPicks(); });
-  live.on('staged', () => { updateStage(); markPicks(); });
+  live.on('live', markPicks);
+  live.on('staged', markPicks);
   live.on('go', markPicks);
 
   return {
     el,
+    open() { return null; },
+  };
+}
+
+// ------------------------------------------------------------ the Tools tab: three parts
+//   Service – readings, communion, the projector lower third, captions
+//   Stage   – the second screen for the platform: messages, timers, phones & laptops (stage.js)
+//   Stream  – OBS: lower thirds, presentation output, scene switching (stream.js)
+// Each part keeps its own content; only the part that is open is shown. Stage and Stream are built the first
+// time they are opened.
+const PARTS = [
+  ['service', 'grid', 'Service', 'Readings, communion, projector lower third, captions'],
+  ['stage', 'stage', 'Stage', 'Second screen for the platform: messages, timers, phones & laptops'],
+  ['stream', 'live', 'Stream', 'OBS live stream: lower thirds, slides, scene switching'],
+];
+export default function create(ctx) {
+  const makers = { service: createService, stage: createStage, stream: createStream };
+  const parts = {};
+  let part = PARTS.some((p) => p[0] === ctx.settings.v.app.toolsPart) ? ctx.settings.v.app.toolsPart : 'service';
+  const seg = h('div.seg.tools-seg', { role: 'group', 'aria-label': 'Tools' });
+  const host = h('div.tools-parts');
+  const el = h('section.tools',
+    h('div.toolbar.tools-bar', h('h2', 'Tools'), seg, h('div.grow'), h('span.note.hide-sm.tools-hint')),
+    host);
+  const hint = el.querySelector('.tools-hint');
+  function get(k) {
+    if (!parts[k]) {
+      const api = makers[k](ctx);
+      api.el.classList.add('tools-part', 'tools-part-' + k);
+      api.el.hidden = true;
+      host.append(api.el);
+      parts[k] = api;
+    }
+    return parts[k];
+  }
+  function paintSeg() {
+    seg.replaceChildren(...PARTS.map(([k, ic, label, title]) => h('button', { type: 'button', title, 'aria-pressed': String(k === part), onclick: () => show(k) }, icon(ic), h('span', label))));
+    const p = PARTS.find((x) => x[0] === part);
+    hint.textContent = p ? p[3] : '';
+  }
+  function show(k) {
+    if (!makers[k]) k = 'service';
+    const prev = parts[part];
+    if (prev && part !== k) { prev.el.hidden = true; if (prev.onHide) prev.onHide(); }
+    part = k;
+    ctx.settings.set('app.toolsPart', k);
+    const api = get(k);
+    api.el.hidden = false;
+    paintSeg();
+    if (visible && api.onShow) api.onShow();
+    return api;
+  }
+  let visible = false;
+  show(part);
+  return {
+    el,
+    /** Open one part (also used for the old tab names "stage" and "stream"); returns that part. */
+    show(k) { return show(k === 'tools' ? 'service' : k); },
+    onShow() { visible = true; const api = get(part); if (api.onShow) api.onShow(); },
+    onHide() { visible = false; const api = parts[part]; if (api && api.onHide) api.onHide(); },
     open() { return null; },
   };
 }
