@@ -6,7 +6,11 @@
 //   hymnbooks imported / edited hymnbooks: id -> {id, name, lang, hymns}
 //   plans     service plans: id -> {id, name, items, updated}
 
-const NAME = 'selah'; // storage name kept from the app's first name, so existing plans and hymnbooks stay
+import { DB_NAME } from './storens.js';
+
+// 'selah': this app's database since its first version, so existing plans, hymnbooks and slides stay (storens.js).
+// Church_Service, on the same website, has its own database and never changes this one.
+const NAME = DB_NAME;
 const VERSION = 1;
 const STORES = ['kv', 'files', 'renders', 'bibles', 'hymnbooks', 'plans'];
 let dbp = null;

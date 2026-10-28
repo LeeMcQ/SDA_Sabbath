@@ -5,10 +5,13 @@ import { icon } from '../core/icons.js';
 import { btn, modal, seg, toggle, menu, toast, confirmBox, closeModal, enter, emptyState, keepInView } from '../core/ui.js';
 import { db } from '../core/db.js';
 import { fitsText } from '../core/render.js';
-import { music, INSTRUMENTS } from '../core/hymnmusic.js';
+import { music, INSTRUMENTS, hqFor, hqStored, hqRemove, hqPrefetch, HQ_MB } from '../core/hymnmusic.js';
 import { fmtTime } from '../core/util.js';
 import * as ai from '../core/ai.js';
 import { findSongs, lyricsOf, songFromPlain, songText, sourceLinks, matchLabel, splitQuery, findMidi, fetchMidi } from '../core/lyrics.js';
+import { communitySongs, syncCommunity, shareUrl, songText as sharedText, COMMUNITY_BOOK, FIRST_NUMBER } from '../core/community.js';
+import { church } from '../core/church.js';
+import { zipBlobs } from '../lib/blobzip.js';
 
 const CHORUS_RE = /^(chorus|refrain|koor|refrein|ikhorasi|c)\s*[:.]?\s*$/i;
 
@@ -127,12 +130,17 @@ export default function create(ctx) {
   let musicSet = null;     // hymn numbers with music in the current book
   let musicEntry = null;   // music index entry of the selected hymn
   const editBtn = btn('edit', 'Edit this hymn', () => hymn && editHymn(hymn), { cls: 'sm' });
+  // A chorus this church added itself can be shared with every church (Praise Choruses only).
+  const shareBtn = h('button.btn.sm', { type: 'button', hidden: true, title: 'Share this chorus with all churches that use SDA Sabbath', onclick: () => hymn && shareChorus(hymn) }, icon('send'), h('span', 'Share with all churches'));
+  const isOwnChorus = (hy) => !!(hy && book && book.id === COMMUNITY_BOOK && !hy.shared && !(book.builtinNs && book.builtinNs.has(hy.n)));
   const moreBtn = btn('more', 'More', () => menu(moreBtn, [
     { label: 'Find lyrics online', icon: 'search', onclick: () => findLyrics() },
     { label: 'New hymn', icon: 'plus', onclick: () => editHymn(null) },
     { label: 'Import a hymnbook…', icon: 'upload', onclick: importBook },
     { label: 'Export this hymnbook', icon: 'download', onclick: exportBook },
     { label: 'Add this hymn to the service plan', icon: 'plan', onclick: addToPlan, disabled: !hymn },
+    { label: 'Check for new shared choruses', icon: 'reload', onclick: () => checkShared(true) },
+    isOwnChorus(hymn) ? { label: 'Share this chorus with all churches…', icon: 'send', onclick: () => shareChorus(hymn) } : null,
     book && !book.builtin ? { label: 'Delete this hymnbook', icon: 'trash', onclick: deleteBook } : null,
   ]), { cls: 'sm' });
 
@@ -140,7 +148,7 @@ export default function create(ctx) {
     h('div.toolbar', h('h2', 'Hymns'), bookSel, h('div.grow'), optsBtn, moreBtn),
     h('div.split.hymn-split',
       h('div.pane', h('div.pane-h', q, padBtn), keypad, h('div.scroll', { style: { flex: '1' } }, listEl)),
-      h('div.pane', h('div.pane-h', titleEl, editBtn), musicBar, h('div', { style: { padding: '8px 12px 0' } }, metaEl, verseChips), h('div.scroll', { style: { flex: '1' } }, grid, empty))));
+      h('div.pane', h('div.pane-h', titleEl, shareBtn, editBtn), musicBar, h('div', { style: { padding: '8px 12px 0' } }, metaEl, verseChips), h('div.scroll', { style: { flex: '1' } }, grid, empty))));
 
   // ------------------------------------------------------------ data
   async function loadBooks() {
@@ -150,7 +158,7 @@ export default function create(ctx) {
       for (const b of idx) {
         try {
           const j = await (await fetch('data/hymns/' + b.file)).json();
-          const nb = normaliseBook(j, b.name); nb.id = b.id; nb.short = b.short || nb.short; nb.builtin = true;
+          const nb = normaliseBook(j, b.name); nb.id = b.id; nb.short = b.short || nb.short; nb.builtin = true; nb.builtinNs = new Set(nb.hymns.map((x) => x.n));
           books.push(nb);
         } catch (e) { console.warn('hymnbook', b.file, e); }
       }
@@ -167,6 +175,24 @@ export default function create(ctx) {
           lang: typeof sb.lang === 'string' ? sb.lang : 'en', hymns: cleanHymns(sb.hymns).sort((a, b) => a.n - b.n) });
       });
     } catch (e) { console.warn(e); }
+    // Choruses shared by other churches (approved by the maintainer) join the Praise Choruses book.
+    try {
+      const cb = books.find((b) => b.id === COMMUNITY_BOOK);
+      if (cb) {
+        const cs = await communitySongs();
+        const key = (x) => normalize(x.t) + '|' + normalize(((x.v && x.v[0]) || [])[0] || '');
+        const sharedKeys = new Set(cs.songs.map(key));
+        // A chorus this church added and later shared now arrives as the shared copy: show it once.
+        cb.hymns = cb.hymns.filter((x) => cb.builtinNs.has(x.n) || !sharedKeys.has(key(x)) || cs.songs.some((y) => y.n === x.n));
+        cs.songs.forEach((sg) => {
+          const hy = Object.assign({}, sg, { shared: true });
+          const i = cb.hymns.findIndex((x) => x.n === sg.n);
+          if (i >= 0) cb.hymns[i] = hy; else cb.hymns.push(hy);
+        });
+        cb.hymns.sort((a, b) => a.n - b.n);
+        cb.sharedCount = cs.songs.length;
+      }
+    } catch (e) { console.warn('shared choruses', e); }
     clear(bookSel);
     books.forEach((b) => bookSel.appendChild(h('option', { value: b.id }, b.name + ' (' + b.hymns.length + ')')));
     setBook(books.some((b) => b.id === S().book) ? S().book : books[0] && books[0].id);
@@ -175,6 +201,7 @@ export default function create(ctx) {
   function setBook(id) {
     book = books.find((b) => b.id === id) || null;
     if (book) { bookSel.value = book.id; settings.set('hymns.book', book.id); }
+    shareBtn.hidden = !isOwnChorus(hymn);
     musicSet = null;
     renderList();
     const bid = book && book.id;
@@ -195,7 +222,27 @@ export default function create(ctx) {
     return nq.split(/\s+/).every((w) => hy._txt.includes(w));
   }
 
+  // The hymn list is one Tab stop (the chosen hymn, or the first); the arrow keys, Home and End move inside it,
+  // so Tab reaches the stanzas and music controls without walking through every hymn.
+  function rovingStop() {
+    const bs = listEl.querySelectorAll(':scope > button');
+    if (!bs.length) return;
+    const cur = listEl.querySelector(':scope > button[aria-pressed="true"]') || bs[0];
+    bs.forEach((b) => b.setAttribute('tabindex', b === cur ? '0' : '-1'));
+  }
+  listEl.addEventListener('keydown', (e) => {
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End', 'PageDown', 'PageUp'].includes(e.key) || e.ctrlKey || e.altKey || e.metaKey) return;
+    const bs = Array.from(listEl.querySelectorAll(':scope > button'));
+    const i = bs.indexOf(document.activeElement);
+    if (i < 0) return;
+    const j = e.key === 'Home' ? 0 : e.key === 'End' ? bs.length - 1 : e.key === 'PageDown' ? Math.min(bs.length - 1, i + 10) : e.key === 'PageUp' ? Math.max(0, i - 10)
+      : Math.max(0, Math.min(bs.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)));
+    e.preventDefault(); e.stopPropagation();
+    bs.forEach((b, k) => b.setAttribute('tabindex', k === j ? '0' : '-1'));
+    bs[j].focus();
+  });
   function renderList() {
+    const hadFocus = listEl.contains(document.activeElement);
     clear(listEl);
     if (!book) { listEl.appendChild(emptyState('hymn', 'No hymnbook installed', 'Use More (…) → Import a hymnbook.')); return; }
     const qq = q.value.trim();
@@ -203,11 +250,14 @@ export default function create(ctx) {
     if (/^\d+$/.test(qq)) list.sort((a, b) => (a.n === +qq ? -1 : b.n === +qq ? 1 : a.n - b.n));
     const frag = document.createDocumentFragment();
     list.slice(0, 400).forEach((x) => {
-      frag.appendChild(h('button', { type: 'button', 'aria-pressed': String(hymn === x), onclick: () => selectHymn(x), ondblclick: () => { selectHymn(x); live.take(); } },
+      frag.appendChild(h('button', { type: 'button', tabindex: '-1', 'aria-pressed': String(hymn === x), onclick: () => selectHymn(x), ondblclick: () => { selectHymn(x); live.take(); } },
         h('span.num', String(x.n)), h('span.grow', h('div.trunc', x.t), h('div.note.trunc', x.v[0][0])),
+        x.shared ? h('span.hy-shared', { title: 'Shared by a church that uses SDA Sabbath' }, 'Shared') : null,
         musicSet && musicSet.has(x.n) ? h('span.has-music', { title: 'Music available offline' }, icon('music')) : null));
     });
     listEl.appendChild(frag);
+    rovingStop();
+    if (hadFocus) { const t = listEl.querySelector(':scope > button[tabindex="0"]'); if (t) t.focus({ preventScroll: true }); }
     if (!list.length) listEl.appendChild(emptyState('search', 'No hymn matches “' + qq + '”', 'Try a number like 73 or a few words from the hymn.',
       { label: 'Clear search', icon: 'x', onclick: () => { q.value = ''; renderList(); q.focus(); } }));
   }
@@ -237,7 +287,7 @@ export default function create(ctx) {
     const cls = s.caps ? 'caps' : '';
     const frames = [], labels = [], cards = [];
     const textFrame = (lines, p, sub) => ({
-      kind: 'text', variant: 'hymn', lines: true, cls: cls + (p.kind === 'chorus' ? ' is-chorus' : ''), refPos: s.refPos,
+      kind: 'text', variant: 'hymn', lines: true, cls: cls + (p.kind === 'chorus' ? ' is-chorus' : ''), refPos: s.refPos, lang: (book && book.lang) || undefined,
       html: lines.map((l) => '<span class="ln">' + esc(l) + '</span>').join(''), foot: footL,
       footR: p.kind === 'chorus' ? 'Chorus' : 'Verse ' + p.n + (sub ? sub : '') + ' of ' + nVerses,
     });
@@ -277,6 +327,7 @@ export default function create(ctx) {
   function selectHymn(hy, { index = 0 } = {}) {
     if (hymn !== hy) chosen = null;
     hymn = hy; stagedIndex = index;
+    shareBtn.hidden = !isOwnChorus(hy);
     restage();
     renderList();
   }
@@ -366,6 +417,19 @@ export default function create(ctx) {
 
   function optionsDialog() {
     const s = S();
+    // What "High quality" means on this device, and whether the 18 MB download is already here.
+    const hqNote = h('p.note');
+    const paintHQ = async () => {
+      const v = S().musicHQ || 'auto';
+      const on = hqFor(v), have = await hqStored();
+      clear(hqNote);
+      hqNote.append(on
+        ? 'Recorded concert grand piano and church pipe organ. ' + (have ? 'Downloaded on this device.' : 'Downloading in the background (' + HQ_MB + ' MB, once); hymns play with the standard sounds until it is done, then offline too.')
+        : (v === 'auto' ? 'Automatic: high quality on PCs and laptops; standard sounds on phones (smaller and lighter). ' : 'Standard sounds (GeneralUser GS). '));
+      if (have) hqNote.append(' ', h('button.btn.ghost.sm', { type: 'button', onclick: async () => { await hqRemove(); paintHQ(); toast('High-quality sounds removed from this device.'); } }, 'Remove download'));
+      if (music.where === 'display') hqNote.append(' The church PC plays the music and uses its own setting for Automatic.');
+    };
+    paintHQ();
     const set = (k) => (v) => { settings.set('hymns.' + k, v); if (hymn) { restage(); syncLive(); } };
     modal({
       title: 'Hymn options',
@@ -378,10 +442,14 @@ export default function create(ctx) {
         h('label', 'Hymn title line'), seg([['bottom', 'Bottom'], ['top', 'Top'], ['none', 'Hidden']], s.refPos, set('refPos')),
         h('h3', { style: { gridColumn: '1 / -1', marginTop: '10px' } }, 'Music'),
         h('label', 'Volume'), slider(0, 2, 0.05, s.musicVolume == null ? 1.3 : s.musicVolume, (v) => Math.round(v / 1.3 * 100) + '%', (v) => music.setVolume(v)),
+        h('label', 'Instruments'), seg([['auto', 'Automatic'], ['on', 'High quality'], ['off', 'Standard']], s.musicHQ || 'auto', (v) => { settings.set('hymns.musicHQ', v); music.applyEffects(); paintHQ(); if (hqFor(v)) hqPrefetch().then(paintHQ); }),
+        h('label', ''), hqNote,
+        h('label', 'Church echo'), seg([['off', 'Off'], ['small', 'Small room'], ['church', 'Church'], ['large', 'Large church']], s.musicRoom || 'church', (v) => { settings.set('hymns.musicRoom', v); music.applyEffects(); }),
+        h('label', 'Natural playing'), toggle('Melody sings out, inner parts softer, every note a little different', s.musicNatural !== false, (v) => { settings.set('hymns.musicNatural', v); }, 'Hymn files often strike every note equally hard. Takes effect from the next hymn.'),
         h('label', 'Reverb'), slider(0, 127, 1, s.musicReverb == null ? 59 : s.musicReverb, (v) => String(v), (v) => { settings.set('hymns.musicReverb', v); music.applyEffects(); }),
         h('label', 'Chorus effect'), slider(0, 127, 1, s.musicChorus == null ? 43 : s.musicChorus, (v) => String(v), (v) => { settings.set('hymns.musicChorus', v); music.applyEffects(); }),
-        h('label', ''), h('p.note', 'Reverb 59 and chorus 43 are the levels GeneralUser GS’s author recommends for Falcosoft MIDI Player. ',
-          h('button.btn.sm', { type: 'button', onclick: () => { settings.set('hymns.musicReverb', 59); settings.set('hymns.musicChorus', 43); music.applyEffects(); closeModal(); optionsDialog(); } }, 'Use recommended')),
+        h('label', ''), h('p.note', 'Reverb is used when Church echo is off (59 and chorus 43 are the levels GeneralUser GS’s author recommends). ',
+          h('button.btn.sm', { type: 'button', onclick: () => { settings.set('hymns.musicReverb', 59); settings.set('hymns.musicChorus', 43); settings.set('hymns.musicRoom', 'church'); settings.set('hymns.musicHQ', 'auto'); settings.set('hymns.musicNatural', true); music.applyEffects(); closeModal(); optionsDialog(); } }, 'Use recommended')),
         h('label', 'Music plays on'), seg([['auto', 'Automatic'], ['here', 'This device'], ['display', 'The display']], s.musicOutput || 'auto', (v) => settings.set('hymns.musicOutput', v)),
         h('label', ''), h('p.note', 'Automatic: on this device, except when this phone controls the church PC through the companion — then the PC plays it.')),
       actions: [{ label: 'Done', primary: true }],
@@ -447,6 +515,7 @@ export default function create(ctx) {
     if (!book) return;
     const out = { id: book.id, name: book.name, short: book.short, lang: book.lang, hymns: book.hymns.map(({ n, t, a, v, c }) => ({ n, t, a, v, c })) };
     download(new Blob([JSON.stringify(out, null, 1)], { type: 'application/json' }), (book.short || book.id) + '-hymns.json');
+    toast('Exported. Before you share this file: song words belong to their owners — songs from CCLI or other publishers may not be passed on, even if your church may sing them.', '', 8000);
   }
 
   async function deleteBook() {
@@ -454,6 +523,75 @@ export default function create(ctx) {
     if (!(await confirmBox('Delete hymnbook?', 'Remove “' + book.name + '” from this device?', 'Delete', true))) return;
     await db.del('hymnbooks', book.id);
     await loadBooks();
+  }
+
+  // ------------------------------------------------------------ shared choruses
+  /** New choruses from other churches: quietly when the tab opens, or when asked from More. */
+  let checking = false;
+  async function checkShared(asked) {
+    if (checking) return;
+    checking = true;
+    try {
+      const r = await syncCommunity({ force: !!asked });
+      if (r.changed) {
+        const keep = book && book.id, keepN = hymn && hymn.n;
+        await loadBooks();
+        if (keep) setBook(keep);
+        if (keepN && book) { const x = book.hymns.find((y) => y.n === keepN); if (x) selectHymn(x); }
+        toast(r.added ? r.added + ' new shared chorus' + (r.added === 1 ? '' : 'es') + ' added to Praise Choruses.' : 'Shared choruses updated.', 'ok', 5000);
+      } else if (asked) toast(r.offline ? 'No internet connection. Shared choruses are checked when this device is online.' : r.error ? 'Could not check for shared choruses: ' + r.error : 'You have all the shared choruses.', r.error ? 'err' : '', 4000);
+    } finally { checking = false; }
+  }
+  window.addEventListener('online', () => setTimeout(() => checkShared(false), 3000));
+
+  /** Send a chorus to the shared list: a GitHub issue with the words filled in; the chorus robot checks it
+   *  and the maintainer approves it, then every church gets it. */
+  async function shareChorus(hy) {
+    const myMidi = await db.get('files', 'midi:' + COMMUNITY_BOOK + ':' + hy.n).catch(() => null);
+    const name = h('input.field', { value: church().name, placeholder: 'Your church (optional, shown publicly)' });
+    const RIGHTS = [
+      ['public-domain', 'Public domain (an old song, or the writer died more than 70 years ago)'],
+      ['own', 'We wrote it (our church or a member)'],
+      ['permission', 'The writer allows it to be shared'],
+      ['unsure', 'I am not sure'],
+    ];
+    let rights = '';
+    const rightsList = h('div.col', { role: 'radiogroup', 'aria-label': 'May these words be shared?', style: { gap: '4px' } },
+      ...RIGHTS.map(([k, lab]) => h('label.switch', h('input', { type: 'radio', name: 'chorus-rights', value: k, onchange: () => { rights = k; } }), h('span', lab))));
+    const preview = h('pre.note', { style: { whiteSpace: 'pre-wrap', maxHeight: '180px', overflow: 'auto', margin: '0', padding: '8px', border: '1px solid var(--line)', borderRadius: '8px' } }, sharedText(hy));
+    const midiRow = myMidi && myMidi.blob ? h('div.row.wrap', h('span.note', 'Your MIDI file for this chorus can go with it: save it, then drag the .zip into the GitHub page.'),
+      h('button.btn.sm', { type: 'button', onclick: async () => {
+        const z = await zipBlobs([{ name: (hy.t.replace(/[^\w\- ]+/g, '').trim() || 'chorus') + '.mid', blob: myMidi.blob }]);
+        download(z, (hy.t.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_') || 'chorus') + '_midi.zip');
+      } }, icon('download'), h('span', 'Save MIDI as .zip'))) : h('p.note', 'No MIDI? The chorus robot looks for one and attaches it if it finds a good match.');
+    const body = h('div.col', { style: { gap: '10px' } },
+      h('p', 'Every church that uses SDA Sabbath gets shared choruses in Praise Choruses (with the music, if there is a MIDI). The SDA Sabbath maintainer checks each song first.'),
+      h('b', hy.t + (hy.a ? ' — ' + hy.a : '')), preview,
+      h('label.muted', 'May these words be shared with every church?'), rightsList,
+      h('p.note', 'Songs from CCLI or other song publishers (most modern worship songs) may not be shared, even if your church has a licence to sing them.'),
+      h('label.muted', 'Shared by'), name,
+      midiRow,
+      h('p.note', 'Sending uses GitHub (a free account is needed). The words are filled in for you: press “Create” / “Submit new issue” on the page that opens.'));
+    const go = () => {
+      if (!rights) { toast('Choose whether the words may be shared.', 'err'); return false; }
+      if (rights === 'unsure') { toast('Please find out who wrote it first. Only songs that may be shared can go to every church.', 'err', 6000); return false; }
+      const url = shareUrl(hy, { church: name.value.trim(), rights });
+      if (url.length > 7800) {
+        navigator.clipboard && navigator.clipboard.writeText(sharedText(hy)).catch(() => {});
+        window.open(shareUrl(Object.assign({}, hy, { v: [['(paste the words here)']], c: null }), { church: name.value.trim(), rights }), '_blank', 'noopener');
+        toast('The words are long, so they were copied: paste them into the Lyrics box on GitHub.', '', 8000);
+      } else window.open(url, '_blank', 'noopener');
+      toast('Thank you! When the chorus is approved, every church gets it with its next update check.', 'ok', 7000);
+      return true;
+    };
+    modal({ title: 'Share “' + hy.t + '” with all churches', body, wide: true, actions: [
+      { label: 'Cancel' },
+      { label: 'No GitHub account? Copy the song', onclick: () => {
+        const txt = 'Chorus for SDA Sabbath (Praise Choruses)\nTitle: ' + hy.t + '\nWriter: ' + (hy.a || '') + '\nShared by: ' + name.value.trim() + '\nMay be shared: ' + (RIGHTS.find((r) => r[0] === rights) || ['', 'not said'])[1] + '\n\n' + sharedText(hy);
+        if (navigator.clipboard) navigator.clipboard.writeText(txt).then(() => toast('Copied. Send it to the person who looks after SDA Sabbath, or to the maintainer on GitHub.', 'ok', 7000), () => toast('Could not copy.', 'err'));
+        return false;
+      } },
+      { label: 'Share on GitHub', primary: true, onclick: go }] });
   }
 
   async function addToPlan() { if (cue) (await ctx.tab('plan')).addItem(cue.plan); }
@@ -603,7 +741,10 @@ export default function create(ctx) {
         const title = titleIn.value.trim() || 'Untitled song';
         if (bk.hymns.some((x) => normalize(x.t) === normalize(title)) &&
           !(await confirmBox('Already in this book', '“' + title + '” is already in ' + bk.name + '. Add another copy?', 'Add anyway'))) return;
-        const num = bk.hymns.reduce((m, x) => Math.max(m, +x.n || 0), 0) + 1;
+        // In Praise Choruses, 501 and up are the shared choruses: a church's own additions stay below them.
+        const below = bk.id === COMMUNITY_BOOK ? bk.hymns.filter((x) => x.n < FIRST_NUMBER) : bk.hymns;
+        let num = below.reduce((m, x) => Math.max(m, +x.n || 0), 0) + 1;
+        if (bk.id === COMMUNITY_BOOK && num >= FIRST_NUMBER) num = bk.hymns.reduce((m, x) => Math.max(m, +x.n || 0), 0) + 1;
         const nh = { n: num, t: title, a: authorIn.value.trim(), v: p.v.length ? p.v : [p.c], c: p.v.length ? p.c : null };
         bk.hymns.push(nh); bk.hymns.sort((a, b) => a.n - b.n);
         try { await saveBookEdit(nh, true, bk, true); }
@@ -759,6 +900,7 @@ export default function create(ctx) {
     if (playingThis() && !musicStatus) musicInfo.textContent = (st.section != null && st.sections[st.section] ? st.sections[st.section].label + '   ' : '') + fmtTime(st.time) + ' / ' + fmtTime(st.dur);
   });
   music.on('progress', (msg) => { musicStatus = msg; if (!el.hidden) renderMusic(); });
+  music.on('notice', (msg) => toast(msg, '', 6000));
   // Words follow the music: the arrangement carries markers where each slide begins.
   music.on('slide', ({ key, slide }) => {
     if (S().musicFollow === false) return;
@@ -874,6 +1016,6 @@ export default function create(ctx) {
   }
   live.on('go', markCtl);
 
-  const ready = loadBooks().then(() => renderList());
+  const ready = loadBooks().then(() => renderList()).then(() => setTimeout(() => checkShared(false), 4000));
   return api;
 }

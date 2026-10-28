@@ -6,6 +6,8 @@ import { live, frameCount, slideName } from './core/live.js';
 import { link } from './core/link.js';
 import { settings } from './core/settings.js';
 import { icon } from './core/icons.js';
+import { hub as stageHub } from './core/stagehub.js';
+import { missing, openNext, roleName } from './core/screens.js';
 
 function frameOf(cue, i) {
   if (!cue) return null;
@@ -30,10 +32,18 @@ export function createMonitors(host) {
   // Phones with nothing staged or live show this slim strip instead of two empty screens.
   const strip = h('div.mon-strip', h('span.tally-dot.next'), h('span', 'Nothing on screen · pick something, then tap Present'));
 
+  // Stage: while a stage screen is connected, a third monitor shows exactly what the platform sees.
+  const stageTitle = h('span.t', '');
+  const stageScreen = h('div.screen.stage-mon');
+  // Below Black / Logo / Clear: a switch shows the live preview of the stage screen when it is needed.
+  const stageSw = h('input', { type: 'checkbox', onchange: () => settings.set('stage.monitorPreview', stageSw.checked) });
+  const stageToggle = h('label.switch.mon-sw', { title: 'Show what the stage screen shows' }, stageSw, h('span', 'Preview'));
+  const stageSec = h('section.mon-stage', { hidden: true }, h('div.mon-h', h('span.tally-dot.stage'), h('span', 'Stage'), stageTitle, stageToggle), stageScreen);
+
   host.append(strip,
     h('section', h('div.mon-h', h('span.tally-dot.next'), h('span', 'Next'), nextTitle), nextScreen),
     h('section', h('div.mon-h', h('span.tally-dot.live'), h('span', 'Live'), liveTitle), liveScreen, frames),
-    actions, extra,
+    actions, stageSec, extra,
   );
 
   const nextStage = createStage(nextHost, { placeholderOnly: true });
@@ -127,8 +137,16 @@ export function createMonitors(host) {
   function updateExtra() {
     if (!link.kind) extra.textContent = 'No display connected. Press Present to open one.';
     else extra.textContent = (link.ready ? 'Presenting to: ' : 'Connecting to: ') + (link.info.label || link.kind) +
-      (link.info.w ? '  (' + link.info.w + ' × ' + link.info.h + ')' : '');
+      (link.info.w ? '  (' + link.info.w + ' × ' + link.info.h + ')' : '') + (link.hasMirror() ? ' + projector 2' : '');
+    // The screen layout has more outputs than are open: one click opens the next (browsers allow one per click).
+    const todo = link.kind ? missing().filter((r) => r !== 'projector') : [];
+    if (todo.length) {
+      extra.append(h('div', { style: { marginTop: '6px' } }, h('button.btn.sm.primary', { type: 'button', onclick: async () => { await openNext(); setTimeout(updateExtra, 900); } },
+        icon('present'), h('span', 'Open ' + roleName(todo[0]) + (todo.length > 1 ? ' (' + todo.length + ' to open)' : '')))));
+    }
   }
+  link.on('mirror', updateExtra);
+  stageHub.on('outlets', updateExtra);
 
   // "Same as Live": the Next monitor is showing what is already on screen.
   const markSame = () => nextScreen.classList.toggle('same', live.sameAsLive());
@@ -158,6 +176,33 @@ export function createMonitors(host) {
   link.on('hello', () => { setAspect(); updateExtra(); });
   link.on('state', updateExtra);
   settings.on('change:display', (p) => { if (p === 'display.aspect') setAspect(); });
+
+  // ---- the Stage monitor (a live stage-screen preview, drawn at TV size and scaled down)
+  let stageFrame = null;
+  const stageScale = () => { if (stageFrame) stageFrame.style.transform = 'scale(' + ((stageScreen.clientWidth || 320) / 1280) + ')'; };
+  if (window.ResizeObserver) new ResizeObserver(stageScale).observe(stageScreen);
+  function syncStage() {
+    const screens = stageHub.screens().filter((o) => o.role !== 'obs');
+    const S = settings.v.stage || {};
+    const want = screens.length > 0 && S.monitor !== false;
+    stageSec.hidden = !want;
+    const on = want && S.monitorPreview === true;
+    stageSw.checked = on;
+    stageScreen.hidden = !on;
+    stageTitle.textContent = want ? (screens.length === 1 ? screens[0].name || screens[0].label || '1 screen' : screens.length + ' screens') : '';
+    const draw = on && !settings.lowPower();
+    if (draw && !stageFrame) {
+      stageFrame = h('iframe.st-pv-f.st-pv-tv', { src: 'stage.html?via=win&preview=1', title: 'What the stage screen shows', tabindex: '-1' });
+      stageScreen.append(stageFrame);
+      emptyText(stageScreen, '');
+      stageScale();
+    } else if (!draw && stageFrame) { stageFrame.remove(); stageFrame = null; }
+    if (on && !draw) emptyText(stageScreen, 'Stage preview is off in low-power mode.');
+  }
+  stageHub.on('outlets', syncStage);
+  settings.on('change:stage', (p) => { if (p === 'stage.monitor' || p === 'stage.monitorPreview') syncStage(); });
+  settings.on('change:app', (p) => { if (p === 'app.lowPower') syncStage(); });
+  syncStage();
 
   setAspect(); updateExtra();
   live.buildStyle();

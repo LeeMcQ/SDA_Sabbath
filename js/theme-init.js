@@ -1,4 +1,5 @@
 // Apply theme before first paint (kept in a file so the Content Security Policy needs no inline script).
+// Same settings name as js/core/storens.js ('selah.settings.v1', this app's since the start).
   try { var s = JSON.parse(localStorage.getItem('selah.settings.v1') || '{}'); var a = s.app || {};
     document.documentElement.setAttribute('data-theme', a.theme || 'dark');
     if (a.monitors === false) document.documentElement.classList.add('no-mon'); } catch (e) {}

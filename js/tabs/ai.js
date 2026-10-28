@@ -5,13 +5,14 @@
 // and short summaries that are always shown for checking first.
 // (The tab id stays 'ai' so existing settings and service plans keep working.)
 import { h, clear, uid, debounce, esc, normalize } from '../core/util.js';
+import { lsKey } from '../core/storens.js';
 import { icon } from '../core/icons.js';
 import { btn, seg, toast, modal, closeModal, confirmBox, promptBox, menu, emptyState } from '../core/ui.js';
 import { db } from '../core/db.js';
 import { createStage } from '../core/render.js';
 import { PALETTES, DECOS } from '../core/bannerframe.js';
 import { church, hasLocation, sabbathSunsetLine, sabbathDateLine, nextTime, safeGivingUrl } from '../core/church.js';
-import { listTranslations, getInfo, versesFor, verseText, search as bibleSearch } from '../core/bibledata.js';
+import { listTranslations, getInfo, versesFor, englishSegs, verseText, search as bibleSearch } from '../core/bibledata.js';
 import { parseRef, refText, SHORT } from '../core/books.js';
 import * as ai from '../core/ai.js';
 import { churchForm } from './church-form.js';
@@ -176,7 +177,7 @@ export default function create(ctx) {
   // Move them into the app's database once, as Picture banners.
   async function migrateOldHistory() {
     let old;
-    try { old = JSON.parse(localStorage.getItem('selah-ai-history') || 'null'); } catch (e) { old = null; }
+    try { old = JSON.parse(localStorage.getItem(lsKey('ai-history')) || 'null'); } catch (e) { old = null; }
     if (!Array.isArray(old) || !old.length) return;
     for (const it of old.slice().reverse()) {
       if (!it || typeof it.data !== 'string' || !/^data:image\//.test(it.data)) continue;
@@ -187,7 +188,7 @@ export default function create(ctx) {
       } catch (e) { /* skip a broken entry */ }
     }
     await saveLib();
-    try { localStorage.removeItem('selah-ai-history'); } catch (e) { /* */ }
+    try { localStorage.removeItem(lsKey('ai-history')); } catch (e) { /* */ }
   }
 
   // ------------------------------------------------------------ pictures
@@ -364,7 +365,7 @@ export default function create(ctx) {
   const strip = h('div.bn-strip', stripList);
   const wideBtn = h('button.btn.sm', { type: 'button', title: 'Bigger slide: make the editing area wider', 'aria-pressed': 'false', onclick: () => setWide(!wide) }, icon('wide'), h('span.hide-sm', 'Wide'));
   let wide = false;
-  try { wide = localStorage.getItem('selah-bn-wide') === '1'; } catch (e) { /* */ }
+  try { wide = localStorage.getItem(lsKey('bn-wide')) === '1'; } catch (e) { /* */ }
   const sideSeg = h('div.seg.bn-side-seg', { role: 'tablist', 'aria-label': 'Panel' });
   let side = 'slide';
   function renderSideSeg() {
@@ -395,7 +396,7 @@ export default function create(ctx) {
   views.make.append(tbRow, makeSplit);
   function setWide(v) {
     wide = v; makeSplit.classList.toggle('bn-wide', v); wideBtn.setAttribute('aria-pressed', String(v));
-    try { localStorage.setItem('selah-bn-wide', v ? '1' : '0'); } catch (e) { /* */ }
+    try { localStorage.setItem(lsKey('bn-wide'), v ? '1' : '0'); } catch (e) { /* */ }
     requestAnimationFrame(() => { stage.fit(); editor.afterRender(); });
   }
 
@@ -1385,12 +1386,14 @@ export default function create(ctx) {
       let text = '', label = ref;
       try {
         if (info.books[r.book - 1] && info.books[r.book - 1][1]) {
-          const vs = await versesFor(info.id, r.book, r.segs, { english: true });
+          // Topic lists use English numbering; show and use this translation's own numbering (Afrikaans Ps 51:12).
+          const segs = await englishSegs(info.id, r.book, r.segs);
+          const vs = await versesFor(info.id, r.book, segs);
           text = vs.map((v) => verseText(v.text)).join(' ');
-          label = refText(info.names, r.book, r.segs);
+          label = refText(info.names, r.book, segs);
         }
       } catch (e) { /* missing book in this translation */ }
-      tpOut.appendChild(verseRow(label, text || '(not in ' + info.abbr + ')', ref));
+      tpOut.appendChild(verseRow(label, text.trim() ? text : '(not in ' + info.abbr + ')'));
     }
   }
   function verseRow(label, text, ref) {
@@ -1413,7 +1416,7 @@ export default function create(ctx) {
     const bible = await ctx.tab('bible');
     const frames = [], labels = [];
     for (const ref of refs) {
-      const c = await bible.cueFor(ref, tr);
+      const c = await bible.cueFor(ref, tr, { english: true });
       if (!c) continue;
       const sh = refText(SHORT, c.book, c.segs);
       c.deck.frames.forEach((f, i) => { frames.push(f); labels.push(c.deck.frames.length > 1 ? sh + ' (' + (i + 1) + ')' : sh); });
@@ -1695,6 +1698,15 @@ export default function create(ctx) {
   // ============================================================ control bar + plan
   const api = {
     el,
+    /** Banners brought in with a shared plan: add them to the saved banners. */
+    async addBanners(docs) {
+      await ready;
+      const add = (docs || []).map(repair).filter((b) => b && b.id && !lib.some((x) => x.id === b.id));
+      lib = add.concat(lib);
+      await saveLib();
+      if (view === 'library') renderLibrary();
+      return add.length;
+    },
     /** Turn a slide into a banner in the editor: {blob} makes a picture banner, {title,text} a text banner. */
     async fromSlide({ blob, title, text, name, els, bg }) {
       await ready;

@@ -1,16 +1,20 @@
 // Settings: small, synchronous, stored in localStorage.
 import { emitter, lowPowerDevice } from './util.js';
+import { lsKey } from './storens.js';
 
-const KEY = 'selah.settings.v1'; // kept from the app's first name: existing settings carry over
-const AIKEY = 'selah.aikey.session';
+// Named after this app's address folder, so another app on the same website never shares them (see storens.js).
+const KEY = lsKey('settings.v1');
+const AIKEY = lsKey('aikey.session');
 
 export const DEFAULTS = {
-  app: { theme: 'dark', railSide: 'left', monitors: true, lowPower: null, lastTab: 'bible', clickerKeys: true, webPart: 'web', toolsPart: 'service' },
+  app: { theme: 'dark', railSide: 'left', monitors: true, lowPower: null, lastTab: 'bible', clickerKeys: true, webPart: 'web', toolsPart: 'stage', stats: true, setupDone: false },
   display: {
     font: 'sans', fg: '#ffffff', bg: '#000000', accent: '#f2cf7a', shadow: true, align: 'center',
     pad: 96, minFont: 58, maxFont: 150, fade: 250, transition: 'fade', aspect: 'auto',
+    hymnSize: 'large', // hymn words on the projector: 'normal' (capped at 110 px of 150), 'large' (130), 'largest' (150)
     bgImage: null, bgDim: 0.45, logo: null, logoText: '', clearShows: 'background', weight: 'bold',
     keepFull: true, // put the projector window back in full screen whenever it drops out
+    screenLabel: '', screenLabel2: '', mirror: false, // projector screen; a second projector (same picture) and its screen
   },
   bible: {
     primary: 'kjv', parallel: '', parallelLayout: 'cols', perSlide: 'auto', numbers: true, redLetter: false,
@@ -21,9 +25,11 @@ export const DEFAULTS = {
     // Hymn music (MIDI accompaniment through GeneralUser GS)
     musicIntro: true, musicFollow: true, musicInstrument: 'arranged', musicTempo: 100, musicKey: 0, musicVolume: 1.3,
     musicReverb: 59, musicChorus: 43, musicOutput: 'auto',
+    // Sound quality: recorded piano and pipe organ (18 MB download, 'auto' = on for PCs), church echo, natural playing
+    musicHQ: 'auto', musicRoom: 'church', musicNatural: true,
   },
   slides: { fit: 'contain', autoSec: 8, quality: 0.9 },
-  video: { volume: 1, autoNext: true, repeat: 'off', fit: 'contain' },
+  video: { volume: 1, autoNext: true, repeat: 'off', fit: 'contain', keepCopies: 'ask' },
   screen: { cursor: 'never', audio: false },
   companion: { url: '', pin: '' },
   // Stage screen (confidence monitor) for the people on the platform: what they see by default, the room
@@ -31,7 +37,8 @@ export const DEFAULTS = {
   stage: {
     code: '', pin: '', online: false, layout: 'full', featured: 'speaker', warnSec: 120, clock24: true,
     showNext: true, showPlan: true, showNotes: true, showLive: true, textSize: 1, mirror: false,
-    allowWinControl: true, msgSec: 0, autoPlanTimer: true, preview: true,
+    allowWinControl: true, msgSec: 0, autoPlanTimer: true, preview: true, monitor: true, monitorPreview: false,
+    useWindow: false, second: false, screenLabel: '', screenLabel2: '', // stage windows on this PC (layout in Settings → Displays)
     presets: [], timers: [], turnUrl: '', turnUser: '', turnPass: '', relays: '', hostKey: null,
   },
   // Live stream (OBS): lower thirds and the full-slide output, their look, and the OBS connection.
@@ -39,7 +46,7 @@ export const DEFAULTS = {
     autoBible: true, autoHymns: true, hymnMode: 'lines', autoOther: false, theme: 'classic', pos: 'left', size: 1, bug: false,
     fullBg: 'stage', accent: '', lowerSec: 8, names: [],
     obsUrl: 'ws://127.0.0.1:4455', obsPass: '', obsAuto: false, autoScene: false, camScene: '', presScene: 'SDA Sabbath · Presentation',
-    mediaScene: 'camera', studioPreview: true,
+    mediaScene: 'camera', studioPreview: true, hdmiBg: 'green', hdmiScreen: '',
   },
   // Presentation clicker: buttons taught in Clicker setup ({next:['key:F14'], prev:[…], black:[…], present:[…], clear:[…]}).
   clicker: { map: {} },
@@ -50,6 +57,7 @@ export const DEFAULTS = {
   ai: { provider: 'openai', apiKey: '', model: '', imageModel: '', auto: {}, keySession: false },
   // The church's details, used by Banners (name, town, sunset times, service countdown, giving QR code).
   church: { name: '', town: '', lat: null, lon: null, service: '09:30', givingUrl: '', givingLabel: '' },
+  backup: { slides: true, videos: false, lastDrive: null, lastFile: null },
 };
 
 function merge(base, over) {
@@ -182,7 +190,7 @@ settings.displayStyle = () => {
   const d = settings.v.display;
   return {
     font: d.font, fg: d.fg, bg: d.bg, accent: d.accent, shadow: d.shadow, align: d.align, pad: d.pad,
-    minFont: d.minFont, maxFont: d.maxFont, fade: settings.lowPower() || d.transition === 'cut' ? 0 : d.fade,
+    minFont: d.minFont, maxFont: d.maxFont, hymnCap: { normal: 110 / 150, large: 130 / 150, largest: 1 }[d.hymnSize] || 130 / 150, fade: settings.lowPower() || d.transition === 'cut' ? 0 : d.fade,
     bgImage: d.bgImage, bgDim: d.bgDim, logo: d.logo, logoText: d.logoText, clearShows: d.clearShows, weight: d.weight,
     // Default logo slide when no logo is set: the church name from Settings → Church, if any.
     logoName: ((settings.v.church && settings.v.church.name) || '').trim(),

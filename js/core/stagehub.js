@@ -482,14 +482,16 @@ hub.disconnect = (id) => {
 
 // ------------------------------------------------------------ 1. window on another screen / preview
 const WIN_NAME = 'selah-stage:' + APP_SCOPE;
-let stageWin = null;
-function windowOutlet(w, kind) {
+// Up to two stage windows on this PC (e.g. one for the preacher, one for the singers / band).
+const stageWins = { 1: null, 2: null };
+const winName = (slot) => WIN_NAME + (slot > 1 ? ':' + slot : '');
+function windowOutlet(w, kind, slot = 1) {
   for (const o of hub.outlets.values()) if (o.w === w) return o;
   return addOutlet({
-    id: kind === 'preview' ? 'preview:' + uid() : 'win', kind, remote: false, w,
-    label: kind === 'preview' ? 'Preview' : 'Stage window',
+    id: kind === 'preview' ? 'preview:' + uid() : kind === 'hdmi' ? 'hdmi:' + uid() : slot > 1 ? 'win' + slot : 'win', kind, remote: false, w, slot,
+    label: kind === 'preview' ? 'Preview' : kind === 'hdmi' ? 'HDMI output' : slot > 1 ? 'Stage window ' + slot : 'Stage window',
     send: (m) => { if (w.closed) throw new Error('closed'); w.postMessage(m, location.origin); },
-    close: () => { if (kind === 'window' && !w.closed) { try { w.close(); } catch (e) { /* */ } } },
+    close: () => { if ((kind === 'window' || kind === 'hdmi') && !w.closed) { try { w.close(); } catch (e) { /* */ } } },
   });
 }
 window.addEventListener('message', (e) => {
@@ -499,8 +501,9 @@ window.addEventListener('message', (e) => {
   for (const x of hub.outlets.values()) if (x.w === e.source) { o = x; break; }
   if (!o) {
     if (m.t !== 'hello') return;
-    o = windowOutlet(e.source, m.kind === 'preview' || m.preview ? 'preview' : 'window');
-    if (o.kind === 'window') stageWin = e.source;
+    const slot = m.slot === 2 ? 2 : 1;
+    o = windowOutlet(e.source, m.kind === 'preview' || m.preview ? 'preview' : m.kind === 'obs' ? 'hdmi' : 'window', slot);
+    if (o.kind === 'window') stageWins[slot] = e.source;
   }
   incoming(o, m);
 });
@@ -514,18 +517,23 @@ try {
   hub.bc = bc;
 } catch (e) { /* old browser */ }
 
-async function pickStageScreen() {
+async function pickStageScreen(slot = 1) {
   if (!('getScreenDetails' in window)) return null;
   try {
     let state = 'prompt';
     try { state = (await navigator.permissions.query({ name: 'window-management' })).state; } catch (e) { /* */ }
     if (state === 'denied') return null;
     const sd = await window.getScreenDetails();
-    const want = settings.v.stage.screenLabel;
+    const want = slot > 1 ? settings.v.stage.screenLabel2 : settings.v.stage.screenLabel;
     const proj = settings.v.display.screenLabel;
+    if (slot > 1) {
+      const used = new Set([proj, settings.v.display.screenLabel2, settings.v.stage.screenLabel].filter(Boolean));
+      const others2 = sd.screens.filter((s) => s !== sd.currentScreen && !used.has(s.label));
+      return (want && sd.screens.find((s) => s.label === want)) || others2[0] || null;
+    }
     const others = sd.screens.filter((s) => s !== sd.currentScreen);
     // Prefer the screen chosen for the stage, then a screen that is neither this one nor the projector.
-    return (want && sd.screens.find((s) => s.label === want)) || others.find((s) => s.label !== proj) || null;
+    return (want && sd.screens.find((s) => s.label === want)) || others.find((s) => s.label !== proj && s.label !== settings.v.display.screenLabel2) || null;
   } catch (e) { return null; }
 }
 hub.listScreens = async () => {
@@ -533,22 +541,46 @@ hub.listScreens = async () => {
   try { const sd = await window.getScreenDetails(); return { screens: sd.screens, current: sd.currentScreen }; } catch (e) { return null; }
 };
 /** Open (or bring back) the stage window, on another screen when there is one. */
-hub.openWindow = async () => {
-  if (stageWin && !stageWin.closed) { try { stageWin.focus(); } catch (e) { /* */ } return true; }
-  const url = new URL('stage.html?via=win', location.href).href;
-  const scr = await pickStageScreen();
+hub.openWindow = async (slot = 1) => {
+  slot = slot === 2 ? 2 : 1;
+  const cur = stageWins[slot];
+  if (cur && !cur.closed) { try { cur.focus(); } catch (e) { /* */ } return true; }
+  const url = new URL('stage.html?via=win' + (slot > 1 ? '&slot=2' : ''), location.href).href;
+  const scr = await pickStageScreen(slot);
   let features = 'popup=yes';
   if (scr) features += ',left=' + scr.availLeft + ',top=' + scr.availTop + ',width=' + scr.availWidth + ',height=' + scr.availHeight + ',fullscreen';
   else features += ',width=1280,height=760';
-  const w = window.open(url, WIN_NAME, features);
+  const w = window.open(url, winName(slot), features);
   if (!w) { hub.emit('blocked'); return false; }
-  stageWin = w;
+  stageWins[slot] = w;
   // Ask the window to go full screen on its screen once it is up (this click allows it).
   setTimeout(() => { try { if (!w.closed) w.postMessage({ stage: 1, t: 'fullscreen' }, { targetOrigin: location.origin, delegate: 'fullscreen' }); } catch (e) { try { w.postMessage({ stage: 1, t: 'fullscreen' }, location.origin); } catch (er) { /* */ } } }, 700);
   return true;
 };
-hub.windowOpen = () => !!(stageWin && !stageWin.closed);
-hub.closeWindow = () => { for (const o of hub.outlets.values()) if (o.kind === 'window') removeOutlet(o.id); stageWin = null; };
+hub.windowOpen = (slot = 1) => !!(stageWins[slot === 2 ? 2 : 1] && !stageWins[slot === 2 ? 2 : 1].closed);
+
+// ------------------------------------------------------------ 1b. stream picture on a screen (HDMI into OBS)
+// For OBS on another PC with a USB HDMI capture card: the lower third (on green, for OBS's Chroma Key) or the
+// slides, full screen on the screen whose cable goes to that capture card.
+const hdmiWins = {};
+hub.openHdmi = async (mode, bg, screen) => {
+  mode = mode === 'full' ? 'full' : 'lower';
+  const name = 'selah-hdmi-' + mode + ':' + APP_SCOPE;
+  const url = new URL('obs.html?via=win&mode=' + mode + '&bg=' + encodeURIComponent(bg || (mode === 'full' ? 'black' : 'green')), location.href).href;
+  let features = 'popup=yes';
+  if (screen) features += ',left=' + screen.availLeft + ',top=' + screen.availTop + ',width=' + screen.availWidth + ',height=' + screen.availHeight + ',fullscreen';
+  else features += ',width=960,height=540';
+  const old = hdmiWins[mode];
+  if (old && !old.closed) { try { old.close(); } catch (e) { /* */ } }
+  const w = window.open(url, name, features);
+  if (!w) { hub.emit('blocked'); return false; }
+  hdmiWins[mode] = w;
+  setTimeout(() => { try { if (!w.closed) w.postMessage({ stage: 1, t: 'fullscreen' }, { targetOrigin: location.origin, delegate: 'fullscreen' }); } catch (e) { try { w.postMessage({ stage: 1, t: 'fullscreen' }, location.origin); } catch (er) { /* */ } } }, 800);
+  return true;
+};
+hub.hdmiOpen = (mode) => !!(hdmiWins[mode] && !hdmiWins[mode].closed);
+hub.closeHdmi = (mode) => { const w = hdmiWins[mode]; if (w && !w.closed) { try { w.close(); } catch (e) { /* */ } } hdmiWins[mode] = null; hub.emit('outlets'); };
+hub.closeWindow = (slot = 1) => { slot = slot === 2 ? 2 : 1; for (const o of hub.outlets.values()) if (o.kind === 'window' && (o.slot || 1) === slot) removeOutlet(o.id); stageWins[slot] = null; };
 // The stage window stays open when this page reloads (it finds the new page again); it closes itself if
 // the app is really closed (stage-main.js).
 

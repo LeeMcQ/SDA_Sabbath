@@ -83,12 +83,15 @@ export function fitBody(body, min, max) {
 function textFrameEl(f) {
   const wrap = document.createElement('div');
   wrap.className = 'f-text f-' + (f.variant || 'plain') + (f.cls ? ' ' + f.cls : '');
+  // Language of the words (Afrikaans, isiXhosa …): screen readers and hyphenation use it. Checked, never echoed raw.
+  const okLang = (l) => (typeof l === 'string' && /^[a-z]{2,3}(-[A-Za-z]{2})?$/.test(l) ? l : '');
+  if (okLang(f.lang)) wrap.setAttribute('lang', f.lang);
   let inner = '';
   if (f.head) inner += '<div class="f-head">' + esc(f.head) + '</div>';
   inner += '<div class="f-body">';
   if (f.cols && f.cols.length > 1) {
     inner += '<div class="f-par' + (f.colLayout === 'rows' ? ' rows' : '') + '">';
-    f.cols.forEach((c) => { inner += '<div class="f-fit">' + c.html + (c.ref ? '<span class="f-col-ref">' + esc(c.ref) + '</span>' : '') + '</div>'; });
+    f.cols.forEach((c) => { inner += '<div class="f-fit"' + (okLang(c.lang) ? ' lang="' + c.lang + '"' : '') + '>' + c.html + (c.ref ? '<span class="f-col-ref">' + esc(c.ref) + '</span>' : '') + '</div>'; });
     inner += '</div>';
   } else inner += '<div class="f-fit' + (f.lines ? ' lines' : '') + '">' + (f.html || '') + '</div>';
   inner += '</div>';
@@ -107,7 +110,7 @@ function decodeImgs(el) {
 
 /**
  * Render a frame into a layer element. Returns a cleanup function (revokes object URLs).
- * opts: {minFont, maxFont, sw, sh, media(layer, frame) -> cleanup?, placeholderOnly}
+ * opts: {minFont, maxFont, hymnCap (share of maxFont for hymn words), sw, sh, media(layer, frame) -> cleanup?, placeholderOnly}
  */
 export async function renderFrame(layer, frame, opts = {}) {
   const urls = [];
@@ -120,9 +123,10 @@ export async function renderFrame(layer, frame, opts = {}) {
     layer.appendChild(el);
     const body = el.querySelector('.f-body');
     const maxF = opts.maxFont || 150;
-    // Hymn lines never wrap (see stage.css), and sung text is capped a little lower (110 px at the
-    // default 150) so short stanzas don't look shouty.
-    fitBody(body, opts.minFont || 58, frame.variant === 'title' ? maxF * 1.2 : frame.variant === 'hymn' ? Math.round(maxF * 110 / 150) : maxF);
+    // Sung text is capped a little lower than the largest size (Settings → Screen → Hymn words: 110, 130 or 150 px
+    // at the default 150), so short stanzas don't look shouty but use the screen.
+    // A slide may allow smaller text than usual (a long Bible passage that must stay on one slide).
+    fitBody(body, Math.min(opts.minFont || 58, frame.minFont > 0 ? frame.minFont : 999), frame.variant === 'title' ? maxF * 1.2 : frame.variant === 'hymn' ? Math.round(maxF * (opts.hymnCap > 0 && opts.hymnCap <= 1 ? opts.hymnCap : 130 / 150)) : maxF);
   } else if (k === 'image') {
     const box = document.createElement('div');
     box.className = 'f-image' + (frame.fit === 'cover' ? ' cover' : '');
@@ -254,7 +258,7 @@ export function createStage(host, opts = {}) {
       if (rp === 'top') el.classList.add('ref-top'); else if (rp === 'none') el.classList.add('ref-none');
       layers[back].classList.add('hide');
       const c = await renderFrame(layers[back], frame, {
-        minFont: style.minFont, maxFont: style.maxFont, sw, sh,
+        minFont: style.minFont, maxFont: style.maxFont, hymnCap: style.hymnCap, sw, sh,
         media: opts.media, placeholderOnly: opts.placeholderOnly, ...extra,
       });
       if (my !== seq) { c(); return; } // superseded while loading

@@ -1,12 +1,12 @@
 // Bible tab: pick a passage (type it, or tap book → chapter → verses), see it in Next,
-// press Present. Long passages are split into readable slides automatically.
+// press Present. Whole verses only: up to 3 verses share a slide, longer passages go over several slides.
 import { h, clear, esc, debounce } from '../core/util.js';
 import { icon } from '../core/icons.js';
 import { btn, modal, seg, toggle, menu, select, activatable, enter, motionOK, emptyState, keepInView } from '../core/ui.js';
 import { EN, SHORT, parseRef, refText } from '../core/books.js';
-import { listTranslations, getInfo, versesFor, verseHtml, verseText, search as bibleSearch } from '../core/bibledata.js';
+import { listTranslations, getInfo, versesFor, englishSegs, getTitles, verseHtml, verseText, search as bibleSearch } from '../core/bibledata.js';
 import { fitsText } from '../core/render.js';
-import { importBibleDialog } from './bible-import.js';
+const importBibleDialog = (cb) => import('./bible-import.js').then((m) => m.importBibleDialog(cb));
 
 export default function create(ctx) {
   const { settings, live } = ctx;
@@ -15,7 +15,7 @@ export default function create(ctx) {
   let info = null, trList = [], noFocus = false;
 
   // ------------------------------------------------------------ toolbar
-  const refInput = h('input.field', { type: 'search', placeholder: 'John 3:16-18', style: { width: '200px' }, 'aria-label': 'Bible reference',
+  const refInput = h('input.field.ref-in', { type: 'search', placeholder: 'John 3:16-18', style: { width: '200px' }, 'aria-label': 'Bible reference',
     onkeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); goRef(refInput.value, e.ctrlKey || e.metaKey); } } });
   // Focus that we set ourselves stays quiet until the operator types or clicks.
   ['keydown', 'pointerdown', 'blur'].forEach((ev) => refInput.addEventListener(ev, () => refInput.classList.remove('quiet-focus')));
@@ -32,7 +32,7 @@ export default function create(ctx) {
   [['kjv', 'KJV'], ['web', 'WEB'], ['afr53', 'AFR']].forEach(([v, a]) => trSel.appendChild(h('option', { value: v }, a)));
   trSel.value = st.tr;
   parSel.appendChild(h('option', { value: '' }, 'No second'));
-  const toolbar = h('div.toolbar', h('h2', 'Bible'), refInput, trSel, h('span.faint.hide-sm', { 'aria-hidden': 'true' }, '+'), parSel, h('div.grow'), searchBtn, optsBtn, moreBtn);
+  const toolbar = h('div.toolbar.bible-bar', h('h2', 'Bible'), refInput, trSel, h('span.faint.hide-sm', { 'aria-hidden': 'true' }, '+'), parSel, h('div.grow'), searchBtn, optsBtn, moreBtn);
   const hist = h('div.bible-hist');
 
   // ------------------------------------------------------------ browse panes
@@ -118,11 +118,14 @@ export default function create(ctx) {
     const book = st.book, chap = st.chapter;
     verseHead.textContent = info.names[book - 1] + ' ' + chap;
     const verses = await versesFor(st.tr, book, [{ c1: chap, v1: null, c2: chap, v2: null }]);
+    const heads = ((await getTitles(st.tr))[book] || {})[chap] || {};
     if (book !== st.book || chap !== st.chapter) return;
     clear(verseList);
     if (info.lang && info.lang !== 'en') verseList.setAttribute('lang', info.lang); else verseList.removeAttribute('lang');
     const frag = document.createDocumentFragment();
     verses.forEach((v) => {
+      // A Psalm's title (or a Hebrew letter in Psalm 119): shown here for the reader, never on the projector.
+      if (heads[v.v]) frag.appendChild(h('div.vr-title', heads[v.v].replace(/[[\]]/g, '')));
       const row = h('div.vr', { 'data-v': v.v, html: '<b>' + v.v + '</b><span>' + verseHtml(v.text, { redLetter: false, italics: S().italics }) + '</span>' });
       // Enter presents the verse at once (like a double-click); Space and a click only select it.
       row.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target === row && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) { e.preventDefault(); e.stopImmediatePropagation(); presentVerse(book, chap, v.v); } });
@@ -151,7 +154,7 @@ export default function create(ctx) {
       onkeydown: (e) => { if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); presentVerse(book, chap, v.v); } } }, String(v.v))));
     vStrip.appendChild(frag);
     vStrip.hidden = !verses.length;
-    vStrip.scrollLeft = 0;
+    vStrip.scrollLeft = 0; vStrip.scrollTop = 0;
   }
   // A mouse wheel scrolls the strip sideways (it is one row on every screen size).
   vStrip.addEventListener('wheel', (e) => {
@@ -162,8 +165,12 @@ export default function create(ctx) {
   function stripShow(b) {
     if (!b || vStrip.hidden) return;
     const l = b.offsetLeft - vStrip.offsetLeft, r = l + b.offsetWidth;
-    if (l >= vStrip.scrollLeft && r <= vStrip.scrollLeft + vStrip.clientWidth) return;
-    vStrip.scrollTo({ left: Math.max(0, l - Math.round(vStrip.clientWidth / 3)), behavior: motionOK() ? 'smooth' : 'auto' });
+    const t = b.offsetTop - vStrip.offsetTop, bt = t + b.offsetHeight;
+    const inX = l >= vStrip.scrollLeft && r <= vStrip.scrollLeft + vStrip.clientWidth;
+    const inY = t >= vStrip.scrollTop && bt <= vStrip.scrollTop + vStrip.clientHeight;
+    if (inX && inY) return;
+    // One sideways row on phones; on larger screens the strip wraps into rows and scrolls up and down.
+    vStrip.scrollTo({ left: inX ? vStrip.scrollLeft : Math.max(0, l - Math.round(vStrip.clientWidth / 3)), top: inY ? vStrip.scrollTop : Math.max(0, t - 4), behavior: motionOK() ? 'smooth' : 'auto' });
   }
 
   function clickVerse(v, shift) {
@@ -297,31 +304,6 @@ export default function create(ctx) {
   }
 
   // ------------------------------------------------------------ slide building
-  function splitText(text, n) {
-    const words = text.split(' ');
-    if (n <= 1 || words.length < n * 3) return [text];
-    const out = [];
-    let start = 0;
-    for (let k = 1; k < n; k++) {
-      const target = Math.round((words.length * k) / n);
-      let best = target;
-      for (let d = 0; d < Math.min(8, words.length); d++) {
-        if (/[,;:.!?]$/.test(words[target - d - 1] || '')) { best = target - d; break; }
-        if (/[,;:.!?]$/.test(words[target + d - 1] || '')) { best = target + d; break; }
-      }
-      out.push(words.slice(start, best).join(' ')); start = best;
-    }
-    out.push(words.slice(start).join(' '));
-    // keep red-letter / italic markers balanced across parts
-    for (let i = 0; i < out.length - 1; i++) {
-      [['‹', '›'], ['[', ']']].forEach(([o, c]) => {
-        const open = out[i].lastIndexOf(o), close = out[i].lastIndexOf(c);
-        if (open > close) { out[i] += c; out[i + 1] = o + out[i + 1]; }
-      });
-    }
-    return out;
-  }
-
   async function buildCue(tr, book, segs) {
     const tinfo = await getInfo(tr);
     const verses = await versesFor(tr, book, segs);
@@ -347,51 +329,46 @@ export default function create(ctx) {
       // A verse cut into parts says where it is: "Esther 8:9 (1/2)". No word is changed.
       const ref = refText(tinfo.names, book, [{ c1: a.c, v1: a.v, c2: b.c, v2: b.v }]) + (g.length === 1 && a.part ? ' (' + a.pn + '/' + a.pt + ')' : '');
       const html = g.map((p) => vHtml(p, p.text)).join('');
-      const f = { kind: 'text', variant: 'bible', html, foot: ref, footR: tinfo.abbr, refPos: S().refPos };
+      const f = { kind: 'text', variant: 'bible', html, foot: ref, footR: tinfo.abbr, refPos: S().refPos, lang: tinfo.lang || 'en' };
       if (pinfo) {
         const phtml = g.map((p) => vHtml(p, p.ptext != null ? p.ptext : pmap.get(p.c + ':' + p.v) || '')).join('');
-        f.cols = [{ html, ref: tinfo.abbr }, { html: phtml, ref: pinfo.abbr }];
+        f.cols = [{ html, ref: tinfo.abbr, lang: tinfo.lang || 'en' }, { html: phtml, ref: pinfo.abbr, lang: pinfo.lang || 'en' }];
         f.colLayout = S().parallelLayout; f.footR = '';
       }
       return f;
     };
-    // One verse may shrink to the minimum size; several verses together must stay comfortably large.
-    const roomy = Object.assign({}, style, { minFont: Math.max(style.minFont || 58, Math.round((style.maxFont || 150) * 0.56)) });
-    // A single verse that would need text smaller than 80 px (on the 1920-wide screen) is cut into parts instead.
-    const single = Object.assign({}, style, { minFont: Math.max(style.minFont || 58, 80) });
-    const fits = (g) => fitsText(frameFor(g), g.length > 1 ? roomy : single, aspect);
-    const splitVerse = (v) => {
-      for (let n = 2; n <= 5; n++) {
-        const parts = splitText(v.text, n);
-        const pparts = pinfo ? splitText(pmap.get(v.c + ':' + v.v) || '', parts.length) : null;
-        const ps = parts.map((t, i) => ({ c: v.c, v: v.v, text: t, ptext: pparts ? pparts[i] || '' : null, part: 'abcde'[i], pn: i + 1, pt: parts.length }));
-        if (ps.every((p) => fits([p])) || n === 5) return ps;
-      }
-      return [v];
+    // Whole verses only: a verse is never cut across slides. Up to 3 verses share a slide (or the number
+    // chosen in the options); a longer passage is spread evenly over slides (4 verses: 2 + 2, 7: 3 + 2 + 2).
+    // The text gets smaller when it must, down to a floor; only below that do the verses go on more slides.
+    const usual = Math.max(style.minFont || 58, Math.round((style.maxFont || 150) * 0.56));
+    const STEPS = [usual, 72, 64, 56, 50, 44, 40];
+    const SINGLE = [usual, 72, 64, 56, 50, 44, 40, 36, 32, 28];
+    const smallest = (g, steps) => {
+      for (const px of steps) if (fitsText(frameFor(g), Object.assign({}, style, { minFont: px }), aspect)) return px;
+      return 0;
     };
     const per = S().perSlide;
+    const maxPer = per === 'auto' ? 3 : Math.max(1, +per || 1);
     const groups = [];
-    const MAXV = 4;
-    const pack = (list, maxPer) => {
-      let cur = [];
-      for (const v of list) {
-        const tryG = cur.concat([v]);
-        if (cur.length < maxPer && fits(tryG)) { cur = tryG; continue; }
-        if (cur.length) { groups.push(cur); cur = []; }
-        if (fits([v])) cur = [v];
-        else splitVerse(v).forEach((p) => groups.push([p]));
-      }
-      if (cur.length) groups.push(cur);
+    const sizes = [];
+    const balanced = (list, max) => {
+      const k = Math.ceil(list.length / max);
+      const base = Math.floor(list.length / k), extra = list.length % k;
+      const out = [];
+      let i = 0;
+      for (let j = 0; j < k; j++) { const n = base + (j < extra ? 1 : 0); out.push(list.slice(i, i + n)); i += n; }
+      return out;
     };
-    if (per === 'auto') pack(verses, MAXV);
-    else {
-      const n = +per || 1;
-      for (let i = 0; i < verses.length; i += n) {
-        const chunk = verses.slice(i, i + n);
-        if (fits(chunk)) groups.push(chunk); else pack(chunk, n);
-      }
-    }
-    const frames = groups.map(frameFor);
+    const place = (g) => {
+      if (g.length === 1) { groups.push(g); sizes.push(smallest(g, SINGLE) || SINGLE[SINGLE.length - 1]); return; }
+      const px = smallest(g, STEPS);
+      if (px) { groups.push(g); sizes.push(px); return; }
+      balanced(g, Math.ceil(g.length / 2)).forEach(place); // too long even small: fewer verses on each slide
+    };
+    balanced(verses, maxPer).forEach(place);
+    const baseFrame = frameFor;
+    const frameAt = (g, i) => { const f = baseFrame(g); if (sizes[i] && sizes[i] < (style.minFont || 58)) f.minFont = sizes[i]; return f; };
+    const frames = groups.map(frameAt);
     const first = verses[0], last = verses[verses.length - 1];
     const title = refText(tinfo.names, book, segs);
     return {
@@ -412,7 +389,7 @@ export default function create(ctx) {
     if (!cur || !cur.bounds) return null;
     const tinfo = await getInfo(tr);
     const counts = tinfo.books[book - 1][2];
-    const step = S().perSlide === 'auto' ? 2 : +S().perSlide || 1;
+    const step = S().perSlide === 'auto' ? 3 : +S().perSlide || 1;
     let c, v1, v2;
     if (dir > 0) {
       c = cur.bounds.last.c; v1 = cur.bounds.last.v + 1;
@@ -497,7 +474,8 @@ export default function create(ctx) {
         ctx.isMobile() ? h('label', 'Second translation') : null,
         ctx.isMobile() ? (() => { const x = select([['', 'None']].concat(trList.filter((t) => t.id !== st.tr).map((t) => [t.id, t.abbr + ' · ' + t.name])), S().parallel || '',
           (v) => { settings.set('bible.parallel', v); parSel.value = v; restage(); }, 'field'); x.setAttribute('aria-label', 'Second translation'); return x; })() : null,
-        h('label', 'Verses per slide'), seg([['auto', 'Auto'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4']], String(s.perSlide), set('perSlide')),
+        h('label', 'Verses per slide'), seg([['auto', 'Auto (up to 3)'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4']], String(s.perSlide), set('perSlide')),
+        h('label', ''), h('p.note', 'A verse is never cut in two: the words get smaller when a slide needs room for whole verses.'),
         h('label', 'Reference'), seg([['bottom', 'Bottom'], ['top', 'Top'], ['none', 'Hidden']], s.refPos, set('refPos')),
         h('label', 'Two translations'), seg([['cols', 'Side by side'], ['rows', 'Stacked']], s.parallelLayout, set('parallelLayout')),
         h('label', 'Verse numbers'), toggle('Show verse numbers', s.numbers, set('numbers')),
@@ -522,14 +500,19 @@ export default function create(ctx) {
       return goRef(ref);
     },
     /** Slides for a reference without selecting it here (used by Banners → Topics). */
-    async cueFor(ref, tr) {
+    async cueFor(ref, tr, opts) {
       await ready;
       const r = parseRef(ref);
       if (!r) return null;
       const t = tr && trList.some((x) => x.id === tr) ? tr : st.tr;
       const ti = await getInfo(t);
       if (!ti.books[r.book - 1] || !ti.books[r.book - 1][1]) return null;
-      const cue = await buildCue(t, r.book, r.segs);
+      // Topic lists use English numbering: Afrikaans Psalms count the title as a verse (Ps 51:10 = Ps 51:12).
+      const segs = opts && opts.english ? await englishSegs(t, r.book, r.segs) : r.segs;
+      // A reference that lands on no text (a verse this translation does not have) is an error, not a blank slide.
+      const vs = await versesFor(t, r.book, segs);
+      if (!vs.length || vs.every((v) => !String(v.text || '').trim())) return null;
+      const cue = await buildCue(t, r.book, segs);
       if (cue) cue.extend = null; // a topic passage does not "keep reading"
       return cue;
     },

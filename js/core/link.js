@@ -4,6 +4,7 @@
 //   cast    – Presentation API (Chromecast / wireless display from Chrome)
 //   socket  – SDA Sabbath companion on the LAN (TV browser or second PC shows display.html?via=ws)
 import { emitter, h, APP_SCOPE } from './util.js';
+import { lsKey } from './storens.js';
 import { createEncoder, createDecoder } from './wire.js';
 import { settings } from './settings.js';
 
@@ -50,7 +51,45 @@ function onDisplayMsg(m) {
   link.emit('msg', m);
 }
 
+// ------------------------------------------------------------ second projector (mirror)
+// A second display window showing the same picture (a second projector, or a TV in the foyer). It gets every
+// message the main display gets; its videos play silently and follow the main projector's timing.
+const MIRROR_NAME = WIN_NAME + ':mirror';
+link.mirror = null;
+const mirrorAlive = () => !!(link.mirror && !link.mirror.closed);
+link.hasMirror = mirrorAlive;
+function toMirror(m) { if (mirrorAlive()) { try { link.mirror.postMessage(m, location.origin); } catch (e) { /* closed */ } } }
+link.sendMirror = toMirror;
+function attachMirror(w) {
+  link.mirror = w;
+  let tries = 0;
+  const ask = () => { if (link.mirror !== w || w.closed || tries++ > 40) return; toMirror({ t: 'hello?' }); setTimeout(ask, 300); };
+  ask();
+  setTimeout(() => toMirror({ t: 'fullscreen' }), 600);
+  link.emit('mirror');
+}
+link.openMirror = async (screen) => {
+  const url = new URL('display.html?mirror=1', location.href).href;
+  let features = 'popup=yes';
+  if (screen) features += ',left=' + screen.availLeft + ',top=' + screen.availTop + ',width=' + screen.availWidth + ',height=' + screen.availHeight + ',fullscreen';
+  else features += ',width=1280,height=720';
+  if (mirrorAlive()) { try { link.mirror.close(); } catch (e) { /* */ } }
+  const w = window.open(url, MIRROR_NAME, features);
+  if (!w) { link.emit('blocked'); return false; }
+  attachMirror(w);
+  setTimeout(() => { try { if (!w.closed) w.postMessage({ t: 'fullscreen' }, { targetOrigin: location.origin, delegate: 'fullscreen' }); } catch (e) { /* */ } }, 900);
+  return true;
+};
+link.closeMirror = () => { if (mirrorAlive()) { try { link.mirror.close(); } catch (e) { /* */ } } link.mirror = null; link.emit('mirror'); };
+setInterval(() => { if (link.mirror && link.mirror.closed) { link.mirror = null; link.emit('mirror'); } }, 1500);
+
 window.addEventListener('message', (e) => {
+  // The second projector: its hello asks for the current picture; nothing else it says is needed.
+  if (e.origin === location.origin && e.data && e.source && (e.source === link.mirror || (e.data.t === 'here-mirror' && !mirrorAlive()))) {
+    if (e.data.t === 'here-mirror') { attachMirror(e.source); return; }
+    if (e.data.t === 'hello') link.emit('mirror-hello', e.data);
+    return;
+  }
   // This page was reloaded (an accidental F5, or after a crash) while the projector window stayed open: the
   // window says it is there, and the app takes it over again — the projector never went blank.
   if (e.origin === location.origin && e.data && e.data.t === 'here-win' && e.source && !link.kind) {
@@ -70,9 +109,10 @@ let seq = 0;
 link.acked = 0; link.lastQ = 0;
 link.remote = () => !!link.ready && (link.kind === 'cast' || link.kind === 'socket');
 link.send = (msg) => {
-  if (!sendImpl) return;
+  if (!sendImpl) { if (mirrorAlive()) toMirror(msg); return; }
   if (PICTURE_MSGS.has(msg.t) && link.remote()) { msg = Object.assign({}, msg, { q: ++seq }); link.lastQ = seq; }
   sendImpl(msg);
+  if (mirrorAlive() && msg.t !== 'hello?') toMirror(msg);
 };
 /** Resolves when the display has drawn change number q (or after ms, so a lost answer never freezes the monitor). */
 link.whenShown = (q, ms = 1500) => new Promise((res) => {
@@ -97,6 +137,7 @@ link.direct = () => {
 
 link.setStream = (stream) => {
   lastStream = stream || null;
+  if (mirrorAlive()) { try { if (link.mirror.SelahDisplay) link.mirror.SelahDisplay.setStream(lastStream); } catch (e) { /* */ } }
   const d = link.direct();
   if (d) { d.setStream(lastStream); return true; }
   return false;
@@ -298,12 +339,12 @@ link.stopLabel = () => ({ cast: 'Stop casting', window: 'Close the display windo
 // announces itself; cast: reconnect by its id). If the app is really closed, the display window closes itself
 // a few seconds later (display-main.js) and a cast TV goes black after a short wait.
 window.addEventListener('pagehide', () => {
-  if (link.kind === 'cast' && castConn) { try { sessionStorage.setItem('selah.castId', castConn.id); } catch (e) { /* */ } }
+  if (link.kind === 'cast' && castConn) { try { sessionStorage.setItem(lsKey('castId'), castConn.id); } catch (e) { /* */ } }
 });
 // After a reload: take over the cast that was running.
 (async () => {
   let id = null;
-  try { id = sessionStorage.getItem('selah.castId'); sessionStorage.removeItem('selah.castId'); } catch (e) { /* */ }
+  try { id = sessionStorage.getItem(lsKey('castId')); sessionStorage.removeItem(lsKey('castId')); } catch (e) { /* */ }
   if (!id || !link.canCast()) return;
   try {
     const req = new PresentationRequest([new URL('display.html?via=cast', location.href).href]);
@@ -316,6 +357,7 @@ link.close = (silent) => {
   clearInterval(pollT); clearTimeout(wsTimer);
   const kind = link.kind;
   if (kind === 'window' && link.win && !silent) { try { link.win.close(); } catch (e) { /* */ } }
+  if (!silent) link.closeMirror();
   if (kind === 'self' && link.self) {
     document.removeEventListener('fullscreenchange', link.self.onFs);
     try { link.self.display.destroy(); } catch (e) { /* */ }

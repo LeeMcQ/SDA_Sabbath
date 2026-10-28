@@ -7,10 +7,11 @@
 // Nothing on this tab changes the projector.
 import { h, clear } from '../core/util.js';
 import { icon } from '../core/icons.js';
-import { btn, seg, toggle, select, modal, confirmBox, promptBox } from '../core/ui.js';
+import { btn, seg, toggle, select, modal, closeModal, confirmBox, promptBox } from '../core/ui.js';
 import { hub } from '../core/stagehub.js';
 import { obs, LOWER_NAME, FULL_NAME } from '../core/obsctl.js';
 import { fmtCode } from '../core/stagenet.js';
+import { remote } from '../core/remotectl.js';
 
 const pad2 = (n) => String(n).padStart(2, '0');
 const dur = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)); return Math.floor(s / 3600) + ':' + pad2(Math.floor(s / 60) % 60) + ':' + pad2(s % 60); };
@@ -99,6 +100,165 @@ export default function create(ctx) {
     // OBS turns a dropped link into a Browser Source (it reads the URL from the drag data).
     try { e.dataTransfer.setData('text/uri-list', u); e.dataTransfer.setData('text/plain', u); e.dataTransfer.effectAllowed = 'copyLink'; } catch (er) { /* */ }
   }));
+
+  // ------------------------------------------------------------ OBS on another computer (no WebSocket, any OBS version)
+  // The companion on the SDA Sabbath PC serves the overlays on the church network; OBS on any other PC (or the same one)
+  // just loads them as Browser Sources. No password, no OBS settings, no internet.
+  const lanBody = h('div.col', { style: { gap: '8px' } });
+  const lanCard = card('OBS on another computer (easiest)', lanBody);
+  function lanBase() { const c = ctx.companion; return (c && c.urls && c.urls[0]) || ''; }
+  function copyText(text, msg) {
+    const done = () => toast(msg, 'ok', 9000);
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, () => promptBox('Copy this address', 'Address', text));
+    else promptBox('Copy this address', 'Address', text);
+  }
+  function paintLan() {
+    clear(lanBody);
+    const comp = ctx.companion;
+    if (!comp) {
+      lanBody.append(
+        h('p', { style: { color: 'var(--warn, #f0b429)', fontWeight: '700' } }, 'OBS says “waiting for the media desk” when this page is not the one feeding it.'),
+        h('p', 'To link OBS on another PC over your Wi-Fi or cable, without internet: run the ', h('b', 'SDA Sabbath companion'), ' on the PC that runs the service and open SDA Sabbath from it (at http://localhost:7777, on that PC). This box then shows the two addresses for OBS.'),
+        h('a.btn.primary', { href: 'companion.html', target: '_blank', rel: 'noopener', style: { alignSelf: 'flex-start' } }, icon('download'), h('span', 'Download the companion (Windows, Linux, Raspberry Pi)')),
+        h('p.note', 'Without the companion, the “Set up OBS by hand” addresses below also work on another PC, as long as both PCs have internet.'));
+      return;
+    }
+    const base = lanBase();
+    const isLocal = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+    if (!isLocal) lanBody.append(h('p', { style: { color: 'var(--warn, #f0b429)', fontWeight: '700' } },
+      'OBS will say “waiting for the media desk” until you open SDA Sabbath on the companion PC itself at http://localhost:' + (location.port || '7777') + ' (not this network address, not the website). Only that page feeds OBS.'));
+    if (!base) { lanBody.append(h('p.note', 'The companion has not found this PC’s network address. Check that Wi-Fi or the cable is connected, then reload.')); return; }
+    const lower = base + '/obs.html?via=lan&mode=lower', full = base + '/obs.html?via=lan&mode=full';
+    const row = (title, note, u, which) => h('div.st-src', h('div', h('b', title), h('span.note', ' — ' + note)), h('code.st-url', u),
+      h('div.row.wrap', h('button.btn.sm.primary', { type: 'button', onclick: () => copyText(u, 'Copied. In OBS: Sources → + → Browser → paste into URL, Width 1920, Height 1080 → OK.') }, icon('copy'), h('span', 'Copy ' + which))));
+    lanBody.append(
+      h('ol.st-steps', { style: { margin: '0', paddingLeft: '20px', display: 'grid', gap: '4px' } },
+        h('li', 'On the OBS computer, connect to the same Wi-Fi or network as this PC. Keep SDA Sabbath open here (at localhost) while you stream.'),
+        h('li', 'In OBS press ', h('b', 'Sources → + → Browser'), ', name it “SDA Sabbath lower third”, and paste the first address below as the URL.'),
+        h('li', 'Set ', h('b', 'Width 1920'), ' and ', h('b', 'Height 1080'), ', press OK. Put it above your camera in the scene.'),
+        h('li', 'Optional: do the same with the Presentation address for a full-screen slides scene.'),
+        h('li', 'Test: show a Bible verse here. The words appear over the camera in OBS.')),
+      row('Lower third', 'over the camera, transparent', lower, 'lower third address'),
+      row('Presentation', 'the slides full screen', full, 'presentation address'),
+      h('p.note', 'Step-by-step help and the companion download for another PC: ', h('a', { href: 'companion.html', target: '_blank', rel: 'noopener' }, 'companion page'), '.'),
+      h('p.note', 'Windows may ask to allow the companion on the private network the first time: choose Allow. If OBS shows nothing, open the address in a browser on the OBS PC to check the link. Scene switching and Start/Stop streaming need OBS’s WebSocket; showing the overlays does not.'));
+  }
+
+  // ------------------------------------------------------------ Stream Deck, Bitfocus Companion and other remote buttons
+  // The companion takes http://localhost:7777/api/control/<command> from any program and passes it to this page.
+  const deckBody = h('div.col', { style: { gap: '8px' } });
+  const deckCard = card('Stream Deck and remote buttons', deckBody);
+  let deckWhere = 'here';
+  const DECK = [
+    ['next', 'Next slide'], ['prev', 'Previous slide'], ['black', 'Black screen (on / off)'], ['logo', 'Logo (on / off)'],
+    ['clear', 'Clear the screen'], ['present', 'Present what is on Next'],
+    ['goto?q=John%203:16', 'Put a verse on Next (change the reference)'], ['show?q=73', 'Show hymn 73 now (change the number)'],
+    ['plan-next', 'Next part of the plan'], ['plan-prev', 'Previous part of the plan'],
+    ['music-toggle', 'Hymn music play / pause'], ['music-fade', 'Fade the music out'], ['music-stop', 'Stop the music'],
+  ];
+  function paintDeck() {
+    clear(deckBody);
+    const comp = ctx.companion;
+    const isLocal = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+    deckBody.append(h('p', 'Run SDA Sabbath from buttons, like OBS: an ', h('b', 'Elgato Stream Deck'), ', ', h('b', 'Bitfocus Companion'),
+      ' (with a Stream Deck, X-keys or a phone), or anything that can open a web address. Each button opens one address.'));
+    if (!comp || !comp.control) {
+      deckBody.append(
+        h('p', 'This needs the ', h('b', 'SDA Sabbath companion'), comp ? ' version 1.1 or newer (download it again).' : ' running on this PC, with SDA Sabbath opened from it at http://localhost:7777.'),
+        h('a.btn.primary', { href: 'companion.html', target: '_blank', rel: 'noopener', style: { alignSelf: 'flex-start' } }, icon('download'), h('span', 'Download the companion')));
+      return;
+    }
+    if (!isLocal) {
+      deckBody.append(h('p', { style: { color: 'var(--warn, #f0b429)', fontWeight: '700' } }, 'Buttons control the SDA Sabbath page open at http://localhost:' + (location.port || '7777') + ' on the companion PC. Open it there (this page is a remote).'));
+      return;
+    }
+    const st = remote.state === 'on';
+    deckBody.append(h('div.row.wrap', { style: { alignItems: 'center' } },
+      h('span.pi-badge' + (st ? '.next' : ''), st ? 'Ready: buttons reach this page' : 'Connecting to the companion…'),
+      remote.last ? h('span.note', 'Last button: ' + remote.last.op + (remote.last.q ? ' ' + remote.last.q : '') + ' at ' + new Date(remote.last.at).toLocaleTimeString()) : null,
+      h('button.btn.sm', { type: 'button', onclick: async () => {
+        try { const r = await fetch('api/control/ping', { cache: 'no-store' }); const j = await r.json(); toast(j.ok ? 'Test OK: the companion passed a button press to this page.' : 'Test failed: ' + j.error, j.ok ? 'ok' : 'err', 6000); }
+        catch (e) { toast('Test failed: ' + e.message, 'err', 6000); }
+      } }, icon('check'), h('span', 'Test'))));
+    const lan = lanBase(), pin = comp.pin || settings.v.companion.pin || '';
+    deckBody.append(seg([['here', 'Buttons on this PC'], ['lan', 'Buttons on another computer']], deckWhere, (v) => { deckWhere = v; paintDeck(); }));
+    const base = deckWhere === 'here' ? 'http://localhost:' + (location.port || '7777') : lan;
+    if (!base) { deckBody.append(h('p.note', 'The companion has not found this PC’s network address. Check the network, then reload.')); return; }
+    const addr = (c) => base + '/api/control/' + c + (deckWhere === 'lan' && pin ? (c.includes('?') ? '&' : '?') + 'pin=' + encodeURIComponent(pin) : '');
+    const list = h('div.col', { style: { gap: '4px' } });
+    // One compact line per button: what it does, its address, copy.
+    DECK.forEach(([c, label]) => list.append(h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 10px', padding: '5px 0', borderBottom: '1px solid var(--line, #36435c)' } },
+      h('b', { style: { minWidth: '210px', flex: '1 1 210px' } }, label),
+      h('code', { style: { flex: '3 1 260px', fontSize: '12px', wordBreak: 'break-all', opacity: '.85' } }, addr(c)),
+      h('button.btn.sm', { type: 'button', title: 'Copy the address', 'aria-label': 'Copy the address for ' + label, onclick: () => copyText(addr(c), 'Copied. Paste it as the button’s web address (GET).') }, icon('copy')))));
+    deckBody.append(list,
+      h('details', h('summary', h('b', 'Bitfocus Companion')), h('ol', { style: { margin: '6px 0', paddingLeft: '20px' } },
+        h('li', 'Connections → add ', h('b', 'Generic: HTTP Requests'), ' (no settings needed).'),
+        h('li', 'On a button: Press actions → that connection → ', h('b', 'GET'), ' → paste an address from above.'),
+        h('li', 'Name the button (e.g. “Next”). Done: pressing it moves the slide here.'))),
+      h('details', h('summary', h('b', 'Elgato Stream Deck app')), h('ol', { style: { margin: '6px 0', paddingLeft: '20px' } },
+        h('li', 'In the Stream Deck store (Marketplace), install a free plugin that opens web addresses: search for “web request” or “API request”.'),
+        h('li', 'Drag its action onto a key, choose ', h('b', 'GET'), ' and paste an address from above.'),
+        h('li', 'Tip: Bitfocus Companion (free) also drives an Elgato Stream Deck, with many more options.'))),
+      h('details', h('summary', h('b', 'Show what is live on a button (for advanced set-ups)')),
+        h('p.note', 'GET ' + base + '/api/status' + (deckWhere === 'lan' && pin ? '?pin=' + pin : '') + ' returns JSON: the live title, slide number and count, the next item, black/logo and whether the projector is open.')),
+      h('p.note', deckWhere === 'lan'
+        ? 'From another computer the address carries this companion’s PIN (' + pin + '). Anyone with the PIN on your network can press these buttons; change the PIN in the companion’s settings file if needed.'
+        : 'On this PC no PIN is needed. Web pages from other sites cannot press these buttons. To present, the projector must already be open (press Present once).'));
+  }
+  remote.on('state', () => paintDeck());
+  remote.on('cmd', () => { if (deckCard.isConnected) paintDeck(); });
+
+  // ------------------------------------------------------------ OBS through an HDMI cable (capture card)
+  // A PC's HDMI port only sends a picture. With a USB HDMI capture card on the OBS PC, this PC's spare HDMI
+  // output carries the stream picture: the lower third on green (OBS keys the green out) or the slides.
+  const hdmiBody = h('div.col', { style: { gap: '8px' } });
+  const hdmiCard = card('OBS through an HDMI cable', hdmiBody);
+  const HDMI_BG = [['green', 'Green (Chroma Key)'], ['black', 'Black']];
+  async function openHdmi(mode) {
+    const bg = mode === 'full' ? 'black' : (settings.v.stream.hdmiBg || 'green');
+    const r = await hub.listScreens();
+    if (!r || r.screens.length < 2) {
+      await hub.openHdmi(mode, bg, null);
+      toast(r ? 'Only one screen is connected. Plug the HDMI cable in (Windows: Win+P → Extend), then try again — or drag the window onto that screen and double-click it for full screen.'
+        : 'Drag the new window onto the HDMI screen, then double-click it (or press F) for full screen.', '', 9000);
+      setTimeout(paintHdmi, 600);
+      return;
+    }
+    const proj = settings.v.display.screenLabel;
+    const pick = (s) => { closeModal(); settings.set('stream.hdmiScreen', s.label || ''); hub.openHdmi(mode, bg, s).then(() => setTimeout(paintHdmi, 600)); };
+    const want = settings.v.stream.hdmiScreen;
+    const list = h('div.list');
+    r.screens.forEach((s, i) => list.appendChild(h('button', { type: 'button', 'aria-pressed': String(!!want && s.label === want), onclick: () => pick(s) },
+      icon('pc'), h('span.grow', (s.label || 'Screen ' + (i + 1)) + (s === r.current ? '  (this screen)' : '') + (proj && s.label === proj ? '  · projector' : '')),
+      h('span.faint', s.width + ' × ' + s.height))));
+    modal({ title: 'Which screen goes to the OBS computer?', body: h('div.col', { style: { gap: '8px' } },
+      h('p.note', 'Choose the HDMI output whose cable goes into the capture card on the OBS computer. It must not be the projector.'), list) });
+  }
+  function paintHdmi() {
+    clear(hdmiBody);
+    const bgSeg = seg(HDMI_BG, settings.v.stream.hdmiBg || 'green', (v) => settings.set('stream.hdmiBg', v));
+    const row = (mode, label, sub) => h('div.st-src',
+      h('div', h('b', label), h('span.note', ' — ' + sub)),
+      h('div.row.wrap',
+        h('button.btn.sm' + (hub.hdmiOpen(mode) ? '' : '.primary'), { type: 'button', onclick: () => openHdmi(mode) }, icon('present'), h('span', hub.hdmiOpen(mode) ? 'Open again on…' : 'Show on a screen…')),
+        hub.hdmiOpen(mode) ? h('button.btn.sm', { type: 'button', onclick: () => { hub.closeHdmi(mode); setTimeout(paintHdmi, 300); } }, icon('x'), h('span', 'Close')) : null,
+        hub.hdmiOpen(mode) ? h('span.note', '● showing') : null));
+    hdmiBody.append(
+      h('p.note', 'For a second PC with OBS and no network link: a PC’s HDMI port only sends a picture, so the OBS PC needs a ', h('b', 'USB HDMI capture card'),
+        ' (any “HDMI to USB 3.0 capture” works). Run an HDMI cable from a spare output of this PC into the capture card.'),
+      row('lower', 'Lower third', 'verses, hymn words, names, ticker'),
+      h('div.row.wrap', h('span.note', 'Background behind the lower third:'), bgSeg),
+      row('full', 'Slides', 'full screen, as on the projector'),
+      h('ol.st-steps', { style: { margin: '0', paddingLeft: '20px', display: 'grid', gap: '4px' } },
+        h('li', 'Windows on this PC: press ', h('b', 'Win + P → Extend'), ' so the HDMI output is its own screen.'),
+        h('li', 'Press ', h('b', 'Show on a screen…'), ' and choose that HDMI screen. The window fills it (double-click it, or press F, if it does not).'),
+        h('li', 'On the OBS PC: ', h('b', 'Sources → + → Video Capture Device'), ' → choose the capture card. Set the card to 1920 × 1080 if it asks.'),
+        h('li', 'For the lower third: right-click that source → ', h('b', 'Filters → + → Chroma Key'), ' (Key Color Type: Green). Put it above the camera. For the slides use the source as it is, in its own scene.'),
+        h('li', 'Show a Bible verse here: the words appear in OBS.')),
+      h('p.note', 'Only one picture fits through one cable: use one HDMI output (and capture card) for the lower third and another for the slides if you need both. Keep SDA Sabbath open here while you stream.'));
+  }
+  settings.on('change:stream', (p) => { if (p === 'stream.hdmiBg') paintHdmi(); });
 
   // ------------------------------------------------------------ 2. OBS control
   const sceneChips = h('div.row.wrap.st-scenes');
@@ -205,7 +365,7 @@ export default function create(ctx) {
     toggle('Bible verses: the reference and the verse appear on the stream when they go on the screen', S().autoBible, (v) => settings.set('stream.autoBible', v)),
     toggle('Hymns: the words appear on the stream so viewers at home can sing along', S().autoHymns, (v) => settings.set('stream.autoHymns', v)),
     h('div.row.wrap', h('span.note', 'Hymns show'), seg([['lines', 'The words'], ['title', 'Only the hymn title']], S().hymnMode, (v) => settings.set('stream.hymnMode', v))),
-    toggle('Other text slides (responsive readings, Tools) too', S().autoOther, (v) => settings.set('stream.autoOther', v)),
+    toggle('Other text slides too', S().autoOther, (v) => settings.set('stream.autoOther', v)),
     h('p.note', 'A name or announcement you show by hand goes over the automatic words while it is up.'));
 
   // ------------------------------------------------------------ look
@@ -285,16 +445,17 @@ export default function create(ctx) {
   }
   const linkNote = h('p.note');
   manualCard.append(linkNote);
-  function paintAll() { paintObs(); paintUrls(); paintLower(); paintNames(); }
+  function paintAll() { paintObs(); paintUrls(); paintLower(); paintNames(); paintLan(); paintHdmi(); paintDeck(); }
 
   const el = h('section.stage-tab.stream-tab',
     h('div.toolbar', h('h2', 'Stream'), h('span.note.hide-sm', 'OBS Studio: lower thirds and the slides for the live stream'), h('div.grow'),
       h('button.btn.sm', { type: 'button', onclick: () => hub.hideLower() }, icon('x'), h('span', 'Hide lower third'))),
     h('div.scroll.st-grid',
       h('div.st-col', lowerCard, autoLowerCard, pvCard),
-      h('div.st-col', controlCard, autoCard, manualCard, lookCard)));
+      h('div.st-col', lanCard, hdmiCard, deckCard, controlCard, autoCard, manualCard, lookCard)));
 
   obs.on('state', paintAll);
+  hub.on('outlets', paintHdmi);
   obs.on('change', paintObs);
   hub.on('overlay', paintLower);
   hub.on('outlets', paintObs);

@@ -4,9 +4,9 @@ import { emitter, debounce } from './util.js';
 import { settings } from './settings.js';
 import { link } from './link.js';
 import { db } from './db.js';
-import { MusicEngine, loadIndex, planSegments, INSTRUMENTS } from './musicengine.js';
+import { MusicEngine, loadIndex, planSegments, INSTRUMENTS, hqFor, hqStored, hqRemove, hqPrefetch, HQ_MB } from './musicengine.js';
 
-export { INSTRUMENTS, planSegments };
+export { INSTRUMENTS, planSegments, hqFor, hqStored, hqRemove, hqPrefetch, HQ_MB };
 
 // ------------------------------------------------------------------ controller (UI side)
 export const music = emitter({ state: { playing: false }, where: 'here', hymnKey: null, entryInfo: null });
@@ -25,6 +25,7 @@ function bindLocal() {
   local.on('state', (s) => { if (music.where === 'here') setState(s); });
   local.on('slide', (i) => { if (music.where === 'here') music.emit('slide', { key: music.hymnKey, slide: i }); });
   local.on('ended', () => { if (music.where === 'here') music.emit('ended'); });
+  local.on('notice', (msg) => music.emit('notice', msg));
   return local;
 }
 link.on('msg', (m) => {
@@ -47,6 +48,9 @@ music.entry = async (book, n) => {
   if (custom && custom.blob) {
     return { f: 'custom', tune: custom.name || 'Custom', ok: false, custom: true, blob: custom.blob };
   }
+  // MIDI that came with a shared chorus (community.js).
+  const shared = await db.get('files', 'cmidi:' + book + ':' + n).catch(() => null);
+  if (shared && shared.blob) return { f: 'custom', tune: shared.name || 'Shared chorus', ok: false, custom: true, bundled: true, blob: shared.blob };
   const idx = await loadIndex();
   const b = idx && idx.books[book];
   const found = (b && b.hymns[String(n)]) || null;
@@ -76,7 +80,7 @@ music.play = async (opts) => {
     book: opts.book, n: opts.hy.n, title: opts.title || opts.hy.t, segs,
     instrument: m.musicInstrument || 'arranged', rate: (m.musicTempo || 100) / 100, key: m.musicKey || 0,
     volume: m.musicVolume == null ? 1.3 : m.musicVolume,
-    fx: { reverb: m.musicReverb == null ? 59 : m.musicReverb, chorus: m.musicChorus == null ? 43 : m.musicChorus },
+    fx: music.fx(),
     light: settings.lowPower(),
     entry: entry.custom ? entry : null,   // a MIDI file added by the user or shipped in data/music/extra
   };
@@ -115,7 +119,13 @@ const saveSoon = debounce((k, v) => settings.set('hymns.' + k, v), 400);
 music.setRate = (r) => { send('rate', r); saveSoon('musicTempo', Math.round(r * 100)); };
 music.setKey = (k) => { send('key', k); saveSoon('musicKey', k); };
 music.setVolume = (v) => { send('volume', v); saveSoon('musicVolume', v); };
-music.applyEffects = () => { const m = settings.v.hymns; send('effects', { reverb: m.musicReverb == null ? 59 : m.musicReverb, chorus: m.musicChorus == null ? 43 : m.musicChorus }); };
+/** Sound settings for the engine. hq stays 'auto' / 'on' / 'off': the device that plays decides what 'auto' means. */
+music.fx = () => {
+  const m = settings.v.hymns;
+  return { reverb: m.musicReverb == null ? 59 : m.musicReverb, chorus: m.musicChorus == null ? 43 : m.musicChorus,
+    room: m.musicRoom || 'church', hq: m.musicHQ || 'auto', natural: m.musicNatural !== false };
+};
+music.applyEffects = () => send('effects', music.fx());
 music.isPlaying = () => !!(music.state && music.state.playing);
 /** For diagnostics and tests. */
 music.engine = () => local;

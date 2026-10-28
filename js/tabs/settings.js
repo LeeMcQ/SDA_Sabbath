@@ -1,11 +1,16 @@
 // Settings: how the screen looks, displays, Bibles, the app itself, and what's coming next.
+import { accountSection, openFeedback } from './account.js';
+import { installed as installedApp, installSteps } from '../core/installer.js';
+import { lsKey } from '../core/storens.js';
+import { backupSection } from './backup-ui.js';
+import { screensPanel } from './screens-panel.js';
 import { h, clear, uid, fmtBytes, download, readText, scrubUrls, debounce } from '../core/util.js';
 import { icon } from '../core/icons.js';
 import { btn, seg, toggle, toast, confirmBox } from '../core/ui.js';
 import { db, persistStorage } from '../core/db.js';
 import { createStage } from '../core/render.js';
 import { listTranslations, deleteImported, resetCaches } from '../core/bibledata.js';
-import { importBibleDialog } from './bible-import.js';
+const importBibleDialog = (cb) => import('./bible-import.js').then((m) => m.importBibleDialog(cb));
 import { listScreens } from '../core/link.js';
 import { sanitizeImportedSettings, exportableSettings } from '../core/settings.js';
 import { churchForm } from './church-form.js';
@@ -17,8 +22,8 @@ export default function create(ctx) {
   const setD = (k) => (v) => settings.set('display.' + k, v);
   const el = h('section');
   const scroll = h('div.scroll.pad', { style: { flex: '1' } });
-  const nav = h('div.row.wrap');
-  el.append(h('div.toolbar', h('h2', 'Settings'), h('div.grow'), nav), scroll);
+  const nav = h('div.row.wrap.set-nav');
+  el.append(h('div.toolbar.set-bar', h('h2', 'Settings'), h('div.grow'), nav), scroll);
 
   const sections = [];
   const section = (id, title, build) => { sections.push({ id, title, build }); };
@@ -71,6 +76,7 @@ export default function create(ctx) {
       h('label', 'Margin'), range('pad', 20, 200, 4, (v) => v + ' px', 'Margin'),
       h('label', 'Smallest text'), range('minFont', 36, 110, 2, (v) => v + ' px', 'Smallest text'),
       h('label', 'Largest text'), range('maxFont', 90, 240, 5, (v) => v + ' px', 'Largest text'),
+      h('label', 'Hymn words'), seg([['normal', 'Normal'], ['large', 'Large'], ['largest', 'Largest']], D().hymnSize || 'large', setD('hymnSize')),
       h('label', 'Changing slides'), seg([['fade', 'Fade'], ['cut', 'Cut']], D().transition, setD('transition')),
       h('label', 'Fade time'), range('fade', 100, 1000, 50, (v) => v + ' ms', 'Fade time'),
       h('label', 'Screen shape'), seg([['auto', 'Automatic'], ['16:9', '16:9'], ['16:10', '16:10'], ['4:3', '4:3']], D().aspect, setD('aspect')),
@@ -85,7 +91,8 @@ export default function create(ctx) {
   section('display', 'Displays', (box) => {
     const stateLine = h('p', link.kind ? (link.ready ? 'Presenting to ' : 'Connecting to ') + link.info.label + (link.info.w ? ' (' + link.info.w + ' × ' + link.info.h + ')' : '') : 'No display connected.');
     const screens = h('div.list');
-    box.append(stateLine,
+    box.append(h('div.card', { style: { marginBottom: '14px' } }, h('h3', 'Screens: projectors and stage screens'), screensPanel()),
+      stateLine,
       h('div.row.wrap', { style: { margin: '10px 0' } },
         h('button.btn', { type: 'button', onclick: () => link.openWindow({ prompt: true }) }, icon('present'), 'Open display window'),
         'getScreenDetails' in window ? h('button.btn', { type: 'button', onclick: async () => {
@@ -117,6 +124,7 @@ export default function create(ctx) {
       rc.append(h('div.row.wrap', qrBox, h('div.col', h('code', url), h('p.note', 'TV or second PC as the screen: open ' + (comp.urls && comp.urls[0] || location.origin) + '/display.html?via=ws&pin=' + (comp.pin || 'PIN')))));
     } else {
       rc.append(h('p.note', 'Run the SDA Sabbath companion on the church PC to control the screen from a phone, use a smart-TV browser as the screen, play videos straight from the PC’s Videos folder, and convert PowerPoint files exactly. Then open SDA Sabbath from the address it shows. Anything in the PC’s Videos\\Selah folder can be opened by anyone on the same Wi-Fi who knows its file name, so keep private files out of it.'));
+      rc.append(h('a.btn.primary', { href: 'companion.html', target: '_blank', rel: 'noopener' }, icon('download'), h('span', 'Download the companion')));
     }
     box.append(rc);
   });
@@ -155,13 +163,16 @@ export default function create(ctx) {
       h('label', 'Next / Live monitors'), toggle('Show monitors', A.monitors !== false, (v) => settings.set('app.monitors', v)),
       h('label', 'Low-power mode'), seg([['auto', 'Automatic' + (A.lowPower == null ? (lpNow ? ' (on)' : ' (off)') : '')], ['on', 'On'], ['off', 'Off']], A.lowPower == null ? 'auto' : A.lowPower ? 'on' : 'off', (v) => settings.set('app.lowPower', v === 'auto' ? null : v === 'on')),
       h('label', ''), h('p.note', 'Low-power mode turns off fades and the live video thumbnail, renders slides at 1280 px and shares screens at 15 frames per second — for old PCs and 1–2 GB phones.'),
-      h('label', 'Install'), ctx.installPrompt ? h('button.btn', { type: 'button', onclick: async () => { await ctx.promptInstall(); rebuild(); } }, icon('download'), 'Install SDA Sabbath') : h('span.note', window.matchMedia('(display-mode: standalone)').matches ? 'Installed.' : 'Use the browser menu → Install app / Add to Home screen.'),
+      h('label', 'Install'), installedApp() ? h('span.note', 'Installed on this device.')
+        : ctx.installPrompt ? h('button.btn', { type: 'button', onclick: async () => { await ctx.promptInstall(); rebuild(); } }, icon('download'), 'Install SDA Sabbath')
+          : h('span.note', installSteps()),
       h('label', 'Offline'), h('div.col', { style: { gap: '6px' } }, cache,
         h('div.row.wrap', h('button.btn.sm', { type: 'button', onclick: () => { cache.textContent = 'Checking…'; if (!ctx.checkOffline || !ctx.checkOffline(true)) offlineStatus().then((t) => { cache.textContent = t; }); } }, icon('check'), 'Check & repair offline files'))),
+      h('label', 'Videos you add'), seg([['ask', 'Ask each time'], ['yes', 'Keep a copy'], ['no', 'This session only']], settings.v.video.keepCopies || 'ask', (v) => settings.set('video.keepCopies', v)),
       h('label', 'Storage'), h('div.row.wrap', storage, h('button.btn.sm', { type: 'button', onclick: async () => { const ok = await persistStorage(); toast(ok ? 'SDA Sabbath’s data is protected from automatic clean-up.' : 'The browser has not allowed it yet. Install SDA Sabbath first.', ok ? 'ok' : ''); } }, 'Protect data')),
       h('label', 'Backup'), h('div.row.wrap',
-        h('button.btn.sm', { type: 'button', onclick: exportBackup }, icon('download'), 'Export settings & plans'),
-        h('button.btn.sm', { type: 'button', onclick: importBackup }, icon('upload'), 'Import')),
+        h('button.btn.sm.primary', { type: 'button', onclick: () => { active = 'backup'; rebuild(); } }, icon('upload'), 'Back up or move to another device'),
+        h('button.btn.sm', { type: 'button', onclick: importBackup, title: 'For the .json backups made by older versions' }, 'Import an old .json backup')),
       h('label', 'Update'), h('div.row.wrap',
         h('button.btn.sm', { type: 'button', onclick: hardUpdate }, icon('reload'), 'Update now'),
         h('button.btn.sm', { type: 'button', onclick: freshCopy }, 'Download a fresh copy'),
@@ -274,6 +285,10 @@ export default function create(ctx) {
       h('label.switch', { title: 'Not available yet' }, h('input', { type: 'checkbox', disabled: true }), h('span', 'Show live captions (not available yet)'))));
   });
 
+  // ------------------------------------------------------------ Account
+  section('backup', 'Backup', (box) => backupSection(box));
+  section('account', 'Account', (box) => accountSection(box, ctx));
+
   section('about', 'About', (box) => {
     // Version, build and the offline copy in use: what to quote when reporting a problem.
     const offline = h('span.mono', '…');
@@ -286,10 +301,13 @@ export default function create(ctx) {
         const t = 'SDA Sabbath ' + ctx.VERSION + ' · build ' + (ctx.BUILD || '—') + ' · offline ' + offline.textContent + ' · ' + location.host + location.pathname + ' · ' + navigator.userAgent;
         if (navigator.clipboard) navigator.clipboard.writeText(t).then(() => toast('Version details copied.', 'ok'), () => {});
       } }, icon('copy'), h('span', 'Copy version details'))));
+    box.append(h('div.row.wrap', { style: { margin: '10px 0' } },
+      h('button.btn', { type: 'button', onclick: () => openFeedback(ctx) }, icon('msg'), h('span', 'Comments and suggestions')),
+      h('button.btn', { type: 'button', onclick: () => ctx.openWelcome && ctx.openWelcome() }, icon('reload'), h('span', 'Run the setup again'))));
     box.append(h('p', 'SDA Sabbath — a free, offline church presenter made for Seventh-day Adventist media teams.'),
       h('p.note', { style: { marginTop: '8px' } }, 'Bibles: KJV (public domain), World English Bible (public domain), Afrikaanse Bybel 1933/53. Fonts: Atkinson Hyperlegible Next and Source Serif 4 (SIL Open Font License). PDF rendering: pdf.js (Apache 2.0). ZIP reading: fflate (MIT). QR codes: qrcode-generator (MIT). Stage link: Trystero and noble-secp256k1 (MIT). Sample hymn words are in the public domain.'),
       h('p.note', { style: { marginTop: '8px' } }, h('a', { href: 'privacy.html', target: '_blank', rel: 'noopener' }, 'Privacy notice'), ' · ', h('a', { href: 'terms.html', target: '_blank', rel: 'noopener' }, 'Terms of use'), ' · ', h('a', { href: 'vendor/VERSIONS.md', target: '_blank', rel: 'noopener' }, 'Third-party code')),
-      h('p.note', { style: { marginTop: '8px' } }, 'Hymn music: the church\'s own MIDI recordings, played by SpessaSynth (Apache 2.0) with the GeneralUser GS 2.0.3 SoundFont by S. Christian Collins (free to use; schristiancollins.com), using the reverb and chorus levels the author recommends.'));
+      h('p.note', { style: { marginTop: '8px' } }, 'Hymn music: the church\'s own MIDI recordings, played by SpessaSynth (Apache 2.0) with the GeneralUser GS 2.0.3 SoundFont by S. Christian Collins (free to use; schristiancollins.com), using the reverb and chorus levels the author recommends. High-quality sounds: Salamander Grand Piano V3 by Alexander Holm (CC BY 3.0) and the GrandOrgue demo pipe organ, recordings by Lars Palo (CC BY-SA 2.5) — data/music/HQ-SOUNDS-LICENSE.txt.'));
   });
 
   /** Is there real internet? (sw.js is never stored offline, so only the server can answer.) */
@@ -319,7 +337,7 @@ export default function create(ctx) {
   }
   async function freshCopy() {
     if (!(await reallyOnline())) { toast('No internet: the offline copy is kept. Connect first.', 'err', 6000); return; }
-    if (!(await confirmBox('Download a fresh copy?', 'Only if the app misbehaves: this removes the stored app files and downloads them again (about 36 MB). Your plans, hymns, banners and settings stay. Keep the internet on until it finishes.', 'Download again', true))) return;
+    if (!(await confirmBox('Download a fresh copy?', 'Only if the app misbehaves: this removes the stored app files and downloads them again (about 24 MB). Your plans, hymns, banners and settings stay. Keep the internet on until it finishes.', 'Download again', true))) return;
     try {
       // Only this app's worker and files: another app on the same site keeps its own offline copy.
       const regs = 'serviceWorker' in navigator ? (await navigator.serviceWorker.getRegistrations()).filter((r) => location.href.indexOf(r.scope) === 0) : [];
@@ -358,7 +376,7 @@ export default function create(ctx) {
           // keep this device's AI key; never take one from a file
           const clean = sanitizeImportedSettings(d.settings);
           clean.ai = Object.assign({}, clean.ai || {}, { apiKey: (settings.v.ai && settings.v.ai.apiKey) || '' });
-          localStorage.setItem('selah.settings.v1', JSON.stringify(clean));
+          localStorage.setItem(lsKey('settings.v1'), JSON.stringify(clean));
         }
         const okId = (x) => x && typeof x === 'object' && (typeof x.id === 'string' || typeof x.id === 'number');
         for (const p of (Array.isArray(d.plans) ? d.plans : []).filter(okId)) await db.put('plans', p.id, scrubUrls(p));

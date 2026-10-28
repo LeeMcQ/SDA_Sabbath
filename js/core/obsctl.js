@@ -8,6 +8,7 @@ import { settings } from './settings.js';
 import { live } from './live.js';
 import { hub } from './stagehub.js';
 
+// These names live inside OBS: they keep the app's first name, so scenes set up earlier keep working.
 export const LOWER_NAME = 'SDA Sabbath · Lower third';
 export const FULL_NAME = 'SDA Sabbath · Slides';
 const CAMERA_KINDS = /^(dshow_input|av_capture_input|macos_avcapture|v4l2_input|decklink-input|ndi_source|pipewire-camera-source)/;

@@ -1,13 +1,13 @@
 // SDA Sabbath service worker: installs the whole app (Bibles, hymns, fonts, pdf.js) in one go
 // so it runs with no internet. VERSION is rewritten by tools/build.py on every build.
-const VERSION = 'c168ef2426cf';
+const VERSION = '0cf2b47783b0';
 // Caches are named per address ('selah-/SDA_Sabbath/|<version>'), so two apps on the same site
 // (for example this one and an older copy under another folder) never delete each other's offline files.
 const SCOPE = new URL(self.registration.scope).pathname;
 const PREFIX = 'selah-' + SCOPE + '|';
 const CACHE = PREFIX + VERSION;
 const LEGACY = /^selah-[0-9a-f]{6,}$/; // the first versions: one shared name, 'selah-<hash>'
-const NETWORK_ONLY = /\/(api|media|ws)(\/|$)/;
+const NETWORK_ONLY = /\/(api|media|ws|download)(\/|$)|\/hq\.sf3$/; // hq.sf3: the optional sound pack keeps its own cache (musicengine.js)
 
 async function broadcast(msg) {
   const cs = await self.clients.matchAll({ includeUncontrolled: true });
@@ -68,7 +68,7 @@ self.addEventListener('install', (event) => {
     const hashes = man.hashes || {};
     const older = (await appCaches()).filter((k) => k !== CACHE).concat(await legacyOwn());
     // A file whose content did not change is copied from the previous version's cache, so an
-    // update only downloads what is new (the instruments and hymn music are 18 MB).
+    // update only downloads what is new (the instruments and hymn music are about 6 MB).
     async function unchanged(f) {
       const want = hashes[f];
       if (!want) return null;

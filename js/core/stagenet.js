@@ -9,7 +9,10 @@
 // Messages use the same wire format as the projector link (wire.js): pictures are sent once per
 // device and referenced afterwards.
 import { createEncoder, createDecoder } from './wire.js';
+import { lsKey } from './storens.js';
 
+// This app's network name since the start. Church_Service has its own, so a phone on its stage page can never
+// join this app's stage rooms (and the other way round).
 export const APP_ID = 'sda-sabbath-stage-v1';
 // No 0/O, 1/I/L, 2/Z, 5/S, 8/B: easy to read out loud and to type on a phone.
 const CODE_CHARS = 'ACDEFGHJKMNPQRTUVWXY34679';
@@ -138,7 +141,7 @@ export async function verifyHost(pub, sig, nonce, wantFp) {
     return (await crypto.subtle.verify(SIG, key, unb64u(sig), challengeBytes(nonce))) ? fp : null;
   } catch (e) { return null; }
 }
-const HOSTS_KEY = 'selah.stage.hosts';
+const HOSTS_KEY = lsKey('stage.hosts');
 const readHosts = () => { try { return JSON.parse(localStorage.getItem(HOSTS_KEY) || '{}') || {}; } catch (e) { return {}; } };
 const writeHosts = (o) => { try { localStorage.setItem(HOSTS_KEY, JSON.stringify(o)); } catch (e) { /* private mode */ } };
 export function forgetHost(code) { const o = readHosts(); delete o[code]; writeHosts(o); }

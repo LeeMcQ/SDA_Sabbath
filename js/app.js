@@ -1,5 +1,6 @@
 // SDA Sabbath control app boot: tabs, Present button, display menu, shortcuts, service worker.
 import { $, h, isTyping } from './core/util.js';
+import { startInstallPrompt } from './core/installer.js';
 import { icon } from './core/icons.js';
 import { settings } from './core/settings.js';
 import { db, persistStorage } from './core/db.js';
@@ -15,10 +16,15 @@ import { openPip, pipSupported } from './pip.js';
 import { clicker, actionFor, sigOfKey, sigOfMouse } from './core/clicker.js';
 import { openClickerSetup, builtinAction } from './clickerui.js';
 import { hub as stageHub, timerValue } from './core/stagehub.js';
-import { obs } from './core/obsctl.js';
+import { cloud } from './core/cloud.js';
+import { currentLayout } from './core/screens.js';
+import { remote, startRemote, sendStatus } from './core/remotectl.js';
+// Loaded when first needed, to keep start-up quick: OBS control, the first-start setup and the feedback form.
+const lazyWelcome = () => import('./tabs/welcome.js');
+const openFeedback = (c, o) => import('./tabs/account.js').then((m) => m.openFeedback(c, o));
 
 export const VERSION = '1.5.0';
-export const BUILD = '3b0614f';
+export const BUILD = '7d5df41';
 
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', file: 'bible.js', load: () => import('./tabs/bible.js') },
@@ -60,7 +66,7 @@ const ctx = {
   companion: null,
   installPrompt: null,
   stage: stageHub,
-  obs,
+  obs: null, // set once OBS control is loaded (see the end of this file)
 };
 window.selah = ctx; // handy for debugging from the console (name kept for existing scripts)
 
@@ -187,7 +193,10 @@ function updatePresent() {
   presentBtn.classList.toggle('is-live', same);
   presentKey.textContent = same ? 'On screen' : 'Present';
   const part = c && !same ? slideName(c, c.index) : '';
-  $('#presentNext').textContent = c ? (same ? '' : 'Next: ') + c.title + (part ? ' · ' + part : '') + (c.sub ? '  ' + c.sub : '') : 'Nothing selected';
+  const pn = $('#presentNext');
+  pn.replaceChildren();
+  if (!c) pn.textContent = 'Nothing selected';
+  else pn.append(same ? '' : h('span.pn-pre', 'Next: '), c.title + (part ? ' · ' + part : '') + (c.sub ? '  ' + c.sub : ''));   // phones drop "Next:" to fit the reference
   presentBtn.title = same ? 'This is already on screen. Press again (F5) to show it from the start.' : 'Present the selected item (F5 or Ctrl+Enter)';
 }
 live.on('staged', updatePresent);
@@ -198,8 +207,11 @@ const syncIdle = () => document.documentElement.classList.toggle('mon-idle', !li
 live.on('staged', syncIdle);
 live.on('live', syncIdle);
 presentBtn.addEventListener('click', () => doPresent());
+// Ask the browser to keep the data even when the disk gets full. Chrome, Edge and Safari decide quietly; Firefox
+// shows a permission box, so there it is asked only from Settings → App → Protect data (never mid-service).
+const autoPersist = () => { if (!/Firefox|FxiOS/.test(navigator.userAgent)) persistStorage(); };
 async function doPresent() {
-  persistStorage();
+  autoPersist();
   const a = document.activeElement;
   if (a && (a.tagName === 'INPUT' || a.tagName === 'SELECT') && a !== document.body) a.blur();
   // Always present on the extended screen, full screen.
@@ -226,8 +238,9 @@ function updateDispBtn() {
   const full = link.kind ? (link.ready ? link.info.label || 'Display' : 'Connecting…') : 'No display';
   dispBtn.querySelector('.lbl').textContent = full;
   // Phones show a one-glance status: "No display", "Ready · TV" or "Live · TV".
-  dispBtn.querySelector('.lbl-s').textContent = !link.kind ? 'No display' : !link.ready ? 'Connecting' : (isLive ? 'Live · ' : 'Ready · ') + (SHORT_KIND[link.kind] || 'Screen');
+  dispBtn.querySelector('.lbl-s').textContent = !link.kind ? 'No display' : !link.ready ? 'Connecting' : isLive ? 'Live' : 'Ready';   // the coloured dot and the tooltip say the rest
   dispBtn.setAttribute('aria-label', 'Display: ' + full + (isLive ? ', something is live' : '') + '. Choose where to present');
+  dispBtn.title = 'Display: ' + (link.kind ? (SHORT_KIND[link.kind] || 'Screen') + ' · ' : '') + full;
 }
 // A one-tap stop button beside the display button whenever something is connected (cast, window, TV …).
 const dispStop = h('button.disp-stop', { type: 'button', hidden: true, onclick: () => { const was = link.kind; link.close(); ui.toast(was === 'cast' ? 'Casting stopped.' : 'Display closed.', 'ok', 2000); } }, icon('x'));
@@ -434,7 +447,9 @@ function stageMenu(anchor) {
 // OBS: a red LIVE / REC mark in the top bar while OBS streams or records (click: Stream tab).
 const obsPill = h('button.obs-pill', { type: 'button', hidden: true, title: 'OBS is live — open Tools → Stream', onclick: () => showTab('stream') });
 stageBtn.after(obsPill);
+let obs = null;
 function paintObsPill() {
+  if (!obs) return;
   const on = obs.state === 'on' && (obs.streaming || obs.recording);
   obsPill.hidden = !on;
   if (!on) return;
@@ -442,7 +457,6 @@ function paintObsPill() {
   const s = Math.max(0, Math.floor((Date.now() - since) / 1000));
   obsPill.textContent = (obs.streaming ? '● LIVE ' : '● REC ') + Math.floor(s / 3600) + ':' + String(Math.floor(s / 60) % 60).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
 }
-obs.on('change', paintObsPill); obs.on('state', paintObsPill);
 setInterval(paintObsPill, 1000);
 stageHub.on('blocked', () => ui.toast('The browser blocked the stage window. Allow pop-ups for this site, then try again.', 'err', 7000));
 stageHub.on('talk', (t) => ui.toast(h('span', h('b', t.from + ': '), t.text, ' ', h('button.btn.sm', { type: 'button', onclick: () => showTab('stage') }, 'Reply')), 'ok', 12000));
@@ -460,6 +474,48 @@ stageHub.onCommand = (op, arg) => {
   else if (op === 'last') live.go(live.count() - 1);
   else if (op === 'go' && Number.isFinite(+arg)) live.go(+arg);
 };
+
+// Remote control (Stream Deck, Bitfocus Companion, any program) through the companion's /api/control/<op>.
+// A browser may not open a projector window without a click, so "present" needs the projector already open.
+async function remoteCommand(op, m = {}) {
+  const q = String(m.q || m.n || '').slice(0, 200);
+  const needDisplay = () => { if (link.ready) return true; ui.toast('A remote button asked to present, but no projector is open. Press Present once on this PC first.', 'err', 6000); return false; };
+  switch (op) {
+    case 'ping': return;
+    case 'present': if (needDisplay()) await doPresent(); return;
+    case 'goto': case 'show': {
+      if (!q) return;
+      const label = await quick.run(/^\d+$/.test(q) ? 'hymn ' + q : q, op === 'show');
+      if (!label) { ui.toast('Remote: nothing found for “' + q + '”.', 'err', 4000); return; }
+      if (op === 'show' && needDisplay()) await doPresent();
+      return;
+    }
+    case 'plan-next': case 'plan-prev': {
+      const p = await getTab('plan');
+      if (!(await p.step(op === 'plan-next' ? 1 : -1))) ui.toast('Remote: no plan is open.', 'err', 3000);
+      return;
+    }
+    case 'music-toggle': case 'music-stop': case 'music-fade': {
+      const { music } = await import('./core/hymnmusic.js');
+      if (op === 'music-toggle') music.toggle(); else if (op === 'music-stop') music.stop(); else music.fade(3000);
+      return;
+    }
+    case 'go': if (Number.isFinite(+m.i)) live.go(Math.max(0, +m.i - 1)); return; // 1 = first slide
+    default: stageHub.onCommand(op);
+  }
+}
+ctx.remoteCommand = remoteCommand;
+ctx.remote = remote;
+function remoteStatus() {
+  const c = live.cue, s = live.staged;
+  return {
+    live: c ? { title: c.title || '', sub: c.sub || '', tab: c.tab || '', slide: live.index + 1, slides: live.count() } : null,
+    next: s ? { title: s.title || '', sub: s.sub || '', tab: s.tab || '' } : null,
+    blank: live.blank || null,
+    projector: !!link.ready,
+  };
+}
+['live', 'go', 'blank', 'staged'].forEach((ev) => live.on(ev, () => sendStatus()));
 
 // ------------------------------------------------------------ sound output device (desktop)
 let audioSink = '';
@@ -523,15 +579,19 @@ const searchBtn = ui.btn('search', 'Go to (/)', () => quick.focus(), { cls: 'sm'
 searchBtn.classList.add('show-sm');
 async function promptInstall() {
   const p = ctx.installPrompt;
-  if (!p) return;
+  if (!p) return false;
   ctx.installPrompt = null; installBtn.hidden = true; // a prompt can only be shown once
-  try { p.prompt(); await p.userChoice; } catch (e) { /* dismissed */ }
+  let ok = false;
+  try { p.prompt(); const c = await p.userChoice; ok = !!c && c.outcome === 'accepted'; } catch (e) { /* dismissed */ }
+  instNotify();
+  return ok;
 }
 ctx.promptInstall = promptInstall;
 const installBtn = ui.btn('download', 'Install SDA Sabbath on this device', promptInstall, { cls: 'sm' });
 installBtn.hidden = true;
 const helpBtn = ui.btn('kbd', 'Keyboard shortcuts (?)', () => showHelp(), { cls: 'sm' });
-topIcons.append(searchBtn, installBtn, helpBtn);
+const feedbackBtn = ui.btn('msg', 'Comments and suggestions', () => openFeedback(ctx), { cls: 'sm fb-btn' });
+topIcons.append(searchBtn, installBtn, feedbackBtn, helpBtn);
 
 // Church logo in the top-right corner (replaces any browser cast icon visually).
 const churchLogo = h('img.church-logo', { alt: 'Church logo', src: 'icons/favicon.svg' });
@@ -554,8 +614,37 @@ async function refreshChurchLogo() {
 refreshChurchLogo();
 settings.on('change:display', (path) => { if (path === 'display.logo' || path === '*') refreshChurchLogo(); });
 settings.on('change', (path) => { if (path === '*') refreshChurchLogo(); });
-window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); ctx.installPrompt = e; installBtn.hidden = false; ui.enter(installBtn, 'pop'); });
-window.addEventListener('appinstalled', () => { ctx.installPrompt = null; installBtn.hidden = true; ui.toast('SDA Sabbath is installed.', 'ok'); });
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); ctx.installPrompt = e; installBtn.hidden = false; ui.enter(installBtn, 'pop'); instNotify(); });
+window.addEventListener('appinstalled', () => { ctx.installPrompt = null; installBtn.hidden = true; ui.toast('SDA Sabbath is installed. Open it from its own icon; it works without internet.', 'ok', 6000); instNotify(); });
+
+// ------------------------------------------------------------ install + offline readiness card
+const instFns = new Set();
+function instNotify() { instFns.forEach((f) => { try { f(); } catch (e) { /* */ } }); }
+function offlineState() {
+  const hh = ctx.offlineHealth, p = ctx.cacheProgress;
+  if (hh && hh.total) return { done: hh.have, total: hh.total, ready: hh.have >= hh.total };
+  if (p && p.total) return { done: p.done, total: p.total, ready: p.done >= p.total };
+  return { done: 0, total: 0, ready: false };
+}
+window.addEventListener('selah-cache', instNotify);
+window.addEventListener('selah-health', instNotify);
+const instCard = startInstallPrompt({ promptInstall, installAvailable: () => !!ctx.installPrompt, offline: offlineState, onChange: (f) => instFns.add(f) });
+// Asked once the first-start setup is done, never while something is on screen (the card would cover the controls).
+function instMaybe(delay) {
+  setTimeout(() => { if (!live.cue && settings.v.app.setupDone && !ui.modalOpen()) { checkOffline(false); instCard.show(); } }, delay);
+}
+if (settings.v.app.setupDone) instMaybe(6000);
+else settings.on('change:app', (path) => { if (path === 'app.setupDone' && settings.v.app.setupDone) instMaybe(4000); });
+live.on('live', (c) => { if (c) instCard.close(false); });
+// Once the app itself is stored offline, the optional high-quality hymn instruments (18 MB) download quietly in
+// the background on devices where they are on, so the first hymn never waits for them.
+let hqTried = false;
+function hqBackground() {
+  if (hqTried || !offlineState().ready || navigator.onLine === false) return;
+  hqTried = true;
+  setTimeout(() => import('./core/hymnmusic.js').then((m) => { if (m.hqFor(settings.v.hymns.musicHQ || 'auto')) m.hqPrefetch(); }).catch(() => {}), 45000);
+}
+instFns.add(hqBackground);
 const mq = matchMedia('(max-width: 760px)');
 const syncSearch = () => { searchBtn.hidden = !mq.matches; helpBtn.hidden = mq.matches; };
 mq.addEventListener ? mq.addEventListener('change', syncSearch) : mq.addListener(syncSearch);
@@ -570,7 +659,8 @@ function showHelp() {
     ['F5  or  Ctrl+Enter', 'Present what is selected (Next → Live)'],
     ['→  ↓  Page Down  Space', 'Next verse / slide / stanza'],
     ['←  ↑  Page Up', 'Previous'], ['Home  End', 'First / last'],
-    ['B  or  .', 'Black screen (press again to return)'], ['L', 'Show logo'], ['C  or  Esc twice', 'Clear the screen'],
+    ['Ctrl+Z', 'Back to what was on screen before (at the same slide)'],
+    ['B  or  .  or  W', 'Black screen (press again to return)'], ['L', 'Show logo'], ['C  or  Esc twice', 'Clear the screen'],
     ['Esc', 'Close a menu or dialog, leave a text box (the screen stays as it is)'], ['M', 'Hymn music: play / pause'],
     ['/  or  Ctrl+K', 'Go to a Bible reference or hymn number (Enter selects it, Shift+Enter presents it now)'], ['Alt+1 … Alt+9, Alt+0', 'Switch tabs (Alt+0: Settings)'],
     ['1 … 9', 'Select that stanza (Hymns) or verse (Bible) as Next; type two digits quickly for verse 10 and up. Then F5 presents it'],
@@ -678,6 +768,7 @@ function handleKey(e, remote) {
   if (quiet && t && t.blur) t.blur();
   if (e.altKey && /^[1-9]$/.test(k)) { const tb = TABS.filter(Boolean)[+k - 1]; if (tb) showTab(tb.id); return true; }
   if (e.altKey && k === '0') { showTab('settings'); return true; }
+  if (ctrl && !e.altKey && !e.shiftKey && (k === 'z' || k === 'Z')) { live.back(); return true; }   // back to what was on screen before
   if (ctrl || e.altKey) return false;
   // 1–9: stage that stanza (Hymns) or verse (Bible) as Next; F5 then presents it. Two digits quickly = verse 10+.
   if (!remote && /^[0-9]$/.test(k) && numberKey(k)) return true;
@@ -813,36 +904,47 @@ function onHealth(hh) {
 setTimeout(() => checkOffline(true), 15000);
 setInterval(() => { if (navigator.onLine) checkOffline(true); }, 30 * 60000);
 // Ask the browser to keep the stored app and data even when the disk gets full.
-setTimeout(() => { persistStorage(); }, 4000);
+setTimeout(autoPersist, 4000);
 
 // Warn before closing while something is live.
 window.addEventListener('beforeunload', (e) => { if (live.cue && link.kind === 'window') { e.preventDefault(); e.returnValue = ''; } });
 
 // ------------------------------------------------------------ companion (LAN) detection
 async function detectCompanion() {
+  // A phone opened with ?remote=1 but no companion behind the address: say why it is not a remote.
+  const remoteAsked = new URLSearchParams(location.search).get('remote') === '1';
+  const noRemote = () => {
+    if (!remoteAsked) return;
+    ui.toast(h('span', 'Phone remote needs the SDA Sabbath companion running on the church PC. Open the address the companion shows (for example http://192.168.1.20:7777/?remote=1) on the church Wi-Fi. ',
+      h('a', { href: 'companion.html', target: '_blank', rel: 'noopener' }, 'About the companion')), '', 15000);
+  };
   // The companion only serves plain http on the church network, so an https site (GitHub Pages)
   // or a file:// copy can never be it. Skipping the probe avoids a 404 in the console on every load.
-  if (location.protocol !== 'http:') return;
+  if (location.protocol !== 'http:') { noRemote(); return; }
   try {
     const ctl = new AbortController();
     const t = setTimeout(() => ctl.abort(), 1200);
     const r = await fetch('api/info', { cache: 'no-store', signal: ctl.signal });
     clearTimeout(t);
-    if (!r.ok) return;
+    if (!r.ok) { noRemote(); return; }
     const info = await r.json();
-    if (info.app !== 'selah-companion') return;
+    if (info.app !== 'selah-companion') { noRemote(); return; }
     ctx.companion = info;
     const local = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
     // Stage screens on the church network (no internet needed) follow this app through the companion.
     // Only the PC running the companion hosts them (a phone used as a remote must not answer as well).
     if (local) stageHub.connectLan(location.origin, settings.v.companion.pin);
+    // Stream Deck / Bitfocus Companion buttons reach this page through the companion (only the PC that runs it).
+    if (local && info.control && new URLSearchParams(location.search).get('remote') !== '1') {
+      startRemote({ origin: location.origin, pin: info.pin || settings.v.companion.pin, onCommand: remoteCommand, status: remoteStatus });
+    }
     const params = new URLSearchParams(location.search);
     if (!local || params.get('remote') === '1') {
       // Opened from a phone on the church network: become a remote for the display there.
       const pin = params.get('pin') || settings.v.companion.pin || (await ui.promptBox('Connect to the church display', 'PIN shown by the SDA Sabbath companion'));
       if (pin != null) { settings.set('companion.pin', pin); link.connectSocket(location.origin, pin); }
     }
-  } catch (e) { /* not served by the companion */ }
+  } catch (e) { noRemote(); /* not served by the companion */ }
 }
 
 // ------------------------------------------------------------ service worker (offline + updates)
@@ -853,7 +955,19 @@ function registerSW() {
       const t = ui.toast(h('span', 'An SDA Sabbath update is ready. ', h('button.btn.sm', { type: 'button', onclick: () => { w.postMessage({ t: 'skip' }); } }, 'Update now')), 'ok', 15000);
       return t;
     };
-    if (reg.waiting && navigator.serviceWorker.controller) ask(reg.waiting);
+    // An update that finished downloading earlier is put in place straight away when the app opens with
+    // nothing on screen (nothing to lose); otherwise the operator is asked.
+    if (reg.waiting && navigator.serviceWorker.controller) {
+      if (!live.cue && !live.staged) reg.waiting.postMessage({ t: 'skip' }); else ask(reg.waiting);
+    }
+    // Phones resume an installed app without reloading it, so the browser never looks for updates by itself:
+    // look whenever the app comes back to the front (at most every 10 minutes), and ask again if one waits.
+    let lastCheck = Date.now();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      if (reg.waiting && navigator.serviceWorker.controller && !live.cue) { if (!live.staged) reg.waiting.postMessage({ t: 'skip' }); else ask(reg.waiting); return; }
+      if (Date.now() - lastCheck > 10 * 60000) { lastCheck = Date.now(); reg.update().catch(() => {}); }
+    });
     reg.addEventListener('updatefound', () => {
       const w = reg.installing;
       if (!w) return;
@@ -894,8 +1008,26 @@ if ('launchQueue' in window) {
 }
 registerSW();
 detectCompanion();
+// Account, usage statistics and the first-start setup (all optional; see js/core/cloud.js).
+ctx.cloud = cloud;
+cloud.track({ presenting: () => !!link.ready || link.hasMirror(), layout: currentLayout });
+live.on('live', (c) => { if (c && c.tab) cloud.count(c.tab === 'stage' ? 'stage' : c.tab); });
+ctx.openWelcome = (opts) => lazyWelcome().then((m) => m.openWelcome(opts));
+// The setup code (and the account screens it uses) is only downloaded when the setup is actually needed.
+cloud.ready.then(() => {
+  const maybe = !settings.v.app.setupDone || (cloud.requireSignIn() && !cloud.user && navigator.onLine !== false);
+  if (maybe) lazyWelcome().then((m) => { if (m.needsSetup()) setTimeout(() => m.openWelcome(), 600); });
+});
 stageHub.start();
-obs.start();
+// OBS control: straight away when it should connect by itself, otherwise a little later in the background.
+const loadObs = () => import('./core/obsctl.js').then((m) => {
+  if (obs) return obs;
+  obs = ctx.obs = m.obs;
+  obs.on('change', paintObsPill); obs.on('state', paintObsPill);
+  obs.start();
+  return obs;
+});
+if (settings.v.stream.obsAuto) loadObs(); else setTimeout(loadObs, 3000);
 // Warm the Hymns tab in the background so "Go to 73" is instant.
 setTimeout(() => getTab('hymns').catch(() => {}), 1500);
 // The order of service also shows on the stage screens: load the Plan tab quietly too.
