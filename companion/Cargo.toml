@@ -1,15 +1,15 @@
 [package]
-name = "selah-companion"
-version = "1.1.0"
+name = "sda-sabbath-companion"
+version = "1.2.0"
 edition = "2021"
-description = "Selah companion: serves the Selah church presenter on the local network, relays phone-remote commands, streams media from the PC and converts PowerPoint files."
+description = "SDA Sabbath companion: serves the SDA Sabbath church presenter on the local network, relays phone-remote commands, streams media from the PC and converts PowerPoint files."
 license = "MIT"
 
 # No third-party crates: a tiny, auditable binary that builds anywhere Rust does.
 [dependencies]
 
 [[bin]]
-name = "selah"
+name = "sda-sabbath"
 path = "src/main.rs"
 
 [profile.release]
