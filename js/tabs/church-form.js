@@ -52,6 +52,8 @@ export function churchForm(settings, onChange) {
   return h('div.form',
     h('label', 'Church name'), text('name', 'e.g. Malmesbury SDA Church'),
     h('label', 'Town'), text('town', 'e.g. Malmesbury'),
+    h('label', 'Conference'), h('div.col', text('conference', 'e.g. Cape Conference'), h('p.note', 'Shown with the union under the church name on the default logo slide and in the order of service.')),
+    h('label', 'Union'), text('union', 'e.g. Southern Africa Union Conference'),
     h('label', 'Location'), h('div.col', { style: { alignItems: 'flex-start' } }, h('div.row.wrap', lat, lon), here, sunNote),
     h('label', 'Service starts'), h('div.row', svc, h('span.note', 'Used by the countdown')),
     h('label', 'Giving link'), h('div.col', giving, h('p.note', 'Shown as a QR code on the Tithe & offering banner. Only https:// links.')),

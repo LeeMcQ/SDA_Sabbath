@@ -9,6 +9,8 @@
 // Any frame may carry clock:{at, label} for a small "Service starts in 4:32" corner.
 import { isBlob, esc } from './util.js';
 import { bannerEl, clockEl } from './bannerframe.js';
+import { SYMBOL_ROUND } from './symbol.js';
+import { sabbathNow, sabbathWords } from './sabbath.js';
 
 /** Slide i of a cue (clamped to the deck), or its only picture; null when there is none. */
 export function frameOf(cue, i) {
@@ -18,8 +20,8 @@ export function frameOf(cue, i) {
   return d.frame || null;
 }
 
-/** The app mark (open book), drawn for the default logo slide. */
-const DEFAULT_MARK = '<svg class="logo-mark" viewBox="0 0 64 64" aria-hidden="true"><path d="M7 18.5Q19 14 30 20.5V50Q19 44.5 7 48Z" fill="#c9a44c"/><path d="M57 18.5Q45 14 34 20.5V50Q45 44.5 57 48Z" fill="#ecd48e"/></svg>';
+/** The default logo slide: the Church symbol (js/core/symbol.js), unaltered, in one solid colour. */
+const DEFAULT_MARK = SYMBOL_ROUND.replace('<svg ', '<svg class="logo-mark" ');
 
 export const STAGE_W = 1920;
 
@@ -210,6 +212,7 @@ export function createStage(host, opts = {}) {
   let front = 0, style = {}, aspect = 16 / 9, sw = STAGE_W, sh = 1080, seq = 0;
   let styleUrls = [];
   let ro = null;
+  let sabbathTimer = 0;
 
   const stage = {
     el, host,
@@ -247,12 +250,25 @@ export function createStage(host, opts = {}) {
       const lu = urlFor(s.logoBlob, styleUrls);
       if (lu) { const im = document.createElement('img'); im.src = lu; im.alt = ''; logoEl.appendChild(im); }
       else if (s.logoText) { const d = document.createElement('div'); d.className = 'logo-text'; d.textContent = s.logoText; logoEl.appendChild(d); }
-      else {
-        // No logo set: a calm default slide (the app's open-book mark and the church name, or "Welcome").
+      clearInterval(sabbathTimer); sabbathTimer = 0;
+      if (!lu && !s.logoText) {
+        // No logo set: the Church symbol, the church name (or "Welcome") and its conference; from Friday sunset
+        // to Sabbath sunset also "Happy Sabbath" and when the Sabbath ends (worked out here, offline).
         const d = document.createElement('div'); d.className = 'logo-default';
         d.innerHTML = DEFAULT_MARK;
         const t = document.createElement('div'); t.className = 'logo-text'; t.textContent = s.logoName || 'Welcome';
-        d.appendChild(t); logoEl.appendChild(d);
+        d.appendChild(t);
+        if (s.logoConf) { const c = document.createElement('div'); c.className = 'logo-conf'; c.textContent = s.logoConf; d.appendChild(c); }
+        const sab = document.createElement('div'); sab.className = 'logo-sabbath';
+        d.appendChild(sab); logoEl.appendChild(d);
+        const lat = typeof s.logoLat === 'number' ? s.logoLat : null, lon = typeof s.logoLon === 'number' ? s.logoLon : null;
+        const paintSabbath = () => {
+          const st = sabbathNow(new Date(), lat, lon), w = sabbathWords(st, s.logoLang);
+          sab.hidden = !st.on;
+          sab.innerHTML = st.on ? '<b>' + esc(w.greeting) + '</b>' + (w.ends ? '<span>' + esc(w.ends) + '</span>' : '') : '';
+        };
+        paintSabbath();
+        sabbathTimer = setInterval(paintSabbath, 60000);
       }
     },
     /** Show a frame. Renders into the hidden layer, then swaps. */

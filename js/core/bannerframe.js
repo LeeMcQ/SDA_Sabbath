@@ -7,6 +7,7 @@
 //         qrLabel?, mark?:bool, countdown?:{at:epochMs, done:'Welcome'}}
 // Any frame may also carry clock:{at, label} for a small "Service starts in 4:32" corner.
 import { esc, pad2 } from './util.js';
+import { SYMBOL_ROUND } from './symbol.js';
 import { elsLayer, finishEls, okColor } from './slideels.js';
 
 export const PALETTES = {
@@ -69,7 +70,7 @@ export function bannerEl(f, urlFor) {
   const hasImg = !!f.img;
   const dark = hasImg ? pal.dark !== false : pal.dark;
   const el = document.createElement('div');
-  el.className = 'f-banner pos-' + (['left', 'right', 'low', 'top'].includes(f.pos) ? f.pos : 'center') + (f.font === 'serif' ? ' serif' : '') +
+  el.className = 'f-banner pos-' + (['left', 'right', 'low', 'top'].includes(f.pos) ? f.pos : 'center') + (f.font === 'serif' ? ' serif' : f.font === 'advent' ? ' advent' : '') +
     (dark ? ' dark' : ' light') + (hasImg ? ' has-img' : '') + ' tpl-' + String(f.tpl || 'blank').replace(/[^a-z]/g, '');
   el.style.setProperty('--b-fg', okColor(f.fgc) || pal.fg);
   el.style.setProperty('--b-accent', okColor(f.acc) || pal.accent);
@@ -107,6 +108,7 @@ export function bannerEl(f, urlFor) {
   inner.className = 'fb-in' + (f.layout ? ' has-layout' : '');
   let top = '';
   if (f.logo) top += '<img class="fb-logo" alt="" src="' + esc(urlFor(f.logo)) + '">';
+  else if (f.symbol) top += '<div class="fb-logo fb-symbol">' + SYMBOL_ROUND + '</div>'; // no church logo: the Church symbol
   if (f.kicker && !f.countdown) top += '<div class="fb-kicker" data-part="kicker">' + lines(f.kicker) + '</div>';
   let mid;
   if (f.countdown) {

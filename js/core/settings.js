@@ -56,7 +56,7 @@ export const DEFAULTS = {
   // keySession: keep the API key only until this browser tab or window is closed (not saved on the device).
   ai: { provider: 'openai', apiKey: '', model: '', imageModel: '', auto: {}, keySession: false },
   // The church's details, used by Banners (name, town, sunset times, service countdown, giving QR code).
-  church: { name: '', town: '', lat: null, lon: null, service: '09:30', givingUrl: '', givingLabel: '' },
+  church: { name: '', town: '', conference: '', union: '', lat: null, lon: null, service: '09:30', givingUrl: '', givingLabel: '' },
   backup: { slides: true, videos: false, lastDrive: null, lastFile: null },
 };
 
@@ -200,5 +200,9 @@ settings.displayStyle = () => {
     bgImage: d.bgImage, bgDim: d.bgDim, logo: d.logo, logoText: d.logoText, clearShows: d.clearShows, weight: d.weight,
     // Default logo slide when no logo is set: the church name from Settings → Church, if any.
     logoName: ((settings.v.church && settings.v.church.name) || '').trim(),
+    // …with its conference, and the location and language for the Sabbath greeting and sunset time on it.
+    logoConf: [settings.v.church && settings.v.church.conference, settings.v.church && settings.v.church.union].map((x) => (x || '').trim()).filter(Boolean).join(' · '),
+    logoLat: settings.v.church ? settings.v.church.lat : null, logoLon: settings.v.church ? settings.v.church.lon : null,
+    logoLang: settings.v.bible && settings.v.bible.primary === 'afr53' ? 'af' : 'en',
   };
 };

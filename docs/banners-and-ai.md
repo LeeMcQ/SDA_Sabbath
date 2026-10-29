@@ -2,6 +2,11 @@
 
 ## Banners
 
+**Logo slide.** Without a logo of your own (Settings → Screen), **Logo** shows the Seventh-day Adventist® Church
+symbol, the church name and its conference and union (Settings → Church). From Friday sunset to Sabbath sunset it
+adds “Happy Sabbath” (“Geseënde Sabbat” when the main Bible is Afrikaans) and when the Sabbath ends, worked out
+offline from the church’s location; the top bar greets the media team the same way.
+
 Like every other tab, nothing in **Banners** reaches the projector until **Present**: buttons say **Set as Next**.
 
 - **Make** — Welcome, Bible verse, Announcement, Tithe & offering, Countdown, Sabbath sunset, Closing blessing,
@@ -11,8 +16,9 @@ Like every other tab, nothing in **Banners** reaches the projector until **Prese
     the sunset time (“Sabbath begins at sunset: 18:58”, worked out offline from the church’s location), the
     service time for the countdown and a **QR code for online giving** (https links only).
   - **Bible verse banners** take a reference (e.g. `Ps 23:1-3`) and fill in the text from any installed Bible.
-  - **Look**: eight colour palettes chosen for readable contrast, patterns, text position, sans or serif, your
-    logo, and **your own photos** as backgrounds (darkened automatically so text stays readable).
+  - **Look**: eight colour palettes chosen for readable contrast, patterns, text position, clear sans, **Advent Sans**
+    (the Seventh-day Adventist Church typeface; Welcome banners start with it) or serif, your logo (or the Church
+    symbol when no logo is set), and **your own photos** as backgrounds (darkened automatically so text stays readable).
   - **Countdown** counts down to the service time on the display itself and shows “Welcome” at zero.
 - **Saved** — your banners, kept in the app’s database (works offline): Set as Next, Edit, Rename, Duplicate,
   Delete, Add to plan, Add to loop. Banners made with the old Banner tab are moved here automatically.

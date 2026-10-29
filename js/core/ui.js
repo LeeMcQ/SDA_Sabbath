@@ -173,12 +173,15 @@ export function confirmBox(title, text, okLabel = 'OK', danger = false) {
   });
 }
 
-export function promptBox(title, label, value = '', placeholder = '') {
+/** Ask for one line of text. suggest: optional list offered while typing (anything else can still be typed). */
+export function promptBox(title, label, value = '', placeholder = '', suggest = null) {
   return new Promise((resolve) => {
     let done = false;
-    const inp = h('input.field', { value, placeholder, style: { width: '100%' },
+    const listId = suggest && suggest.length ? 'pb-list-' + Math.random().toString(36).slice(2, 8) : '';
+    const inp = h('input.field', { value, placeholder, style: { width: '100%' }, list: listId || null,
       onkeydown: (e) => { if (e.key === 'Enter') { done = true; resolve(inp.value); closeModal(); } } });
-    modal({ title, body: h('div.col', h('label.muted', label), inp), onclose: () => { if (!done) resolve(null); },
+    const list = listId ? h('datalist', { id: listId }, ...suggest.map((x) => h('option', { value: x }))) : null;
+    modal({ title, body: h('div.col', h('label.muted', label), inp, list), onclose: () => { if (!done) resolve(null); },
       actions: [{ label: 'Cancel', onclick: () => { done = true; resolve(null); } },
         { label: 'OK', primary: true, onclick: () => { done = true; resolve(inp.value); } }] });
   });

@@ -7,6 +7,8 @@ export const church = () => {
   return {
     name: (c.name || '').trim() || (settings.v.display.logoText || '').trim(),
     town: (c.town || '').trim(),
+    conference: (c.conference || '').trim(),
+    union: (c.union || '').trim(),
     lat: typeof c.lat === 'number' && isFinite(c.lat) ? c.lat : null,
     lon: typeof c.lon === 'number' && isFinite(c.lon) ? c.lon : null,
     service: /^\d{1,2}:\d{2}$/.test(c.service || '') ? c.service : '09:30',
@@ -16,30 +18,8 @@ export const church = () => {
 };
 export const hasLocation = () => { const c = church(); return c.lat != null && c.lon != null; };
 
-// ------------------------------------------------------------ sun
-const RAD = Math.PI / 180;
-/**
- * Sunrise and sunset for a local calendar day (NOAA / "sunrise equation", within about 2 minutes).
- * lat: degrees north (South Africa is negative), lon: degrees east. Returns Dates, or null near the poles.
- */
-export function sunTimes(day, lat, lon) {
-  const jdNoon = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate(), 12) / 86400000 + 2440587.5;
-  const n = Math.round(jdNoon - 2451545.0 + 0.0008);
-  const jStar = n - lon / 360;
-  const M = (357.5291 + 0.98560028 * jStar) % 360;
-  const C = 1.9148 * Math.sin(M * RAD) + 0.02 * Math.sin(2 * M * RAD) + 0.0003 * Math.sin(3 * M * RAD);
-  const lambda = (M + C + 180 + 102.9372) % 360;
-  const jTransit = 2451545.0 + jStar + 0.0053 * Math.sin(M * RAD) - 0.0069 * Math.sin(2 * lambda * RAD);
-  const sinD = Math.sin(lambda * RAD) * Math.sin(23.4397 * RAD);
-  const cosD = Math.cos(Math.asin(sinD));
-  const cosW = (Math.sin(-0.833 * RAD) - Math.sin(lat * RAD) * sinD) / (Math.cos(lat * RAD) * cosD);
-  if (cosW < -1 || cosW > 1) return null;
-  const w = Math.acos(cosW) / RAD;
-  const toDate = (j) => new Date((j - 2440587.5) * 86400000);
-  return { sunrise: toDate(jTransit - w / 360), sunset: toDate(jTransit + w / 360) };
-}
-
-export const hhmm = (d) => d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+export { sunTimes, hhmm } from './sabbath.js';
+import { sunTimes, hhmm } from './sabbath.js';
 
 /** "Sabbath begins at sunset: 18:52" (Friday), "Sabbath ends at sunset: 18:53" (Sabbath), else next Friday's. */
 export function sabbathSunsetLine(now = new Date()) {

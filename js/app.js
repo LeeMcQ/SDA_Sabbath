@@ -19,12 +19,14 @@ import { hub as stageHub, timerValue } from './core/stagehub.js';
 import { cloud } from './core/cloud.js';
 import { currentLayout } from './core/screens.js';
 import { remote, startRemote, sendStatus } from './core/remotectl.js';
+import { church } from './core/church.js';
+import { sabbathNow, sabbathWords } from './core/sabbath.js';
 // Loaded when first needed, to keep start-up quick: OBS control, the first-start setup and the feedback form.
 const lazyWelcome = () => import('./tabs/welcome.js');
 const openFeedback = (c, o) => import('./tabs/account.js').then((m) => m.openFeedback(c, o));
 
 export const VERSION = '1.6.0';
-export const BUILD = '4a8c5a8';
+export const BUILD = '3caabe3';
 
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', file: 'bible.js', load: () => import('./tabs/bible.js') },
@@ -838,6 +840,20 @@ createMonitors($('#monitors'));
 createControlBar($('#ctrlbar'), getTab);
 
 // ------------------------------------------------------------ keep the control screen awake during a service (phones)
+// From Friday sunset to Sabbath sunset the top bar greets the media team, with the closing time on hover
+// (worked out offline from the location in Settings → Church).
+const sabbathChip = h('span.sabbath-chip', { hidden: true });
+$('.brand').appendChild(sabbathChip);
+function paintSabbathChip() {
+  const c = church(), st = sabbathNow(new Date(), c.lat, c.lon);
+  const w = sabbathWords(st, settings.v.bible.primary === 'afr53' ? 'af' : 'en');
+  sabbathChip.hidden = !st.on; sabbathChip.textContent = w.greeting; sabbathChip.title = w.ends;
+}
+paintSabbathChip();
+setInterval(paintSabbathChip, 60000);
+settings.on('change:church', paintSabbathChip);
+settings.on('change:bible', paintSabbathChip);
+
 // Only while something is shown or a screen is connected: an idle control PC may sleep.
 const keepAwake = keepScreenOn(() => !!(live.cue || link.kind));
 live.on('live', keepAwake);

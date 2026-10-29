@@ -32,6 +32,15 @@ const TEMPLATES = {
   ],
   'Sabbath School': ['Song service', 'Opening hymn', 'Opening prayer', 'Mission story', 'Lesson study', 'Closing hymn', 'Closing prayer'],
   'Vespers / AY': ['Song service', 'Opening hymn', 'Prayer', 'Scripture', 'Programme', 'Closing hymn', 'Prayer'],
+  'Communion (Lord’s Supper)': ['Song service', 'Opening hymn', 'Invocation', 'Scripture reading', 'Communion message',
+    'Ordinance of Humility (foot washing)', 'Hymn', 'The bread', 'The cup', 'Closing hymn', 'Benediction'],
+  'Prayer Meeting': ['Song service', 'Opening hymn', 'Opening prayer', 'Bible study', 'Testimonies', 'Prayer requests', 'Season of prayer', 'Closing hymn', 'Closing prayer'],
+  'Thirteenth Sabbath': ['Song service', 'Opening hymn', 'Opening prayer', 'Mission report', 'Thirteenth Sabbath programme', 'Thirteenth Sabbath offering', 'Lesson review', 'Closing hymn', 'Closing prayer'],
+  'Baptism': ['Opening hymn', 'Prayer', 'Scripture reading', 'Baptismal vows', 'Baptism', 'Welcome into church fellowship', 'Hymn', 'Prayer of blessing'],
+  'Child Dedication': ['Hymn', 'Scripture reading', 'Words to the parents', 'Prayer of dedication', 'Presentation of the certificate', 'Hymn'],
+  'Pathfinder / Adventurer Investiture': ['March-in', 'Opening hymn', 'Opening prayer', 'Pledge and Law', 'Club song', 'Welcome', 'Message',
+    'Investiture of classes and honours', 'Closing hymn', 'Benediction'],
+  'Week of Prayer': ['Song service', 'Opening hymn', 'Opening prayer', 'Scripture reading', 'Reading for the day', 'Season of prayer', 'Closing hymn', 'Closing prayer'],
   'Empty plan': [],
 };
 const TEMPLATE_PARTS = new Set(Object.values(TEMPLATES).flat().map((x) => x.toLowerCase()));
@@ -42,7 +51,18 @@ const TEMPLATE_MEDIA = {
     'Praise My Soul': { tab: 'hymns', n: 4, book: 'sda-online', label: 'Hymn 4 — Praise, My Soul, the King of Heaven' },
     'Dismiss Us Lord': { tab: 'hymns', n: 690, book: 'sda-online', label: 'Hymn 690 — Dismiss Us, Lord, With Blessing' },
   },
+  'Communion (Lord’s Supper)': {
+    'Scripture reading': { tab: 'bible', ref: 'John 13:1–17', label: 'John 13:1–17' },
+    'The bread': { tab: 'bible', ref: '1 Corinthians 11:23–24', label: '1 Corinthians 11:23–24' },
+    'The cup': { tab: 'bible', ref: '1 Corinthians 11:25–26', label: '1 Corinthians 11:25–26' },
+  },
+  'Baptism': { 'Scripture reading': { tab: 'bible', ref: 'Matthew 28:18–20', label: 'Matthew 28:18–20' } },
+  'Child Dedication': { 'Scripture reading': { tab: 'bible', ref: 'Mark 10:13–16', label: 'Mark 10:13–16' } },
 };
+// Who leads a part: offered as suggestions (any name can still be typed).
+const ROLES = ['Elder of the day', 'Elder', 'Pastor', 'Speaker', 'Deacon', 'Deaconess', 'Platform party', 'Sabbath School superintendent',
+  'Lesson teacher', 'Song leader', 'Musician', 'Children’s ministries', 'Personal ministries', 'AY leader', 'Pathfinder director',
+  'Adventurer director', 'Communication / media'];
 
 // Fields that describe an item's media (everything else — id, part, role, done — belongs to the part).
 const MEDIA_KEYS = ['tab', 'n', 'book', 'ref', 'tr', 'deck', 'item', 'url', 'banner', 'loop', 'topic', 'index', 'heading', 'label'];
@@ -336,7 +356,7 @@ export default function create(ctx) {
     const c = church();
     const d = /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? new Date(dateStr + 'T12:00:00') : nextSabbath();
     const parts = plan.items.map((it, i) => ({ n: i + 1, part: titleOf(it), kind: it.heading ? 'note' : it.tab, kindLabel: kindText(it), detail: mediaLabel(it) || '', role: it.role || '', mins: it.mins > 0 ? it.mins : 0, empty: !!it.heading }));
-    const model = { church: c.name, title: plan.name, dateLine: d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+    const model = { church: c.name, conference: [c.conference, c.union].filter(Boolean).join(' · '), title: plan.name, dateLine: d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
       start: /^\d{1,2}:\d{2}$/.test(startStr) ? startStr.replace(/^(\d):/, '0$1:') : c.service, showTimes: o.times, notes: o.notes, parts, readings: [], hymns: [],
       generated: new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) };
     if (o.scripture) {
@@ -670,7 +690,7 @@ export default function create(ctx) {
       { label: it.heading ? 'Attach media…' : 'Change media…', icon: 'link', onclick: () => openPicker({ target: it }) },
       it.heading ? null : { label: 'Remove the media (keep this part)', icon: 'x', onclick: () => detach(it) },
       { label: 'Rename this part…', icon: 'edit', onclick: () => renameItem(it) },
-      { label: 'Who leads this part…', icon: 'edit', onclick: async () => { const r = await promptBox('Who leads this part?', 'Role or name (e.g. Elder, Deacon, Speaker)', it.role || ''); if (r != null) { it.role = r.trim(); save(); render(); } } },
+      { label: 'Who leads this part…', icon: 'edit', onclick: async () => { const r = await promptBox('Who leads this part?', 'Role or name (e.g. Elder of the day, Deacon, Speaker)', it.role || '', '', ROLES); if (r != null) { it.role = r.trim(); save(); render(); } } },
       { label: it.mins > 0 ? 'Planned time: ' + it.mins + ' min…' : 'Planned time…', icon: 'clock', onclick: async () => {
         const r = await promptBox('Planned time for “' + titleOf(it) + '”', 'Minutes (empty for none). The stage count-down starts from this when the part goes on screen.', it.mins > 0 ? String(it.mins) : '');
         if (r == null) return;

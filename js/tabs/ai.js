@@ -23,7 +23,7 @@ import { cleanEls, htmlText, okColor } from '../core/slideels.js';
 
 // ------------------------------------------------------------ templates
 const TPL = {
-  welcome: { name: 'Welcome', fields: ['kicker', 'title', 'text', 'foot'], x: { logo: true, date: true }, s: { pal: 'navy', deco: 'glow' },
+  welcome: { name: 'Welcome', fields: ['kicker', 'title', 'text', 'foot'], x: { logo: true, date: true }, s: { pal: 'navy', deco: 'glow', font: 'advent' },
     d: (c) => ({ kicker: c.name, title: 'Happy Sabbath', text: 'Welcome to our worship service. We are glad you are here!' }),
     mood: 'Warm early-morning light over a peaceful green valley' },
   verse: { name: 'Bible verse', fields: ['ref', 'title', 'kicker'], x: {}, s: { pal: 'black', deco: 'none', font: 'serif' },
@@ -56,7 +56,7 @@ const FIELD = {
   done: { label: 'At zero show', ph: 'Welcome' },
 };
 const EXTRAS = [
-  ['logo', 'Logo', 'Your church logo from Settings → Screen'],
+  ['logo', 'Logo', 'Your church logo from Settings → Screen (or the Church symbol)'],
   ['date', 'Date', 'The coming Sabbath’s date'],
   ['sunset', 'Sunset time', 'When Sabbath begins or ends, worked out offline'],
   ['qr', 'Giving QR code', 'The giving link from Church details'],
@@ -116,7 +116,7 @@ export default function create(ctx) {
       if (PALETTES[S.pal]) out.s.pal = S.pal;
       if (DECOS[S.deco]) out.s.deco = S.deco;
       if (['center', 'left', 'right', 'top', 'low'].includes(S.pos)) out.s.pos = S.pos;
-      if (['sans', 'serif'].includes(S.font)) out.s.font = S.font;
+      if (['sans', 'serif', 'advent'].includes(S.font)) out.s.font = S.font;
       out.s.img = typeof S.img === 'string' ? S.img : null;
       out.s.dim = typeof S.dim === 'number' && isFinite(S.dim) ? S.dim : null;
       if (['cover', 'contain', 'crop'].includes(S.imgFit)) out.s.imgFit = S.imgFit;
@@ -278,7 +278,7 @@ export default function create(ctx) {
         fr.imgZoom = s.imgZoom || 100;
       }
     }
-    if (x.logo) { const lg = await logoBlob(); if (lg) fr.logo = lg; }
+    if (x.logo) { const lg = await logoBlob(); if (lg) fr.logo = lg; else fr.symbol = true; }
     // Free elements: fields such as {date} filled in now, pictures fetched from the database.
     if (Array.isArray(b.els) && b.els.length) {
       const fields = fieldValues(now);
@@ -802,7 +802,7 @@ export default function create(ctx) {
     });
     const decoSeg = seg(Object.keys(DECOS).map((k) => [k, DECOS[k]]), sl.s.deco || 'none', (v) => { sl.s.deco = v; changed(false); });
     const posSeg = seg(POS, sl.s.pos || 'center', (v) => { sl.s.pos = v; changed(false); });
-    const fontSeg = seg([['sans', 'Clear sans'], ['serif', 'Serif']], sl.s.font || 'sans', (v) => { sl.s.font = v; changed(false); });
+    const fontSeg = seg([['sans', 'Clear sans'], ['advent', 'Advent Sans'], ['serif', 'Serif']], sl.s.font || 'sans', (v) => { sl.s.font = v; changed(false); });
     const boldBtn = h('button.chip', { type: 'button', 'aria-pressed': String(!!sl.s.textBold), title: 'Bold title', onclick: () => { sl.s.textBold = !sl.s.textBold; changed(false); } }, 'B');
     const italicBtn = h('button.chip', { type: 'button', 'aria-pressed': String(!!sl.s.textItalic), title: 'Italic title', onclick: () => { sl.s.textItalic = !sl.s.textItalic; changed(false); } }, 'I');
     const sizeOut = h('span.note', (sl.s.textSize || 100) + '%');

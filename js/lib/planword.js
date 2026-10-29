@@ -24,7 +24,8 @@ export function planWord(model) {
   const times = !!model.showTimes && anyMins;
 
   // ---- title block
-  if (model.church) out.push(para(run(model.church, { caps: true, b: true, sz: 20, color: GOLD, spacing: 40 }), { after: 40 }));
+  if (model.church) out.push(para(run(model.church, { caps: true, b: true, sz: 20, color: GOLD, spacing: 40 }), { after: model.conference ? 0 : 40 }));
+  if (model.conference) out.push(para(run(model.conference, { sz: 17, color: MUTED }), { after: 40 }));
   out.push(para(run(model.title || 'Order of service', { b: true, sz: 56, color: NAVY, font: 'Georgia' }), { style: 'Title', after: 40, keepNext: true }));
   const sub = [model.dateLine, model.start && times ? 'Starts ' + model.start : ''].filter(Boolean).join('   ·   ');
   if (sub) out.push(para(run(sub, { sz: 24, color: MUTED }), { after: 160, borderBottom: { sz: 14, color: GOLD }, keepNext: true }));

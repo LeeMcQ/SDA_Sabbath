@@ -16,6 +16,7 @@ import { esc } from './util.js';
 
 export const FONTS = [
   ['Hyperlegible', '"Hyperlegible", system-ui, sans-serif', 'Atkinson Hyperlegible'],
+  ['Advent Sans', '"Advent Sans", "Hyperlegible", sans-serif', 'Advent Sans'],
   ['Selah Serif', '"Selah Serif", Georgia, serif', 'Source Serif'],
   ['Arial', 'Arial, Helvetica, sans-serif'],
   ['Helvetica', 'Helvetica, Arial, sans-serif'],
