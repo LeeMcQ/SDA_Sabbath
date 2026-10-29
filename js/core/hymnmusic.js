@@ -127,6 +127,8 @@ music.fx = () => {
     eq: Array.isArray(m.musicEq) ? m.musicEq.slice(0, 5) : [0, 0, 0, 0, 0], interp: m.musicInterp === 'linear' ? 'linear' : 'hermite', voices: +m.musicVoices || 256 };
 };
 music.applyEffects = () => send('effects', music.fx());
+/** Instrument or natural playing changed: the playing hymn carries on from the same moment with it. */
+music.rearrange = (o) => send('rearrange', o);
 music.isPlaying = () => !!(music.state && music.state.playing);
 /** For diagnostics and tests. */
 music.engine = () => local;

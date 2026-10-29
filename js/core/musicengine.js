@@ -73,7 +73,8 @@ async function midiBytes(book, entry) {
 // It is not part of the offline install; it downloads the first time it is switched on and is kept in its own
 // cache, which app updates leave alone, so it downloads once per device.
 // Equaliser bands: bass, low middle, middle, presence, treble (gains in dB, -12 … +12).
-export const EQ_BANDS = [['lowshelf', 80, 'Bass'], ['peaking', 250, 'Low'], ['peaking', 1000, 'Middle'], ['peaking', 3500, 'Presence'], ['highshelf', 9000, 'Treble']];
+// Shelves sit where hymn accompaniment has its bass and air (a shelf gives half its gain at its corner frequency).
+export const EQ_BANDS = [['lowshelf', 150, 'Bass'], ['peaking', 350, 'Low'], ['peaking', 1000, 'Middle'], ['peaking', 3000, 'Presence'], ['highshelf', 6500, 'Treble']];
 export const EQ_PRESETS = {
   flat: ['Flat', [0, 0, 0, 0, 0]],
   warm: ['Warm', [3, 1, 0, -1, -2]],
@@ -190,6 +191,7 @@ export class MusicEngine {
       synth.connect(this.gain);
       this.eq.reduce((a, b) => { a.connect(b); return b; }, this.gain).connect(lim);
       lim.connect(ctx.destination);
+      this.out = lim; // the finished sound (tests and level meters listen here)
       // Church echo: synth → convolver (the room) → wet level → the same volume control, beside the dry sound.
       this.conv = ctx.createConvolver();
       this.wet = ctx.createGain(); this.wet.gain.value = 0;
@@ -310,7 +312,7 @@ export class MusicEngine {
     const smf = parseSMF(await midiBytes(req.book, entry));
     const segs = req.segs && req.segs.length ? req.segs : [{ from: 0, to: entry.last != null ? entry.last + 1 : smf.events.reduce((m, e) => Math.max(m, e.tick), 0) + 1, label: 'Hymn', kind: 'all', slide: null }];
     this.arr = buildArrangement(smf, segs, { channels: channelMap(req.instrument), humanize: !(req.fx && req.fx.natural === false) });
-    this.req = req;
+    this.req = req; this._smf = smf; this._segs = segs;   // kept for rearrange()
     if (req.fx) {
       const { hq, ...rest } = req.fx;
       this.applyEffects(rest);
@@ -347,8 +349,11 @@ export class MusicEngine {
     if (this.playing) { seq.pause(); this.synth.stopAll(true); }
     this.arr = { sections: [], duration: 0 };
     this.req = { title, n: null, book: null };
-    this.synth.setSystemParameter('interpolationType', 2);
-    this.synth.setSystemParameter('voiceCap', 256);
+    this._smf = null; this._segs = null;
+    // Same quality as the hymns (Hymn options → Sound quality / Notes at once); the equaliser applies as well.
+    const q = this.fx || {};
+    this.synth.setSystemParameter('interpolationType', q.interp === 'linear' ? 0 : 2);
+    this.synth.setSystemParameter('voiceCap', Math.max(32, Math.min(350, +q.voices || 256)));
     this.gain.gain.cancelScheduledValues(this.ctx.currentTime);
     if (volume != null) this.volume = volume;
     this.gain.gain.setValueAtTime(this.volume, this.ctx.currentTime);
@@ -415,6 +420,25 @@ export class MusicEngine {
     if (this.gain && !this._fadeT) { const now = this.ctx.currentTime; this.gain.gain.cancelScheduledValues(now); this.gain.gain.setTargetAtTime(this.volume, now, 0.03); }
     this._state();
   }
+  /**
+   * Change the instrument or natural playing while a hymn plays: the arrangement is rebuilt and carries on from
+   * the same moment (no restart). o: { instrument?, natural? }.
+   */
+  rearrange(o = {}) {
+    if (!this.playing || !this._smf || !this.req) return false;
+    const req = this.req;
+    if (o.instrument) req.instrument = o.instrument;
+    if (o.natural != null) req.fx = Object.assign({}, req.fx || {}, { natural: !!o.natural });
+    const seq = this.seq, at = seq.currentTime, paused = this.paused;
+    this.arr = buildArrangement(this._smf, this._segs, { channels: channelMap(req.instrument), humanize: !(req.fx && req.fx.natural === false) });
+    this.synth.stopAll(true);
+    seq.loadNewSongList([{ binary: this.arr.bytes.buffer.slice(0), fileName: 'hymn-' + req.n + '.mid' }]);
+    seq.playbackRate = this.rate;
+    seq.currentTime = at;
+    if (paused) seq.pause(); else seq.play();
+    this._state();
+    return true;
+  }
   seekSection(i) {
     if (!this.arr || !this.arr.sections[i]) return;
     const s = this.arr.sections[i];
@@ -437,6 +461,7 @@ export class MusicEngine {
       case 'volume': this.setVolume(v); break;
       case 'seek': this.seekSection(v); break;
       case 'effects': this.applyEffects(v); break;
+      case 'rearrange': this.rearrange(v); break;
     }
   }
 }

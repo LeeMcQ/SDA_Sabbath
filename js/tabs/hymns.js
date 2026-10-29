@@ -428,6 +428,7 @@ export default function create(ctx) {
         const eqp = EQ_PRESETS[p[1].musicEqPreset];
         if (eqp) settings.set('hymns.musicEq', eqp[1].slice());
         apply(); if (hqFor(S().musicHQ)) hqPrefetch();
+        if (music.isPlaying()) music.rearrange({ natural: S().musicNatural !== false });
         reopen();
       }
     } }, ...Object.entries(SOUND_PRESETS).map(([k, [label]]) => h('option', { value: k }, label)), h('option', { value: 'custom' }, 'Custom'));
@@ -494,7 +495,7 @@ export default function create(ctx) {
         h('label', 'Instruments'), seg([['auto', 'Automatic'], ['on', 'High quality'], ['off', 'Standard']], s.musicHQ || 'auto', (v) => { settings.set('hymns.musicPreset', 'custom'); settings.set('hymns.musicHQ', v); music.applyEffects(); paintHQ(); if (hqFor(v)) hqPrefetch().then(paintHQ); }),
         h('label', ''), hqNote,
         h('label', 'Church echo'), seg([['off', 'Off'], ['small', 'Small room'], ['church', 'Church'], ['large', 'Large church']], s.musicRoom || 'church', (v) => { settings.set('hymns.musicPreset', 'custom'); settings.set('hymns.musicRoom', v); music.applyEffects(); }),
-        h('label', 'Natural playing'), toggle('Melody sings out, inner parts softer, every note a little different', s.musicNatural !== false, (v) => { settings.set('hymns.musicPreset', 'custom'); settings.set('hymns.musicNatural', v); }, 'Hymn files often strike every note equally hard. Takes effect from the next hymn.'),
+        h('label', 'Natural playing'), toggle('Melody sings out, inner parts softer, every note a little different', s.musicNatural !== false, (v) => { settings.set('hymns.musicPreset', 'custom'); settings.set('hymns.musicNatural', v); if (music.isPlaying()) music.rearrange({ natural: v }); }, 'Hymn files often strike every note equally hard. A playing hymn changes straight away.'),
         h('label', 'Reverb'), slider(0, 127, 1, s.musicReverb == null ? 59 : s.musicReverb, (v) => String(v), (v) => { settings.set('hymns.musicPreset', 'custom'); settings.set('hymns.musicReverb', v); music.applyEffects(); }),
         h('label', 'Chorus effect'), slider(0, 127, 1, s.musicChorus == null ? 43 : s.musicChorus, (v) => String(v), (v) => { settings.set('hymns.musicPreset', 'custom'); settings.set('hymns.musicChorus', v); music.applyEffects(); }),
         h('label', ''), h('p.note', 'Reverb is used when Church echo is off (59 and chorus 43 are the levels GeneralUser GS’s author recommends). ',
@@ -929,7 +930,7 @@ export default function create(ctx) {
       st.sections.forEach((sec, i) => jumps.appendChild(h('button.frame-chip' + (st.section === i ? '.cur' : ''), { type: 'button', title: 'Go to ' + sec.label, onclick: () => music.seek(i) }, sec.label === 'Intro' ? 'Intro' : sec.label.replace('Verse ', ''))));
       musicBar.append(jumps);
     }
-    const instSel = h('select.field.sm', { 'aria-label': 'Instrument', title: 'Instrument', onchange: () => { setM('musicInstrument', instSel.value); if (mine) startMusic(false); } },
+    const instSel = h('select.field.sm', { 'aria-label': 'Instrument', title: 'Instrument', onchange: () => { setM('musicInstrument', instSel.value); if (mine) music.rearrange({ instrument: instSel.value }); } },
       Object.keys(INSTRUMENTS).map((k) => h('option', { value: k, selected: k === (m.musicInstrument || 'arranged') }, INSTRUMENTS[k].label)));
     const tempo = m.musicTempo || 100, keyS = m.musicKey || 0;
     musicBar.append(h('div.row.wrap.music-opts',
