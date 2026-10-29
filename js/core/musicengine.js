@@ -86,36 +86,55 @@ export const EQ_PRESETS = {
 };
 /** Sound presets: instruments, room and quality together. Values are the Hymn options settings they set. */
 export const SOUND_PRESETS = {
-  best: ['Best (church PC)', { musicHQ: 'on', musicRoom: 'church', musicNatural: true, musicInterp: 'hermite', musicVoices: 350, musicEqPreset: 'flat' }],
+  best: ['Best (church PC)', { musicHQ: 'studio', musicRoom: 'church', musicNatural: true, musicInterp: 'hermite', musicVoices: 350, musicEqPreset: 'flat' }],
   balanced: ['Balanced', { musicHQ: 'auto', musicRoom: 'church', musicNatural: true, musicInterp: 'hermite', musicVoices: 256, musicEqPreset: 'flat' }],
   light: ['Light (phone, old PC)', { musicHQ: 'off', musicRoom: 'off', musicNatural: true, musicInterp: 'linear', musicVoices: 96, musicReverb: 40, musicChorus: 20, musicEqPreset: 'small' }],
   hall: ['Large church, organ', { musicHQ: 'on', musicRoom: 'large', musicNatural: true, musicInterp: 'hermite', musicVoices: 350, musicEqPreset: 'organ' }],
   practice: ['Small room, clear', { musicHQ: 'auto', musicRoom: 'small', musicNatural: true, musicInterp: 'hermite', musicVoices: 256, musicEqPreset: 'clear' }],
 };
 
-const HQ_FILE = 'data/music/hq.sf3';
+// Two optional sound packs, downloaded once when chosen and kept in their own cache (not part of the offline install):
+//   hq      High quality (18 MB): concert grand (5 recorded loudness layers) and a church pipe organ.
+//   studio  Studio (larger, for the church PC): all 16 loudness layers, the piano's full natural decay, finer
+//           audio and a fuller organ. Built by tools/build_hq_soundfont.mjs (STUDIO=1).
+export const PACKS = { hq: { file: 'data/music/hq.sf3', mb: 18, label: 'High quality' }, studio: { file: 'data/music/studio.sf3', mb: 83, label: 'Studio' } };
 // This app's own name (storens.js). Not 'sda-sabbath-sounds-v1': Church_Service, on the same website, takes a cache
 // with that name over as its own, so using it here would make the sounds download again and again.
 const HQ_CACHE = CACHE_NS + 'sounds-v1';
 export const HQ_MB = 18;
-/** 'on' / 'off', or 'auto': on for PCs and laptops, off for phones and slow devices (decided by the device that plays). */
+/** 'studio' / 'on' / 'off', or 'auto': on for PCs and laptops, off for phones and slow devices (decided by the device
+ *  that plays). True when a sound pack is wanted. */
 export function hqFor(v) {
-  if (v === true || v === 'on') return true;
+  if (v === true || v === 'on' || v === 'studio') return true;
   if (v === false || v === 'off' || v == null) return false;
   const mem = navigator.deviceMemory || 4, cores = navigator.hardwareConcurrency || 4;
   const phone = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
   return !phone && mem > 2 && cores > 2;
 }
-export async function hqStored() {
-  try { return !!(await (await caches.open(HQ_CACHE)).match(url(HQ_FILE))); } catch (e) { return false; }
+/** Which pack a setting asks for: 'studio', 'hq' or null (the standard GeneralUser GS sounds). Studio needs a PC with
+ *  memory to spare (it is decoded as notes are played); elsewhere it falls back to High quality. */
+export function packFor(v) {
+  if (!hqFor(v)) return null;
+  if (v === 'studio') { const mem = navigator.deviceMemory || 8; return mem >= 4 ? 'studio' : 'hq'; }
+  return 'hq';
 }
-export async function hqRemove() { try { await caches.delete(HQ_CACHE); } catch (e) { /* */ } }
-async function hqBytes(onProgress) {
+export async function hqStored(pack = 'hq') {
+  try { return !!(await (await caches.open(HQ_CACHE)).match(url(PACKS[pack].file))); } catch (e) { return false; }
+}
+/** Remove one pack, or both. */
+export async function hqRemove(pack) {
+  try {
+    if (!pack) { await caches.delete(HQ_CACHE); return; }
+    await (await caches.open(HQ_CACHE)).delete(url(PACKS[pack].file));
+  } catch (e) { /* */ }
+}
+async function hqBytes(onProgress, pack = 'hq') {
+  const P = PACKS[pack];
   let cache = null;
-  try { cache = await caches.open(HQ_CACHE); const hit = await cache.match(url(HQ_FILE)); if (hit) return hit.arrayBuffer(); } catch (e) { /* no Cache API: download each time */ }
-  const res = await fetch(url(HQ_FILE), { cache: 'no-store' });
-  if (!res.ok) throw new Error('Could not download the high-quality sounds (' + res.status + ').');
-  const total = +res.headers.get('content-length') || HQ_MB * 1048576;
+  try { cache = await caches.open(HQ_CACHE); const hit = await cache.match(url(P.file)); if (hit) return hit.arrayBuffer(); } catch (e) { /* no Cache API: download each time */ }
+  const res = await fetch(url(P.file), { cache: 'no-store' });
+  if (!res.ok) throw new Error('Could not download the ' + P.label + ' sounds (' + res.status + ').');
+  const total = +res.headers.get('content-length') || P.mb * 1048576;
   const parts = []; let got = 0;
   const rd = res.body && res.body.getReader ? res.body.getReader() : null;
   if (rd) {
@@ -123,25 +142,26 @@ async function hqBytes(onProgress) {
       const { done, value } = await rd.read();
       if (done) break;
       parts.push(value); got += value.length;
-      onProgress && onProgress('Downloading high-quality instruments (once): ' + Math.min(99, Math.round(got / total * 100)) + '%');
+      const pct = Math.min(99, Math.round(got / total * 100));
+      onProgress && onProgress('Downloading ' + P.label + ' instruments (once): ' + pct + '%', pct);
     }
   } else parts.push(new Uint8Array(await res.arrayBuffer()));
   const buf = await new Blob(parts).arrayBuffer();
-  if (cache) { try { await cache.put(url(HQ_FILE), new Response(buf, { headers: { 'Content-Type': 'application/octet-stream' } })); } catch (e) { /* storage full: still plays this time */ } }
+  if (cache) { try { await cache.put(url(P.file), new Response(buf, { headers: { 'Content-Type': 'application/octet-stream' } })); } catch (e) { /* storage full: still plays this time */ } }
   return buf;
 }
 
-/** Download the high-quality instruments in the background (once; nothing plays). Resolves true when stored. */
-let prefetchP = null;
-export function hqPrefetch() {
-  if (prefetchP) return prefetchP;
-  prefetchP = (async () => {
-    if (await hqStored()) return true;
+/** Download a pack in the background (once; nothing plays). Resolves true when stored. onProgress(text, percent). */
+const prefetchP = {};
+export function hqPrefetch(pack = 'hq', onProgress) {
+  if (prefetchP[pack]) return prefetchP[pack];
+  prefetchP[pack] = (async () => {
+    if (await hqStored(pack)) return true;
     if (navigator.onLine === false) return false;
-    await hqBytes();
-    return hqStored();
-  })().catch(() => false).finally(() => { setTimeout(() => { prefetchP = null; }, 1000); });
-  return prefetchP;
+    await hqBytes(onProgress, pack);
+    return hqStored(pack);
+  })().catch(() => false).finally(() => { setTimeout(() => { prefetchP[pack] = null; }, 1000); });
+  return prefetchP[pack];
 }
 
 // ------------------------------------------------------------------ engine
@@ -247,36 +267,40 @@ export class MusicEngine {
     try { s.setSystemParameter('voiceCap', Math.max(32, Math.min(350, +q.voices || 350))); } catch (e) { /* */ }
     const eq = Array.isArray(q.eq) ? q.eq : [];
     if (this.eq) this.eq.forEach((f, i) => f.gain.setTargetAtTime(Math.max(-12, Math.min(12, +eq[i] || 0)), this.ctx.currentTime, 0.05));
-    if (q.hq != null) this._wantHQ(hqFor(q.hq), false).catch(() => {});
+    if (q.hq != null) this._wantHQ(packFor(q.hq), false).catch(() => {});
   }
 
-  /** Switch the high-quality instruments on or off (downloads them the first time). */
+  /** Use a sound pack ('hq' / 'studio', true = 'hq') or none (false/null); downloads it the first time. */
   async setHQ(on, onProgress) {
     if (!this.synth) return;
     if (this._hqP) await this._hqP.catch(() => {});
-    if (on === !!this._hq) return;
+    const want = on === true ? 'hq' : on || null;
+    if (want === (this._hq || null)) return;
     this._hqP = (async () => {
       const mgr = this.synth.soundBankManager;
-      if (on) {
-        const buf = await hqBytes(onProgress);
+      if (this._hq) { await mgr.deleteSoundBank('hq'); this._hq = null; }
+      if (want) {
+        const buf = await hqBytes(onProgress, want);
         await mgr.addSoundBank(buf, 'hq');
         mgr.priorityOrder = ['hq', 'main'];   // its piano and organ win over GeneralUser GS's
-        this._hq = true;
-      } else {
-        await mgr.deleteSoundBank('hq');
-        this._hq = false;
+        this._hq = want;
       }
     })();
     try { await this._hqP; } finally { this._hqP = null; }
   }
   get hq() { return !!this._hq; }
+  /** The pack in use: 'studio', 'hq' or null. */
+  get pack() { return this._hq || null; }
   /** Use the high-quality instruments if they are already on this device; otherwise start their download in the
    *  background and keep the standard sounds for now (a hymn never waits for an 18 MB download). */
   async _wantHQ(want, onProgress) {
-    if (!want) { if (this._hq) await this.setHQ(false); return; }
-    if (this._hq) return;
-    if (await hqStored()) { await this.setHQ(true, onProgress); return; }
-    hqPrefetch();
+    if (want === true) want = 'hq';
+    if (!want) { if (this._hq) await this.setHQ(null); return; }
+    if (this._hq === want) return;
+    if (await hqStored(want)) { await this.setHQ(want, onProgress); return; }
+    // Not downloaded yet: fetch it in the background; Studio plays with High quality meanwhile, if that is here.
+    hqPrefetch(want).then((ok) => { if (ok && this.fx && packFor(this.fx.hq) === want && this.synth) this.setHQ(want).catch(() => {}); });
+    if (want === 'studio' && this._hq !== 'hq' && await hqStored('hq')) await this.setHQ('hq', onProgress);
   }
 
   _meta(d) {
@@ -318,7 +342,7 @@ export class MusicEngine {
       this.applyEffects(rest);
       this.fx.hq = hq;
       // High-quality instruments when they are stored (loads in about a second); never wait for their download.
-      try { await this._wantHQ(hqFor(hq), onProgress); } catch (e) { /* the standard sounds play */ }
+      try { await this._wantHQ(packFor(hq), onProgress); } catch (e) { /* the standard sounds play */ }
     }
     // The chosen quality (Hymn options); light mode (old PCs, 1–2 GB phones) caps it: linear interpolation and
     // at most 96 voices, ~25% less CPU.

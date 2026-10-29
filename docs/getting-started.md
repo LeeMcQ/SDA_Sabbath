@@ -35,6 +35,15 @@ SDA Sabbath is built to run a whole service with no internet:
 - Install SDA Sabbath (browser menu → Install app) and press **Protect data**, so the browser never clears it to
   free disk space.
 
+### First start
+
+A short setup runs once (Settings → About → Run the setup again): the language of your services and your church
+(name, conference, location for sunset times), the screens this PC drives, **Hymn music** — this device (church PC,
+laptop or phone), your hall (small, medium, large) and what the music is heard through (sound desk, small
+speakers, TV) set the best sound, with *Download now* for the Studio or High-quality instruments and *Play a
+test* — and **Ready for Sabbath**: saved for use without internet, install the app, keep the data safe, and a
+clicker test.
+
 ### 2. Projector setup (PC)
 
 1. Connect the projector as an **extended** display (Windows: Win+P → Extend).

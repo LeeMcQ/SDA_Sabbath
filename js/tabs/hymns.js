@@ -5,7 +5,7 @@ import { icon } from '../core/icons.js';
 import { btn, modal, seg, toggle, menu, toast, confirmBox, closeModal, enter, emptyState, keepInView } from '../core/ui.js';
 import { db } from '../core/db.js';
 import { fitsText } from '../core/render.js';
-import { music, INSTRUMENTS, hqFor, hqStored, hqRemove, hqPrefetch, HQ_MB, EQ_BANDS, EQ_PRESETS, SOUND_PRESETS } from '../core/hymnmusic.js';
+import { music, INSTRUMENTS, packFor, PACKS, hqStored, hqRemove, hqPrefetch, EQ_BANDS, EQ_PRESETS, SOUND_PRESETS } from '../core/hymnmusic.js';
 import { fmtTime } from '../core/util.js';
 import * as ai from '../core/ai.js';
 import { findSongs, lyricsOf, songFromPlain, songText, sourceLinks, matchLabel, splitQuery, findMidi, fetchMidi } from '../core/lyrics.js';
@@ -427,7 +427,7 @@ export default function create(ctx) {
         Object.entries(p[1]).forEach(([k, v]) => settings.set('hymns.' + k, v));
         const eqp = EQ_PRESETS[p[1].musicEqPreset];
         if (eqp) settings.set('hymns.musicEq', eqp[1].slice());
-        apply(); if (hqFor(S().musicHQ)) hqPrefetch();
+        apply(); if (packFor(S().musicHQ)) hqPrefetch(packFor(S().musicHQ));
         if (music.isPlaying()) music.rearrange({ natural: S().musicNatural !== false });
         reopen();
       }
@@ -466,16 +466,30 @@ export default function create(ctx) {
 
   function optionsDialog() {
     const s = S();
-    // What "High quality" means on this device, and whether the 18 MB download is already here.
+    // What the chosen sounds are on this device, and whether their download is already here.
     const hqNote = h('p.note');
     const paintHQ = async () => {
       const v = S().musicHQ || 'auto';
-      const on = hqFor(v), have = await hqStored();
+      const pack = packFor(v);
+      const haveHQ = await hqStored('hq'), haveStudio = await hqStored('studio');
       clear(hqNote);
-      hqNote.append(on
-        ? 'Recorded concert grand piano and church pipe organ. ' + (have ? 'Downloaded on this device.' : 'Downloading in the background (' + HQ_MB + ' MB, once); hymns play with the standard sounds until it is done, then offline too.')
-        : (v === 'auto' ? 'Automatic: high quality on PCs and laptops; standard sounds on phones (smaller and lighter). ' : 'Standard sounds (GeneralUser GS). '));
-      if (have) hqNote.append(' ', h('button.btn.ghost.sm', { type: 'button', onclick: async () => { await hqRemove(); paintHQ(); toast('High-quality sounds removed from this device.'); } }, 'Remove download'));
+      if (!pack) hqNote.append(v === 'auto' ? 'Automatic: high quality on PCs and laptops; standard sounds on phones (smaller and lighter). ' : 'Standard sounds (GeneralUser GS). ');
+      else {
+        const P = PACKS[pack], have = pack === 'studio' ? haveStudio : haveHQ;
+        hqNote.append(pack === 'studio'
+          ? 'Studio: every one of the piano’s 16 recorded loudness layers, its full natural ring, finer audio and a fuller pipe organ. Best on the church PC. '
+          : 'Recorded concert grand piano and church pipe organ. ');
+        if (v === 'studio' && pack !== 'studio') hqNote.append('This device has too little memory for Studio, so it uses High quality. ');
+        hqNote.append(have ? 'Downloaded on this device.' : 'Downloading in the background (' + P.mb + ' MB, once); hymns play with ' + (pack === 'studio' && haveHQ ? 'High quality' : 'the standard sounds') + ' until it is done, then offline too.');
+        if (!have) {
+          const prog = h('b', { style: { marginLeft: '6px' } });
+          hqNote.append(prog);
+          hqPrefetch(pack, (t, pct) => { prog.textContent = pct + '%'; }).then(() => { if (hqNote.isConnected) paintHQ(); });
+        }
+      }
+      const rm = (pk, label) => h('button.btn.ghost.sm', { type: 'button', onclick: async () => { await hqRemove(pk); paintHQ(); toast(label + ' sounds removed from this device.'); } }, 'Remove ' + label);
+      if (haveHQ) hqNote.append(' ', rm('hq', 'High quality'));
+      if (haveStudio) hqNote.append(' ', rm('studio', 'Studio'));
       if (music.where === 'display') hqNote.append(' The church PC plays the music and uses its own setting for Automatic.');
     };
     paintHQ();
@@ -492,7 +506,7 @@ export default function create(ctx) {
         h('h3', { style: { gridColumn: '1 / -1', marginTop: '10px' } }, 'Music'),
         ...soundControls(() => { closeModal(); setTimeout(optionsDialog, 60); }),
         h('label', 'Volume'), slider(0, 2, 0.05, s.musicVolume == null ? 1.3 : s.musicVolume, (v) => Math.round(v / 1.3 * 100) + '%', (v) => music.setVolume(v)),
-        h('label', 'Instruments'), seg([['auto', 'Automatic'], ['on', 'High quality'], ['off', 'Standard']], s.musicHQ || 'auto', (v) => { settings.set('hymns.musicPreset', 'custom'); settings.set('hymns.musicHQ', v); music.applyEffects(); paintHQ(); if (hqFor(v)) hqPrefetch().then(paintHQ); }),
+        h('label', 'Instruments'), seg([['auto', 'Automatic'], ['off', 'Standard'], ['on', 'High quality'], ['studio', 'Studio']], s.musicHQ || 'auto', (v) => { settings.set('hymns.musicPreset', 'custom'); settings.set('hymns.musicHQ', v); music.applyEffects(); paintHQ(); }),
         h('label', ''), hqNote,
         h('label', 'Church echo'), seg([['off', 'Off'], ['small', 'Small room'], ['church', 'Church'], ['large', 'Large church']], s.musicRoom || 'church', (v) => { settings.set('hymns.musicPreset', 'custom'); settings.set('hymns.musicRoom', v); music.applyEffects(); }),
         h('label', 'Natural playing'), toggle('Melody sings out, inner parts softer, every note a little different', s.musicNatural !== false, (v) => { settings.set('hymns.musicPreset', 'custom'); settings.set('hymns.musicNatural', v); if (music.isPlaying()) music.rearrange({ natural: v }); }, 'Hymn files often strike every note equally hard. A playing hymn changes straight away.'),

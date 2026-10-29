@@ -317,6 +317,34 @@ def main():
                 assert r['ir'] and r['ir'] > 1.5 and r['wet'] > 0.1, 'church echo not on: %r' % r
             t_music_hq()
 
+            @check('Studio piano and organ (all 16 piano layers)')
+            def t_music_studio():
+                r = pg.evaluate("""async () => {
+                  const m = await import('./js/core/musicengine.js');
+                  await m.hqRemove('studio');
+                  const pre = await m.hqPrefetch('studio');
+                  const e = new m.MusicEngine(); e.unlock(); await e.init();
+                  const an = e.ctx.createAnalyser(); an.fftSize = 2048; e.gain.connect(an);
+                  const peakFor = async (instrument) => {
+                    await e.play({ book: 'sda-online', n: 73, instrument, fx: { hq: 'studio', room: 'church' } });
+                    await new Promise((r) => setTimeout(r, 3500));
+                    const buf = new Float32Array(an.fftSize); let peak = 0;
+                    for (let k = 0; k < 20; k++) { an.getFloatTimeDomainData(buf); for (const x of buf) peak = Math.max(peak, Math.abs(x)); await new Promise((r) => setTimeout(r, 50)); }
+                    e.stop(); return peak;
+                  };
+                  const piano = await peakFor('piano'), organ = await peakFor('organ');
+                  const out = { pre, piano, organ, pack: e.pack, mem: navigator.deviceMemory, banks: e.synth.soundBankManager.priorityOrder, stored: await m.hqStored('studio'), hqKept: await m.hqStored('hq') };
+                  await m.hqRemove('studio'); out.afterRemove = await m.hqStored('studio');
+                  return out;
+                }""")
+                if r['mem'] is not None and r['mem'] < 4:
+                    return  # low-memory devices use High quality instead
+                assert r['pack'] == 'studio' and r['banks'][0] == 'hq', 'Studio pack not in use: %r' % r
+                assert r['stored'] and r['hqKept'], 'packs not kept side by side: %r' % r
+                assert r['piano'] > 0.05 and r['organ'] > 0.05, 'no sound: %r' % r
+                assert not r['afterRemove'], 'Remove Studio did not remove it'
+            t_music_studio()
+
             @check('sound settings change while a hymn plays')
             def t_music_live():
                 r = pg.evaluate("""async () => {

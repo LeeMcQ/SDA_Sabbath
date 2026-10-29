@@ -26,7 +26,7 @@ const lazyWelcome = () => import('./tabs/welcome.js');
 const openFeedback = (c, o) => import('./tabs/account.js').then((m) => m.openFeedback(c, o));
 
 export const VERSION = '1.6.0';
-export const BUILD = 'af5a748';
+export const BUILD = '1e43956';
 
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', file: 'bible.js', load: () => import('./tabs/bible.js') },
@@ -643,6 +643,8 @@ function offlineState() {
 window.addEventListener('selah-cache', instNotify);
 window.addEventListener('selah-health', instNotify);
 const instCard = startInstallPrompt({ promptInstall, installAvailable: () => !!ctx.installPrompt, offline: offlineState, onChange: (f) => instFns.add(f) });
+ctx.offlineState = offlineState;                 // the first-start setup shows these too
+ctx.onInstallChange = (f) => instFns.add(f);
 // Asked once the first-start setup is done, never while something is on screen (the card would cover the controls).
 function instMaybe(delay) {
   setTimeout(() => { if (!live.cue && settings.v.app.setupDone && !ui.modalOpen()) { checkOffline(false); instCard.show(); } }, delay);
@@ -656,7 +658,7 @@ let hqTried = false;
 function hqBackground() {
   if (hqTried || !offlineState().ready || navigator.onLine === false) return;
   hqTried = true;
-  setTimeout(() => import('./core/hymnmusic.js').then((m) => { if (m.hqFor(settings.v.hymns.musicHQ || 'auto')) m.hqPrefetch(); }).catch(() => {}), 45000);
+  setTimeout(() => import('./core/hymnmusic.js').then((m) => { if (m.hqFor(settings.v.hymns.musicHQ || 'auto')) m.hqPrefetch(m.packFor(settings.v.hymns.musicHQ || 'auto')); }).catch(() => {}), 45000);
 }
 instFns.add(hqBackground);
 const mq = matchMedia('(max-width: 760px)');

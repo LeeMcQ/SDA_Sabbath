@@ -96,6 +96,10 @@ Falcosoft MIDI Player with that SoundFont. Nothing is streamed: it works with no
   organ. The hymnal's own arrangements, which use an electric piano, play on the grand piano too. It is an 18 MB
   download the first time (then offline, kept across app updates). **Automatic** switches it on for PCs and laptops
   and leaves phones on the standard 4 MB sounds; when a phone is the remote, the church PC decides.
+- **Instruments → Studio** (for the church PC): all 16 recorded loudness layers of the grand piano, so every change
+  in touch is a different recording, a longer natural ring, finer audio, and a fuller organ (adds Flûte harmonique
+  8' and Octavin 2'). A larger one-time download (`data/music/studio.sf3`), then offline. Devices with little
+  memory use High quality instead. The **Best** preset and the setup's "The church PC" choose it.
 - **Church echo:** the sound of a church (small room, church or large church) instead of the synthesizer's reverb.
 - **Sound preset:** Best (church PC), Balanced, Light (phone, old PC), Large church with organ, or Small room and clear.
   Each sets the instruments, church echo, quality and equaliser together; changing any of them makes it Custom.
