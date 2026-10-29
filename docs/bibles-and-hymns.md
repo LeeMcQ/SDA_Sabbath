@@ -97,6 +97,12 @@ Falcosoft MIDI Player with that SoundFont. Nothing is streamed: it works with no
   download the first time (then offline, kept across app updates). **Automatic** switches it on for PCs and laptops
   and leaves phones on the standard 4 MB sounds; when a phone is the remote, the church PC decides.
 - **Church echo:** the sound of a church (small room, church or large church) instead of the synthesizer's reverb.
+- **Sound preset:** Best (church PC), Balanced, Light (phone, old PC), Large church with organ, or Small room and clear.
+  Each sets the instruments, church echo, quality and equaliser together; changing any of them makes it Custom.
+- **Equaliser:** five bands (bass, low, middle, presence, treble, ±12 dB) with presets: Flat, Warm, Clear words,
+  Small speakers, Big hall, Bass boost and Organ.
+- **Sound quality** (Best or Lighter sample interpolation) and **Notes at once** (96–350): lower them on old PCs
+  and phones that crackle.
   It is calculated in the app, so it costs no download.
 - **Natural playing:** the melody (top note of each chord) sings out, the inner parts sit back and every note varies a
   little, instead of every note being struck equally hard. The timing is not changed, so the words stay in step.

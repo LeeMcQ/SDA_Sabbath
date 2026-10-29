@@ -5,7 +5,7 @@ import { icon } from '../core/icons.js';
 import { btn, modal, seg, toggle, menu, toast, confirmBox, closeModal, enter, emptyState, keepInView } from '../core/ui.js';
 import { db } from '../core/db.js';
 import { fitsText } from '../core/render.js';
-import { music, INSTRUMENTS, hqFor, hqStored, hqRemove, hqPrefetch, HQ_MB } from '../core/hymnmusic.js';
+import { music, INSTRUMENTS, hqFor, hqStored, hqRemove, hqPrefetch, HQ_MB, EQ_BANDS, EQ_PRESETS, SOUND_PRESETS } from '../core/hymnmusic.js';
 import { fmtTime } from '../core/util.js';
 import * as ai from '../core/ai.js';
 import { findSongs, lyricsOf, songFromPlain, songText, sourceLinks, matchLabel, splitQuery, findMidi, fetchMidi } from '../core/lyrics.js';
@@ -415,6 +415,54 @@ export default function create(ctx) {
     return h('div.row', r, out);
   }
 
+  /** Sound presets, equaliser and quality (Hymn options → Music). Any single change makes the preset "Custom". */
+  function soundControls(reopen) {
+    const s = S();
+    const custom = () => { if (S().musicPreset !== 'custom') { settings.set('hymns.musicPreset', 'custom'); presetSel.value = 'custom'; } };
+    const apply = () => music.applyEffects();
+    const presetSel = h('select.field', { 'aria-label': 'Sound preset', onchange: () => {
+      const p = SOUND_PRESETS[presetSel.value];
+      settings.set('hymns.musicPreset', presetSel.value);
+      if (p) {
+        Object.entries(p[1]).forEach(([k, v]) => settings.set('hymns.' + k, v));
+        const eqp = EQ_PRESETS[p[1].musicEqPreset];
+        if (eqp) settings.set('hymns.musicEq', eqp[1].slice());
+        apply(); if (hqFor(S().musicHQ)) hqPrefetch();
+        reopen();
+      }
+    } }, ...Object.entries(SOUND_PRESETS).map(([k, [label]]) => h('option', { value: k }, label)), h('option', { value: 'custom' }, 'Custom'));
+    presetSel.value = SOUND_PRESETS[s.musicPreset] ? s.musicPreset : 'custom';
+
+    const eqVals = (Array.isArray(s.musicEq) ? s.musicEq : [0, 0, 0, 0, 0]).slice(0, 5);
+    const bands = EQ_BANDS.map(([, freq, name], i) => {
+      const out = h('span.meq-v', fmtDb(eqVals[i]));
+      const r = h('input', { type: 'range', min: -12, max: 12, step: 1, 'aria-label': name + ' (' + freq + ' Hz)',
+        oninput: () => { out.textContent = fmtDb(+r.value); },
+        onchange: () => { eqVals[i] = +r.value; settings.set('hymns.musicEq', eqVals.slice()); settings.set('hymns.musicEqPreset', 'custom'); eqSel.value = 'custom'; custom(); apply(); } });
+      r.value = eqVals[i] || 0;
+      return h('div.meq-band', h('span.meq-n', name), r, out);
+    });
+    const eqSel = h('select.field', { 'aria-label': 'Equaliser preset', onchange: () => {
+      const p = EQ_PRESETS[eqSel.value];
+      settings.set('hymns.musicEqPreset', eqSel.value);
+      if (!p) return;
+      p[1].forEach((v, i) => { eqVals[i] = v; bands[i].querySelector('input').value = v; bands[i].querySelector('.meq-v').textContent = fmtDb(v); });
+      settings.set('hymns.musicEq', eqVals.slice()); custom(); apply();
+    } }, ...Object.entries(EQ_PRESETS).map(([k, [label]]) => h('option', { value: k }, label)), h('option', { value: 'custom' }, 'Custom'));
+    eqSel.value = EQ_PRESETS[s.musicEqPreset] ? s.musicEqPreset : 'custom';
+
+    return [
+      h('label', 'Sound preset'), h('div.col', { style: { alignItems: 'stretch', gap: '4px' } }, presetSel,
+        h('p.note', 'Sets the instruments, church echo, quality and equaliser together. Fine-tune anything below.')),
+      h('label', 'Equaliser'), h('div.col', { style: { alignItems: 'stretch', gap: '6px' } }, eqSel, h('div.meq', ...bands)),
+      h('label', 'Sound quality'), seg([['hermite', 'Best'], ['linear', 'Lighter']], s.musicInterp === 'linear' ? 'linear' : 'hermite', (v) => { settings.set('hymns.musicInterp', v); custom(); apply(); }),
+      h('label', 'Notes at once'), h('div.col', { style: { alignItems: 'flex-start', gap: '4px' } },
+        seg([['96', '96'], ['192', '192'], ['256', '256'], ['350', '350']], String(+s.musicVoices || 256), (v) => { settings.set('hymns.musicVoices', +v); custom(); apply(); }),
+        h('p.note', 'Lighter and fewer notes help old PCs and phones that crackle; Best and 256 or more for the church PC.')),
+    ];
+  }
+  const fmtDb = (v) => (v > 0 ? '+' : '') + (v || 0) + ' dB';
+
   function optionsDialog() {
     const s = S();
     // What "High quality" means on this device, and whether the 18 MB download is already here.
@@ -441,15 +489,16 @@ export default function create(ctx) {
         h('label', 'Lines per slide'), seg([['0', 'Auto'], ['2', '2'], ['3', '3'], ['4', '4'], ['6', '6']], String(s.maxLines || 0), (v) => set('maxLines')(+v)),
         h('label', 'Hymn title line'), seg([['bottom', 'Bottom'], ['top', 'Top'], ['none', 'Hidden']], s.refPos, set('refPos')),
         h('h3', { style: { gridColumn: '1 / -1', marginTop: '10px' } }, 'Music'),
+        ...soundControls(() => { closeModal(); setTimeout(optionsDialog, 60); }),
         h('label', 'Volume'), slider(0, 2, 0.05, s.musicVolume == null ? 1.3 : s.musicVolume, (v) => Math.round(v / 1.3 * 100) + '%', (v) => music.setVolume(v)),
-        h('label', 'Instruments'), seg([['auto', 'Automatic'], ['on', 'High quality'], ['off', 'Standard']], s.musicHQ || 'auto', (v) => { settings.set('hymns.musicHQ', v); music.applyEffects(); paintHQ(); if (hqFor(v)) hqPrefetch().then(paintHQ); }),
+        h('label', 'Instruments'), seg([['auto', 'Automatic'], ['on', 'High quality'], ['off', 'Standard']], s.musicHQ || 'auto', (v) => { settings.set('hymns.musicPreset', 'custom'); settings.set('hymns.musicHQ', v); music.applyEffects(); paintHQ(); if (hqFor(v)) hqPrefetch().then(paintHQ); }),
         h('label', ''), hqNote,
-        h('label', 'Church echo'), seg([['off', 'Off'], ['small', 'Small room'], ['church', 'Church'], ['large', 'Large church']], s.musicRoom || 'church', (v) => { settings.set('hymns.musicRoom', v); music.applyEffects(); }),
-        h('label', 'Natural playing'), toggle('Melody sings out, inner parts softer, every note a little different', s.musicNatural !== false, (v) => { settings.set('hymns.musicNatural', v); }, 'Hymn files often strike every note equally hard. Takes effect from the next hymn.'),
-        h('label', 'Reverb'), slider(0, 127, 1, s.musicReverb == null ? 59 : s.musicReverb, (v) => String(v), (v) => { settings.set('hymns.musicReverb', v); music.applyEffects(); }),
-        h('label', 'Chorus effect'), slider(0, 127, 1, s.musicChorus == null ? 43 : s.musicChorus, (v) => String(v), (v) => { settings.set('hymns.musicChorus', v); music.applyEffects(); }),
+        h('label', 'Church echo'), seg([['off', 'Off'], ['small', 'Small room'], ['church', 'Church'], ['large', 'Large church']], s.musicRoom || 'church', (v) => { settings.set('hymns.musicPreset', 'custom'); settings.set('hymns.musicRoom', v); music.applyEffects(); }),
+        h('label', 'Natural playing'), toggle('Melody sings out, inner parts softer, every note a little different', s.musicNatural !== false, (v) => { settings.set('hymns.musicPreset', 'custom'); settings.set('hymns.musicNatural', v); }, 'Hymn files often strike every note equally hard. Takes effect from the next hymn.'),
+        h('label', 'Reverb'), slider(0, 127, 1, s.musicReverb == null ? 59 : s.musicReverb, (v) => String(v), (v) => { settings.set('hymns.musicPreset', 'custom'); settings.set('hymns.musicReverb', v); music.applyEffects(); }),
+        h('label', 'Chorus effect'), slider(0, 127, 1, s.musicChorus == null ? 43 : s.musicChorus, (v) => String(v), (v) => { settings.set('hymns.musicPreset', 'custom'); settings.set('hymns.musicChorus', v); music.applyEffects(); }),
         h('label', ''), h('p.note', 'Reverb is used when Church echo is off (59 and chorus 43 are the levels GeneralUser GS’s author recommends). ',
-          h('button.btn.sm', { type: 'button', onclick: () => { settings.set('hymns.musicReverb', 59); settings.set('hymns.musicChorus', 43); settings.set('hymns.musicRoom', 'church'); settings.set('hymns.musicHQ', 'auto'); settings.set('hymns.musicNatural', true); music.applyEffects(); closeModal(); optionsDialog(); } }, 'Use recommended')),
+          h('button.btn.sm', { type: 'button', onclick: () => { settings.set('hymns.musicReverb', 59); settings.set('hymns.musicChorus', 43); settings.set('hymns.musicRoom', 'church'); settings.set('hymns.musicHQ', 'auto'); settings.set('hymns.musicNatural', true); settings.set('hymns.musicInterp', 'hermite'); settings.set('hymns.musicVoices', 256); settings.set('hymns.musicEq', [0, 0, 0, 0, 0]); settings.set('hymns.musicEqPreset', 'flat'); settings.set('hymns.musicPreset', 'balanced'); music.applyEffects(); closeModal(); optionsDialog(); } }, 'Use recommended')),
         h('label', 'Music plays on'), seg([['auto', 'Automatic'], ['here', 'This device'], ['display', 'The display']], s.musicOutput || 'auto', (v) => settings.set('hymns.musicOutput', v)),
         h('label', ''), h('p.note', 'Automatic: on this device, except when this phone controls the church PC through the companion — then the PC plays it.')),
       actions: [{ label: 'Done', primary: true }],

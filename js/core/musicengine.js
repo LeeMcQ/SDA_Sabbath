@@ -72,6 +72,26 @@ async function midiBytes(book, entry) {
 // data/music/hq.sf3 (18 MB): a recorded concert grand (Salamander) and a recorded pipe organ (GrandOrgue demo).
 // It is not part of the offline install; it downloads the first time it is switched on and is kept in its own
 // cache, which app updates leave alone, so it downloads once per device.
+// Equaliser bands: bass, low middle, middle, presence, treble (gains in dB, -12 … +12).
+export const EQ_BANDS = [['lowshelf', 80, 'Bass'], ['peaking', 250, 'Low'], ['peaking', 1000, 'Middle'], ['peaking', 3500, 'Presence'], ['highshelf', 9000, 'Treble']];
+export const EQ_PRESETS = {
+  flat: ['Flat', [0, 0, 0, 0, 0]],
+  warm: ['Warm', [3, 1, 0, -1, -2]],
+  clear: ['Clear words', [-1, -1, 1, 3, 2]],
+  small: ['Small speakers', [-4, -1, 2, 2, 0]],
+  hall: ['Big hall', [-2, -2, 0, 2, 1]],
+  bass: ['Bass boost', [6, 3, 0, 0, 0]],
+  organ: ['Organ', [2, 2, -1, -1, 1]],
+};
+/** Sound presets: instruments, room and quality together. Values are the Hymn options settings they set. */
+export const SOUND_PRESETS = {
+  best: ['Best (church PC)', { musicHQ: 'on', musicRoom: 'church', musicNatural: true, musicInterp: 'hermite', musicVoices: 350, musicEqPreset: 'flat' }],
+  balanced: ['Balanced', { musicHQ: 'auto', musicRoom: 'church', musicNatural: true, musicInterp: 'hermite', musicVoices: 256, musicEqPreset: 'flat' }],
+  light: ['Light (phone, old PC)', { musicHQ: 'off', musicRoom: 'off', musicNatural: true, musicInterp: 'linear', musicVoices: 96, musicReverb: 40, musicChorus: 20, musicEqPreset: 'small' }],
+  hall: ['Large church, organ', { musicHQ: 'on', musicRoom: 'large', musicNatural: true, musicInterp: 'hermite', musicVoices: 350, musicEqPreset: 'organ' }],
+  practice: ['Small room, clear', { musicHQ: 'auto', musicRoom: 'small', musicNatural: true, musicInterp: 'hermite', musicVoices: 256, musicEqPreset: 'clear' }],
+};
+
 const HQ_FILE = 'data/music/hq.sf3';
 // This app's own name (storens.js). Not 'sda-sabbath-sounds-v1': Church_Service, on the same website, takes a cache
 // with that name over as its own, so using it here would make the sounds download again and again.
@@ -161,7 +181,15 @@ export class MusicEngine {
       this.gain = ctx.createGain(); this.gain.gain.value = this.volume;
       const lim = ctx.createDynamicsCompressor();
       lim.threshold.value = -1.5; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.002; lim.release.value = 0.2;
-      synth.connect(this.gain); this.gain.connect(lim); lim.connect(ctx.destination);
+      // Equaliser (5 bands, Hymn options → Equaliser) between the volume and the limiter.
+      this.eq = EQ_BANDS.map(([type, freq], i) => {
+        const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.gain.value = 0;
+        if (type === 'peaking') f.Q.value = i === 2 ? 0.8 : 1.0;
+        return f;
+      });
+      synth.connect(this.gain);
+      this.eq.reduce((a, b) => { a.connect(b); return b; }, this.gain).connect(lim);
+      lim.connect(ctx.destination);
       // Church echo: synth → convolver (the room) → wet level → the same volume control, beside the dry sound.
       this.conv = ctx.createConvolver();
       this.wet = ctx.createGain(); this.wet.gain.value = 0;
@@ -171,7 +199,7 @@ export class MusicEngine {
       const sf = await (await fetch(url('data/music/' + ((idx && idx.soundfont) || 'hymnal.sf3')))).arrayBuffer();
       await synth.soundBankManager.addSoundBank(sf, 'main');
       await synth.isReady;
-      synth.setSystemParameter('interpolationType', 2); // Hermite: SpessaSynth's highest quality
+      synth.setSystemParameter('interpolationType', 2); // Hermite: SpessaSynth's highest quality (Hymn options can lower it)
       synth.setSystemParameter('deviceID', -1);
       this.synth = synth;
       this.applyEffects();
@@ -211,7 +239,13 @@ export class MusicEngine {
     s.systemExclusive(gs([0x01, 0x3a], [cho]));    // chorus level (Falcosoft recommendation: 43)
     // Lock them: otherwise each new song's reset would restore the GS defaults (64 / 64).
     s.setSystemParameter('reverbLock', true); s.setSystemParameter('chorusLock', true);
-    if (this.fx && this.fx.hq != null) this._wantHQ(hqFor(this.fx.hq), false).catch(() => {});
+    // Quality: sample interpolation (2 Hermite = best, 0 linear = lighter) and how many notes may sound at once.
+    const q = this.fx || {};
+    try { s.setSystemParameter('interpolationType', q.interp === 'linear' ? 0 : 2); } catch (e) { /* older engine */ }
+    try { s.setSystemParameter('voiceCap', Math.max(32, Math.min(350, +q.voices || 350))); } catch (e) { /* */ }
+    const eq = Array.isArray(q.eq) ? q.eq : [];
+    if (this.eq) this.eq.forEach((f, i) => f.gain.setTargetAtTime(Math.max(-12, Math.min(12, +eq[i] || 0)), this.ctx.currentTime, 0.05));
+    if (q.hq != null) this._wantHQ(hqFor(q.hq), false).catch(() => {});
   }
 
   /** Switch the high-quality instruments on or off (downloads them the first time). */
@@ -284,9 +318,11 @@ export class MusicEngine {
       // High-quality instruments when they are stored (loads in about a second); never wait for their download.
       try { await this._wantHQ(hqFor(hq), onProgress); } catch (e) { /* the standard sounds play */ }
     }
-    // Light mode (old PCs, 1–2 GB phones): linear interpolation and fewer voices, ~25% less CPU.
-    this.synth.setSystemParameter('interpolationType', req.light ? 0 : 2);
-    this.synth.setSystemParameter('voiceCap', req.light ? 96 : 256);
+    // The chosen quality (Hymn options); light mode (old PCs, 1–2 GB phones) caps it: linear interpolation and
+    // at most 96 voices, ~25% less CPU.
+    const fx = this.fx || {};
+    this.synth.setSystemParameter('interpolationType', req.light || fx.interp === 'linear' ? 0 : 2);
+    this.synth.setSystemParameter('voiceCap', Math.max(32, Math.min(req.light ? 96 : 350, +fx.voices || 256)));
     const seq = this.seq;
     if (this.playing) { seq.pause(); this.synth.stopAll(true); }
     this.gain.gain.cancelScheduledValues(this.ctx.currentTime);

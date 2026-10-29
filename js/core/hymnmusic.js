@@ -4,9 +4,9 @@ import { emitter, debounce } from './util.js';
 import { settings } from './settings.js';
 import { link } from './link.js';
 import { db } from './db.js';
-import { MusicEngine, loadIndex, planSegments, INSTRUMENTS, hqFor, hqStored, hqRemove, hqPrefetch, HQ_MB } from './musicengine.js';
+import { MusicEngine, loadIndex, planSegments, INSTRUMENTS, hqFor, hqStored, hqRemove, hqPrefetch, HQ_MB, EQ_BANDS, EQ_PRESETS, SOUND_PRESETS } from './musicengine.js';
 
-export { INSTRUMENTS, planSegments, hqFor, hqStored, hqRemove, hqPrefetch, HQ_MB };
+export { INSTRUMENTS, planSegments, hqFor, hqStored, hqRemove, hqPrefetch, HQ_MB, EQ_BANDS, EQ_PRESETS, SOUND_PRESETS };
 
 // ------------------------------------------------------------------ controller (UI side)
 export const music = emitter({ state: { playing: false }, where: 'here', hymnKey: null, entryInfo: null });
@@ -123,7 +123,8 @@ music.setVolume = (v) => { send('volume', v); saveSoon('musicVolume', v); };
 music.fx = () => {
   const m = settings.v.hymns;
   return { reverb: m.musicReverb == null ? 59 : m.musicReverb, chorus: m.musicChorus == null ? 43 : m.musicChorus,
-    room: m.musicRoom || 'church', hq: m.musicHQ || 'auto', natural: m.musicNatural !== false };
+    room: m.musicRoom || 'church', hq: m.musicHQ || 'auto', natural: m.musicNatural !== false,
+    eq: Array.isArray(m.musicEq) ? m.musicEq.slice(0, 5) : [0, 0, 0, 0, 0], interp: m.musicInterp === 'linear' ? 'linear' : 'hermite', voices: +m.musicVoices || 256 };
 };
 music.applyEffects = () => send('effects', music.fx());
 music.isPlaying = () => !!(music.state && music.state.playing);

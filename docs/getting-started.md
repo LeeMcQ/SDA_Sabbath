@@ -94,6 +94,8 @@ it for private networks.
 ### Phones and tablets
 
 Press **Present** and choose:
+- **Nothing connected:** Present opens a **small screen in the corner** of the phone. Drag it to any corner; tap it
+  for ⤢ (full screen; leaving full screen brings it back to the corner) and ✕ (close).
 - **This device** — full screen on the phone itself (HDMI adapter or screen mirroring).
 - **Cast** — Chromecast or a wireless display (Chrome on Android).
 - **SDA Sabbath companion** — use the phone as a remote for the church PC or TV.
