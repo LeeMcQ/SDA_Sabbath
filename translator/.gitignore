@@ -1,0 +1,4 @@
+models/
+.venv/
+*.translation.md
+*.translation.af.txt

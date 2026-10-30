@@ -1,0 +1,8 @@
+faster-whisper>=1.1
+ctranslate2>=4.4
+sentencepiece>=0.2
+sounddevice>=0.4.6
+soundfile>=0.12
+numpy>=1.24
+scipy>=1.10
+huggingface_hub>=0.23

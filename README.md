@@ -54,6 +54,7 @@ a local web address. Everything is explained in the guides below.
 | [Keyboard and clicker](docs/keyboard-and-clicker.md) | Shortcuts and presentation clickers |
 | [Bibles and hymns](docs/bibles-and-hymns.md) | Bible translations, hymnbooks, shared praise choruses, lyrics search, hymn music |
 | [Stage screen and OBS](docs/stage-and-obs.md) | The Tools tab, stage screens, phones and laptops, live streaming with OBS, Stream Deck buttons |
+| [Live translation](translator/README.md) | Afrikaans sermon → English captions, offline on the church PC: exact Bible verses, Adventist words, verse and hymn suggestions |
 | [Banners and AI](docs/banners-and-ai.md) | Banners, editing on the slide, banner music, the optional online AI |
 | [Backup and moving devices](docs/backup.md) | Back up to Google Drive or a file, restore on another PC or phone, switching on Google Drive |
 | [Development](docs/development.md) | Weak computers, the code layout, building, testing, deploying |

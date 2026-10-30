@@ -72,6 +72,7 @@ jobs:
           pip install --quiet playwright==1.56.0
           python -m playwright install --with-deps chromium
           python tests/smoke.py
+          python tests/test_translator.py
       - name: Collect the web app
         run: |
           mkdir -p site
