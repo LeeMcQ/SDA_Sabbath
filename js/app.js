@@ -29,7 +29,7 @@ const lazyWelcome = () => import('./tabs/welcome.js');
 const openFeedback = (c, o) => import('./tabs/account.js').then((m) => m.openFeedback(c, o));
 
 export const VERSION = '1.6.0';
-export const BUILD = 'ff4741c';
+export const BUILD = '189467d';
 
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', file: 'bible.js', load: () => import('./tabs/bible.js') },
@@ -787,10 +787,15 @@ function handleKey(e, remote) {
   if (k === 'F5' || (ctrl && k === 'Enter')) { doPresent(); return true; }
   // Go to: Ctrl+K works everywhere; "/" too, except where a "/" is real text (notes, banner text, web addresses).
   if (!remote && t !== quickInput && ((ctrl && !e.altKey && (k === 'k' || k === 'K')) || (k === '/' && !ctrl && !e.altKey && !(typing && slashTypes(t))))) { quick.focus(); return true; }
+  // Alt+1…9 / Alt+0 open a tab, also from a search box (Alt+digit types nothing). AltGr (Ctrl+Alt) is left alone.
+  const altDigit = e.altKey && !e.ctrlKey && !e.metaKey ? (/^[0-9]$/.test(k) ? k : (/^Digit([0-9])$/.exec(e.code || '') || [])[1]) : null;
+  if (altDigit != null) {
+    if (typing && t && t.blur) t.blur();
+    if (altDigit === '0') showTab('settings'); else { const tb = TABS.filter(Boolean)[+altDigit - 1]; if (tb) showTab(tb.id); }
+    return true;
+  }
   if (typing) { if (k === 'Escape' && t && t.blur && t !== quickInput && !e.defaultPrevented) t.blur(); return false; }
   if (quiet && t && t.blur) t.blur();
-  if (e.altKey && /^[1-9]$/.test(k)) { const tb = TABS.filter(Boolean)[+k - 1]; if (tb) showTab(tb.id); return true; }
-  if (e.altKey && k === '0') { showTab('settings'); return true; }
   if (ctrl && !e.altKey && !e.shiftKey && (k === 'z' || k === 'Z')) { live.back(); return true; }   // back to what was on screen before
   if (ctrl || e.altKey) return false;
   // 1–9: stage that stanza (Hymns) or verse (Bible) as Next; F5 then presents it. Two digits quickly = verse 10+.
@@ -901,6 +906,9 @@ live.on('live', keepAwake);
 
 // ------------------------------------------------------------ storage problems
 // Saving not possible at all (private window, storage blocked): say so once; the app still works.
+// A save that failed for another reason than a full device: said once, so a change is never lost quietly.
+let saveFailSaid = false;
+window.addEventListener('selah-save-failed', (e) => { if (saveFailSaid) return; saveFailSaid = true; ui.toast('A change could not be saved on this device (' + String((e && e.detail) || 'unknown error').slice(0, 80) + '). Reload SDA Sabbath; if it happens again, back up and use Settings → Backup.', 'err', 10000); });
 window.addEventListener('selah-storage', () => ui.toast('This browser is not letting SDA Sabbath save (private window or storage turned off). Everything works, but changes are lost when it closes.', 'err', 10000));
 // A full disk: tell the operator plainly instead of failing silently. db.js reports every save that failed
 // for lack of space (also the ones nobody waits for); other code that runs out of space ends up here unhandled.

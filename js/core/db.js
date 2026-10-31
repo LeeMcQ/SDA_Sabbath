@@ -11,7 +11,7 @@ import { DB_NAME } from './storens.js';
 // 'selah': this app's database since its first version, so existing plans, hymnbooks and slides stay (storens.js).
 // Church_Service, on the same website, has its own database and never changes this one.
 const NAME = DB_NAME;
-const VERSION = 1;
+const VERSION = 1; // the version a new database starts at; open() adds missing stores to any version
 const STORES = ['kv', 'files', 'renders', 'bibles', 'hymnbooks', 'plans'];
 let dbp = null;
 // When the browser will not open its database (some private windows, storage turned off, a damaged
@@ -30,7 +30,8 @@ function open() {
   if (dbp) return dbp;
   dbp = new Promise((resolve) => {
     let req;
-    try { req = indexedDB.open(NAME, VERSION); } catch (e) { resolve(useMemory(e && e.message)); return; }
+    // Opened at whatever version it has (a newer app may have raised it); missing stores are added below.
+    try { req = indexedDB.open(NAME); } catch (e) { resolve(useMemory(e && e.message)); return; }
     const timer = setTimeout(() => resolve(useMemory('the database did not answer')), 8000);
     req.onupgradeneeded = () => {
       const d = req.result;
@@ -42,7 +43,18 @@ function open() {
       // A newer SDA Sabbath in another tab needs to upgrade the database: let it (this tab reopens it on its next
       // use instead of blocking the other tab for ever).
       d.onversionchange = () => { try { d.close(); } catch (e) { /* */ } dbp = null; };
-      resolve(d);
+      // A database without all the stores (made by another version or a damaged profile): add them with one
+      // upgrade, so saving plans, slides and Bibles never fails quietly.
+      const lacking = STORES.filter((s) => !d.objectStoreNames.contains(s));
+      if (!lacking.length) { resolve(d); return; }
+      const v = d.version + 1;
+      d.close();
+      let up;
+      try { up = indexedDB.open(NAME, v); } catch (e) { resolve(useMemory(e && e.message)); return; }
+      up.onupgradeneeded = () => { const u = up.result; STORES.forEach((s) => { if (!u.objectStoreNames.contains(s)) u.createObjectStore(s); }); };
+      up.onsuccess = () => { const u = up.result; u.onversionchange = () => { try { u.close(); } catch (e) { /* */ } dbp = null; }; resolve(u); };
+      up.onerror = () => resolve(useMemory(up.error && up.error.message));
+      up.onblocked = () => console.warn('Database upgrade waiting for another SDA Sabbath tab to close.');
     };
     req.onerror = () => { clearTimeout(timer); resolve(useMemory(req.error && req.error.message)); };
     req.onblocked = () => console.warn('Database upgrade waiting for another SDA Sabbath tab to close.');
@@ -68,6 +80,7 @@ function wrap(req) {
 function reportFull(err) {
   const msg = (err && (err.name + ' ' + err.message)) || '';
   if (/QuotaExceeded|quota|disk|space/i.test(msg)) { try { window.dispatchEvent(new CustomEvent('selah-storage-full')); } catch (e) { /* not in a page */ } }
+  else if (err) { try { window.dispatchEvent(new CustomEvent('selah-save-failed', { detail: msg })); } catch (e) { /* not in a page */ } }
   return err;
 }
 

@@ -37,8 +37,9 @@ export function sabbathNow(now = new Date(), lat = null, lon = null) {
   const shift = (n) => { const d = new Date(now); d.setDate(now.getDate() + n); return d; };
   const known = lat != null && lon != null;
   const edge = (d) => sunset(d) || at6(d);
-  if (day === 5 && now >= edge(now)) return { on: true, begins: known ? edge(now) : null, ends: known ? sunset(shift(1)) : null };
-  if (day === 6 && now < edge(now)) return { on: true, begins: known ? sunset(shift(-1)) : null, ends: known ? edge(now) : null };
+  // Near the poles the sun may not set for weeks (or not rise): 18:00 is used then, and the words say so.
+  if (day === 5 && now >= edge(now)) return { on: true, begins: known ? edge(now) : null, ends: known ? edge(shift(1)) : null, noSunset: known && (!sunset(now) || !sunset(shift(1))) };
+  if (day === 6 && now < edge(now)) return { on: true, begins: known ? edge(shift(-1)) : null, ends: known ? edge(now) : null, noSunset: known && (!sunset(shift(-1)) || !sunset(now)) };
   const toFri = (5 - day + 7) % 7 || 7;
   return { on: false, begins: known ? sunset(shift(day === 5 ? 0 : toFri)) : null, ends: null };
 }
@@ -48,6 +49,8 @@ export function sabbathWords(state, lang = 'en') {
   const af = lang === 'af';
   return {
     greeting: af ? 'Geseënde Sabbat' : 'Happy Sabbath',
-    ends: state && state.ends ? (af ? 'Die Sabbat eindig met sononder om ' : 'Sabbath ends at sunset, ') + hhmm(state.ends) : '',
+    ends: state && state.noSunset
+      ? (af ? 'Geen sononder hier vandag nie: die Sabbat eindig om ' : 'No sunset at this latitude today: the Sabbath ends at ') + hhmm(state.ends || new Date(2000, 0, 1, 18, 0))
+      : state && state.ends ? (af ? 'Die Sabbat eindig met sononder om ' : 'Sabbath ends at sunset, ') + hhmm(state.ends) : '',
   };
 }

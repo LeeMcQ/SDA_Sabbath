@@ -306,6 +306,61 @@ def main():
                 assert not errs, '; '.join(errs[:3])
             t_backup_nag()
 
+            @check('two windows changing settings keep both changes')
+            def t_two_windows():
+                other = new_page(ctx, errs, bad)
+                other.goto(base + 'index.html'); other.wait_for_selector('#presentBtn'); other.wait_for_timeout(1200)
+                pg.evaluate("import('./js/core/settings.js').then(m => m.settings.set('display.font', 'serif'))")
+                other.evaluate("import('./js/core/settings.js').then(m => m.settings.set('display.pad', 50))")
+                pg.evaluate("import('./js/core/settings.js').then(m => m.settings.set('app.railSide', 'right'))")
+                other.evaluate("import('./js/core/settings.js').then(m => m.settings.set('app.theme', 'light'))")
+                pg.wait_for_timeout(500)
+                saved = pg.evaluate("import('./js/core/storens.js').then(n => { const s = JSON.parse(localStorage.getItem(n.lsKey('settings.v1'))); return [s.display.font, s.display.pad, s.app.railSide, s.app.theme]; })")
+                synced = other.evaluate("import('./js/core/settings.js').then(m => [m.settings.v.display.font, m.settings.v.app.railSide])")
+                pg.evaluate("import('./js/core/settings.js').then(m => { m.settings.set('display.font', 'sans'); m.settings.set('display.pad', 96); m.settings.set('app.railSide', 'left'); m.settings.set('app.theme', 'dark'); })")
+                other.close()
+                assert saved == ['serif', 50, 'right', 'light'], 'stored after both windows: %r' % saved
+                assert synced == ['serif', 'right'], 'the other window did not take over the changes: %r' % synced
+            t_two_windows()
+
+            @check('Alt+1…9 open tabs, also from a search box')
+            def t_alt_keys():
+                pg.evaluate("window.selah.showTab('bible')"); pg.wait_for_timeout(500)
+                cur = "(document.querySelector('#rail [aria-selected=true]') || {}).dataset.tab"
+                got = []
+                for key, want in (('Alt+2', 'hymns'), ('Alt+7', 'plan'), ('Alt+1', 'bible')):
+                    pg.locator('input[placeholder^="Go to"]').first.focus()
+                    pg.keyboard.press(key); pg.wait_for_timeout(500)
+                    got.append(pg.evaluate(cur) == want)
+                assert all(got), 'Alt shortcuts from a search box: %r' % got
+            t_alt_keys()
+
+            @check('a database missing stores is completed, saving works')
+            def t_db_upgrade():
+                c2 = b.new_context()
+                p2 = c2.new_page()
+                p2.goto(base + 'privacy.html'); p2.wait_for_timeout(300)
+                name = p2.evaluate("import('./js/core/storens.js').then(n => n.DB_NAME)")
+                p2.evaluate("""n => new Promise((res) => { const r = indexedDB.open(n, 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => { r.result.close(); res(); }; })""", name)
+                ok = p2.evaluate("""async () => { const { db } = await import('./js/core/db.js');
+                  await db.put('plans', 'test', { id: 'test', name: 'Test', items: [] }); const v = await db.get('plans', 'test');
+                  await db.put('files', 'f1', { id: 'f1' }); return !!(v && v.name === 'Test') && !!(await db.get('files', 'f1')); }""")
+                c2.close()
+                assert ok, 'saving into a database that lacked stores failed'
+            t_db_upgrade()
+
+            @check('Sabbath near the poles: 18:00, and the greeting says why')
+            def t_polar():
+                r = pg.evaluate("""import('./js/core/sabbath.js').then(m => {
+                  const day = m.sabbathNow(new Date(2026, 5, 19, 20, 0), 69.65, 18.96);           // Tromsø, midnight sun
+                  const night = m.sabbathNow(new Date(2026, 11, 18, 18, 30), 69.65, 18.96);       // polar night
+                  const cape = m.sabbathNow(new Date(2026, 9, 30, 20, 0), -33.46, 18.73);         // Malmesbury
+                  return [day.on, m.sabbathWords(day).ends, night.on, m.sabbathWords(night).ends, cape.on, m.sabbathWords(cape).ends]; })""")
+                assert r[0] and 'No sunset' in r[1] and '18:00' in r[1], 'midnight sun: %r' % r[:2]
+                assert r[2] and 'No sunset' in r[3], 'polar night: %r' % r[2:4]
+                assert r[4] and r[5].startswith('Sabbath ends at sunset'), 'Malmesbury: %r' % r[4:]
+            t_polar()
+
             @check('a shared plan file opens')
             def t_plan():
                 data = list(open(os.path.join(HERE, 'fixtures', 'sample.sdaplan'), 'rb').read())
