@@ -14,7 +14,7 @@ import json, os, random, sys
 from livetranslate import lord
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-BIBLES = os.path.join(HERE, '..', 'data', 'bibles')
+from livetranslate import BIBLES  # translator/bibles in the download, else ../data/bibles
 OUT = os.path.join(HERE, 'models', 'opus-mt-af-en-sda')
 BASE = 'Helsinki-NLP/opus-mt-af-en'
 PSALMS = 19     # Afrikaans psalm headings are counted as verses, so its verse numbers do not line up: left out

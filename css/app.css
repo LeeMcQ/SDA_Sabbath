@@ -1317,3 +1317,4 @@ a.btn { text-decoration: none; }
 .cap-line { display: flex; flex-direction: column; gap: 2px; }
 .cap-af { color: var(--muted); font-size: var(--fs-sm, 13px); }
 .cap-en { font-size: var(--fs-md, 15px); overflow-wrap: anywhere; }
+.cap-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }

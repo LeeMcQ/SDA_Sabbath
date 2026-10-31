@@ -34,19 +34,51 @@ Sound desk ─► cut at pauses ─► Afrikaans speech → text ─► Bible qu
 - **Junk is filtered out.** Organ music and silence are cut out before recognition, and Whisper's known phantom lines ("Teksting deur…") are dropped.
 - **It speeds up when it falls behind.** If more than two pieces are waiting, it switches to a lighter search until it catches up, then returns to full accuracy.
 
-## Install (once, with internet)
+## Install (once, with internet): one double-click
 
-1. Install Python 3.10 or newer from python.org (tick "Add to PATH").
-2. Double-click **`start-translator.bat`**. The first time, it installs everything and downloads the models:
-   - Fluister turbo and small, about 1 GB;
-   - OPUS-MT, about 80 MB.
-3. In SDA Sabbath: **Settings → Live translation**.
-   - Switch it on, choose the sound-desk input and press **Start listening**.
+1. In SDA Sabbath: **Settings → Live translation → Download for Windows**. Unzip it on the church PC, for example into Documents.
+2. Double-click **`start-translator.bat`**. If Windows warns, choose *More info → Run anyway*.
+   - The first time, it does everything by itself, in about 15 minutes. **No Python install is needed.**
+   - It fetches its own Python, installs the translator and downloads the Afrikaans models.
+   - It **measures this PC** and chooses the most accurate model the PC can run live.
+   - It runs the **quality test** and shows the score.
+   - It finds the sound-desk input.
+   - It puts a **desktop shortcut** on the PC, and can start by itself with Windows.
+3. Back in SDA Sabbath, switch **Live translation** on and press **Start listening**.
    - The browser may ask to allow access to devices on the local network. Allow it.
 
-After that, it works without internet. Start `start-translator.bat` before each service.
+After that, it works without internet: just use the shortcut. Take the sound from the sound desk (aux or USB), not a microphone in the room. This matters more than anything else.
 
-**Sound:** take a feed from the sound desk (aux or USB) rather than a microphone in the room. This matters more than anything else.
+## Words never translated, and South African Afrikaans
+
+All of these are in [`glossary.json`](glossary.json). Open it with Notepad to add your own.
+
+| List | What it does | Examples |
+|---|---|---|
+| `keep` | **Never translated**, written exactly as said. Matched with the same capitals, so the name *Swart* is kept but *swart* (black) is translated. | Amen, Maranata, Malmesbury, Riebeek-Kasteel, Van der Merwe, De Wet, Fortuin, Koopman, braai, bakkie |
+| `terms` / `terms_exact` | Always this English | Sabbat → Sabbath, Gees van die Profesie → Spirit of Prophecy, die Here → the Lord (but *dames en here* stays "ladies and gentlemen") |
+| `slang` | Everyday and Kaaps Afrikaans made standard before translating | djy → jy, hie → hier, issie → is nie, laaities → kinders, nou-nou → binnekort, tjommie → vriend, ek's → ek is |
+| `fillers` | Left out: they add nothing in English | mos, nè, nogal |
+
+**Names from SDA Sabbath are added by themselves.** Use *Settings → Live translation → Never translate* (one per line: pastor, elders, speakers). The church name and town from *Settings → Church* are added too.
+
+Kept words and terms are swapped for number markers while translating, because the model copies numbers exactly. If a marker gets lost, the sentence is translated again with the words written inline, so nothing is dropped.
+
+## Quality test
+
+```
+.venv\Scripts\python livetranslate.py test
+```
+
+The test translates 50 sentences, in [`quality/adventist-af-en.tsv`](quality/adventist-af-en.tsv). Each one has a correct English reference, words that must appear and words that must not:
+- Adventist terms
+- names that must not be translated
+- South African slang and Kaaps
+- English mixed into Afrikaans
+- everyday sermon lines
+- Bible quotes
+
+The report (`quality/report.md`) shows the score per kind, an automatic similarity score against the reference (chrF), and every sentence side by side. Setup runs it by itself. `test --dry` checks the preparation without a model. Add your own sentences to the file at any time.
 
 ## Which model on which PC
 
@@ -54,7 +86,7 @@ Run the test first (see the next section). It tells you whether your PC keeps up
 
 | PC | Use | |
 |---|---|---|
-| Any NVIDIA graphics card | `--asr turbo` (default), or `large-v3` | comfortably live |
+| Any NVIDIA graphics card | turbo (setup picks it) | comfortably live |
 | Modern i5 / Ryzen 5, 2018 or newer | `--asr turbo` | check the test: under 0.8 × real time keeps up |
 | Older or weak PC | `--asr small` | live, less accurate |
 

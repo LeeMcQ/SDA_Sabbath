@@ -217,7 +217,7 @@ export default function create(ctx) {
     const paintStatus = (s) => {
       const x = s.status;
       if (!Cv().on) st.textContent = 'Off';
-      else if (!s.connected && !x) st.textContent = 'The translator is not running on this PC. Start it with start-translator.bat (see below).';
+      else if (!s.connected && !x) st.textContent = 'The translator is not running on this PC. Get it below (once), or start it with the "SDA Sabbath translator" shortcut on the desktop.';
       else if (x && x.running) st.textContent = 'Listening on ' + x.device + ' · ' + x.asr + ' on ' + (x.hw === 'cuda' ? 'the graphics card' : 'the processor') + (x.rtf ? ' · ' + (x.rtf < 0.8 ? 'keeping up' : 'falling behind') + ' (' + x.rtf + '× real time)' : '');
       else if (x && x.error) st.textContent = x.error;
       else st.textContent = 'Translator ready (' + ((x && x.asr) || '') + '). Choose the sound input and press Start listening.';
@@ -243,6 +243,16 @@ export default function create(ctx) {
       h('label', 'Caption stays'), seg([['8', '8 s'], ['12', '12 s'], ['20', '20 s']], String(Cv().clearAfter || 12), (v) => settings.set('captions.clearAfter', +v)),
       h('label', 'Bible quotes'), seg([['web', 'World English Bible'], ['kjv', 'King James']], Cv().english || 'web', (v) => { settings.set('captions.english', v); act((c) => c.setEnglish(v))(); }),
       h('label', 'Suggestions'), toggle('Offer the verses and hymns the preacher names (Set as Next)', Cv().suggest !== false, setC('suggest')),
+      h('label', 'Never translate'), h('div.col', { style: { gap: '6px', minWidth: 0 } },
+        h('textarea.field', { rows: 3, 'aria-label': 'Names never to translate', placeholder: 'One per line: pastor Botha, Broer Fortuin, Riebeek-Kasteel …', style: { width: '100%', maxWidth: '520px' },
+          value: Cv().keep || '', onchange: (e) => settings.set('captions.keep', e.target.value) }),
+        h('span.note', 'Names and words shown exactly as said (people, places, the church). The church name and town from Settings → Church are added by themselves.')),
+      h('label', 'Get the translator'), h('div.col', { style: { gap: '6px', minWidth: 0 } },
+        h('div.row.wrap', h('a.btn.sm.primary', { href: 'download/sda-sabbath-translator.zip', download: '' }, icon('download'), h('span', 'Download for Windows'))),
+        h('ol.note.cap-steps',
+          h('li', 'Unzip it, for example into Documents, on the church PC.'),
+          h('li', 'Double-click start-translator.bat. The first time (with internet, about 15 minutes) it installs itself, downloads the Afrikaans models, checks how fast the PC is and tests the translation. It adds a desktop shortcut and can start by itself with Windows.'),
+          h('li', 'Come back here, switch Live translation on and press Start listening.'))),
       h('label', 'Translator address'), urlInp,
       h('label', 'Last sentences'), logBox,
       h('label', ''), h('p.note', 'The translator runs on this PC, without internet: it listens to the sound desk, writes down the Afrikaans with an Afrikaans speech model, ' +

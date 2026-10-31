@@ -1,4 +1,7 @@
 models/
 .venv/
+bin/
+config.json
+quality/report*.md
 *.translation.md
 *.translation.af.txt

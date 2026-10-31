@@ -39,7 +39,7 @@ function connect() {
   disconnect();
   if (!C().on || typeof EventSource === 'undefined') return;
   es = new EventSource(base() + '/events');
-  es.onopen = () => { captions.state.connected = true; emit(); };
+  es.onopen = () => { captions.state.connected = true; emit(); sendWords(); };
   es.onerror = () => { captions.state.connected = false; emit(); };   // EventSource tries again by itself
   es.addEventListener('status', (e) => { try { captions.state.status = JSON.parse(e.data); } catch (x) { /* */ } emit(); });
   es.addEventListener('line', (e) => {
@@ -66,6 +66,16 @@ async function call(path, body) {
   return j;
 }
 
+/** Names never to translate: the list in Settings → Live translation, plus the church's name and town. */
+export function keepWords() {
+  const s = settings.v, out = [];
+  String((s.captions && s.captions.keep) || '').split(/[\n,;]+/).forEach((w) => { w = w.trim(); if (w) out.push(w); });
+  const ch = s.church || {};
+  [ch.name, ch.town].forEach((w) => { if (w && String(w).trim()) out.push(String(w).trim()); });
+  return out.slice(0, 300);
+}
+function sendWords() { call('/config', { keep: keepWords(), english: C().english || 'web' }).catch(() => {}); }
+captions.sendWords = sendWords;
 captions.status = () => call('/status');
 captions.start = (device) => call('/start', { device: device === '' || device == null ? null : +device });
 captions.stop = () => call('/stop', {});
@@ -77,5 +87,5 @@ export function initCaptions(appCtx) {
   if (ctx) { connect(); return; }
   ctx = appCtx;
   connect();
-  settings.on('change:captions', (path) => { if (path === 'captions.on' || path === 'captions.url') connect(); });
+  settings.on('change:captions', (path) => { if (path === 'captions.on' || path === 'captions.url') connect(); else if (path === 'captions.keep' && es) sendWords(); });
 }

@@ -21,7 +21,21 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 VERSION = '1.0.0'
 HERE = os.path.dirname(os.path.abspath(__file__))
 MODELS = os.path.join(HERE, 'models')
-BIBLES = os.path.normpath(os.path.join(HERE, '..', 'data', 'bibles'))
+# The Bibles: its own copy in the download (translator/bibles), else SDA Sabbath's data folder next to it.
+BIBLES = os.path.join(HERE, 'bibles') if os.path.isdir(os.path.join(HERE, 'bibles', 'afr53')) else os.path.normpath(os.path.join(HERE, '..', 'data', 'bibles'))
+CONFIG = os.path.join(HERE, 'config.json')
+
+
+def config():
+    try:
+        return json.load(open(CONFIG, encoding='utf-8'))
+    except (OSError, ValueError):
+        return {}
+
+
+def save_config(**kv):
+    c = config(); c.update(kv)
+    json.dump(c, open(CONFIG, 'w', encoding='utf-8'), indent=2)
 SR = 16000
 ASR_SIZES = ['turbo', 'small', 'base', 'large-v3', 'medium', 'tiny']
 OPUS_ZIP = 'https://object.pouta.csc.fi/OPUS-MT-models/af-en/opus-2019-12-18.zip'
@@ -256,29 +270,143 @@ def hymns_named(af_sentence):
     return out
 
 
-# ---------------------------------------------------------------------------------------------- Adventist words
+# ---------------------------------------------------------------------------------------------- Adventist and SA words
+MARK_RE = re.compile(r'(?<!\d)9[ ,.]?3[ ,.]?(\d)[ ,.]?(\d)(?!\d)')
+
+
+def _word_rx(phrase, case=False):
+    return re.compile(r'(?<![\w\'-])' + re.escape(phrase).replace(r'\ ', r'\s+') + r'(?![\w-])', 0 if case else re.I)
+
+
 class Glossary:
+    """The word file (glossary.json): what to keep, what to say in English, slang to straighten out.
+
+    Words never to translate and fixed Adventist terms are swapped for number markers (9301, 9302 …) before
+    translating, because a translation model copies numbers exactly; afterwards the markers become the kept word or
+    the fixed English. If a marker goes missing, the sentence is translated again with the words written inline."""
+
     def __init__(self, path=os.path.join(HERE, 'glossary.json')):
         g = json.load(open(path, encoding='utf-8'))
         self.prompt = g.get('prompt', '')
-        terms = sorted(g.get('terms', {}).items(), key=lambda kv: -len(kv[0]))
-        self.terms = [(re.compile(r'(?<!\w)' + re.escape(a) + r'(?!\w)', re.I), e) for a, e in terms]
         self.fixes = list(g.get('fixes', {}).items())
         self.drop = [d.lower() for d in g.get('drop', [])]
+        self.slang = [(_word_rx(a), b) for a, b in sorted(g.get('slang', {}).items(), key=lambda kv: -len(kv[0]))]
+        self.fillers = [_word_rx(f) for f in sorted(g.get('fillers', []), key=len, reverse=True)]
+        self.base_keep = list(g.get('keep', []))
+        self.terms_src = dict(g.get('terms', {}))
+        self.terms_exact = dict(g.get('terms_exact', {}))
+        self.set_keep([])
 
-    def before(self, af):
-        for rx, en in self.terms:
-            af = rx.sub(en, af)
+    def set_keep(self, extra):
+        """Words never to translate: the word file plus names from SDA Sabbath (Settings → Live translation)."""
+        keep = []
+        for w in self.base_keep + [str(x).strip() for x in (extra or [])]:
+            if w and w not in keep and len(w) <= 60:
+                keep.append(w)
+        self.keep = keep
+        spans = [(w, w, True) for w in keep] + [(a, e, False) for a, e in self.terms_src.items()] + [(a, e, True) for a, e in self.terms_exact.items()]
+        spans.sort(key=lambda t: -len(t[0]))                     # longest first: "Ellen G. White" before "White"
+        self.spans = [(_word_rx(a, case), out) for a, out, case in spans]
+
+    def normalise(self, af):
+        """Everyday South African / Kaaps Afrikaans -> standard Afrikaans the translation model knows."""
+        for _ in range(2):                                       # twice: "djy's" -> "jy's" -> "jy is"
+            for rx, std in self.slang:
+                af = rx.sub(lambda m, std=std: (std[:1].upper() + std[1:]) if m.group(0)[:1].isupper() else std, af)
+        for rx in self.fillers:
+            af = rx.sub('', af)
+        af = re.sub(r'\s+([,.!?;:])', r'\1', af)
+        af = re.sub(r',\s*,', ',', af)
+        af = re.sub(r',\s*([?!.])', r'\1', af)
+        return re.sub(r'\s{2,}', ' ', af).strip(' ,')
+
+    def protect(self, af):
+        """-> (text with markers, [(marker, output)])."""
+        used, out = [], af
+        if '93' in af:                                           # a real number like 93..: no markers, write inline
+            return self.inline(af), []
+        for rx, word in self.spans:
+            def sub(m, word=word):
+                if len(used) >= 99:
+                    return m.group(0)
+                used.append(word)
+                return '\x01%02d\x01' % len(used)
+            out = rx.sub(sub, out)
+        order = [int(k) for k in re.findall(r'\x01(\d\d)\x01', out)]
+        renum = {k: i + 1 for i, k in enumerate(order)}
+        out = re.sub(r'\x01(\d\d)\x01', lambda m: '93%02d' % renum[int(m.group(1))], out)
+        return out, [('93%02d' % renum[k], used[k - 1]) for k in order]
+
+    def inline(self, af):
+        for rx, word in self.spans:
+            af = rx.sub(word, af)
         return af
+
+    def restore(self, en, marks):
+        """Put the kept words back; None when the translation lost a marker (then translate inline instead)."""
+        if not marks:
+            return en
+        found = {}
+        def sub(m):
+            k = '93' + m.group(1) + m.group(2)
+            found[k] = found.get(k, 0) + 1
+            return '\x00' + k + '\x00'
+        tmp = MARK_RE.sub(sub, en)
+        if any(found.get(k) != 1 for k, _ in marks):
+            return None
+        for k, w in marks:
+            tmp = tmp.replace('\x00' + k + '\x00', w)
+        return tmp[:1].upper() + tmp[1:] if tmp else tmp
 
     def after(self, en):
         for a, b in self.fixes:
             en = en.replace(a, b)
+        en = re.sub(r'\s+([,.!?;:])', r'\1', en)
         return re.sub(r'\s+', ' ', en).strip()
 
     def junk(self, af):
         low = af.lower()
         return any(d in low for d in self.drop)
+
+
+class TextTranslator:
+    """Afrikaans sentences -> what is shown. The live captions and the quality test both use this, so the test
+    checks exactly what the congregation sees."""
+
+    def __init__(self, mt, gloss, bible):
+        self.mt, self.gloss, self.bible = mt, gloss, bible
+        self.marker_ok = self.marker_lost = 0
+
+    def __call__(self, batch):
+        out = [None] * len(batch)
+        todo = []
+        for i, af in enumerate(batch):
+            q = self.bible.match(af)
+            if q:
+                b, c, v1, v2, score = q
+                verse = {'ref': self.bible.ref_text(b, c, v1, v2), 'text': self.bible.english(b, c, v1, v2), 'score': round(score, 2)}
+                out[i] = {'en': verse['text'], 'verse': verse, 'how': 'verse'}
+            else:
+                todo.append(i)
+        if not todo:
+            return out
+        prepared = {i: self.gloss.protect(self.gloss.normalise(batch[i])) for i in todo}
+        ens = self.mt([prepared[i][0] for i in todo])
+        retry = []
+        for i, en in zip(todo, ens):
+            text, marks = prepared[i]
+            fixed = self.gloss.restore(en, marks)
+            if fixed is None:
+                self.marker_lost += 1
+                retry.append(i)
+            else:
+                self.marker_ok += 1 if marks else 0
+                out[i] = {'en': self.gloss.after(fixed), 'how': 'mt', 'sent': text}
+        if retry:
+            inl = {i: self.gloss.inline(self.gloss.normalise(batch[i])) for i in retry}
+            for i, en in zip(retry, self.mt([inl[i] for i in retry])):
+                out[i] = {'en': self.gloss.after(en), 'how': 'mt-inline', 'sent': inl[i]}
+        return out
 
 
 # ---------------------------------------------------------------------------------------------- models
@@ -417,6 +545,7 @@ class Pipeline:
 
     def __init__(self, asr, mt, bible, gloss, emit):
         self.asr, self.mt, self.bible, self.gloss, self.emit = asr, mt, bible, gloss, emit
+        self.text = TextTranslator(mt, gloss, bible)
         self.audio_q, self.text_q = queue.Queue(), queue.Queue()
         self.pending, self.pending_t, self.context = '', 0.0, ''
         self.stats = {'audio_s': 0.0, 'asr_s': 0.0, 'mt_s': 0.0, 'lines': 0, 'verses': 0}
@@ -484,22 +613,13 @@ class Pipeline:
                     self.emit('ref', {'q': q, 'af': af})
                 for n in hymns_named(af):
                     self.emit('hymn', {'n': n, 'af': af})
-            quotes = [self.bible.match(af) for af in batch]
-            todo = [i for i, q in enumerate(quotes) if not q]
             t0 = time.time()
-            ens = self.mt([self.gloss.before(batch[i]) for i in todo]) if todo else []
+            results = self.text(batch)
             self.stats['mt_s'] += time.time() - t0
-            en_by = dict(zip(todo, ens))
-            for i, af in enumerate(batch):
-                line = {'af': af, 't': time.time()}
-                q = quotes[i]
-                if q:
-                    b, c, v1, v2, score = q
-                    line['verse'] = {'ref': self.bible.ref_text(b, c, v1, v2), 'text': self.bible.english(b, c, v1, v2), 'score': round(score, 2)}
-                    line['en'] = line['verse']['text']
-                    self.stats['verses'] += 1
-                else:
-                    line['en'] = self.gloss.after(en_by.get(i, ''))
+            for af, r in zip(batch, results):
+                line = {'af': af, 't': time.time(), 'en': r['en']}
+                if r.get('verse'):
+                    line['verse'] = r['verse']; self.stats['verses'] += 1
                 self.stats['lines'] += 1
                 self.emit('line', line)
 
@@ -534,6 +654,24 @@ class Mic:
             pass
 
 
+DESK = re.compile(r'line|usb|mixer|desk|interface|scarlett|focusrite|behringer|yamaha|zoom|presonus|xenyx|umc|stereo mix', re.I)
+
+
+def pick_device():
+    """The saved input, else one that looks like a sound desk or USB audio interface, else the default."""
+    c = config().get('device')
+    try:
+        devs = input_devices()
+    except Exception:
+        return None
+    if c is not None and any(d['id'] == c for d in devs):
+        return c
+    for d in devs:
+        if DESK.search(d['name']) and 'microsoft sound mapper' not in d['name'].lower():
+            return d['id']
+    return None
+
+
 def input_devices():
     import sounddevice as sd
     out = []
@@ -552,15 +690,16 @@ class Hub:
         self.args, self.clients, self.lock = args, [], threading.Lock()
         self.recent = []
         self.mic = self.pipe = self.cutter = None
-        self.device = args.device
+        self.device = args.device if args.device is not None else None
         self.error = ''
         if engines:
             self.asr, self.mt, self.bible, self.gloss = engines
         else:
             log('Loading the Bible and word list…')
             self.bible, self.gloss = Bible(args.english), Glossary()
-            log('Loading the speech model', find_asr(args.asr), '…')
-            self.asr = Recogniser(find_asr(args.asr), beam=args.beam)
+            asr_choice = args.asr or config().get('asr')
+            log('Loading the speech model', find_asr(asr_choice), '…')
+            self.asr = Recogniser(find_asr(asr_choice), beam=args.beam)
             log('Loading the translation model', find_mt(args.mt), '…')
             self.mt = Translator(find_mt(args.mt))
             self.asr(__import__('numpy').zeros(SR, dtype='float32'), '')     # warm up: the first sentence is not slow
@@ -579,6 +718,9 @@ class Hub:
         self.stop()
         if device is not None:
             self.device = device
+            save_config(device=device)
+        if self.device is None:
+            self.device = pick_device()
         self.cutter = Cutter()
         self.pipe = Pipeline(self.asr, self.mt, self.bible, self.gloss, self.emit)
         def on_audio(x):
@@ -613,7 +755,7 @@ class Hub:
         return {'ok': True, 'app': 'sda-sabbath-translator', 'version': VERSION, 'running': bool(self.mic),
                 'device': self.mic.name if self.mic else None, 'devices': devs, 'error': self.error,
                 'asr': os.path.basename(getattr(self.asr, 'path', 'demo')), 'mt': os.path.basename(getattr(self.mt, 'path', 'demo')),
-                'hw': getattr(self.asr, 'device', 'cpu'), 'english': self.bible.en_id, 'rtf': rtf,
+                'hw': getattr(self.asr, 'device', 'cpu'), 'english': self.bible.en_id, 'rtf': rtf, 'keep': len(self.gloss.keep),
                 'behind': self.pipe.audio_q.qsize() if self.pipe else 0}
 
 
@@ -691,6 +833,8 @@ def make_handler(hub):
                 elif self.path.startswith('/config'):
                     if body.get('english') in ('web', 'kjv'):
                         hub.bible.set_english(body['english'])
+                    if isinstance(body.get('keep'), list):
+                        hub.gloss.set_keep(body['keep'][:300])
                 else:
                     return self._json(404, {'ok': False})
             except Exception as e:
@@ -827,6 +971,143 @@ def bench(args):
         print('Word error rate: %.1f %%' % (100 * wer(open(args.ref, encoding='utf-8').read(), af_all)))
 
 
+# ---------------------------------------------------------------------------------------------- quality test
+QUALITY = os.path.join(HERE, 'quality')
+
+
+def chrf(hyp, ref, n=6, beta=2.0):
+    """chrF: character n-gram F-score (0-100), the usual automatic measure for translation; spaces ignored."""
+    from collections import Counter
+    h, r = re.sub(r'\s+', '', hyp.lower()), re.sub(r'\s+', '', ref.lower())
+    ps, rs = [], []
+    for k in range(1, n + 1):
+        hc, rc = Counter(h[i:i + k] for i in range(len(h) - k + 1)), Counter(r[i:i + k] for i in range(len(r) - k + 1))
+        if not hc or not rc:
+            continue
+        m = sum((hc & rc).values())
+        ps.append(m / sum(hc.values())); rs.append(m / sum(rc.values()))
+    if not ps:
+        return 0.0
+    P, R = sum(ps) / len(ps), sum(rs) / len(rs)
+    return 0.0 if P + R == 0 else 100 * (1 + beta ** 2) * P * R / (beta ** 2 * P + R)
+
+
+class EchoMT:
+    """--dry: no model; shows what would be sent for translation (slang straightened out, names marked)."""
+    path = 'dry run (no model)'
+    def __call__(self, sents):
+        return list(sents)
+
+
+def quality(args, quiet=False):
+    rows = []
+    with open(os.path.join(QUALITY, 'adventist-af-en.tsv'), encoding='utf-8') as f:
+        next(f)
+        for line in f:
+            c = line.rstrip('\n').split('\t')
+            if len(c) >= 3:
+                rows.append({'cat': c[0], 'af': c[1], 'ref': c[2], 'must': [x for x in (c[3] if len(c) > 3 else '').split('|') if x],
+                             'not': [x for x in (c[4] if len(c) > 4 else '').split('|') if x]})
+    gloss, bible = Glossary(), Bible(getattr(args, 'english', 'web'))
+    mt = EchoMT() if args.dry else Translator(find_mt(args.mt))
+    tt = TextTranslator(mt, gloss, bible)
+    t0 = time.time()
+    res = []
+    for i in range(0, len(rows), 8):
+        res += tt([r['af'] for r in rows[i:i + 8]])
+    secs = time.time() - t0
+    passed, scores, by_cat = 0, [], {}
+    for r, x in zip(rows, res):
+        en = x['en']
+        if r['ref'].startswith('@'):
+            ok = bool(x.get('verse')) and x['verse']['ref'] == r['ref'][1:]
+            r['why'] = '' if ok else 'expected the verse ' + r['ref'][1:]
+        elif args.dry:
+            kept = [w for w in gloss.keep if _word_rx(w, True).search(r['af'])]
+            missing = [w for w in kept if w not in en]
+            ok = not missing and not x.get('verse')
+            r['why'] = ('lost: ' + ', '.join(missing)) if missing else ('taken for a verse' if x.get('verse') else '')
+        else:
+            low = en.lower()
+            miss = [m for m in r['must'] if m.lower() not in low]
+            bad = [m for m in r['not'] if re.search(r'\b' + re.escape(m) + r'\b', en)]
+            ok = not miss and not bad and not x.get('verse')
+            r['why'] = '; '.join((['missing: ' + ', '.join(miss)] if miss else []) + (['should not say: ' + ', '.join(bad)] if bad else [])
+                                 + (['taken for a verse'] if x.get('verse') else []))
+            scores.append(chrf(en, r['ref']))
+        r['ok'], r['en'], r['how'], r['sent'] = ok, en, x.get('how'), x.get('sent', '')
+        passed += ok
+        c = by_cat.setdefault(r['cat'], [0, 0]); c[0] += ok; c[1] += 1
+    out = os.path.join(QUALITY, 'report-dry.md' if args.dry else 'report.md')
+    with open(out, 'w', encoding='utf-8') as f:
+        f.write('# Translation quality test — %s\n\n' % os.path.basename(mt.path))
+        f.write('**%d of %d sentences correct** (%.0f %%)' % (passed, len(rows), 100 * passed / len(rows)))
+        if scores:
+            f.write(' · average chrF %.1f (100 = word for word the reference; 60+ reads well)' % (sum(scores) / len(scores)))
+        f.write(' · %.1f s\n\n' % secs)
+        f.write('| Kind | Correct |\n|---|---|\n' + ''.join('| %s | %d / %d |\n' % (k, v[0], v[1]) for k, v in by_cat.items()))
+        f.write('\nNames kept by marker: %d · retried inline: %d\n\n' % (tt.marker_ok, tt.marker_lost))
+        f.write('| | Kind | Afrikaans | Shown in English | Reference | Note |\n|---|---|---|---|---|---|\n')
+        for r in rows:
+            f.write('| %s | %s | %s | %s | %s | %s |\n' % ('✔' if r['ok'] else '✘', r['cat'], r['af'], r['en'].replace('|', '/'),
+                                                    r['ref'], r['why'] + ((' · sent: ' + r['sent']) if args.dry and r['sent'] else '')))
+    summary = '%d of %d sentences correct (%.0f %%)%s. Report: %s' % (passed, len(rows), 100 * passed / len(rows),
+              ', average chrF %.1f' % (sum(scores) / len(scores)) if scores else '', out)
+    if not quiet:
+        print(summary)
+        for r in rows:
+            if not r['ok']:
+                print('  ✘ [%s] %s\n      → %s   (%s)' % (r['cat'], r['af'], r['en'], r['why']))
+    return passed, len(rows), summary
+
+
+def speed(asr_path):
+    """Recognition speed on this PC (the short recording in quality/), × real time: under 0.8 keeps up live."""
+    audio = load_audio(os.path.join(QUALITY, 'sample-af.wav'))
+    asr = Recogniser(asr_path)
+    asr(audio[:SR], '')
+    t0 = time.time()
+    asr(audio, Glossary().prompt)
+    return (time.time() - t0) / (len(audio) / SR), asr.device
+
+
+def setup(args):
+    """First run: download the models, choose the one this PC can run live, test translation, choose the input."""
+    print('\n== SDA Sabbath translator: first-time setup ==\n')
+    a = argparse.Namespace(asr=['small'])
+    print('1/4  Downloading the Afrikaans speech model (small) and the translator …')
+    get_models(a)
+    print('\n2/4  Checking how fast this PC is …')
+    rtf, hw = speed(os.path.join(MODELS, 'fluister-small'))
+    choice = 'small'
+    print('     small model: %.2f × real time on the %s' % (rtf, 'graphics card' if hw == 'cuda' else 'processor'))
+    if hw == 'cuda' or rtf < 0.22:
+        print('     Fast enough for the more accurate turbo model: downloading it …')
+        get_models(argparse.Namespace(asr=['turbo']))
+        rtf_t, _ = speed(os.path.join(MODELS, 'fluister-turbo'))
+        print('     turbo model: %.2f × real time' % rtf_t)
+        if rtf_t < 0.6:
+            choice = 'turbo'
+    elif rtf > 0.7:
+        print('     This PC is slow for live recognition; using the small model. A PC with an NVIDIA graphics card is far faster.')
+    save_config(asr=choice)
+    print('     Using: %s' % choice)
+    print('\n3/4  Translation quality test (50 Adventist, slang and everyday sentences) …')
+    p, n, summary = quality(argparse.Namespace(dry=False, mt=None, english='web'), quiet=True)
+    print('     ' + summary)
+    print('\n4/4  Sound input …')
+    try:
+        devs = input_devices()
+        d = pick_device()
+        for x in devs:
+            print('     %s %3d  %s' % ('→' if x['id'] == d or (d is None and x['default']) else ' ', x['id'], x['name']))
+        print('     (→ will be used; choose another in SDA Sabbath: Settings → Live translation)')
+    except Exception as e:
+        print('     No sound inputs found (%s). Plug in the sound-desk cable and choose it in SDA Sabbath.' % e)
+    save_config(setup_done=True)
+    print('\nSetup finished. In SDA Sabbath open Settings → Live translation, switch it on and press Start listening.\n')
+
+
 # ---------------------------------------------------------------------------------------------- downloads
 def get_models(args):
     os.makedirs(MODELS, exist_ok=True)
@@ -869,6 +1150,9 @@ def main(argv=None):
     s.add_argument('--device', type=int, default=None, help='sound input number (see: devices)')
     s.add_argument('--port', type=int, default=7790); s.add_argument('--lan', action='store_true', help='also reachable from other PCs')
     s.add_argument('--autostart', action='store_true', help='start listening immediately')
+    q = sub.add_parser('test', help='translation quality test'); q.add_argument('--mt'); q.add_argument('--english', default='web', choices=['web', 'kjv'])
+    q.add_argument('--dry', action='store_true', help='without a model: check slang, names and Bible quotes only')
+    sub.add_parser('setup', help='first-time setup')
     b = sub.add_parser('bench'); common(b); b.add_argument('file'); b.add_argument('--ref', help='correct Afrikaans text, for the word error rate')
     d = sub.add_parser('demo'); d.add_argument('--port', type=int, default=7790); d.add_argument('--english', default='web')
     d.add_argument('--every', type=float, default=4.0); d.add_argument('--autostart', action='store_true')
@@ -886,6 +1170,11 @@ def main(argv=None):
         bench(a)
     elif a.cmd == 'demo':
         demo(a)
+    elif a.cmd == 'test':
+        p, n, _ = quality(a)
+        sys.exit(0 if p >= n * 0.8 else 1)
+    elif a.cmd == 'setup':
+        setup(a)
 
 
 if __name__ == '__main__':

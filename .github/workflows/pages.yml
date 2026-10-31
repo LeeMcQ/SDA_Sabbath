@@ -82,6 +82,15 @@ jobs:
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         continue-on-error: true
         with: { path: site/download, merge-multiple: true }
+      - name: Add the translator download
+        # Live translation (Afrikaans -> English) for the church PC: the translator folder with its own copy of the
+        # Bibles it needs. Models are downloaded by start-translator.bat on first run.
+        run: |
+          mkdir -p site/download /tmp/tr/sda-sabbath-translator/bibles
+          cp -r translator/. /tmp/tr/sda-sabbath-translator/
+          rm -rf /tmp/tr/sda-sabbath-translator/models /tmp/tr/sda-sabbath-translator/.venv /tmp/tr/sda-sabbath-translator/bin
+          cp -r data/bibles/afr53 data/bibles/web data/bibles/kjv /tmp/tr/sda-sabbath-translator/bibles/
+          cd /tmp/tr && zip -qr9 "$GITHUB_WORKSPACE/site/download/sda-sabbath-translator.zip" sda-sabbath-translator
       - name: List the downloads
         run: |
           mkdir -p site/download

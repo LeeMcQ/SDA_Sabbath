@@ -28,8 +28,25 @@ for s, want in [('Ons lees uit Johannes hoofstuk drie vers sestien.', ['John 3:1
 for s, want in [('Kom ons sing gesang nommer honderd.', [100]), ('Ons sing lied 214', [214]), ('Ons sing saam', [])]:
     ok(L.hymns_named(s) == want, 'hymn heard: %s → %s' % (s, L.hymns_named(s)))
 g = L.Glossary()
-ok(g.before('Die Sewendedag-Adventiste Kerk hou die Sabbat en glo in die Gees van die Profesie.') ==
-   'Die Seventh-day Adventist Church hou die Sabbath en glo in die Spirit of Prophecy.', 'Adventist words fixed before translating')
+t, marks = g.protect(g.normalise('Die Sewendedag-Adventiste Kerk hou die Sabbat en glo in die Gees van die Profesie.'))
+ok(t == 'Die 9301 hou die 9302 en glo in die 9303.' and [w for _, w in marks] == ['Seventh-day Adventist Church', 'Sabbath', 'Spirit of Prophecy'],
+   'Adventist terms marked for fixed English: %s' % t)
+ok(g.restore('The 9301 keeps the 9302 and believes in the 9303.', marks) == 'The Seventh-day Adventist Church keeps the Sabbath and believes in the Spirit of Prophecy.', 'markers become the fixed English')
+ok(g.restore('The church keeps the day.', marks) is None, 'a lost marker is noticed (then translated again, words inline)')
+t, marks = g.protect('Broer Fortuin en suster Swart kom van Malmesbury.')
+ok([w for _, w in marks] == ['Fortuin', 'Swart', 'Malmesbury'], 'names never translated: %s' % t)
+ok(g.protect('Swart mense en wit mense')[1] == [] or g.protect('die swart hond')[1] == [], 'ordinary lower-case words are not taken for names')
+g.set_keep(['Riebeek-Kasteel', 'Pastoor Botha'])
+ok([w for _, w in g.protect('Pastoor Botha preek in Riebeek-Kasteel.')[1]] == ['Pastoor Botha', 'Riebeek-Kasteel'], 'names sent by SDA Sabbath are kept')
+t, marks = g.protect('Die Here is goed, dames en here.')
+ok([w for _, w in marks] == ['The Lord'] and 'dames en here' in t, '"die Here" is the Lord; lower-case "here" (gentlemen) is left alone')
+for a, b in [("Ek's so bly djy's hie vandag.", 'Ek is so bly jy is hier vandag.'), ('Die laaities moet stil sit.', 'Die kinders moet stil sit.'),
+             ('Dit issie maklik nie.', 'Dit is nie maklik nie.'), ('Hy het mos gesê hy sal kom, nè?', 'Hy het gesê hy sal kom?'),
+             ('Ons gaan nou-nou sing.', 'Ons gaan binnekort sing.'), ('Ek wiet nie wat om te sê nie.', 'Ek weet nie wat om te sê nie.')]:
+    ok(g.normalise(a) == b, 'slang: %s → %s' % (a, g.normalise(a)))
 ok(g.after('the Here Jesus') == 'the Lord Jesus', 'English corrected after translating')
 ok(g.junk('Teksting deur Amara.org') and not g.junk('Ons bid saam.'), 'phantom subtitle lines dropped')
+import argparse
+p_, n_, _ = L.quality(argparse.Namespace(dry=True, mt=None, english='web'), quiet=True)
+ok(p_ == n_, 'quality test set, without a model: %d / %d prepared correctly' % (p_, n_))
 print('\n%d failed' % len(fails)); sys.exit(len(fails))
