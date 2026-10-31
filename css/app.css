@@ -1496,3 +1496,6 @@ html:not(.lp) .listen-box.on .ls-dot { animation: ls-pulse 1.6s ease-in-out infi
 @media (max-width: 1400px) and (min-width: 1025px) {
   .brand > span:not(.sabbath-chip) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
+/* "Being sung now": following the singing of the hymn on screen (green, like Next). */
+.ls-card.ls-follow { border-color: var(--next); }
+.ls-card.ls-follow .ls-k { color: var(--next); }
