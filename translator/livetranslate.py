@@ -298,7 +298,7 @@ class Glossary:
         self.set_keep([])
 
     def set_keep(self, extra):
-        """Words never to translate: the word file plus names from SDA Sabbath (Settings → Live translation)."""
+        """Words never to translate: the word file plus names from SDA Sabbath (Tools → Translate)."""
         keep = []
         for w in self.base_keep + [str(x).strip() for x in (extra or [])]:
             if w and w not in keep and len(w) <= 60:
@@ -1101,11 +1101,11 @@ def setup(args):
         d = pick_device()
         for x in devs:
             print('     %s %3d  %s' % ('→' if x['id'] == d or (d is None and x['default']) else ' ', x['id'], x['name']))
-        print('     (→ will be used; choose another in SDA Sabbath: Settings → Live translation)')
+        print('     (→ will be used; choose another in SDA Sabbath: Tools → Translate)')
     except Exception as e:
         print('     No sound inputs found (%s). Plug in the sound-desk cable and choose it in SDA Sabbath.' % e)
     save_config(setup_done=True)
-    print('\nSetup finished. In SDA Sabbath open Settings → Live translation, switch it on and press Start listening.\n')
+    print('\nSetup finished. In SDA Sabbath open Tools → Translate, switch it on and press Start listening.\n')
 
 
 # ---------------------------------------------------------------------------------------------- downloads

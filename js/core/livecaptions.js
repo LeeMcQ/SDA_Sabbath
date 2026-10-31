@@ -66,7 +66,7 @@ async function call(path, body) {
   return j;
 }
 
-/** Names never to translate: the list in Settings → Live translation, plus the church's name and town. */
+/** Names never to translate: the list in Tools → Translate, plus the church's name and town. */
 export function keepWords() {
   const s = settings.v, out = [];
   String((s.captions && s.captions.keep) || '').split(/[\n,;]+/).forEach((w) => { w = w.trim(); if (w) out.push(w); });
