@@ -36,7 +36,14 @@ function open() {
       const d = req.result;
       STORES.forEach((s) => { if (!d.objectStoreNames.contains(s)) d.createObjectStore(s); });
     };
-    req.onsuccess = () => { clearTimeout(timer); resolve(req.result); };
+    req.onsuccess = () => {
+      clearTimeout(timer);
+      const d = req.result;
+      // A newer SDA Sabbath in another tab needs to upgrade the database: let it (this tab reopens it on its next
+      // use instead of blocking the other tab for ever).
+      d.onversionchange = () => { try { d.close(); } catch (e) { /* */ } dbp = null; };
+      resolve(d);
+    };
     req.onerror = () => { clearTimeout(timer); resolve(useMemory(req.error && req.error.message)); };
     req.onblocked = () => console.warn('Database upgrade waiting for another SDA Sabbath tab to close.');
   });
