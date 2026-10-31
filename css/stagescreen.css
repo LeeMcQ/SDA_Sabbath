@@ -347,3 +347,41 @@ body.ss > .ss-top { grid-row: 1; } body.ss > .ss-msg { grid-row: 2; } body.ss > 
 .lay-full .ss-next:has(.ss-pn:not([hidden])) .ss-scr { width: min(100%, calc((100cqh - 150px) * 16 / 9)); }
 .lay-slides .ss-next:has(.ss-pn:not([hidden])) .ss-scr { width: min(100%, calc((100cqh - 110px) * 16 / 9)); }
 }
+
+/* ---------- Live translation on a phone (stage.html#…&v=tr, js/trview.js) ----------
+   Light and calm for reading in church: denim blue (the Adventist Church's core colour), warm white, the
+   Church symbol and Advent Sans for the headings, Atkinson Hyperlegible for the words. */
+html.tr-mode body > :not(.tr-view):not(.ss-join):not(.ss-toast) { display: none !important; }
+html.tr-mode, html.tr-mode body { background: #f4f6f8; }
+.tr-view { --tr-denim: #1f4e79; --tr-ink: #1c2633; --tr-muted: #5b6878; --tr-line: #dbe2ea; --tr-card: #ffffff; --tr-size: 20px;
+  position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; background: #f4f6f8; color: var(--tr-ink);
+  font-family: "Hyperlegible", system-ui, sans-serif; padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
+.tr-head { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--tr-denim); color: #fff; }
+.tr-mark { width: 40px; height: 40px; flex: none; color: #fff; }
+.tr-mark svg { width: 100%; height: 100%; display: block; }
+.tr-titles { flex: 1 1 auto; min-width: 0; }
+.tr-church { font-size: 13px; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tr-head h1 { margin: 0; font: 700 19px/1.15 "Advent Sans", "Hyperlegible", sans-serif; letter-spacing: .01em; }
+.tr-conn { display: inline-flex; align-items: center; gap: 6px; flex: none; font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 99px; background: rgba(255,255,255,.14); }
+.tr-conn i { width: 9px; height: 9px; border-radius: 50%; background: #c9d3de; }
+.tr-conn.on i { background: #4cc26a; box-shadow: 0 0 0 3px rgba(76,194,106,.25); }
+.tr-conn.lost i, .tr-conn.offline i { background: #f0a43a; }
+.tr-tools { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--tr-line); background: var(--tr-card); }
+.tr-grow { flex: 1; }
+.tr-btn { min-width: 48px; height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--tr-line); background: #fff; color: var(--tr-denim); font: 700 16px/1 "Hyperlegible", sans-serif; }
+.tr-btn:disabled { opacity: .4; }
+.tr-btn[aria-pressed="true"] { background: var(--tr-denim); border-color: var(--tr-denim); color: #fff; }
+.tr-btn:focus-visible, .tr-new:focus-visible { outline: 3px solid #7aa7d6; outline-offset: 2px; }
+.tr-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 16px 16px 28px; -webkit-overflow-scrolling: touch; }
+.tr-state { margin: 24px auto; max-width: 30em; text-align: center; color: var(--tr-muted); font-size: 17px; line-height: 1.5; }
+.tr-list { display: flex; flex-direction: column; gap: 14px; max-width: 46em; margin: 0 auto; }
+.tr-line { padding: 0 0 0 12px; border-left: 3px solid transparent; }
+.tr-en { margin: 0; font-size: var(--tr-size); line-height: 1.45; color: var(--tr-muted); }
+.tr-line.now { border-left-color: var(--tr-denim); }
+.tr-line.now .tr-en { color: var(--tr-ink); font-weight: 700; }
+.tr-ref { color: var(--tr-denim); font-weight: 700; white-space: nowrap; }
+.tr-orig { margin: 4px 0 0; font-size: calc(var(--tr-size) * .72); line-height: 1.4; color: #7d8896; font-style: italic; }
+.tr-new { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(64px + env(safe-area-inset-bottom, 0px)); z-index: 2; padding: 10px 16px; border-radius: 99px; border: 0;
+  background: var(--tr-denim); color: #fff; font: 700 15px/1 "Hyperlegible", sans-serif; box-shadow: 0 6px 18px rgba(31,78,121,.35); }
+.tr-foot { padding: 10px 16px; font-size: 12.5px; line-height: 1.4; color: var(--tr-muted); border-top: 1px solid var(--tr-line); background: var(--tr-card); text-align: center; }
+@media (min-width: 900px) { .tr-scroll { padding: 28px 32px 40px; } }

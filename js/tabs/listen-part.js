@@ -26,7 +26,7 @@ export default function create(ctx) {
   const main = card('Listen for verses & hymns',
     h('p.note', 'Listens through the microphone. When a Bible verse or a hymn is mentioned, it is offered as a card with Put on Next and Present. While a hymn is on the screen it follows the singing and offers the stanza being sung. Nothing goes on the screen by itself.'),
     h('div.ls-src', h('span.ls-src-l', 'Hear with'), hearWith),
-    h('p.note', 'Offline translator: the SDA Sabbath translator on this PC (Tools → Translate) listens to the sound desk without internet, for Afrikaans sermons. It also recognises Bible verses the preacher quotes without naming them. Live translation does not need to be switched on. ' +
+    h('p.note', 'Offline translator: the SDA Sabbath translator on this PC (Tools → Listen & Translate) listens to the sound desk without internet, for Afrikaans sermons. It also recognises Bible verses the preacher quotes without naming them. Live translation does not need to be switched on. ' +
       'Browser: Chrome or Edge with the internet and the microphone, in English (or Afrikaans when your main Bible is Afrikaans). Automatic uses the translator when it is running on this PC, otherwise the browser.'),
     status,
     h('div.row', toggleBtn));

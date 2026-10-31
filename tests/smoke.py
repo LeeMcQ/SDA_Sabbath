@@ -197,8 +197,9 @@ def main():
                 pg.evaluate("window.selah.showTab('listen')"); pg.wait_for_timeout(800)
                 assert pg.locator('.tools-part-listen .ls-toggle').is_visible(), 'Tools → Listen does not open'
                 pg.evaluate("window.selah.showTab('translate')"); pg.wait_for_timeout(800)
-                tr = pg.locator('.tools-part-translate .form')
-                assert tr.is_visible() and 'English captions' in tr.inner_text(), 'Tools → Translate does not open'
+                tr = pg.locator('.tools-part-listen .tr-card .form')
+                assert tr.is_visible() and 'English captions' in tr.inner_text(), 'Live translation is not in Tools → Listen & Translate'
+                assert pg.locator('.tools-part-listen .ls-toggle').is_visible(), 'Listen is not in the same part as Live translation'
                 got = pg.evaluate("""import('./js/core/spokenref.js').then(m => [
                     'as it says in John chapter three verse sixteen', 'Romans 8 28', 'first Corinthians thirteen verses four to seven',
                     'let us sing hymn number one hundred', 'Johannes drie vers sestien', 'the Lord is my shepherd'
@@ -240,6 +241,28 @@ def main():
                 assert 'Psalm' in refs and '23:1' in refs and 'Romans 8:28' in refs and 'Hymn 73' in refs, 'cards: %s' % refs
                 assert not errs, '; '.join(errs[:3])
             t_offline_listen()
+
+            @check('translation on phones: QR slide and the phone view')
+            def t_tr_phone():
+                pg.evaluate("window.selah.showTab('listen')"); pg.wait_for_timeout(600)
+                pg.locator('.tools-part-listen').get_by_role('button', name='Put on Next').click(); pg.wait_for_timeout(4000)
+                st = pg.evaluate("import('./js/core/live.js').then(m => m.live.staged && [m.live.staged.title, m.live.staged.deck.frames[0].src.size])")
+                assert st and st[0] == 'Translation on your phone' and st[1] > 20000, 'phone slide on Next: %r' % (st,)
+                with ctx.expect_page(timeout=10000) as pop:
+                    pg.evaluate("window.open('stage.html?via=win&v=tr', 'trphone', 'popup=yes,width=390,height=800')")
+                ph = pop.value
+                ph.on('pageerror', lambda e: errs.append('phone: ' + str(e)[:200]))
+                ph.wait_for_load_state(); ph.wait_for_timeout(2500)
+                pg.evaluate("window.selah.stage.setTranslation(true)")
+                pg.evaluate("window.selah.stage.addCaption({ af: 'Want so lief het God die wêreld gehad', en: 'For God so loved the world', verse: { ref: 'John 3:16' } })")
+                ph.wait_for_timeout(800)
+                txt = ph.locator('.tr-line.now').inner_text()
+                assert 'For God so loved the world' in txt and 'John 3:16' in txt, 'phone shows %r' % txt
+                assert pg.evaluate("window.selah.stage.readers().length") == 1, 'the phone is not counted as a reader'
+                assert not ph.locator('.ss-ctrl, .ss-now').first.is_visible(), 'the phone shows stage controls'
+                ph.close()
+                assert not errs, '; '.join(errs[:3])
+            t_tr_phone()
 
             @check('a shared plan file opens')
             def t_plan():

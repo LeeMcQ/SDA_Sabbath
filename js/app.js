@@ -27,7 +27,7 @@ const lazyWelcome = () => import('./tabs/welcome.js');
 const openFeedback = (c, o) => import('./tabs/account.js').then((m) => m.openFeedback(c, o));
 
 export const VERSION = '1.6.0';
-export const BUILD = '950e935';
+export const BUILD = '80412a7';
 
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', file: 'bible.js', load: () => import('./tabs/bible.js') },
@@ -646,7 +646,7 @@ window.addEventListener('selah-health', instNotify);
 const instCard = startInstallPrompt({ promptInstall, installAvailable: () => !!ctx.installPrompt, offline: offlineState, onChange: (f) => instFns.add(f) });
 ctx.offlineState = offlineState;                 // the first-start setup shows these too
 ctx.onInstallChange = (f) => instFns.add(f);
-// Live translation (optional): loads only once switched on in Tools → Translate.
+// Live translation (optional): loads only once switched on in Tools → Listen & Translate.
 const capLoad = () => import('./core/livecaptions.js').then((m) => m.initCaptions(ctx)).catch(() => {});
 if (settings.v.captions && settings.v.captions.on) capLoad();
 settings.on('change:captions', (path) => { if (path === 'captions.on' && settings.v.captions.on) capLoad(); });

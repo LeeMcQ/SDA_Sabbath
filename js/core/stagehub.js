@@ -121,10 +121,14 @@ function sendTo(o, msg) {
     catch (e) { remoteCopy(msg).then((m) => { try { o.send(m); } catch (er) { /* closed */ } }); }
   }
 }
-function broadcast(msg) { hub.outlets.forEach((o) => { if (o.ready) sendTo(o, msg); }); }
+// Translation readers (phones in the congregation) only receive the captions and the church name.
+const TR_MSGS = new Set(['cap', 'caps', 'cfg', 'ping', 'bye', 'kick']);
+function broadcast(msg) { hub.outlets.forEach((o) => { if (o.ready && (o.role !== 'tr' || TR_MSGS.has(msg.t))) sendTo(o, msg); }); }
 hub.count = (pred) => { let n = 0; hub.outlets.forEach((o) => { if (o.ready && (!pred || pred(o))) n++; }); return n; };
 /** Stage screens people can see in the list (the preview inside the Stage tab is not one). */
-hub.screens = () => Array.from(hub.outlets.values()).filter((o) => o.ready && o.kind !== 'preview' && o.role !== 'obs');
+hub.screens = () => Array.from(hub.outlets.values()).filter((o) => o.ready && o.kind !== 'preview' && o.role !== 'obs' && o.role !== 'tr');
+/** Phones in the congregation reading the live translation. */
+hub.readers = () => Array.from(hub.outlets.values()).filter((o) => o.ready && o.role === 'tr');
 /** OBS browser sources that are connected (lower third / presentation). */
 hub.obsOutputs = () => Array.from(hub.outlets.values()).filter((o) => o.ready && o.kind !== 'preview' && o.role === 'obs');
 
@@ -180,7 +184,21 @@ function snapshot(o, full = true) {
   sendTo(o, { t: 'plan', plan: hub.plan });
   sendTo(o, obsMsg());
   if (live.media) sendTo(o, mediaMsg(live.media));
+  sendTo(o, { t: 'caps', on: hub.trOn, list: hub.caps });
 }
+
+// ------------------------------------------------------------ live translation for phones
+// The translator runs on this PC (js/core/livecaptions.js): phones cannot reach it, so its English sentences
+// travel to them here, over the same room code as the stage screen (stage.html#…&v=tr shows only these).
+hub.caps = [];           // the last sentences: {en, af, ref, t}
+hub.trOn = false;        // Live translation switched on (phones say "waiting" otherwise)
+hub.addCaption = (l) => {
+  if (!l || !l.en) return;
+  const c = { en: String(l.en).slice(0, 600), af: String(l.af || '').slice(0, 600), ref: (l.verse && l.verse.ref) || '', t: Date.now() };
+  hub.caps = hub.caps.concat([c]).slice(-30);
+  broadcast({ t: 'cap', l: c });
+};
+hub.setTranslation = (on) => { hub.trOn = !!on; broadcast({ t: 'caps', on: hub.trOn, list: hub.caps }); };
 
 // ------------------------------------------------------------ live stream (OBS) overlays
 // What the OBS browser sources show besides the slides: lower thirds (a name, an announcement, or —
@@ -400,6 +418,7 @@ function you(o, extra) { sendTo(o, Object.assign({ t: 'you', id: o.id, control: 
 async function welcome(o, m) {
   // OBS browser sources: larger pictures for the full-slide output, words only for the lower third.
   if (m.kind === 'obs') { o.role = 'obs'; o.mode = m.mode === 'full' ? 'full' : 'lower'; if (o.remote) o.size = o.mode === 'full' ? 'big' : 'text'; }
+  else if (m.view === 'tr') o.role = 'tr'; // a phone in the congregation reading the live translation
   else o.role = 'stage';
   o.dev = String(m.dev || '').slice(0, 60);
   o.did = String(m.did || '').slice(0, 40);
@@ -418,6 +437,14 @@ async function welcome(o, m) {
   o.ready = true;
   o.lastSeen = Date.now();
   sendTo(o, hi);
+  if (o.role === 'tr') {
+    // Translation readers get only what they show (church name and the sentences), never controls or slides.
+    o.control = false;
+    sendTo(o, cfgMsg());
+    sendTo(o, { t: 'caps', on: hub.trOn, list: hub.caps });
+    hub.emit('outlets');
+    return;
+  }
   you(o);
   snapshot(o, true);
   hub.emit('outlets');
@@ -730,12 +757,14 @@ hub.newPin = () => {
 export const PUBLIC_BASE = 'https://leemcq.github.io/SDA_Sabbath/';
 const joinBase = () => (location.protocol === 'https:' ? location.href : PUBLIC_BASE);
 /** Address phones open (the QR code): the code travels after #, so it never reaches any web server. */
-hub.joinUrl = (code) => {
+hub.joinUrl = (code, view) => {
   const u = new URL('stage.html', joinBase());
   const r = relaysFrom(settings.v.stage.relays);
-  u.search = ''; u.hash = 'c=' + (code || settings.v.stage.code) + (hub.key ? '&h=' + hub.key.fp : '') + (r ? '&r=' + encodeURIComponent(r.join(',')) : '');
+  u.search = ''; u.hash = 'c=' + (code || settings.v.stage.code) + (hub.key ? '&h=' + hub.key.fp : '') + (r ? '&r=' + encodeURIComponent(r.join(',')) : '') + (view ? '&v=' + view : '');
   return u.href;
 };
+/** The phone address for live translation (the QR code on the join screen). */
+hub.translateUrl = (code) => hub.joinUrl(code, 'tr');
 /**
  * Address of an OBS browser source (mode 'lower' or 'full'). With the companion running, OBS loads it from the
  * church PC (works without internet); otherwise it follows by room code like a phone does.

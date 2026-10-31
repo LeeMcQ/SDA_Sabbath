@@ -1,4 +1,4 @@
-// Tools → Translate: live translation of the sermon (Afrikaans → English captions) through the SDA Sabbath
+// Tools → Listen & Translate: live translation of the sermon (Afrikaans → English captions) through the SDA Sabbath
 // translator on this PC (translator/livetranslate.py, js/core/livecaptions.js). Moved here from Settings.
 import { h, clear } from '../core/util.js';
 import { icon } from '../core/icons.js';

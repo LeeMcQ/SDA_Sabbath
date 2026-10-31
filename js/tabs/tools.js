@@ -1,27 +1,24 @@
-// The Tools tab: the Stage, Stream, Listen and Translate parts (stage.js, stream.js, listen-part.js, translate-part.js).
+// The Tools tab: the Stage, Stream and Listen & Translate parts (stage.js, stream.js, listen-translate.js).
 // Like every other tab, slides from here go to the green Next screen first; Present shows them.
 import { h } from '../core/util.js';
 import { icon } from '../core/icons.js';
 import createStage from './stage.js';
 import createStream from './stream.js';
-import createListen from './listen-part.js';
-import createTranslate from './translate-part.js';
+import createListenTranslate from './listen-translate.js';
 
 // ------------------------------------------------------------ the Tools tab: two parts
 //   Stage   – the second screen for the platform: messages, timers, phones & laptops (stage.js)
 //   Stream  – OBS: lower thirds, presentation output, scene switching (stream.js)
-//   Listen  – verse and hymn suggestions from what is said and sung (listen-part.js, js/listen.js)
-//   Translate – live translation of the sermon into English captions (translate-part.js)
+//   Listen & Translate – verse and hymn suggestions, live translation and the phone QR slide (listen-translate.js)
 // Each part keeps its own content; only the part that is open is shown. Stage and Stream are built the first
 // time they are opened.
 const PARTS = [
   ['stage', 'stage', 'Stage', 'Second screen for the platform: messages, timers, phones & laptops'],
   ['stream', 'live', 'Stream', 'OBS live stream: lower thirds, slides, scene switching'],
-  ['listen', 'mic', 'Listen', 'Verse and hymn suggestions from what is said and sung'],
-  ['translate', 'translate', 'Translate', 'Live translation: Afrikaans sermon → English captions'],
+  ['listen', 'translate', 'Listen & Translate', 'Verse and hymn suggestions, live translation and translation on phones'],
 ];
 export default function create(ctx) {
-  const makers = { stage: createStage, stream: createStream, listen: createListen, translate: createTranslate };
+  const makers = { stage: createStage, stream: createStream, listen: createListenTranslate };
   const parts = {};
   let part = PARTS.some((p) => p[0] === ctx.settings.v.app.toolsPart) ? ctx.settings.v.app.toolsPart : 'stage';
   const seg = h('div.seg.tools-seg', { role: 'group', 'aria-label': 'Tools' });
@@ -46,6 +43,7 @@ export default function create(ctx) {
     hint.textContent = p ? p[3] : '';
   }
   function show(k) {
+    if (k === 'translate') k = 'listen'; // one part since Listen and Translate were joined
     if (!makers[k]) k = 'stage';
     const prev = parts[part];
     if (prev && part !== k) { prev.el.hidden = true; if (prev.onHide) prev.onHide(); }

@@ -4,7 +4,7 @@
 // Present"). While a hymn is on screen it also follows the singing and offers the stanza being sung.
 // Nothing ever goes on screen by itself.
 // Two ways to hear (Tools → Listen → Hear with):
-//   Offline translator – the SDA Sabbath translator on this PC (Tools → Translate) already turns the Afrikaans
+//   Offline translator – the SDA Sabbath translator on this PC (Tools → Listen & Translate) already turns the Afrikaans
 //                        sermon into sentences offline; its sentences, the Bible quotes it recognises (the verse
 //                        itself, even when no reference is said) and the references and hymn numbers it finds
 //                        become cards here.
@@ -72,12 +72,12 @@ export function createListener({ ctx, getTab, present, ui }) {
       try { await (await translator()).status(); up = true; } catch (e) { up = false; }
       if (up) return 'offline';
       if (pref() === 'offline') {
-        ui.toast('The offline translator is not running on this PC. Start it with the “SDA Sabbath translator” shortcut on the desktop (set it up once in Tools → Translate).', 'err', 8000);
+        ui.toast('The offline translator is not running on this PC. Start it with the “SDA Sabbath translator” shortcut on the desktop (set it up once in Tools → Listen & Translate).', 'err', 8000);
         return null;
       }
     }
     if (!SR) {
-      ui.toast('This browser cannot listen, and the offline translator is not running on this PC. Use Chrome or Edge, or start the translator (Tools → Translate).', 'err', 8000);
+      ui.toast('This browser cannot listen, and the offline translator is not running on this PC. Use Chrome or Edge, or start the translator (Tools → Listen & Translate).', 'err', 8000);
       return null;
     }
     return 'browser';

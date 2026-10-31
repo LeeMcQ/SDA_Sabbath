@@ -112,7 +112,7 @@ export default function create(ctx) {
     joinBox.hidden = !on || !s.code;
     const st = hub.net.state;
     netState.className = 'st-net ' + st;
-    netState.textContent = !on ? '' : { starting: 'Starting…', on: 'Ready · ' + hub.count((o) => o.kind === 'peer') + ' connected', error: 'Could not start: ' + hub.net.error, offline: 'No internet on this PC — use the church network or a stage window', off: '' }[st] || '';
+    netState.textContent = !on ? '' : { starting: 'Starting…', on: 'Ready · ' + hub.count((o) => o.kind === 'peer' && o.role !== 'tr') + ' connected' + (hub.readers().length ? ' · ' + hub.readers().length + ' reading the translation' : ''), error: 'Could not start: ' + hub.net.error, offline: 'No internet on this PC — use the church network or a stage window', off: '' }[st] || '';
     pinEl.textContent = pinEl2.textContent = s.pin || '—';
     if (!on || !s.code) return;
     codeEl.textContent = fmtCode(s.code);
@@ -139,7 +139,7 @@ export default function create(ctx) {
     navigator.share({ title: 'Stage screen', text: 'Follow the service on the stage screen. Code: ' + fmtCode(S().code), url: hub.joinUrl(S().code) }).catch(() => {});
   }
   async function newCode() {
-    if (hub.count((o) => o.kind === 'peer') && !(await confirmBox('New room code?', 'Everyone who joined with the current code is disconnected and must scan the new QR code.', 'New code', true))) return;
+    if (hub.count((o) => o.kind === 'peer') && !(await confirmBox('New room code?', 'Everyone who joined with the current code is disconnected (stage screens and phones reading the translation) and must scan the new QR code.', 'New code', true))) return;
     await hub.newCode();
     paintNet();
   }

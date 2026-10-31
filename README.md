@@ -30,14 +30,22 @@ The Plan tab has its own switch (the choice is kept on each device); the rest of
 - **Advanced** is the plan editor: add and attach media, change the order, templates, sharing. Each part shows
   a small picture of its first slide.
 
-## Tools → Listen
+## Tools → Listen & Translate
 
-**Listen for verses & hymns** listens to the service and offers the Bible verses and hymns that are mentioned —
-by number (“hymn 100”, “number 73 in our hymnal”) or by name (“let us sing Great Is Thy Faithfulness”) — as
-cards under Black / Logo / Clear (on phones above the tabs). While a hymn is on screen it follows the singing
-and offers the stanza being sung. Nothing goes on screen by itself. It uses the browser's online speech
-service (Chrome or Edge), so it needs the internet while it listens, and it follows the language of your main
-Bible (English or Afrikaans).
+Everything that listens to the service, in one place.
+
+- **Listen for verses & hymns** offers the Bible verses and hymns that are mentioned — by number (“hymn 100”,
+  “number 73 in our hymnal”) or by name (“let us sing Great Is Thy Faithfulness”) — as cards under
+  Black / Logo / Clear (on phones above the tabs). While a hymn is on screen it follows the singing and offers the
+  stanza being sung. Nothing goes on screen by itself. **Hear with:** *Offline translator* (the SDA Sabbath
+  translator on this PC: no internet, and it also recognises Bible verses quoted without a reference),
+  *Browser* (Chrome or Edge, online), or *Automatic* (the translator when it runs, otherwise the browser).
+- **Live translation** turns the Afrikaans sermon into English captions on the screen, offline on the church PC
+  (see [Live translation](translator/README.md)).
+- **Translation on phones**: put the light “Live English translation on your phone” slide on the screen (it is
+  offered when Live translation is switched on). People scan its QR code and read the sermon in English on their
+  own phones as it is translated, with bigger text (A+) and optional Afrikaans underneath. Phones connect over the
+  internet with the room code; they only receive the translation, never the controls.
 
 ## What each tab does
 
@@ -51,12 +59,11 @@ Bible (English or Afrikaans).
 | **Plan** | Prepare the order of service at home (one-tap Divine Service, Sabbath School, Vespers/AY, Communion, Prayer Meeting, Thirteenth Sabbath, Baptism, Child Dedication, Pathfinder/Adventurer Investiture and Week of Prayer templates, with suggested roles such as Elder of the day, or **your own templates**: build a plan once, then ⋯ → Save as template, with or without its hymns and readings, and make it the default for new plans). Type in the Add box — “hymn 73”, “Amazing grace”, “John 3:16-18”, a slide deck, video or banner name — and pick a suggestion, or use **Add media…** (Bible verse ranges and whole chapters, hymns and choruses by number or words, slides, video, banners, web pages; new files can be added right there). Attach or change the media of each part while it keeps its name (“Opening Hymn — Hymn 73”), rename parts, add who leads them, drag parts into order, see progress and what is **On screen**, undo a removal, copy the order as text, export it to Word, **save or share it with its media** (⋯ → Save or share this plan: one `.sdaplan` file with the slides, pictures, banners and videos it uses; Bible passages and hymns go as references; templates can be shared the same way from ⋯ → Templates → Share, and opened on another device with ⋯ → Open a shared plan or template, as a plan or as the default template), and step through it in church with **Next part** (it becomes Next; Present shows it). |
 | **Banners & Music** | Welcome, verse, announcement, offering (with giving QR code), countdown and Sabbath-sunset banners drawn live on the display; a self-running pre-service loop; **background music** that starts with the banners and fades out when something else goes on screen; key verses for the 28 Fundamental Beliefs and sermon topics. See [Banners](docs/banners-and-ai.md#banners) and [Banner music](docs/banners-and-ai.md#banner-music). |
 | **Tools → Stage** | The **second screen for the people on the platform** (confidence monitor): the slide on screen and what comes next, the words in large type, speaker notes, the time, speaker timers, your messages and the order of service — never shown to the congregation. Open it on another monitor, cast it, or let pastors and singers **follow on their own phones and laptops** with a QR code or a short room code. See [Stage screen](docs/stage-and-obs.md#stage-screen)). |
-| **Tools → Listen** | Verse and hymn suggestions from what is said and sung (see above). |
 | **Tools → Stream** | **OBS Studio** for the live stream: lower thirds that show the **Bible verse or hymn words automatically** when they go on screen, names and titles, announcements, a scrolling ticker and the church logo; the slides as a full-screen **Presentation** source; **one-click OBS set-up**, automatic scene switching, and start/stop streaming and recording. See [Live stream (OBS)](docs/stage-and-obs.md#live-stream-obs)). |
-| **Tools → Translate** | Live translation: the Afrikaans sermon as English captions on the screen, through the SDA Sabbath translator on the church PC (see [Live translation](translator/README.md)). |
+| **Tools → Listen & Translate** | Verse and hymn suggestions, live translation of the sermon (Afrikaans → English captions) and the QR slide for reading the translation on phones (see above). |
 | **Settings** | Fonts (Atkinson Hyperlegible, serif), colours, background picture, logo, margins, text sizes, fade/cut, 4:3 projectors, light/dark theme, tabs left or right, low-power mode, backups, Bibles, church details, online AI. |
 
-**Live translation** (Afrikaans sermon → English captions) is in Tools → Translate; the caption line is already
+**Live translation** (Afrikaans sermon → English captions) is in Tools → Listen & Translate; the caption line is already
 built into the display.
 
 ## Quick start

@@ -7,12 +7,14 @@
 //   ?via=cast    a Chromecast / Google TV started from the app (Presentation API)
 //   ?via=lan     the SDA Sabbath companion on the church network (works without internet)
 //   #c=CODE      phones, tablets and laptops anywhere: the room code (or QR code) from the media desk
+//   …&v=tr       the congregation's phones: only the live English translation of the sermon (js/trview.js)
 import { h, clear, pad2, uid, APP_SCOPE, keepScreenOn } from './core/util.js';
 import { lsKey } from './core/storens.js';
 import { icon } from './core/icons.js';
 import { createStage, fitBody, sanitizeSlideHtml, frameOf } from './core/render.js';
 import { createEncoder, createDecoder } from './core/wire.js';
 import { normCode, fmtCode, joinStageRoom, relaysFrom, createFollower, forgetHost, canVerify } from './core/stagenet.js';
+import { createTrView } from './trview.js';
 
 const params = new URLSearchParams(location.search);
 const hashParams = new URLSearchParams(location.hash.replace(/^#/, ''));
@@ -31,6 +33,10 @@ let local = {};
 try { local = JSON.parse(localStorage.getItem(LKEY) || '{}') || {}; } catch (e) { local = {}; }
 if (!local.pins || typeof local.pins !== 'object') local.pins = {};
 const saveLocal = () => { if (PREVIEW) return; try { localStorage.setItem(LKEY, JSON.stringify(local)); } catch (e) { /* private mode */ } };
+// A phone in the congregation following the live translation (the QR code on the "translation on your phone"
+// slide): only the translation is shown, over the same connection as a stage screen.
+const TR = (hashParams.get('v') || params.get('v')) === 'tr';
+const trView = TR ? createTrView({ local, saveLocal }) : null;
 // The stage window and cast screen follow the media desk's choices; phones may make their own.
 const OWN = !PREVIEW && VIA !== 'cast' && VIA !== 'win';
 const LOCAL_KEYS = ['layout', 'textSize', 'showNext', 'showPlan', 'showNotes', 'showLive', 'mirror', 'clock24'];
@@ -425,6 +431,7 @@ function setConn(state, text) {
     lost: 'Connection lost · reconnecting…', offline: 'No internet',
   }[state] || '';
   root.classList.toggle('is-on', state === 'on');
+  if (trView) trView.conn(state, statusTxt.textContent);
   dot.title = statusTxt.textContent; dot.setAttribute('aria-label', statusTxt.textContent);
 }
 setInterval(() => {
@@ -458,7 +465,9 @@ function onMsg(m) {
       setConn('on');
       break;
     }
-    case 'cfg': S.cfg = Object.assign({}, S.cfg, m.cfg || {}); if (m.cfg && m.cfg.aspect) { nowStage.setAspect(m.cfg.aspect); nextStage.setAspect(m.cfg.aspect); } paintLayout(); paintNow(); break;
+    case 'caps': if (trView) trView.all(m); break;
+    case 'cap': if (trView) trView.add(m.l); break;
+    case 'cfg': if (trView && m.cfg) trView.church(m.cfg.church); S.cfg = Object.assign({}, S.cfg, m.cfg || {}); if (m.cfg && m.cfg.aspect) { nowStage.setAspect(m.cfg.aspect); nextStage.setAspect(m.cfg.aspect); } paintLayout(); paintNow(); break;
     case 'style': S.style = m.style || {}; nowStage.applyStyle(S.style); nextStage.applyStyle(S.style); paintNow(); break;
     case 'live': S.live = cleanCue(m.cue); S.index = m.index || 0; S.blank = m.blank || null; S.media = null; paintNow(); break;
     case 'go': S.index = m.index || 0; if (S.blank === 'black') S.blank = null; paintNow(); break;
@@ -513,7 +522,7 @@ function devName() {
 if (!local.did) { local.did = uid(); saveLocal(); }
 function helloMsg(nonce) {
   const pin = local.pins[pinKey()];
-  return { t: 'hello', sid: SID, v: 1, slot: params.get('slot') === '2' ? 2 : 1, kind: kindName(), name: PREVIEW ? 'Preview' : local.name || '', dev: devName(), did: local.did, pin: pin || undefined, nonce, w: innerWidth, h: innerHeight };
+  return { t: 'hello', sid: SID, v: 1, slot: params.get('slot') === '2' ? 2 : 1, kind: kindName(), name: PREVIEW ? 'Preview' : local.name || '', dev: devName(), did: local.did, pin: TR ? undefined : pin || undefined, nonce, w: innerWidth, h: innerHeight, view: TR ? 'tr' : undefined };
 }
 function hello() {
   if (follower) { const id = follower.hostId(); if (id) follower.join(id); return; }

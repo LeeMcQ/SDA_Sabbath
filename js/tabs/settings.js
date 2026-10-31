@@ -199,7 +199,7 @@ export default function create(ctx) {
   });
 
   // ------------------------------------------------------------ AI providers
-  // Live translation moved to Tools → Translate (js/tabs/translate-part.js).
+  // Live translation moved to Tools → Listen & Translate (js/tabs/translate-part.js, listen-translate.js).
 
   section('ai', 'AI', (box) => {
     const A = settings.v.ai || {};

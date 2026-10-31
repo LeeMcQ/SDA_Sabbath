@@ -53,6 +53,7 @@ function connect() {
     let l; try { l = JSON.parse(e.data); } catch (x) { return; }
     captions.state.lines = captions.state.lines.concat([l]).slice(-40);
     if (C().show !== false && l.en) show(l.verse ? l.en + ' (' + l.verse.ref + ')' : l.en);
+    if (C().on && ctx && ctx.stage && ctx.stage.addCaption) ctx.stage.addCaption(l); // phones following the translation
     emit();
     pass('line', l);
   });
@@ -76,7 +77,7 @@ async function call(path, body) {
   return j;
 }
 
-/** Names never to translate: the list in Tools → Translate, plus the church's name and town. */
+/** Names never to translate: the list in Tools → Listen & Translate, plus the church's name and town. */
 export function keepWords() {
   const s = settings.v, out = [];
   String((s.captions && s.captions.keep) || '').split(/[\n,;]+/).forEach((w) => { w = w.trim(); if (w) out.push(w); });
@@ -98,6 +99,9 @@ captions.clear = () => { clearTimeout(clearTimer); if (ctx && ctx.live) ctx.live
 export function initCaptions(appCtx) {
   if (ctx) { connect(); return; }
   ctx = appCtx;
+  const trState = () => { if (ctx.stage && ctx.stage.setTranslation) ctx.stage.setTranslation(!!C().on); };
+  trState();
+  settings.on('change:captions', (path) => { if (path === 'captions.on') trState(); });
   connect();
   settings.on('change:captions', (path) => { if (path === 'captions.on' || path === 'captions.url') { if (wanted()) connect(); else disconnect(); } else if (path === 'captions.keep' && es) sendWords(); });
 }

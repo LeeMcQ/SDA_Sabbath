@@ -36,7 +36,7 @@ Sound desk ─► cut at pauses ─► Afrikaans speech → text ─► Bible qu
 
 ## Install (once, with internet): one double-click
 
-1. In SDA Sabbath: **Tools → Translate → Download for Windows**. Unzip it on the church PC, for example into Documents.
+1. In SDA Sabbath: **Tools → Listen & Translate → Download for Windows**. Unzip it on the church PC, for example into Documents.
 2. Double-click **`start-translator.bat`**. If Windows warns, choose *More info → Run anyway*.
    - The first time, it does everything by itself, in about 15 minutes. **No Python install is needed.**
    - It fetches its own Python, installs the translator and downloads the Afrikaans models.
@@ -60,7 +60,7 @@ All of these are in [`glossary.json`](glossary.json). Open it with Notepad to ad
 | `slang` | Everyday and Kaaps Afrikaans made standard before translating | djy → jy, hie → hier, issie → is nie, laaities → kinders, nou-nou → binnekort, tjommie → vriend, ek's → ek is |
 | `fillers` | Left out: they add nothing in English | mos, nè, nogal |
 
-**Names from SDA Sabbath are added by themselves.** Use *Tools → Translate → Never translate* (one per line: pastor, elders, speakers). The church name and town from *Settings → Church* are added too.
+**Names from SDA Sabbath are added by themselves.** Use *Tools → Listen & Translate → Never translate* (one per line: pastor, elders, speakers). The church name and town from *Settings → Church* are added too.
 
 Kept words and terms are swapped for number markers while translating, because the model copies numbers exactly. If a marker gets lost, the sentence is translated again with the words written inline, so nothing is dropped.
 
