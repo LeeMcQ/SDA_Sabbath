@@ -271,15 +271,19 @@ def main():
                 pg.wait_for_timeout(1500)
                 pg.evaluate("window.selah.listener.ready()"); pg.wait_for_timeout(600)
                 inj = "(a) => import('./js/core/livecaptions.js').then(m => m.captions.inject(a[0], a[1]))"
-                pg.evaluate(inj, ['ref', {'q': 'Jesaja 58:13', 'af': 'Jesaja agt en vyftig vers dertien'}])
-                pg.evaluate(inj, ['hymn', {'n': 462, 'af': 'kom ons sing gesang vier honderd twee en sestig'}])
-                pg.evaluate(inj, ['line', {'af': 'Kom na My toe almal wat vermoeid en belas is', 'en': 'Come to me, all you who are weary and burdened', 'verse': {'ref': 'Matthew 11:28'}}])
-                pg.evaluate(inj, ['line', {'af': 'Kom ons sing nou Amazing Grace', 'en': 'Let us now sing Amazing Grace how sweet the sound'}])
-                pg.wait_for_timeout(2000)
-                refs = pg.evaluate("[...document.querySelectorAll('.ls-card:not(.ls-follow) .ls-ref')].map(e => e.textContent).join(' | ')")
-                assert 'Hymn 108' in refs, 'hymn by name missing: %s' % refs
-                assert 'Matthew 11:28' in refs or 'Matteus 11:28' in refs, 'quoted verse missing: %s' % refs
-                assert 'Hymn 462' in refs, 'hymn by number missing: %s' % refs
+                cards = "[...document.querySelectorAll('.ls-card:not(.ls-follow) .ls-ref')].map(e => e.textContent).join(' | ')"
+                # One at a time: the panel keeps the newest three cards, and each card is made at its own speed.
+                def offered(event, data, want, what):
+                    pg.evaluate(inj, [event, data])
+                    for _ in range(20):
+                        refs = pg.evaluate(cards)
+                        if any(w in refs for w in want): return
+                        pg.wait_for_timeout(200)
+                    raise AssertionError('%s missing: %s' % (what, refs))
+                offered('ref', {'q': 'Jesaja 58:13', 'af': 'Jesaja agt en vyftig vers dertien'}, ['Isaiah 58:13', 'Jesaja 58:13'], 'named reference')
+                offered('line', {'af': 'Kom na My toe almal wat vermoeid en belas is', 'en': 'Come to me, all you who are weary and burdened', 'verse': {'ref': 'Matthew 11:28'}}, ['Matthew 11:28', 'Matteus 11:28'], 'quoted verse')
+                offered('line', {'af': 'Kom ons sing nou Amazing Grace', 'en': 'Let us now sing Amazing Grace how sweet the sound'}, ['Hymn 108'], 'hymn by name')
+                offered('hymn', {'n': 462, 'af': 'kom ons sing gesang vier honderd twee en sestig'}, ['Hymn 462'], 'hymn by number')
                 assert pg.locator('.listen-box').is_visible(), 'the cards are hidden while Listen is off'
                 assert not pg.locator('.toast', has_text='Preacher:').count(), 'the old Set as Next pop-up still shows'
                 pg.locator('.ls-card:not(.ls-follow)', has_text='Hymn 462').locator('.btn.primary').click(); pg.wait_for_timeout(1200)
