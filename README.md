@@ -85,6 +85,7 @@ a local web address. Everything is explained in the guides below.
 | [Stage screen and OBS](docs/stage-and-obs.md) | The Tools tab, stage screens, phones and laptops, live streaming with OBS, Stream Deck buttons |
 | [Live translation](translator/README.md) | Afrikaans sermon → English captions, offline on the church PC: exact Bible verses, Adventist words, verse and hymn suggestions |
 | [Banners and AI](docs/banners-and-ai.md) | Banners, editing on the slide, banner music, the optional online AI |
+| [Offline safety](docs/offline-safety.md) | Readiness badge, updates held on the Sabbath, the emergency USB copy, the Friday check and the offline tests |
 | [Backup and moving devices](docs/backup.md) | Back up to Google Drive or a file, restore on another PC or phone, switching on Google Drive |
 | [Development](docs/development.md) | Weak computers, the code layout, building, testing, deploying |
 | [Cloud setup](supabase/SETUP.md) | Switching on accounts, statistics and suggestions (maintainer) |
