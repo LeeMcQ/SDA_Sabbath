@@ -1,8 +1,9 @@
 // Live translation: English captions from the SDA Sabbath translator on this PC (translator/livetranslate.py).
 // The translator listens to the sound desk, recognises the Afrikaans sermon and sends finished English sentences
 // here; a sentence that quotes the Bible arrives as the English verse itself. Captions go to the caption line on
-// the screen (and stage screens). References and hymn numbers the preacher names are offered to the operator as
-// "Set as Next" suggestions: nothing reaches the screen without the operator.
+// the screen (and stage screens). Verses and hymns the preacher names or quotes are offered to the operator as
+// suggestion cards beside Next / Live (js/listen.js: Put on Next / Present): nothing reaches the screen without
+// the operator.
 import { settings } from './settings.js';
 import { h } from './util.js';
 import { toast } from './ui.js';
@@ -32,8 +33,15 @@ function show(text) {
   if (text) clearTimer = setTimeout(() => ctx.live.caption(''), s * 1000);
 }
 
+/** Live translation → Suggestions: every event goes to the suggestion cards (verses, hymns by number or name). */
+function toCards(type, data) {
+  if (captions.onEvent || C().suggest === false || !C().on || !ctx) return false; // Listen using the translator shows its own
+  if (ctx.listener && ctx.listener.suggest) { ctx.listener.suggest(type, data); return true; }
+  return false;
+}
 function suggest(key, label, q) {
   if (captions.onEvent) return; // Tools → Listen shows these as its own cards
+  if (ctx && ctx.listener && ctx.listener.suggest) return; // shown as cards (toCards)
   if (C().suggest === false || !ctx || !ctx.remoteCommand) return;
   const now = Date.now();
   if (lastSuggest[key] && now - lastSuggest[key] < 60000) return;   // once a minute is enough
@@ -56,9 +64,10 @@ function connect() {
     if (C().on && ctx && ctx.stage && ctx.stage.addCaption) ctx.stage.addCaption(l); // phones following the translation
     emit();
     pass('line', l);
+    toCards('line', l);
   });
-  es.addEventListener('ref', (e) => { try { const r = JSON.parse(e.data); pass('ref', r); suggest('r:' + r.q, r.q, r.q); } catch (x) { /* */ } });
-  es.addEventListener('hymn', (e) => { try { const r = JSON.parse(e.data); pass('hymn', r); suggest('h:' + r.n, 'hymn ' + r.n, 'hymn ' + r.n); } catch (x) { /* */ } });
+  es.addEventListener('ref', (e) => { try { const r = JSON.parse(e.data); pass('ref', r); toCards('ref', r); suggest('r:' + r.q, r.q, r.q); } catch (x) { /* */ } });
+  es.addEventListener('hymn', (e) => { try { const r = JSON.parse(e.data); pass('hymn', r); toCards('hymn', r); suggest('h:' + r.n, 'hymn ' + r.n, 'hymn ' + r.n); } catch (x) { /* */ } });
 }
 
 function pass(type, data) { if (captions.onEvent) { try { captions.onEvent(type, data); } catch (e) { console.warn(e); } } }
@@ -92,6 +101,11 @@ captions.start = (device) => call('/start', { device: device === '' || device ==
 captions.stop = () => call('/stop', {});
 captions.setEnglish = (english) => call('/config', { english });
 captions.reconnect = connect;
+/** For tests: an event as the translator sends it (captions, phones and suggestion cards). */
+captions.inject = (type, data) => {
+  if (type === 'line') { captions.state.lines = captions.state.lines.concat([data]).slice(-40); if (C().on && ctx && ctx.stage && ctx.stage.addCaption) ctx.stage.addCaption(data); emit(); }
+  toCards(type, data);
+};
 /** Tools → Listen: keep the connection to the translator open while it listens (also with Live translation off). */
 captions.listen = (onOff) => { forListen = !!onOff; if (onOff && es) return; if (wanted()) connect(); else disconnect(); };
 captions.clear = () => { clearTimeout(clearTimer); if (ctx && ctx.live) ctx.live.caption(''); };

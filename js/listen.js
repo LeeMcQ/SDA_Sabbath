@@ -28,6 +28,9 @@ export function createListener({ ctx, getTab, present, ui }) {
   let source = '';        // 'offline' (the translator on this PC) or 'browser' while listening
   let cap = null;         // the translator client (js/core/livecaptions.js), loaded when first needed
   let startedTranslator = false, capOff = null;
+  // Live translation → Suggestions: the translator's finds become cards here even while Listen itself is off.
+  const fromLive = () => !!(settings.v.captions && settings.v.captions.on && settings.v.captions.suggest !== false);
+  const active = () => on || testing || fromLive();
   const seen = new Map(); // key -> time offered
   const cards = [];       // { key, el, t }
   let hyApi = null;       // the Hymns tab, once loaded (its hymn list is used to find hymns announced by name)
@@ -51,8 +54,14 @@ export function createListener({ ctx, getTab, present, ui }) {
     clear(head);
     box.classList.toggle('on', on);
     box.hidden = !on && !list.children.length; // switched on and off in Tools → Listen
+    box.classList.toggle('has-cards', !!list.children.length);
     watchers.forEach((fn) => { try { fn(); } catch (e) { /* */ } });
-    if (!on) return;
+    if (!on) {
+      // Cards from Live translation → Suggestions while Listen itself is off.
+      if (list.children.length) head.append(h('span.ls-dot.live-tr', { 'aria-hidden': 'true' }), h('span.ls-state', 'From the live translation'),
+        h('button.btn.sm.ls-stop', { type: 'button', title: 'Dismiss all suggestions', onclick: () => clearAll() }, icon('x'), h('span', 'Clear')));
+      return;
+    }
     head.append(
       h('span.ls-dot', { 'aria-hidden': 'true' }),
       h('span.ls-state', problem || ((cards.length ? 'Listening' : 'Listening for verses and hymns…') + (source === 'offline' ? ' (offline)' : ''))),
@@ -156,11 +165,24 @@ export function createListener({ ctx, getTab, present, ui }) {
   }
   function fromTranslator(type, d) {
     if (!on || source !== 'offline' || !d) return;
+    translatorEvent(type, d);
+  }
+  /** One event from the translator: verses and hymns named or quoted become cards (and the singing is followed). */
+  function translatorEvent(type, d) {
     if (type === 'line') {
       // A sentence that quotes the Bible arrives with the verse itself: offer it, even when no reference was said.
       if (d.verse && d.verse.ref) offerRef(d.verse.ref, d.af || d.en || '');
-      if (d.af) heard(d.af, true);
-      if (d.en) { const found = findRefs(d.en); found.forEach((r) => offer(r, d.en, true)); }
+      if (d.af) heard(d.af, true);   // Afrikaans: "Johannes drie vers sestien", "gesang nommer 100", hymns by name, singing
+      if (d.en) {
+        const found = findRefs(d.en);
+        found.forEach((r) => offer(r, d.en, true));
+        // The English sentence may name a hymn of the (English) hymnal: "let us sing Great Is Thy Faithfulness".
+        if (hyApi && !found.some((r) => r.kind === 'hymn')) {
+          const c = hyApi.catalog();
+          const m = findHymnTitle(d.en, c.list);
+          if (m) offer({ kind: 'hymn', n: m.n, book: c.id }, d.en, true);
+        }
+      }
     } else if (type === 'ref' && d.q) offerRef(d.q, d.af || d.q);
     else if (type === 'hymn' && d.n) offer({ kind: 'hymn', n: +d.n }, d.af || '', true);
   }
@@ -209,7 +231,7 @@ export function createListener({ ctx, getTab, present, ui }) {
 
   function followSinging(text, final) {
     const cue = live.cue;
-    if (!cue || cue.tab !== 'hymns' || !cue.cards || !(on || testing)) return;
+    if (!cue || cue.tab !== 'hymns' || !cue.cards || !active()) return;
     if (music && music.isPlaying() && music.hymnKey === cue.hymnKey) return; // the music already moves the slides
     const recent = (sung + ' ' + text).slice(-400);
     if (final) sung = recent;
@@ -245,7 +267,7 @@ export function createListener({ ctx, getTab, present, ui }) {
     let card = null;
     if (r.kind === 'bible') card = await bibleCard(r, text);
     else card = await hymnCard(r, text);
-    if (!card || !(on || testing)) return;
+    if (!card || !active()) return;
     // A verse replaces the bare chapter offered a moment ago ("John 3" -> "John 3:16").
     if (r.kind === 'bible' && r.v != null) {
       const ch = 'b' + EN[r.book - 1] + ' ' + r.c;
@@ -259,6 +281,7 @@ export function createListener({ ctx, getTab, present, ui }) {
     while (cards.length > MAX_CARDS) drop(cards[cards.length - 1]);
     paintHead();
   }
+  function clearAll() { cards.slice().forEach(drop); clearFollow(); paintHead(); }
   function drop(entry) {
     const i = cards.indexOf(entry);
     if (i >= 0) cards.splice(i, 1);
@@ -320,6 +343,8 @@ export function createListener({ ctx, getTab, present, ui }) {
     get on() { return on; },
     get problem() { return problem; },
     get source() { return source; },
+    /** Live translation → Suggestions: an event from the translator while Listen itself is not using it. */
+    suggest(type, d) { if (!d || (on && source === 'offline')) return; loadHelpers(); translatorEvent(type, d); },
     /** For tests: an event as the offline translator sends it. */
     fromTranslator(type, d) { const was = [on, source]; on = true; source = 'offline'; testing = true; fromTranslator(type, d); [on, source] = was; },
     onChange(fn) { watchers.add(fn); },

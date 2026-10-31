@@ -56,7 +56,7 @@ export default function create(ctx) {
         h('label', 'On the screen'), toggle('Show the English captions', Cv().show !== false, setC('show')),
         h('label', 'Caption stays'), seg([['8', '8 s'], ['12', '12 s'], ['20', '20 s']], String(Cv().clearAfter || 12), (v) => settings.set('captions.clearAfter', +v)),
         h('label', 'Bible quotes'), seg([['web', 'World English Bible'], ['kjv', 'King James']], Cv().english || 'web', (v) => { settings.set('captions.english', v); act((c) => c.setEnglish(v))(); }),
-        h('label', 'Suggestions'), toggle('Offer the verses and hymns the preacher names (Set as Next)', Cv().suggest !== false, setC('suggest')),
+        h('label', 'Suggestions'), toggle('Offer the verses and hymns that are mentioned (cards beside Next / Live: Put on Next or Present)', Cv().suggest !== false, setC('suggest')),
         h('label', 'Never translate'), h('div.col', { style: { gap: '6px', minWidth: 0 } },
           h('textarea.field', { rows: 3, 'aria-label': 'Names never to translate', placeholder: 'One per line: pastor Botha, Broer Fortuin, Riebeek-Kasteel …', style: { width: '100%', maxWidth: '520px' },
             value: Cv().keep || '', onchange: (e) => settings.set('captions.keep', e.target.value) }),

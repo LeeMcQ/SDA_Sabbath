@@ -1448,7 +1448,7 @@ html:not(.lp) .listen-box.on .ls-dot { animation: ls-pulse 1.6s ease-in-out infi
 /* Phones: the monitors are a row of two screens, so suggestions float above the tabs while listening. */
 @media (max-width: 760px) {
   .monitors .listen-box { display: none; }
-  .monitors .listen-box.on { display: flex; position: fixed; z-index: 30; left: 8px; right: 8px;
+  .monitors .listen-box.on, .monitors .listen-box.has-cards { display: flex; position: fixed; z-index: 30; left: 8px; right: 8px;
     bottom: calc(var(--tab-h) + var(--bar-real, 0px) + 8px); max-height: 46vh; overflow: auto;
     padding: 10px; border-radius: 12px; background: var(--sunk); border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(0,0,0,.45); }
   .ls-act .btn { min-height: 42px; }
@@ -1476,3 +1476,5 @@ html:not(.lp) .listen-box.on .ls-dot { animation: ls-pulse 1.6s ease-in-out infi
 .listen-tab .st-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 12px; align-items: start; }
 .listen-tab .st-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 @media (max-width: 1100px) { .listen-tab .st-grid { grid-template-columns: minmax(0, 1fr); } }
+
+.ls-dot.live-tr { background: var(--next); }
