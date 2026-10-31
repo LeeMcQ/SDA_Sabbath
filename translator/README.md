@@ -133,3 +133,12 @@ Compare models with `--asr small` / `--asr turbo`.
 - OPUS-MT af-en: Apache 2.0, by the University of Helsinki.
 - Silero VAD: MIT.
 - The Bibles are public domain.
+
+## If the first-time setup stops
+
+- **"certificate verify failed"**: the setup now checks certificates the way Windows does and, if Python still
+  cannot download, uses Windows' own downloader (curl.exe / PowerShell). Download the latest translator (Tools →
+  Listen & Translate → Download for Windows), unzip it over the old folder (the models already downloaded are
+  kept) and double-click start-translator.bat again.
+- **Still stuck on a school or office network**: that network may block the model download. Run the setup once on
+  another connection (for example a phone hotspot); after that the translator needs no internet.

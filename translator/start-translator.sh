@@ -6,5 +6,5 @@ if ! command -v uv >/dev/null 2>&1 && [ ! -x bin/uv ]; then
 fi
 UV=$(command -v uv || echo bin/uv)
 [ -x .venv/bin/python ] || { "$UV" venv --python 3.12 .venv && "$UV" pip install --python .venv/bin/python -r requirements.txt; } || exit 1
-grep -q setup_done config.json 2>/dev/null || .venv/bin/python livetranslate.py setup || exit 1
+grep -q setup_done config.json 2>/dev/null || { "$UV" pip install --python .venv/bin/python -r requirements.txt && .venv/bin/python livetranslate.py setup; } || exit 1
 exec .venv/bin/python livetranslate.py serve "$@"

@@ -21,6 +21,9 @@ if errorlevel 1 goto fail
 
 findstr /c:"setup_done" config.json >nul 2>&1
 if not errorlevel 1 goto run
+rem Setup not finished yet: bring the installed parts up to date first (an earlier copy may lack a newer part).
+"bin\uv.exe" pip install --python ".venv\Scripts\python.exe" -r requirements.txt
+if errorlevel 1 goto fail
 ".venv\Scripts\python.exe" livetranslate.py setup
 if errorlevel 1 goto fail
 call :shortcuts
@@ -29,7 +32,7 @@ call :shortcuts
 echo.
 echo ============================================================================
 echo  The translator is running. Keep this window open during the service.
-echo  In SDA Sabbath: Settings - Live translation - Start listening.
+echo  In SDA Sabbath: Tools - Listen ^& Translate - Live translation - Start listening.
 echo ============================================================================
 ".venv\Scripts\python.exe" livetranslate.py serve %*
 pause

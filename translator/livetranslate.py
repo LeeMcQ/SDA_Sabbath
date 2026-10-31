@@ -1109,28 +1109,84 @@ def setup(args):
 
 
 # ---------------------------------------------------------------------------------------------- downloads
+def use_system_certificates():
+    """Check https certificates the way Windows (or macOS) does, not with Python's own list.
+    Python's OpenSSL fails with "unable to get local issuer certificate" when a server leaves out an intermediate
+    certificate (Windows fetches it itself) or when the network inspects https with its own certificate (offices,
+    schools, some routers) that Windows trusts but Python does not. truststore makes Python ask the system."""
+    try:
+        import truststore
+        truststore.inject_into_ssl()
+        return True
+    except Exception:
+        return False
+
+
+def download(url, path):
+    """Download url to path. Python first; if its certificate check fails, the system's own downloader
+    (curl.exe on Windows 10/11, which checks certificates like the browser does), then PowerShell."""
+    import urllib.request, subprocess, shutil
+    try:
+        urllib.request.urlretrieve(url, path)
+        return
+    except Exception as e:
+        first = e
+    tries = []
+    curl = shutil.which('curl.exe' if os.name == 'nt' else 'curl')
+    if curl:
+        tries.append([curl, '-fL', '--retry', '3', '--silent', '--show-error', '-o', path, url])
+    if os.name == 'nt':
+        tries.append(['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command',
+                      "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -UseBasicParsing -Uri '%s' -OutFile '%s'" % (url, path)])
+    for cmd in tries:
+        log('Python could not download it (%s); trying %s …' % (first, os.path.basename(cmd[0])))
+        try:
+            subprocess.run(cmd, check=True, timeout=1800)
+            if os.path.getsize(path) > 1000:
+                return
+        except Exception as e:
+            first = e
+    raise RuntimeError('could not download %s (%s)' % (url, first))
+
+
+def model_ready(d):
+    return os.path.isfile(os.path.join(d, 'model.bin')) and os.path.isfile(os.path.join(d, 'source.spm'))
+
+
 def get_models(args):
     os.makedirs(MODELS, exist_ok=True)
+    use_system_certificates()
     from huggingface_hub import snapshot_download
     for size in args.asr:
         dst = os.path.join(MODELS, 'fluister-' + size)
         log('Downloading Fluister %s (Afrikaans Whisper, MIT licence) …' % size)
         snapshot_download('digiphyte/fluister-' + size, local_dir=dst)
     dst = os.path.join(MODELS, 'opus-mt-af-en')
-    if not os.path.isdir(dst):
-        import tempfile, urllib.request, zipfile, shutil, ctranslate2
+    if not model_ready(dst):
+        import tempfile, zipfile, shutil, ctranslate2
+        shutil.rmtree(dst, ignore_errors=True)       # a half-finished earlier attempt
         tmp = tempfile.mkdtemp()
         try:
             log('Downloading OPUS-MT af-en (Apache 2.0) …')
-            z = os.path.join(tmp, 'm.zip'); urllib.request.urlretrieve(OPUS_ZIP, z)
-            zipfile.ZipFile(z).extractall(os.path.join(tmp, 'm'))
-            ctranslate2.converters.OpusMTConverter(os.path.join(tmp, 'm')).convert(dst, quantization='int8')
-            for f in ('source.spm', 'target.spm'):
-                shutil.copy(os.path.join(tmp, 'm', f), dst)
-        except Exception as e:
-            log('Direct OPUS-MT download failed (%s); trying Hugging Face (needs: pip install transformers torch) …' % e)
-            src = snapshot_download('Helsinki-NLP/opus-mt-af-en', local_dir=os.path.join(tmp, 'hf'))
-            ctranslate2.converters.TransformersConverter(src, copy_files=['source.spm', 'target.spm']).convert(dst, quantization='int8')
+            try:
+                z = os.path.join(tmp, 'm.zip')
+                download(OPUS_ZIP, z)
+                zipfile.ZipFile(z).extractall(os.path.join(tmp, 'm'))
+                ctranslate2.converters.OpusMTConverter(os.path.join(tmp, 'm')).convert(dst, quantization='int8')
+                for f in ('source.spm', 'target.spm'):
+                    shutil.copy(os.path.join(tmp, 'm', f), dst)
+            except Exception as e:
+                shutil.rmtree(dst, ignore_errors=True)
+                # The Hugging Face copy needs PyTorch to convert (a large extra download): only when it is there.
+                try:
+                    import torch, transformers  # noqa: F401
+                except ImportError:
+                    raise RuntimeError('The translation model could not be downloaded: %s. Check the internet connection '
+                                       '(a school or office network may block it; try another network, for example a phone hotspot) '
+                                       'and double-click start-translator.bat again.' % e)
+                log('Direct OPUS-MT download failed (%s); converting the Hugging Face copy …' % e)
+                src = snapshot_download('Helsinki-NLP/opus-mt-af-en', local_dir=os.path.join(tmp, 'hf'))
+                ctranslate2.converters.TransformersConverter(src, copy_files=['source.spm', 'target.spm']).convert(dst, quantization='int8')
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
     log('Models ready in', MODELS)
@@ -1174,7 +1230,11 @@ def main(argv=None):
         p, n, _ = quality(a)
         sys.exit(0 if p >= n * 0.8 else 1)
     elif a.cmd == 'setup':
-        setup(a)
+        try:
+            setup(a)
+        except RuntimeError as e:          # a plain explanation instead of a long error listing
+            print('\n' + str(e) + '\n')
+            sys.exit(1)
 
 
 if __name__ == '__main__':

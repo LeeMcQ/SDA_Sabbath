@@ -1,5 +1,5 @@
 {
-"version": "f98f0c93e4c8",
+"version": "9b2675cb9a6a",
 "bytes": 25279997,
 "files": [
 "index.html",
@@ -376,7 +376,7 @@
 "css/stage.css": "5d631edc7db85bc5",
 "css/stagescreen.css": "120efa80055cf368",
 "js/admin-main.js": "e53718c1778a986c",
-"js/app.js": "6136eb16d74da391",
+"js/app.js": "5cb93db6f8fb18c4",
 "js/backupnag.js": "57a2a351e5ffa4c1",
 "js/boot-guard.js": "93fc9bad50db53ff",
 "js/clickerui.js": "ceb58c892b9c95ba",
