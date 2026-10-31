@@ -29,7 +29,7 @@ const lazyWelcome = () => import('./tabs/welcome.js');
 const openFeedback = (c, o) => import('./tabs/account.js').then((m) => m.openFeedback(c, o));
 
 export const VERSION = '1.6.0';
-export const BUILD = '189467d';
+export const BUILD = '91446a1';
 
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', file: 'bible.js', load: () => import('./tabs/bible.js') },
@@ -956,7 +956,11 @@ let healthWarned = false;
 function checkOffline(repair) {
   const c = navigator.serviceWorker && navigator.serviceWorker.controller;
   if (!c) return false;
-  c.postMessage({ t: 'check', repair: !!repair && navigator.onLine });
+  // The chosen Bibles and the hymn music are fetched first when anything is missing (the first visit stores
+  // only the app, the hymnbooks and one Bible before it starts; the rest follows in the background).
+  const B = settings.v.bible || {};
+  const first = [B.primary, B.parallel].filter(Boolean).map((id) => 'data/bibles/' + id + '/').concat(['data/hymns/', 'data/music/']);
+  c.postMessage({ t: 'check', repair: !!repair && navigator.onLine, first });
   return true;
 }
 ctx.checkOffline = checkOffline;
@@ -1059,7 +1063,12 @@ function registerSW() {
     // Reload only when an *update* takes over (not on the very first install).
     let reloading = false;
     const hadController = !!navigator.serviceWorker.controller;
-    navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController && !reloading && !live.cue) { reloading = true; location.reload(); } });
+    let tookOver = hadController;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      // The very first install just took over: fetch the rest (other Bibles, music, …) in the background now.
+      if (!tookOver) { tookOver = true; setTimeout(() => checkOffline(true), 500); return; }
+      if (!reloading && !live.cue) { reloading = true; location.reload(); }
+    });
     navigator.serviceWorker.addEventListener('message', (e) => {
       if (e.data && e.data.t === 'progress') ctx.cacheProgress = e.data;
       if (e.data && e.data.t === 'progress') window.dispatchEvent(new CustomEvent('selah-cache', { detail: e.data }));
@@ -1107,6 +1116,10 @@ const loadObs = () => import('./core/obsctl.js').then((m) => {
 });
 if (settings.v.stream.obsAuto) loadObs(); else setTimeout(loadObs, 3000);
 // Warm the Hymns tab in the background so "Go to 73" is instant.
-setTimeout(() => getTab('hymns').catch(() => {}), 1500);
+// The hymnbooks (about 1.5 MB) load once the page has settled and the browser is idle, so they never slow down
+// the first screen on a phone; opening Hymns or Go to loads them at once anyway.
+const whenIdle = (fn, t) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: t }) : setTimeout(fn, t));
+const preloadHymns = () => setTimeout(() => whenIdle(() => getTab('hymns').catch(() => {}), 3000), 2000);
+if (document.readyState === 'complete') preloadHymns(); else window.addEventListener('load', preloadHymns, { once: true });
 // The order of service also shows on the stage screens: load the Plan tab quietly too.
 setTimeout(() => getTab('plan').catch(() => {}), 2500);
