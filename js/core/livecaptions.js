@@ -11,15 +11,21 @@ const C = () => settings.v.captions || {};
 const base = () => String(C().url || 'http://127.0.0.1:7790').replace(/\/+$/, '');
 const listeners = new Set();
 let es = null, ctx = null, clearTimer = 0, lastSuggest = {};
+// Tools → Listen may use the translator as its ears (offline) while Live translation itself is off: then nothing
+// is captioned, the sentences only go to Listen.
+let forListen = false;
+const wanted = () => !!C().on || forListen;
 
 export const captions = {
   state: { connected: false, status: null, lines: [] },
+  /** Set by Tools → Listen while it uses the translator: (type: 'line' | 'ref' | 'hymn', data) for each event. */
+  onEvent: null,
   on(f) { listeners.add(f); return () => listeners.delete(f); },
 };
 const emit = () => listeners.forEach((f) => { try { f(captions.state); } catch (e) { /* */ } });
 
 function show(text) {
-  if (!ctx || !ctx.live) return;
+  if (!ctx || !ctx.live || !C().on) return; // captions only while Live translation is on
   ctx.live.caption(text);
   clearTimeout(clearTimer);
   const s = +C().clearAfter || 12;
@@ -27,6 +33,7 @@ function show(text) {
 }
 
 function suggest(key, label, q) {
+  if (captions.onEvent) return; // Tools → Listen shows these as its own cards
   if (C().suggest === false || !ctx || !ctx.remoteCommand) return;
   const now = Date.now();
   if (lastSuggest[key] && now - lastSuggest[key] < 60000) return;   // once a minute is enough
@@ -37,7 +44,7 @@ function suggest(key, label, q) {
 
 function connect() {
   disconnect();
-  if (!C().on || typeof EventSource === 'undefined') return;
+  if (!wanted() || typeof EventSource === 'undefined') return;
   es = new EventSource(base() + '/events');
   es.onopen = () => { captions.state.connected = true; emit(); sendWords(); };
   es.onerror = () => { captions.state.connected = false; emit(); };   // EventSource tries again by itself
@@ -47,10 +54,13 @@ function connect() {
     captions.state.lines = captions.state.lines.concat([l]).slice(-40);
     if (C().show !== false && l.en) show(l.verse ? l.en + ' (' + l.verse.ref + ')' : l.en);
     emit();
+    pass('line', l);
   });
-  es.addEventListener('ref', (e) => { try { const r = JSON.parse(e.data); suggest('r:' + r.q, r.q, r.q); } catch (x) { /* */ } });
-  es.addEventListener('hymn', (e) => { try { const r = JSON.parse(e.data); suggest('h:' + r.n, 'hymn ' + r.n, 'hymn ' + r.n); } catch (x) { /* */ } });
+  es.addEventListener('ref', (e) => { try { const r = JSON.parse(e.data); pass('ref', r); suggest('r:' + r.q, r.q, r.q); } catch (x) { /* */ } });
+  es.addEventListener('hymn', (e) => { try { const r = JSON.parse(e.data); pass('hymn', r); suggest('h:' + r.n, 'hymn ' + r.n, 'hymn ' + r.n); } catch (x) { /* */ } });
 }
+
+function pass(type, data) { if (captions.onEvent) { try { captions.onEvent(type, data); } catch (e) { console.warn(e); } } }
 
 function disconnect() {
   if (es) { es.close(); es = null; }
@@ -81,11 +91,13 @@ captions.start = (device) => call('/start', { device: device === '' || device ==
 captions.stop = () => call('/stop', {});
 captions.setEnglish = (english) => call('/config', { english });
 captions.reconnect = connect;
+/** Tools → Listen: keep the connection to the translator open while it listens (also with Live translation off). */
+captions.listen = (onOff) => { forListen = !!onOff; if (onOff && es) return; if (wanted()) connect(); else disconnect(); };
 captions.clear = () => { clearTimeout(clearTimer); if (ctx && ctx.live) ctx.live.caption(''); };
 
 export function initCaptions(appCtx) {
   if (ctx) { connect(); return; }
   ctx = appCtx;
   connect();
-  settings.on('change:captions', (path) => { if (path === 'captions.on' || path === 'captions.url') connect(); else if (path === 'captions.keep' && es) sendWords(); });
+  settings.on('change:captions', (path) => { if (path === 'captions.on' || path === 'captions.url') { if (wanted()) connect(); else disconnect(); } else if (path === 'captions.keep' && es) sendWords(); });
 }

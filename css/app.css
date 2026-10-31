@@ -1466,3 +1466,5 @@ html:not(.lp) .listen-box.on .ls-dot { animation: ls-pulse 1.6s ease-in-out infi
 /* Tools → Translate (moved from Settings): the settings form in one card. */
 .tr-scroll { padding: 12px; }
 .tr-card { max-width: 980px; }
+.ls-src { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.ls-src-l { font-weight: 700; }

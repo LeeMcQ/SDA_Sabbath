@@ -230,6 +230,17 @@ def main():
                 assert not errs, '; '.join(errs[:3])
             t_hymn_listen()
 
+            @check('listening through the offline translator (quoted verse, reference, hymn)')
+            def t_offline_listen():
+                pg.evaluate("window.selah.listener.fromTranslator('line', { af: 'Die Here is my herder, niks sal my ontbreek nie', en: 'The Lord is my shepherd, I shall lack nothing', verse: { ref: 'Psalms 23:1', text: '' } })")
+                pg.evaluate("window.selah.listener.fromTranslator('ref', { q: 'Romeine 8:28', af: 'Romeine agt vers agt en twintig' })")
+                pg.evaluate("window.selah.listener.fromTranslator('hymn', { n: 73, af: 'kom ons sing gesang drie en sewentig' })")
+                pg.wait_for_timeout(1500)
+                refs = pg.evaluate("[...document.querySelectorAll('.ls-card:not(.ls-follow) .ls-ref')].map(e => e.textContent).join(' | ')")
+                assert 'Psalm' in refs and '23:1' in refs and 'Romans 8:28' in refs and 'Hymn 73' in refs, 'cards: %s' % refs
+                assert not errs, '; '.join(errs[:3])
+            t_offline_listen()
+
             @check('a shared plan file opens')
             def t_plan():
                 data = list(open(os.path.join(HERE, 'fixtures', 'sample.sdaplan'), 'rb').read())

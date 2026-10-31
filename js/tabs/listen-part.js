@@ -2,6 +2,7 @@
 // The suggestions themselves appear beside Next / Live (on phones above the tabs), where the operator looks.
 import { h, clear } from '../core/util.js';
 import { icon } from '../core/icons.js';
+import { seg } from '../core/ui.js';
 
 export default function create(ctx) {
   const L = ctx.listener;
@@ -11,23 +12,24 @@ export default function create(ctx) {
   const toggleBtn = h('button.btn.primary.ls-toggle', { type: 'button', onclick: () => L && L.toggle() });
   function paint() {
     clear(status); clear(toggleBtn);
-    if (!L || !L.supported) {
-      status.append(h('span.ls-off-dot'), h('b', 'Not available in this browser'));
-      toggleBtn.disabled = true;
-      toggleBtn.append(icon('mic'), h('span', 'Start listening'));
-      return;
-    }
-    status.append(h('span' + (L.on ? '.ls-dot' : '.ls-off-dot')), h('b', L.on ? 'Listening' : 'Off'),
+    if (!L) return;
+    const by = L.source === 'offline' ? ' · offline translator' : L.source === 'browser' ? ' · browser (online)' : '';
+    status.append(h('span' + (L.on ? '.ls-dot' : '.ls-off-dot')), h('b', L.on ? 'Listening' + by : 'Off'),
       h('span.note', L.on ? (L.problem || 'Suggestions appear under Black / Logo / Clear (on phones, above the tabs).') : 'Nothing is heard while it is off.'));
     toggleBtn.classList.toggle('primary', !L.on);
     toggleBtn.append(icon(L.on ? 'stop' : 'mic'), h('span', L.on ? 'Stop listening' : 'Start listening'));
   }
 
+  const S = ctx.settings;
+  const hearWith = seg([['auto', 'Automatic'], ['offline', 'Offline translator'], ['browser', 'Browser (online)']], S.v.app.listenSource || 'auto',
+    (v) => { S.set('app.listenSource', v); if (L && L.on) { L.stop(); L.start(); } });
   const main = card('Listen for verses & hymns',
     h('p.note', 'Listens through the microphone. When a Bible verse or a hymn is mentioned, it is offered as a card with Put on Next and Present. While a hymn is on the screen it follows the singing and offers the stanza being sung. Nothing goes on the screen by itself.'),
+    h('div.ls-src', h('span.ls-src-l', 'Hear with'), hearWith),
+    h('p.note', 'Offline translator: the SDA Sabbath translator on this PC (Tools → Translate) listens to the sound desk without internet, for Afrikaans sermons. It also recognises Bible verses the preacher quotes without naming them. Live translation does not need to be switched on. ' +
+      'Browser: Chrome or Edge with the internet and the microphone, in English (or Afrikaans when your main Bible is Afrikaans). Automatic uses the translator when it is running on this PC, otherwise the browser.'),
     status,
-    h('div.row', toggleBtn),
-    h('p.note', 'Needs Chrome or Edge, the internet (the browser’s own speech service turns speech into text) and permission to use the microphone. Language: English, or Afrikaans when your main Bible is Afrikaans (Settings → Bible).'));
+    h('div.row', toggleBtn));
 
   const ex = (said, gets) => h('li', h('span.ls-said', '“' + said + '”'), h('span.note', ' → ' + gets));
   const examples = card('What it listens for',
@@ -38,7 +40,8 @@ export default function create(ctx) {
       ex('let us sing hymn number one hundred', 'Hymn 100'),
       ex('please turn to number 73 in your hymnal', 'Hymn 73'),
       ex('let us stand and sing Great Is Thy Faithfulness', 'Hymn 100, by its name'),
-      ex('(the congregation sings the third stanza)', 'Being sung now: Verse 3')));
+      ex('(the congregation sings the third stanza)', 'Being sung now: Verse 3'),
+      ex('Want so lief het God die wêreld gehad… (quoted, with the offline translator)', 'John 3:16')));
 
   const el = h('section.listen-tab',
     h('div.toolbar', h('h2', 'Listen'), h('span.note.hide-sm', 'Verse and hymn suggestions while the service runs'), h('div.grow')),

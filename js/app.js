@@ -27,7 +27,7 @@ const lazyWelcome = () => import('./tabs/welcome.js');
 const openFeedback = (c, o) => import('./tabs/account.js').then((m) => m.openFeedback(c, o));
 
 export const VERSION = '1.6.0';
-export const BUILD = '4dbd6fc';
+export const BUILD = '950e935';
 
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', file: 'bible.js', load: () => import('./tabs/bible.js') },
