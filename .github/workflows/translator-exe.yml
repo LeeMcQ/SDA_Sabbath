@@ -38,7 +38,8 @@ jobs:
         run: |
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress | Out-Null }
-          $ver = (& python -c "import re;print(re.search(r\"VERSION = '([^']+)'\", open('translator/livetranslate.py',encoding='utf-8').read()).group(1))")
+          $ver = ((& "translator/dist/SDA Sabbath Translator/SDA Sabbath Translator.exe" version) -split ' ')[-1]
+          Write-Host "Version $ver"
           & $iscc "/DAppVersion=$ver" translator/installer.iss
           if ($LASTEXITCODE) { exit 1 }
           Get-Item translator/dist/SDA-Sabbath-Translator-Setup.exe | Select-Object Name, Length
