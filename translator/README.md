@@ -34,20 +34,40 @@ Sound desk ─► cut at pauses ─► Afrikaans speech → text ─► Bible qu
 - **Junk is filtered out.** Organ music and silence are cut out before recognition, and Whisper's known phantom lines ("Teksting deur…") are dropped.
 - **It speeds up when it falls behind.** If more than two pieces are waiting, it switches to a lighter search until it catches up, then returns to full accuracy.
 
-## Install (once, with internet): one double-click
+## Install (once, with internet)
 
-1. In SDA Sabbath: **Tools → Listen & Translate → Download for Windows**. Unzip it on the church PC, for example into Documents.
-2. Double-click **`start-translator.bat`**. If Windows warns, choose *More info → Run anyway*.
-   - The first time, it does everything by itself, in about 15 minutes. **No Python install is needed.**
-   - It fetches its own Python, installs the translator and downloads the Afrikaans models.
-   - It **measures this PC** and chooses the most accurate model the PC can run live.
-   - It runs the **quality test** and shows the score.
-   - It finds the sound-desk input.
-   - It puts a **desktop shortcut** on the PC, and can start by itself with Windows.
-3. Back in SDA Sabbath, switch **Live translation** on and press **Start listening**.
-   - The browser may ask to allow access to devices on the local network. Allow it.
+**Easiest: the installer.** In SDA Sabbath, open **Tools → Listen & Translate → Download the installer (Windows)**, or get
+[`SDA-Sabbath-Translator-Setup.exe`](https://github.com/LeeMcQ/SDA_Sabbath/releases/download/translator/SDA-Sabbath-Translator-Setup.exe).
+- Run it. No administrator rights are needed, and Python is included. If Windows warns, choose *More info → Run anyway*.
+- It adds a desktop shortcut, a Start-menu entry ("Check each part", "Run the setup again") and optionally starts with Windows.
+- The first start sets itself up, **step by step**, with internet, in about 15 minutes. Every step shows ✔ (works), ! (works, with advice) or ✘ (needs attention):
 
-After that, it works without internet: just use the shortcut. Take the sound from the sound desk (aux or USB), not a microphone in the room. This matters more than anything else.
+| Step | What it checks |
+|---|---|
+| 1 Program parts | Everything is installed; whether there is a graphics card |
+| 2 Bibles and word list | Afrikaans and English Bibles for exact verse quotes; the never-translate, Adventist and slang lists |
+| 3 Translation model | Downloads it, then translates three test sentences: Adventist words, a name, slang |
+| 4 PC speed test | Measures this PC and lists every speech model, how long it takes per minute of speech, and **★ the recommended one**: the most accurate one that keeps up live. **Press Enter for it, or type the number of another.** |
+| 5 Speech model | Downloads the chosen model and measures it |
+| 6 Speech recognition | Recognises a short Afrikaans recording and counts the words it got right |
+| 7 Translation quality | 50 test sentences (see below) |
+| 8 Sound input | Finds the sound-desk input and listens for 3 seconds: play something from the desk |
+
+**Or the zip:** *Zip instead* on the same page. Unzip it and double-click `start-translator.bat`. It fetches its own Python and runs the same setup.
+
+Afterwards it works without internet: just use the shortcut. Take the sound from the sound desk (aux or USB), not a microphone in the room.
+
+## In SDA Sabbath
+
+**Tools → Listen & Translate → Live translation** is one bar:
+- on/off, the status, a **sound meter** and **Start listening**;
+- **Sound input** and **Speech model**: the recommended one is marked ★. A different one downloads and switches in the background;
+- the sentences: the Afrikaans that was heard, and the English shown on the screen;
+- **Check each part** runs all the checks again, one by one, including the speed test with the list of models to choose from, and a test caption on the screen;
+- **Settings** has the rest: captions on or off, how long a caption stays, the Bible for quotes, suggestions, never-translate names, the translator address and the downloads;
+- every explanation sits behind an **(i)**: point at it (or tap it) to read it.
+
+From the command line: `"SDA Sabbath Translator.exe" check` (or `python livetranslate.py check`) runs the checks and returns an error code if one fails.
 
 ## Words never translated, and South African Afrikaans
 

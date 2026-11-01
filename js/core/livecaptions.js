@@ -15,10 +15,12 @@ let es = null, ctx = null, clearTimer = 0, lastSuggest = {};
 // Tools → Listen may use the translator as its ears (offline) while Live translation itself is off: then nothing
 // is captioned, the sentences only go to Listen.
 let forListen = false;
-const wanted = () => !!C().on || forListen;
+// The Listen & Translate page keeps the connection open while it is visible (sound meter, model downloads).
+let watching = false;
+const wanted = () => !!C().on || forListen || watching;
 
 export const captions = {
-  state: { connected: false, status: null, lines: [] },
+  state: { connected: false, status: null, lines: [], level: null, busy: '', modelEvent: null },
   /** Set by Tools → Listen while it uses the translator: (type: 'line' | 'ref' | 'hymn', data) for each event. */
   onEvent: null,
   on(f) { listeners.add(f); return () => listeners.delete(f); },
@@ -42,7 +44,7 @@ function toCards(type, data) {
 function suggest(key, label, q) {
   if (captions.onEvent) return; // Tools → Listen shows these as its own cards
   if (ctx && ctx.listener && ctx.listener.suggest) return; // shown as cards (toCards)
-  if (C().suggest === false || !ctx || !ctx.remoteCommand) return;
+  if (C().suggest === false || !C().on || !ctx || !ctx.remoteCommand) return;
   const now = Date.now();
   if (lastSuggest[key] && now - lastSuggest[key] < 60000) return;   // once a minute is enough
   lastSuggest[key] = now;
@@ -66,6 +68,8 @@ function connect() {
     pass('line', l);
     toCards('line', l);
   });
+  es.addEventListener('level', (e) => { try { captions.state.level = JSON.parse(e.data).db; } catch (x) { /* */ } emit(); });
+  es.addEventListener('model', (e) => { try { const m = JSON.parse(e.data); captions.state.busy = m.busy || ''; captions.state.modelEvent = m; } catch (x) { /* */ } emit(); });
   es.addEventListener('ref', (e) => { try { const r = JSON.parse(e.data); pass('ref', r); toCards('ref', r); suggest('r:' + r.q, r.q, r.q); } catch (x) { /* */ } });
   es.addEventListener('hymn', (e) => { try { const r = JSON.parse(e.data); pass('hymn', r); toCards('hymn', r); suggest('h:' + r.n, 'hymn ' + r.n, 'hymn ' + r.n); } catch (x) { /* */ } });
 }
@@ -97,6 +101,17 @@ export function keepWords() {
 function sendWords() { call('/config', { keep: keepWords(), english: C().english || 'web' }).catch(() => {}); }
 captions.sendWords = sendWords;
 captions.status = () => call('/status');
+/** Questions that are not the status: the speech models, the step-by-step checks. */
+async function ask(path, body) {
+  const r = await fetch(base() + path, { method: body ? 'POST' : 'GET', headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.ok === false && j.error) throw new Error(j.error || ('The translator answered ' + r.status));
+  return j;
+}
+captions.models = () => ask('/models');
+captions.setModel = (asr) => ask('/model', { asr });
+captions.check = (step, device) => ask('/check', { step, device: device === '' || device == null ? null : +device });
+captions.watch = (onOff) => { watching = !!onOff; if (onOff && es) return; if (wanted()) connect(); else disconnect(); };
 captions.start = (device) => call('/start', { device: device === '' || device == null ? null : +device });
 captions.stop = () => call('/stop', {});
 captions.setEnglish = (english) => call('/config', { english });

@@ -18,8 +18,17 @@ translated, so the words on the screen do not change after they appear.
 import argparse, json, os, queue, re, sys, threading, time, unicodedata
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
-VERSION = '1.0.0'
-HERE = os.path.dirname(os.path.abspath(__file__))
+VERSION = '1.1.0'
+# Nothing is sent anywhere: switch off the usage reports some parts make by default (Hugging Face, ONNX Runtime).
+for _k, _v in (('HF_HUB_DISABLE_TELEMETRY', '1'), ('DO_NOT_TRACK', '1'), ('HF_HUB_DISABLE_IMPLICIT_TOKEN', '1'), ('ORT_DISABLE_TELEMETRY', '1')):
+    os.environ.setdefault(_k, _v)
+try:
+    import onnxruntime as _ort
+    _ort.disable_telemetry_events()
+except Exception:
+    pass
+# In the installed program (SDA Sabbath Translator.exe) its files sit next to the .exe.
+HERE = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, 'frozen', False) else __file__))
 MODELS = os.path.join(HERE, 'models')
 # The Bibles: its own copy in the download (translator/bibles), else SDA Sabbath's data folder next to it.
 BIBLES = os.path.join(HERE, 'bibles') if os.path.isdir(os.path.join(HERE, 'bibles', 'afr53')) else os.path.normpath(os.path.join(HERE, '..', 'data', 'bibles'))
@@ -625,9 +634,40 @@ class Pipeline:
 
 
 # ---------------------------------------------------------------------------------------------- microphone
+class Resampler:
+    """Any input rate -> 16 kHz: low-pass (windowed sinc) and interpolate, with the filter state carried between blocks.
+    Plenty for speech, and no scipy (a smaller installer)."""
+
+    def __init__(self, rate):
+        import numpy as np
+        self.np, self.rate, self.pos = np, rate, 0.0
+        n = 63
+        cut = 0.45 * SR / rate if rate > SR else 0.5
+        t = np.arange(n) - (n - 1) / 2
+        h = np.sinc(2 * cut * t) * np.hamming(n)
+        self.h = (h / h.sum()).astype(np.float32)
+        self.tail = np.zeros(n - 1, dtype=np.float32)
+        self.last = np.zeros(1, dtype=np.float32)
+
+    def __call__(self, x):
+        np = self.np
+        if self.rate == SR:
+            return x.astype(np.float32)
+        buf = np.concatenate([self.tail, x.astype(np.float32)])
+        y = np.convolve(buf, self.h, mode='valid')          # len(x) samples, filtered
+        self.tail = buf[-(len(self.h) - 1):]
+        y = np.concatenate([self.last, y])                   # one sample of overlap keeps the interpolation joined
+        step = self.rate / SR
+        idx = np.arange(self.pos, len(y) - 1, step)
+        out = np.interp(idx, np.arange(len(y)), y).astype(np.float32)
+        self.pos = (idx[-1] + step) - (len(y) - 1) if len(idx) else self.pos - (len(y) - 1)
+        self.last = y[-1:]
+        return out
+
+
 class Mic:
     def __init__(self, device, on_audio):
-        import numpy as np, sounddevice as sd
+        import sounddevice as sd
         info = sd.query_devices(device, 'input')
         rate = int(info['default_samplerate'])
         try:
@@ -635,13 +675,7 @@ class Mic:
         except Exception:
             pass
         self.rate, self.name = rate, info['name']
-        if rate != SR:
-            from scipy.signal import resample_poly
-            from math import gcd
-            g = gcd(SR, rate); up, down = SR // g, rate // g
-            conv = lambda x: resample_poly(x, up, down).astype(np.float32)
-        else:
-            conv = lambda x: x
+        conv = Resampler(rate)
         def cb(indata, frames, t, status):
             on_audio(conv(indata[:, 0].copy()))
         self.stream = sd.InputStream(device=device, channels=1, samplerate=rate, dtype='float32', blocksize=rate // 10, callback=cb)
@@ -692,6 +726,7 @@ class Hub:
         self.mic = self.pipe = self.cutter = None
         self.device = args.device if args.device is not None else None
         self.error = ''
+        self.peak_db, self.busy, self._lvl = -120.0, '', [0.0, 0.0]
         if engines:
             self.asr, self.mt, self.bible, self.gloss = engines
         else:
@@ -726,6 +761,12 @@ class Hub:
         def on_audio(x):
             for p in self.cutter.feed(x):
                 self.pipe.push(p)
+            # sound level for the meter in SDA Sabbath: loudest moment of each half second
+            self._lvl[0] = max(self._lvl[0], float(abs(x).max()) if len(x) else 0.0); self._lvl[1] += len(x)
+            if self._lvl[1] >= SR // 2:
+                pk = self._lvl[0]; self._lvl = [0.0, 0.0]
+                self.peak_db = -120.0 if pk <= 1e-6 else round(20 * __import__('math').log10(pk), 1)
+                self.emit('level', {'db': self.peak_db})
         try:
             self.mic = Mic(self.device, on_audio)
             self.error = ''
@@ -745,6 +786,41 @@ class Hub:
         self.pipe = None
         self.emit('status', {'running': False})
 
+    def switch_model(self, size):
+        """Download (if needed) and load another speech model, in the background; progress as 'model' events."""
+        if size not in MODEL_INFO:
+            raise ValueError('unknown model ' + str(size))
+        if self.busy:
+            raise RuntimeError('busy: ' + self.busy)
+        if DEMO:
+            def fake():
+                for msg in ('Downloading the %s model (demo) …' % size, 'Loading the %s model …' % size):
+                    self.busy = msg; self.emit('model', {'busy': msg}); time.sleep(0.8)
+                self.busy = ''; self.demo_model = size
+                self.emit('model', {'busy': '', 'done': size, 'models': model_list()}); self.emit('status', self.status())
+            threading.Thread(target=fake, daemon=True).start()
+            return
+        def run():
+            try:
+                if not asr_ready(size):
+                    self.busy = 'Downloading the %s model (about %d MB) …' % (size, MODEL_INFO[size][0]); self.emit('model', {'busy': self.busy})
+                    download_asr(size)
+                self.busy = 'Loading the %s model …' % size; self.emit('model', {'busy': self.busy})
+                asr = Recogniser(os.path.join(MODELS, 'fluister-' + size), beam=self.args.beam)
+                self.busy = 'Measuring the speed of the %s model …' % size; self.emit('model', {'busy': self.busy})
+                measure(size, asr)
+                self.asr = asr
+                if self.pipe:
+                    self.pipe.asr = asr
+                save_config(asr=size)
+                self.busy = ''
+                self.emit('model', {'busy': '', 'done': size, 'models': model_list()})
+                self.emit('status', self.status())
+            except Exception as e:
+                self.busy = ''
+                self.emit('model', {'busy': '', 'error': '%s: %s' % (type(e).__name__, e)})
+        threading.Thread(target=run, daemon=True).start()
+
     def status(self):
         st = self.pipe.stats if self.pipe else {}
         rtf = round(st['asr_s'] / st['audio_s'], 2) if st and st.get('audio_s') else None
@@ -756,7 +832,8 @@ class Hub:
                 'device': self.mic.name if self.mic else None, 'devices': devs, 'error': self.error,
                 'asr': os.path.basename(getattr(self.asr, 'path', 'demo')), 'mt': os.path.basename(getattr(self.mt, 'path', 'demo')),
                 'hw': getattr(self.asr, 'device', 'cpu'), 'english': self.bible.en_id, 'rtf': rtf, 'keep': len(self.gloss.keep),
-                'behind': self.pipe.audio_q.qsize() if self.pipe else 0}
+                'behind': self.pipe.audio_q.qsize() if self.pipe else 0, 'busy': self.busy, 'level': self.peak_db if self.mic else None,
+                'model': getattr(self, 'demo_model', None) or os.path.basename(getattr(self.asr, 'path', '')).replace('fluister-', '')}
 
 
 def make_handler(hub):
@@ -792,6 +869,10 @@ def make_handler(hub):
                 return self._json(200, hub.status())
             if self.path.startswith('/recent'):
                 return self._json(200, hub.recent)
+            if self.path.startswith('/models'):
+                return self._json(200, model_list())
+            if self.path.startswith('/steps'):
+                return self._json(200, [{'id': i, 'title': t} for i, t in STEPS])
             if self.path.startswith('/events'):
                 q = queue.Queue()
                 with hub.lock:
@@ -830,6 +911,12 @@ def make_handler(hub):
                     hub.start(body.get('device'))
                 elif self.path.startswith('/stop'):
                     hub.stop()
+                elif self.path.startswith('/model'):
+                    hub.switch_model(body.get('asr'))
+                    return self._json(200, {'ok': True, 'busy': True})
+                elif self.path.startswith('/check'):
+                    dev = body.get('device')
+                    return self._json(200, dict(check(body.get('step'), hub, None if dev in (None, '') else int(dev)), step=body.get('step')))
                 elif self.path.startswith('/config'):
                     if body.get('english') in ('web', 'kjv'):
                         hub.bible.set_english(body['english'])
@@ -881,6 +968,8 @@ class DemoMT:
 
 def demo(args):
     import numpy as np
+    global DEMO
+    DEMO = True
     hub = Hub(args, (DemoASR(), DemoMT(), Bible(args.english), Glossary()))
     class FakeMic:
         name = 'demo'
@@ -891,6 +980,7 @@ def demo(args):
                     time.sleep(args.every)
                     if self.on and hub.pipe:
                         hub.pipe.push(np.zeros(SR, dtype=np.float32))
+                        hub.peak_db = -18.0; hub.emit('level', {'db': -18.0})
             threading.Thread(target=run, daemon=True).start()
         def close(self):
             self.on = False
@@ -920,10 +1010,8 @@ def load_audio(path):
     x, rate = sf.read(path, dtype='float32', always_2d=True)
     x = x.mean(axis=1)
     if rate != SR:
-        from scipy.signal import resample_poly
-        from math import gcd
-        g = gcd(SR, rate); x = resample_poly(x, SR // g, rate // g).astype(np.float32)
-    return x
+        x = Resampler(rate)(x)
+    return x.astype(np.float32)
 
 
 def bench(args):
@@ -999,7 +1087,7 @@ class EchoMT:
         return list(sents)
 
 
-def quality(args, quiet=False):
+def quality(args, quiet=False, engines=None):
     rows = []
     with open(os.path.join(QUALITY, 'adventist-af-en.tsv'), encoding='utf-8') as f:
         next(f)
@@ -1008,8 +1096,11 @@ def quality(args, quiet=False):
             if len(c) >= 3:
                 rows.append({'cat': c[0], 'af': c[1], 'ref': c[2], 'must': [x for x in (c[3] if len(c) > 3 else '').split('|') if x],
                              'not': [x for x in (c[4] if len(c) > 4 else '').split('|') if x]})
-    gloss, bible = Glossary(), Bible(getattr(args, 'english', 'web'))
-    mt = EchoMT() if args.dry else Translator(find_mt(args.mt))
+    if engines:
+        mt, gloss, bible = engines
+    else:
+        gloss, bible = Glossary(), Bible(getattr(args, 'english', 'web'))
+        mt = EchoMT() if args.dry else Translator(find_mt(args.mt))
     tt = TextTranslator(mt, gloss, bible)
     t0 = time.time()
     res = []
@@ -1061,51 +1152,256 @@ def quality(args, quiet=False):
     return passed, len(rows), summary
 
 
-def speed(asr_path):
-    """Recognition speed on this PC (the short recording in quality/), × real time: under 0.8 keeps up live."""
+# ---------------------------------------------------------------------------------------------- models and checks
+# Fluister sizes: download (MB, 8-bit), accuracy rank, recognition time compared with small on a processor, words.
+MODEL_INFO = {
+    'tiny':     (40,   1, 0.3, 'Fastest, least accurate. Only for very old PCs.'),
+    'base':     (75,   2, 0.5, 'Very fast. For old or slow PCs.'),
+    'small':    (250,  3, 1.0, 'Good accuracy. Runs live on most PCs.'),
+    'medium':   (780,  4, 3.0, 'Better accuracy. Needs a fast PC.'),
+    'turbo':    (820,  5, 3.3, 'Very accurate. A fast PC or any graphics card.'),
+    'large-v3': (1600, 6, 6.0, 'Most accurate. Needs an NVIDIA graphics card.'),
+}
+ORDER = ['tiny', 'base', 'small', 'medium', 'turbo', 'large-v3']
+LIVE_LIMIT = 0.5          # recognition must take at most half the time of the speech, to keep up with room to spare
+SAMPLE_TEXT = ('Broers en susters, welkom in die huis van die Here op hierdie Sabbat. Ons lees vanoggend uit Johannes hoofstuk drie. '
+               'Want so lief het God die wêreld gehad, dat Hy sy eniggebore Seun gegee het. Laat ons ons koppe buig vir gebed.')
+
+
+def asr_ready(size):
+    return os.path.isfile(os.path.join(MODELS, 'fluister-' + size, 'model.bin'))
+
+
+def speed(asr_path, asr=None):
+    """Recognition speed on this PC (the short recording in quality/), × real time: under 0.5 keeps up live."""
     audio = load_audio(os.path.join(QUALITY, 'sample-af.wav'))
-    asr = Recogniser(asr_path)
+    asr = asr or Recogniser(asr_path)
     asr(audio[:SR], '')
     t0 = time.time()
-    asr(audio, Glossary().prompt)
-    return (time.time() - t0) / (len(audio) / SR), asr.device
+    text = asr(audio, Glossary().prompt)
+    return (time.time() - t0) / (len(audio) / SR), asr.device, text
+
+
+def model_list():
+    """Each speech model: downloaded?, measured or estimated speed, and which one is recommended for this PC."""
+    c = config()
+    speeds, hw = c.get('speeds', {}), c.get('hw', 'cpu')
+    if DEMO:
+        speeds = {'small': 0.14}
+    ref = None
+    for size in ORDER:                                    # estimate from any measured model
+        if size in speeds:
+            ref = speeds[size] / MODEL_INFO[size][2]; break
+    out, rec = [], None
+    for size in ORDER:
+        mb, acc, rel, words = MODEL_INFO[size]
+        est = speeds.get(size, ref * rel if ref is not None else None)
+        if est is not None and est <= LIVE_LIMIT:
+            rec = size                                    # the most accurate one that keeps up
+        out.append({'id': size, 'mb': mb, 'accuracy': acc, 'words': words, 'downloaded': asr_ready(size),
+                    'speed': round(est, 2) if est is not None else None, 'measured': size in speeds,
+                    'live': est is not None and est <= LIVE_LIMIT})
+    if rec is None and ref is not None:
+        rec = 'base' if (speeds.get('small') or ref) > 1.2 else 'small'
+    for m in out:
+        m['recommended'] = m['id'] == rec
+    return {'models': out, 'current': c.get('asr'), 'recommended': rec, 'hw': hw, 'limit': LIVE_LIMIT}
+
+
+def download_asr(size):
+    use_system_certificates()
+    from huggingface_hub import snapshot_download
+    dst = os.path.join(MODELS, 'fluister-' + size)
+    log('Downloading Fluister %s (Afrikaans Whisper, MIT licence, about %d MB) …' % (size, MODEL_INFO[size][0]))
+    snapshot_download('digiphyte/fluister-' + size, local_dir=dst)
+    return dst
+
+
+def measure(size, asr=None):
+    rtf, hw, text = speed(os.path.join(MODELS, 'fluister-' + size), asr)
+    c = config(); sp = c.get('speeds', {}); sp[size] = round(rtf, 3)
+    save_config(speeds=sp, hw=hw)
+    return rtf, hw, text
+
+
+def level_db(x):
+    import numpy as np
+    peak = float(np.max(np.abs(x))) if len(x) else 0.0
+    return -120.0 if peak <= 1e-6 else 20 * np.log10(peak)
+
+
+def level_words(db):
+    if db < -50: return False, 'No sound. Check the cable from the sound desk and that this input is the right one.'
+    if db < -35: return None, 'Very quiet. Turn up the sound desk\'s output (aux or USB send) to this PC.'
+    if db > -1: return None, 'Too loud: the sound is clipping. Turn the sound desk\'s output down a little.'
+    return True, 'Good level.'
+
+
+def listen_level(device, secs=3.0):
+    """Open the sound input for a few seconds and report the loudest moment (dB below full scale)."""
+    import numpy as np
+    got = []
+    m = Mic(device, lambda x: got.append(x))
+    try:
+        time.sleep(secs)
+    finally:
+        m.close()
+    x = np.concatenate(got) if got else np.zeros(0, dtype=np.float32)
+    return level_db(x), m.name
+
+
+CHECK_MT = [('Ons aanbid God op die Sabbat.', ['Sabbath']), ('Broer Fortuin doen vandag die Skriflesing.', ['Fortuin', 'Scripture reading']),
+            ('Die laaities moet stil sit in die kerk.', ['children', 'church'])]
+STEPS = [('parts', 'Program parts'), ('words', 'Bibles and word list'), ('mt', 'Translation model'), ('speed', 'PC speed and speech model'),
+         ('speech', 'Speech recognition'), ('sound', 'Sound input'), ('quality', 'Translation quality (50 sentences)')]
+
+
+DEMO = False      # `demo`: made-up answers, to try SDA Sabbath's screens without models
+
+
+def demo_check(step):
+    time.sleep(0.4)
+    fake = {'parts': (True, 'All parts installed. No graphics card: the processor does the work.'),
+            'words': (True, '31,170 Afrikaans verses for Bible quotes; 80 words never translated.'),
+            'mt': (True, '“Ons aanbid God op die Sabbat.” → “We worship God on the Sabbath.”'),
+            'speed': (True, 'small model: 0.14 × real time on the processor (keeps up easily). Recommended for this PC: turbo.'),
+            'speech': (True, 'Heard 88% of the words right (demo).'),
+            'sound': (None, 'Demo input: loudest -38 dB. Very quiet. Turn up the sound desk\'s output.'),
+            'quality': (True, '46 of 50 sentences correct (92 %), average chrF 71.2 (demo).')}
+    ok, words = fake.get(step, (False, 'unknown check'))
+    out = {'ok': ok, 'detail': words}
+    if step == 'speed':
+        out['models'] = model_list()
+    return out
+
+
+def check(step, hub=None, device=None):
+    """One part of the translator: {'ok': True/False/None (warning), 'detail': words, ...}."""
+    if DEMO:
+        return demo_check(step)
+    try:
+        if step == 'parts':
+            import importlib
+            vers = []
+            for mod in ('numpy', 'ctranslate2', 'faster_whisper', 'sentencepiece', 'sounddevice', 'huggingface_hub'):
+                m = importlib.import_module(mod)
+                vers.append('%s %s' % (mod, getattr(m, '__version__', '')))
+            return {'ok': True, 'detail': 'All parts installed (%s). %s.' % (', '.join(vers[:3]), 'NVIDIA graphics card found' if cuda() else 'No graphics card: the processor does the work')}
+        if step == 'words':
+            b = hub.bible if hub else Bible('web'); g = hub.gloss if hub else Glossary()
+            return {'ok': len(b.verses) > 30000, 'detail': '%s Afrikaans verses for Bible quotes; %d words never translated, %d Adventist terms, %d slang words.'
+                    % (format(len(b.verses), ','), len(g.keep), len(g.terms_src) + len(g.terms_exact), len(g.slang))}
+        if step == 'mt':
+            mt = hub.mt if hub else Translator(find_mt())
+            tt = TextTranslator(mt, hub.gloss if hub else Glossary(), hub.bible if hub else Bible('web'))
+            res = tt([a for a, _ in CHECK_MT])
+            bad = [(a, r['en']) for (a, need), r in zip(CHECK_MT, res) if not all(n.lower() in r['en'].lower() for n in need)]
+            return {'ok': not bad, 'detail': ' · '.join('“%s” → “%s”' % (a, r['en']) for (a, _), r in zip(CHECK_MT, res)),
+                    'model': os.path.basename(mt.path)}
+        if step == 'speed':
+            ml = model_list()
+            cur = (hub and os.path.basename(hub.asr.path).replace('fluister-', '')) or ml['current'] or 'small'
+            if not asr_ready(cur):
+                return {'ok': False, 'detail': 'The %s speech model is not downloaded.' % cur, 'models': ml}
+            rtf, hw, _ = measure(cur, hub.asr if hub else None)
+            ml = model_list()
+            ok = rtf <= LIVE_LIMIT
+            return {'ok': True if ok else (None if rtf <= 0.9 else False), 'models': ml, 'current': cur,
+                    'detail': '%s model: %.2f × real time on the %s (%s). Recommended for this PC: %s.' % (
+                        cur, rtf, 'graphics card' if hw == 'cuda' else 'processor',
+                        'keeps up easily' if ok else 'may fall behind' if rtf <= 0.9 else 'too slow to keep up', ml['recommended'])}
+        if step == 'speech':
+            asr = hub.asr if hub else Recogniser(find_asr(config().get('asr')))
+            audio = load_audio(os.path.join(QUALITY, 'sample-af.wav'))
+            t0 = time.time(); text = asr(audio, Glossary().prompt); rtf = (time.time() - t0) / (len(audio) / SR)
+            right = max(0.0, 1 - wer(SAMPLE_TEXT, text))
+            return {'ok': True if right >= 0.6 else (None if right >= 0.35 else False),
+                    'detail': 'Heard %d%% of the words right (a computer voice; real speech is clearer): “%s”' % (round(100 * right), text)}
+        if step == 'sound':
+            if hub and hub.mic:
+                db, name = hub.peak_db, hub.mic.name
+            else:
+                dev = device if device is not None else (hub.device if hub and hub.device is not None else pick_device())
+                db, name = listen_level(dev)
+            ok, words = level_words(db)
+            return {'ok': ok, 'detail': '%s: loudest %.0f dB. %s' % (name, db, words), 'db': round(db, 1)}
+        if step == 'quality':
+            p, n, summary = quality(argparse.Namespace(dry=False, mt=None, english='web'), quiet=True,
+                                    engines=(hub.mt, hub.gloss, hub.bible) if hub else None)
+            return {'ok': True if p >= 0.8 * n else (None if p >= 0.6 * n else False), 'detail': summary.split(' Report:')[0] + '.'}
+        return {'ok': False, 'detail': 'unknown check'}
+    except SystemExit as e:
+        return {'ok': False, 'detail': str(e)}
+    except Exception as e:
+        return {'ok': False, 'detail': '%s: %s' % (type(e).__name__, e)}
+
+
+MARK = {True: '✔', False: '✘', None: '!'}
 
 
 def setup(args):
-    """First run: download the models, choose the one this PC can run live, test translation, choose the input."""
-    print('\n== SDA Sabbath translator: first-time setup ==\n')
-    a = argparse.Namespace(asr=['small'])
-    print('1/4  Downloading the Afrikaans speech model (small) and the translator …')
-    get_models(a)
-    print('\n2/4  Checking how fast this PC is …')
-    rtf, hw = speed(os.path.join(MODELS, 'fluister-small'))
-    choice = 'small'
-    print('     small model: %.2f × real time on the %s' % (rtf, 'graphics card' if hw == 'cuda' else 'processor'))
-    if hw == 'cuda' or rtf < 0.22:
-        print('     Fast enough for the more accurate turbo model: downloading it …')
-        get_models(argparse.Namespace(asr=['turbo']))
-        rtf_t, _ = speed(os.path.join(MODELS, 'fluister-turbo'))
-        print('     turbo model: %.2f × real time' % rtf_t)
-        if rtf_t < 0.6:
-            choice = 'turbo'
-    elif rtf > 0.7:
-        print('     This PC is slow for live recognition; using the small model. A PC with an NVIDIA graphics card is far faster.')
+    """First run, step by step: every part is checked, the PC's speed decides the recommended speech model, and the
+    user may choose another one."""
+    interactive = sys.stdin is not None and sys.stdin.isatty()
+    total = 8
+    def step(n, title):
+        print('\nStep %d of %d · %s' % (n, total, title))
+    def show(r):
+        print('   %s %s' % (MARK[r['ok']], r['detail']))
+        return r['ok'] is not False
+    print('\n============================================================\n  SDA Sabbath translator · first-time setup\n  Afrikaans sermon → English captions, offline\n============================================================')
+    step(1, 'Program parts')
+    if not show(check('parts')):
+        raise SystemExit('Some parts are missing. Run the installer again.')
+    step(2, 'Bibles and word list')
+    show(check('words'))
+    step(3, 'Translation model (OPUS-MT, about 80 MB)')
+    get_models(argparse.Namespace(asr=[]))
+    show(check('mt'))
+    step(4, 'PC speed test')
+    if not asr_ready('small'):
+        print('   Downloading the small speech model to measure with (about 250 MB) …')
+        download_asr('small')
+    rtf, hw, _ = measure('small')
+    print('   %s small model: %.2f × real time on the %s' % (MARK[True], rtf, 'graphics card' if hw == 'cuda' else 'processor'))
+    ml = model_list()
+    print('\n   Speech models for this PC (time to recognise 1 minute of speech; under %.0f s keeps up live):\n' % (60 * LIVE_LIMIT))
+    for i, m in enumerate(ml['models'], 1):
+        tag = '★ recommended' if m['recommended'] else ('keeps up' if m['live'] else 'too slow here')
+        print('   %d  %-9s %5d MB  %-48s ~%3.0f s  %s%s' % (i, m['id'], m['mb'], m['words'], 60 * (m['speed'] or 0), tag,
+                                                      '  (downloaded)' if m['downloaded'] else ''))
+    choice = ml['recommended'] or 'small'
+    if interactive:
+        ans = input('\n   Press Enter for %s (recommended), or type the number of another model: ' % choice).strip()
+        if ans.isdigit() and 1 <= int(ans) <= len(ORDER):
+            choice = ORDER[int(ans) - 1]
+    print('   Using: %s   (you can change it later in SDA Sabbath: Tools → Listen & Translate)' % choice)
+    step(5, 'Speech model (%s)' % choice)
+    if not asr_ready(choice):
+        download_asr(choice)
+    if choice != 'small':
+        rtf, hw, _ = measure(choice)
+    print('   %s %s model: %.2f × real time%s' % (MARK[rtf <= LIVE_LIMIT or None], choice, rtf,
+                                             '' if rtf <= LIVE_LIMIT else ' — it may fall behind; choose a smaller model in SDA Sabbath if captions lag'))
     save_config(asr=choice)
-    print('     Using: %s' % choice)
-    print('\n3/4  Translation quality test (50 Adventist, slang and everyday sentences) …')
-    p, n, summary = quality(argparse.Namespace(dry=False, mt=None, english='web'), quiet=True)
-    print('     ' + summary)
-    print('\n4/4  Sound input …')
+    step(6, 'Speech recognition test')
+    show(check('speech'))
+    step(7, 'Translation quality test (50 Adventist, names, slang and sermon sentences)')
+    show(check('quality'))
+    step(8, 'Sound input')
     try:
         devs = input_devices()
         d = pick_device()
         for x in devs:
             print('     %s %3d  %s' % ('→' if x['id'] == d or (d is None and x['default']) else ' ', x['id'], x['name']))
-        print('     (→ will be used; choose another in SDA Sabbath: Tools → Listen & Translate)')
+        if interactive:
+            print('   Play some sound from the sound desk (or speak into the microphone) for 3 seconds …')
+        show(check('sound', device=d))
     except Exception as e:
-        print('     No sound inputs found (%s). Plug in the sound-desk cable and choose it in SDA Sabbath.' % e)
+        print('   ! No sound inputs found (%s). Plug in the sound-desk cable and choose it in SDA Sabbath.' % e)
     save_config(setup_done=True)
-    print('\nSetup finished. In SDA Sabbath open Tools → Listen & Translate, switch it on and press Start listening.\n')
+    print('\n============================================================\n  Setup finished. In SDA Sabbath: Tools → Listen & Translate,\n'
+          '  switch Live translation on and press Start listening.\n  "Check each part" there runs these checks again at any time.\n============================================================\n')
 
 
 # ---------------------------------------------------------------------------------------------- downloads
@@ -1193,6 +1489,11 @@ def get_models(args):
 
 
 def main(argv=None):
+    for f in (sys.stdout, sys.stderr):           # ✔ and → also when the output goes to a file or another program
+        try:
+            f.reconfigure(encoding='utf-8', errors='replace')
+        except Exception:
+            pass
     ap = argparse.ArgumentParser(description='SDA Sabbath live translation (Afrikaans → English, offline)')
     sub = ap.add_subparsers(dest='cmd', required=True)
     def common(p):
@@ -1209,11 +1510,25 @@ def main(argv=None):
     q = sub.add_parser('test', help='translation quality test'); q.add_argument('--mt'); q.add_argument('--english', default='web', choices=['web', 'kjv'])
     q.add_argument('--dry', action='store_true', help='without a model: check slang, names and Bible quotes only')
     sub.add_parser('setup', help='first-time setup')
+    k = sub.add_parser('check', help='check each part'); k.add_argument('step', nargs='?', default='all')
+    sub.add_parser('version')
     b = sub.add_parser('bench'); common(b); b.add_argument('file'); b.add_argument('--ref', help='correct Afrikaans text, for the word error rate')
     d = sub.add_parser('demo'); d.add_argument('--port', type=int, default=7790); d.add_argument('--english', default='web')
     d.add_argument('--every', type=float, default=4.0); d.add_argument('--autostart', action='store_true')
     d.add_argument('--device', type=int, default=None); d.add_argument('--asr'); d.add_argument('--mt'); d.add_argument('--beam', type=int, default=5)
     d.add_argument('--lan', action='store_true')
+    argv = sys.argv[1:] if argv is None else argv
+    if not argv or argv[0].startswith('--'):
+        # SDA Sabbath Translator.exe (or double-click): the first time the setup, afterwards straight to listening
+        try:
+            if not config().get('setup_done'):
+                setup(None)
+            argv = ['serve'] + argv
+        except (Exception, SystemExit) as e:
+            print('\nThe setup stopped: %s\nCheck the internet connection and start it again.' % e)
+            if sys.stdin and sys.stdin.isatty():
+                input('Press Enter to close.')
+            sys.exit(1)
     a = ap.parse_args(argv)
     if a.cmd == 'get-models':
         get_models(a)
@@ -1229,6 +1544,18 @@ def main(argv=None):
     elif a.cmd == 'test':
         p, n, _ = quality(a)
         sys.exit(0 if p >= n * 0.8 else 1)
+    elif a.cmd == 'version':
+        print('SDA Sabbath translator', VERSION)
+    elif a.cmd == 'check':
+        failed = 0
+        for sid, title in STEPS:
+            if a.step in ('all', sid):
+                r = check(sid)
+                failed += r['ok'] is False
+                print('%s %-36s %s' % (MARK[r['ok']], title, r['detail']))
+        if a.step == 'all' and sys.stdin and sys.stdin.isatty() and getattr(sys, 'frozen', False):
+            input('\nPress Enter to close.')
+        sys.exit(1 if failed else 0)
     elif a.cmd == 'setup':
         try:
             setup(a)

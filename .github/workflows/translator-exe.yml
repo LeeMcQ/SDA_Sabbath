@@ -1,0 +1,51 @@
+# Builds the Windows installer for the live translator (SDA-Sabbath-Translator-Setup.exe) and attaches it to the
+# "translator" GitHub Release, where SDA Sabbath's Download button points. Runs when translator/ changes.
+name: Translator installer
+
+on:
+  push:
+    branches: [main]
+    paths: ['translator/**', '.github/workflows/translator-exe.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency: { group: translator-exe, cancel-in-progress: true }
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with: { python-version: '3.12' }
+      - name: Install the parts
+        run: python -m pip install --quiet -r translator/requirements.txt pyinstaller==6.11.1
+      - name: Build the program
+        run: python translator/build_exe.py
+      - name: Test the program before packing it
+        # It must start, find all its parts (sound included) and its Bibles, and prepare the 50 test sentences.
+        shell: pwsh
+        run: |
+          $exe = "translator/dist/SDA Sabbath Translator/SDA Sabbath Translator.exe"
+          & $exe version; if ($LASTEXITCODE) { exit 1 }
+          & $exe check parts; if ($LASTEXITCODE) { exit 1 }
+          & $exe check words; if ($LASTEXITCODE) { exit 1 }
+          & $exe test --dry; if ($LASTEXITCODE) { exit 1 }
+      - name: Make the installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress | Out-Null }
+          $ver = (& python -c "import re;print(re.search(r\"VERSION = '([^']+)'\", open('translator/livetranslate.py',encoding='utf-8').read()).group(1))")
+          & $iscc "/DAppVersion=$ver" translator/installer.iss
+          if ($LASTEXITCODE) { exit 1 }
+          Get-Item translator/dist/SDA-Sabbath-Translator-Setup.exe | Select-Object Name, Length
+      - name: Publish to the "translator" release
+        env: { GH_TOKEN: '${{ github.token }}' }
+        shell: pwsh
+        run: |
+          gh release view translator 2>$null
+          if ($LASTEXITCODE) { gh release create translator --title "SDA Sabbath Translator (Windows)" --latest=false --notes "Live translation for SDA Sabbath: Afrikaans sermon to English captions, offline on the church PC. Download SDA-Sabbath-Translator-Setup.exe, run it, and the first start sets everything up." }
+          gh release upload translator translator/dist/SDA-Sabbath-Translator-Setup.exe --clobber

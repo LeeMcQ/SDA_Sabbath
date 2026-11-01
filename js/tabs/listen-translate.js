@@ -8,6 +8,7 @@ import { fmtCode } from '../core/stagenet.js';
 import createListen from './listen-part.js';
 import createTranslate from './translate-part.js';
 import { translationJoinSlide } from './trjoin.js';
+import { tip } from './translate-part.js';
 
 export default function create(ctx) {
   const { settings, ui } = ctx;
@@ -22,8 +23,7 @@ export default function create(ctx) {
   const preview = h('div.trp-prev');
   const netNote = h('p.note.trp-net');
   const card = (title, ...kids) => h('div.card.st-card', h('h3', title), ...kids);
-  const phones = card('Translation on phones',
-    h('p.note', 'People in the church can read the English translation on their own phones. Put this slide on the screen: they scan the QR code and the sermon appears on their phone as it is translated.'),
+  const phones = card(h('span.tip-h', 'Translation on phones', tip('People in the church can read the English translation on their own phones. Put this slide on the screen: they scan the QR code and the sermon appears on their phone as it is translated. Phones connect over the internet with the room code (the same as Tools → Stage → Phones & laptops); the translator itself works without internet.')),
     preview,
     h('div.row.wrap',
       h('button.btn.primary', { type: 'button', onclick: () => stage(false) }, icon('next'), h('span', 'Put on Next')),
@@ -66,7 +66,7 @@ export default function create(ctx) {
   function paintNet() {
     const st = hub.net && hub.net.state;
     const n = hub.readers ? hub.readers().length : 0;
-    netNote.textContent = !settings.v.stage.online ? 'Phones connect over the internet with the room code (the same as Tools → Stage → Phones & laptops). The translator itself works without internet; this PC needs internet only to reach the phones.'
+    netNote.textContent = !settings.v.stage.online ? 'Phones connect with the room code over the internet.'
       : st === 'on' ? 'Ready · ' + n + ' phone' + (n === 1 ? ' is' : 's are') + ' reading the translation. Room code ' + fmtCode(settings.v.stage.code) + '.'
       : st === 'offline' ? 'This PC has no internet, so phones cannot connect. The translation still shows on the screen.'
       : st === 'error' ? 'Could not reach the phones: ' + (hub.net.error || '') : 'Starting…';

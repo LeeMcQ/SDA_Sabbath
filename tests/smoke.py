@@ -261,8 +261,11 @@ def main():
                 pg.evaluate("window.selah.showTab('listen')"); pg.wait_for_timeout(800)
                 assert pg.locator('.tools-part-listen .ls-toggle').is_visible(), 'Tools → Listen does not open'
                 pg.evaluate("window.selah.showTab('translate')"); pg.wait_for_timeout(800)
-                tr = pg.locator('.tools-part-listen .tr-card .form')
-                assert tr.is_visible() and 'English captions' in tr.inner_text(), 'Live translation is not in Tools → Listen & Translate'
+                tr = pg.locator('.tools-part-listen .tr-card .tr-bar')
+                assert tr.is_visible() and 'Live translation' in tr.inner_text(), 'Live translation is not in Tools → Listen & Translate'
+                pg.locator('.tools-part-listen .tr-more > summary').click(); pg.wait_for_timeout(300)
+                assert 'English captions' in pg.inner_text('.tools-part-listen .tr-more'), 'the Live translation settings are missing'
+                pg.locator('.tools-part-listen .tr-more > summary').click()
                 assert pg.locator('.tools-part-listen .ls-toggle').is_visible(), 'Listen is not in the same part as Live translation'
                 got = pg.evaluate("""import('./js/core/spokenref.js').then(m => [
                     'as it says in John chapter three verse sixteen', 'Romans 8 28', 'first Corinthians thirteen verses four to seven',
