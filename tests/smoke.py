@@ -124,6 +124,8 @@ def main():
                     if not pg.evaluate(inside): out += 1
                 assert out == 0, 'Tab left the setup dialog %d times' % out
                 pg.keyboard.press('Escape'); pg.wait_for_timeout(400)
+                if pg.locator('.welcome').count():  # cloud on: step 1 is the account step; a second Escape skips the rest
+                    pg.keyboard.press('Escape'); pg.wait_for_timeout(400)
                 assert pg.locator('.welcome').count() == 0, 'Escape did not skip the setup'
                 assert not pg.evaluate("[...document.body.children].some(e => e.inert)"), 'the page stayed inert'
             t_welcome_keys()
