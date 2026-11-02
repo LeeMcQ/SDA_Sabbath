@@ -67,7 +67,7 @@ The anon key is meant to be public; what anyone may read or write is limited by 
 Signing in stays optional. `requireSignIn: true` asks for a sign-in on first start instead (it never blocks a PC
 without internet: it can carry on and sign in later).
 
-Usage statistics are off until each church switches them on (Settings → Account, or the first-start setup).
+Usage statistics are on by default; each church can switch them off (Settings → Account, or the first-start setup).
 
 ## Looking at the numbers
 Open **https://leemcq.github.io/SDA_Sabbath/admin.html** (or Settings → Account → *Statistics and feedback*),
@@ -81,7 +81,7 @@ messages go to your Supabase project, so add this to the table under *What is se
 
 ```html
 <tr><td>Signing in (account)</td><td>Your email address, to send you a sign-in code; with “Continue with Google”, your Google account’s email and name</td><td>The SDA Sabbath cloud (Supabase), and Google if you choose it</td></tr>
-<tr><td>Usage statistics (“Help improve SDA Sabbath”, only if you switch it on)</td><td>A random number for this device; how many minutes the app was in use and presenting each day; how often each kind of item (Bible, hymn, slides, video, banner, web page) went on screen; the app version, operating system, browser and screen layout; the church name and town from Settings → Church; and, if you signed in, which account. Never the words, pictures or videos you show.</td><td>The SDA Sabbath cloud (Supabase)</td></tr>
+<tr><td>Usage statistics (“Help improve SDA Sabbath”, on by default; switch off in Settings → Account)</td><td>A random number for this device; how many minutes the app was in use and presenting each day; how often each kind of item (Bible, hymn, slides, video, banner, web page) went on screen; the app version, operating system, browser and screen layout; the church name and town from Settings → Church; and, if you signed in, which account. Never the words, pictures or videos you show.</td><td>The SDA Sabbath cloud (Supabase)</td></tr>
 ```
 
 and this section after the table (fill in the region you chose in step 1):
@@ -89,5 +89,5 @@ and this section after the table (fill in the region you chose in step 1):
 ```html
 <h2>The SDA Sabbath cloud</h2>
 <p>Accounts, usage statistics and messages are kept in a database run for SDA Sabbath by Supabase, in REGION. Only the maintainer can see the statistics and messages; a signed-in person can see their own messages and the replies. Statistics are used only to understand how many churches use SDA Sabbath, how much, and which parts, so it can be improved.</p>
-<p>Statistics are off unless you switch them on, in the first-start setup or Settings → Account, and you can switch them off again at any time. Settings → Account → Delete my account deletes your account, your messages and the statistics of the devices you signed in on.</p>
+<p>Statistics are on by default; you can switch them off at any time in the first-start setup or Settings → Account. Settings → Account → Delete my account deletes your account, your messages and the statistics of the devices you signed in on.</p>
 ```

@@ -57,7 +57,7 @@ export function signInBox({ onDone, compact = false } = {}) {
 export function statsToggle() {
   return h('div.col', { style: { gap: '6px' } },
     toggle('Help improve SDA Sabbath: send usage statistics', settings.v.app.stats === true, (v) => { settings.set('app.stats', v); if (v) cloud.ping(); }),
-    h('p.note', 'Counts only: how many minutes the app is used and presenting, how often Bible verses, hymns, slides and videos go on screen, the app version, browser and screen layout, and your church’s name and town. Never what you show. ',
+    h('p.note', 'On by default; switch it off here at any time. Counts only: how many minutes the app is used and presenting, how often Bible verses, hymns, slides and videos go on screen, the app version, browser and screen layout, and your church’s name and town. Never what you show. ',
       h('a', { href: 'privacy.html', target: '_blank', rel: 'noopener' }, 'Privacy notice')));
 }
 

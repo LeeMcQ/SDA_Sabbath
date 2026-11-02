@@ -122,8 +122,8 @@ after Present the Live monitor offers **Open Projector 2 / Open Stage screen** f
 ### Account, statistics and suggestions (optional cloud)
 
 With the SDA Sabbath cloud switched on (see `supabase/SETUP.md`), the first start offers a sign-in with an email
-code (or Google) and runs a short setup: language, church, screens, and whether to send usage statistics (off
-unless the church switches them on). **Settings → Account** shows the
+code (or Google) and runs a short setup: language, church, screens, and whether to send usage statistics (on by default;
+the church can switch them off). **Settings → Account** shows the
 account, the statistics switch, *My messages* (with replies) and *Delete my account*. The speech-bubble button at the
 top sends a comment or suggestion (it waits on the device when offline); the website has the same form at
 `feedback.html`. The maintainer sees installs, active churches, hours used and presenting, feature use, versions,

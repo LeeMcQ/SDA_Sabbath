@@ -7,7 +7,7 @@ const KEY = lsKey('settings.v1');
 const AIKEY = lsKey('aikey.session');
 
 export const DEFAULTS = {
-  app: { theme: 'dark', railSide: 'left', monitors: true, lowPower: null, lastTab: 'bible', clickerKeys: true, webPart: 'web', toolsPart: 'stage', stats: false, setupDone: false, deviceRole: '', speakers: '',
+  app: { theme: 'dark', railSide: 'left', monitors: true, lowPower: null, lastTab: 'bible', clickerKeys: true, webPart: 'web', toolsPart: 'stage', stats: true, setupDone: false, deviceRole: '', speakers: '',
     // Plan tab view. Basic: the order of service with Show buttons and big Back / Next / Blank. Advanced: the plan editor.
     planView: 'basic', listenOk: false, updates: 'sabbath',
     listenSource: 'auto' }, // Tools → Listen hears with: 'auto' (the offline translator when it runs, else the browser), 'offline', 'browser'
@@ -115,6 +115,12 @@ function load() {
   if (v.app.rev < 3) {
     v.app.stats = false;
     v.app.rev = 3;
+  }
+  // v1.7: usage statistics are ON by default (a church can switch them off in Settings → Account or the first-start
+  // setup). Nobody could have chosen "off" before this, because the switch only shows when the cloud is set up.
+  if (v.app.rev < 4) {
+    v.app.stats = true;
+    v.app.rev = 4;
   }
   return v;
 }
