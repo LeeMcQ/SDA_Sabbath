@@ -9,5 +9,5 @@ export const CLOUD = {
   requireSignIn: false, // true: the first start asks to sign in (never blocks the app without internet)
   // Google Drive backup (works without Supabase): an OAuth client id from Google Cloud, type "Web application".
   // See docs/backup.md. Empty: the Drive buttons explain that it is not set up; backup files still work.
-  googleClientId: '',
+  googleClientId: '871585998484-labocq2oofqmpcgg7t04bn9cqudvr2aa.apps.googleusercontent.com',
 };
