@@ -31,7 +31,7 @@ PAGES = ['index.html', 'display.html', 'stage.html', 'obs.html', 'privacy.html',
 TABS = ['bible', 'hymns', 'ai', 'slides', 'video', 'web', 'plan', 'tools', 'settings']
 # Other websites the app may contact for optional online extras. They must never be needed: the offline part of
 # this test proves the app works with all of them unreachable.
-OPTIONAL_HOSTS = ('leemcq.github.io', 'raw.githubusercontent.com')
+OPTIONAL_HOSTS = ('leemcq.github.io', 'raw.githubusercontent.com', '.supabase.co')  # .supabase.co: the optional usage-statistics ping and sign-in (cloud-config.js)
 OVERRIDES = {}  # path -> bytes: lets a test publish a pretend new version without touching the files
 # path (or a 'folder/' prefix, or '*') -> 'portal' (a Wi-Fi login page with status 200) | 'hang' (never answers) |
 # 'down' (the connection is dropped): the bad networks churches meet.
