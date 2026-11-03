@@ -211,21 +211,42 @@ def render(r):
 
 
 def send(subject, body, text):
-    user, pw = os.environ.get('SMTP_USER', ''), os.environ.get('SMTP_PASS', '')
+    # Secrets pasted from a web page often carry spaces, line breaks or non-breaking spaces; an app password is 16 plain letters.
+    clean = lambda v: ''.join(ch for ch in (v or '') if ch.isascii() and not ch.isspace())
+    user, pw = (os.environ.get('SMTP_USER', '') or '').strip(), clean(os.environ.get('SMTP_PASS', ''))
     to = [a.strip() for a in (os.environ.get('REPORT_TO') or user).split(',') if a.strip()]
     msg = EmailMessage()
     msg['Subject'], msg['From'], msg['To'] = subject, '%s statistics <%s>' % (APP, user), ', '.join(to)
     msg.set_content(text)
     msg.add_alternative(body, subtype='html')
-    host, port = os.environ.get('SMTP_HOST') or 'smtp.gmail.com', int(os.environ.get('SMTP_PORT') or 465)
+    host = (os.environ.get('SMTP_HOST') or '').strip() or 'smtp.gmail.com'
+    port = int((os.environ.get('SMTP_PORT') or '').strip() or 465)
     ctx = ssl.create_default_context()
-    if port == 465:
-        with smtplib.SMTP_SSL(host, port, context=ctx, timeout=60) as s:
-            s.login(user, pw); s.send_message(msg)
-    else:
-        with smtplib.SMTP(host, port, timeout=60) as s:
-            s.starttls(context=ctx); s.login(user, pw); s.send_message(msg)
-    print('Sent "%s" to %s' % (subject, ', '.join(to)))
+
+    def attempt(port):
+        if port == 465:
+            with smtplib.SMTP_SSL(host, port, context=ctx, timeout=60) as s:
+                s.login(user, pw); s.send_message(msg)
+        else:
+            with smtplib.SMTP(host, port, timeout=60) as s:
+                s.starttls(context=ctx); s.login(user, pw); s.send_message(msg)
+
+    errors = []
+    for pt in ([port] + [x for x in (465, 587) if x != port]):
+        try:
+            attempt(pt)
+            print('Sent "%s" to %s' % (subject, ', '.join(to)))
+            return True
+        except smtplib.SMTPAuthenticationError as e:
+            errors.append('port %d: the mail server refused the login (%s)' % (pt, e.smtp_code)); break
+        except (smtplib.SMTPException, OSError) as e:
+            errors.append('port %d: %s' % (pt, e))
+    print('The report was made but could not be emailed:')
+    for e in errors:
+        print('  - ' + e)
+    print('Check the secrets SMTP_USER (the full Gmail address), SMTP_PASS (a Gmail App password: 16 letters, not your normal '
+          'password; it needs 2-Step Verification on) and, for another provider, SMTP_HOST and SMTP_PORT. The report is under this run\'s Artifacts.')
+    return False
 
 
 def main():
@@ -250,7 +271,8 @@ def main():
     if not (os.environ.get('SMTP_USER') and os.environ.get('SMTP_PASS')):
         print('No SMTP_USER / SMTP_PASS secrets yet: the report was made (see the run\'s report file) but not emailed.')
         return
-    send(subject, body, text)
+    if not send(subject, body, text):
+        sys.exit(1)
 
 
 if __name__ == '__main__':
