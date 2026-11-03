@@ -34,7 +34,7 @@ def main():
     shutil.copytree(os.path.join(HERE, 'quality'), os.path.join(DIST, 'quality'), dirs_exist_ok=True,
                     ignore=shutil.ignore_patterns('report*.md'))
     src = os.path.join(HERE, 'bibles') if os.path.isdir(os.path.join(HERE, 'bibles')) else os.path.join(HERE, '..', 'data', 'bibles')
-    for b in ('afr53', 'web', 'kjv'):
+    for b in ('web', 'kjv'):   # public-domain only; the licensed Afrikaans Bible is the church's own (licensed/ folder)
         shutil.copytree(os.path.join(src, b), os.path.join(DIST, 'bibles', b), dirs_exist_ok=True)
     print('Built', DIST)
 

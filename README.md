@@ -52,7 +52,7 @@ Everything that listens to the service, in one place.
 
 | Tab | What you can do |
 |---|---|
-| **Bible** | Type `John 3:16-18`, `Ps 23`, `Joh 3:16` (Afrikaans) or tap book → chapter → verses. KJV, WEB and the Afrikaans 1933/53 Bible are built in; add NIV, ESV, NKJV, Xhosa or any licensed Bible. Two translations side by side (e.g. English + isiXhosa). Text grows to fill the screen; long passages split into readable slides automatically. “Keep reading” shows the next verses when the preacher carries on. Full-text search. A row of verse numbers above the verses puts any verse one tap away, and the list keeps the live verse in view. |
+| **Bible** | Type `John 3:16-18`, `Ps 23`, `Joh 3:16` (Afrikaans) or tap book → chapter → verses. KJV and WEB are built in (licensed Bibles such as the Afrikaans 1933/53 are added by the church); add NIV, ESV, NKJV, Xhosa or any licensed Bible. Two translations side by side (e.g. English + isiXhosa). Text grows to fill the screen; long passages split into readable slides automatically. “Keep reading” shows the next verses when the preacher carries on. Full-text search. A row of verse numbers above the verses puts any verse one tap away, and the list keeps the live verse in view. |
 | **Hymns** | Type the number or words. Title slide, one stanza per slide, chorus repeated automatically, choose which stanzas to sing (1, 2, 4). Tap a stanza to make it Next (also while the hymn is on screen); double-tap, Enter or Present shows it. Jump to any stanza from the control bar. Edit or add hymns; import or export hymnbooks. |
 | **Slides** | PDF, PowerPoint (.pptx) and pictures. Converted once on import and kept offline. Speaker notes shown to the operator. Auto-advance loop for announcements. |
 | **Video** | VLC-style player: playlist with auto-next and repeat, speed 0.25×–4×, A-B repeat, loop, frame step, fade in/out, volume boost to 200 %, 10-band equaliser with presets, fit/fill/stretch, zoom, rotate, mirror, brightness/contrast/colour/hue, .srt/.vtt subtitles, snapshots. Music can play **in the background** while lyrics stay on screen. |
@@ -93,9 +93,14 @@ a local web address. Everything is explained in the guides below.
 
 ## Credits and licences
 
-- Bible texts: KJV and WEB (public domain), Afrikaanse Bybel 1933/53 — converted from the Joy in the Journey app
-  (`github.com/LeeMcQ/joy-in-the-journey`).
-- Sample hymn words: public domain.
+- Bible texts: KJV and WEB (public domain). The Afrikaanse Bybel 1933/53 is © Bybelgenootskap van Suid-Afrika and is
+  not shipped: a church with permission adds its own copy (`licensed/README.md`).
+- Hymns: the SDA Hymnal 1985, Advent Lofliedere, Praise Choruses and Malmesbury Praise are listed by number and title
+  only; words are included only where they are public domain (and the 1941 Church Hymnal). Each church adds other
+  words under its own licence (Hymns → ⋯ → Import licensed words), like OpenLP and FreeShow.
+- Logo: a neutral open-Bible mark. The Seventh-day Adventist® Church symbol is not shipped; churches upload their own logo.
+  SDA Sabbath is an independent tool, not an official product of the Seventh-day Adventist Church.
+- See `THIRD_PARTY_NOTICES.md` for every data set, font, sound and library and its licence.
 - Fonts: Atkinson Hyperlegible Next and Source Serif 4 (SIL Open Font License).
 - pdf.js (Apache 2.0), fflate (MIT), qrcode-generator (MIT), SpessaSynth (Apache 2.0), Trystero and noble-secp256k1 (MIT).
 - GeneralUser GS 2.0.3 SoundFont by S. Christian Collins — free to use and modify
@@ -103,4 +108,4 @@ a local web address. Everything is explained in the guides below.
 - High-quality and Studio hymn sounds (`data/music/hq.sf3`, `data/music/studio.sf3`, optional downloads): Salamander Grand Piano V3 by Alexander Holm
   (CC BY 3.0) and the GrandOrgue demo pipe organ, recordings by Lars Palo (CC BY-SA 2.5) — `data/music/HQ-SOUNDS-LICENSE.txt`.
 - Hymn MIDI files: supplied by the church for its own services.
-- SDA Sabbath code: MIT.
+- SDA Sabbath code: MIT (`LICENSE`, code only — not the Bible, hymn or other third-party content).

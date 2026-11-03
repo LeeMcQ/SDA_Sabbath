@@ -1,11 +1,12 @@
 [
   {
     "id": "sda-online",
-    "name": "SDA Hymnal (full, offline)",
+    "name": "SDA Hymnal 1985 (numbers and titles)",
     "short": "SDAH",
     "lang": "en",
     "file": "sda-online.json",
-    "note": "All 698 hymns with lyrics offline. Music links open the source page."
+    "note": "All 698 numbers and titles. The words are copyrighted: add them under your church's licence (More → Import licensed words), or use the public-domain words from the Church Hymnal 1941 where the hymn is in it.",
+    "words": "licensed"
   },
   {
     "id": "church-1941",
@@ -13,30 +14,33 @@
     "short": "CH41",
     "lang": "en",
     "file": "church-1941.json",
-    "note": "All 703 hymns of the 1941 SDA Church Hymnal with lyrics offline."
+    "note": "All 703 hymns of the 1941 SDA Church Hymnal with words offline (older public-domain texts)."
   },
   {
     "id": "afrikaans-sda",
-    "name": "Advent Lofliedere (Afrikaans, offline)",
+    "name": "Advent Lofliedere (Afrikaans, numbers and titles)",
     "short": "AL",
     "lang": "af",
     "file": "afrikaans.json",
-    "note": "All 481 Afrikaans hymns with lyrics offline. Play music opens the source page."
+    "note": "All 481 numbers and titles. The words are copyrighted: add them under your church's licence (More → Import licensed words).",
+    "words": "licensed"
   },
   {
     "id": "choruses",
-    "name": "Praise Choruses (offline)",
+    "name": "Praise Choruses (titles; traditional ones with words)",
     "short": "CHR",
     "lang": "en",
     "file": "choruses.json",
-    "note": "Short praise and worship choruses (not part of the main hymnals). Lyrics for offline use."
+    "note": "Titles, authors and CCLI look-up. Words included only for traditional (public-domain) choruses; add the others under your church's CCLI licence.",
+    "words": "licensed"
   },
   {
     "id": "malmesbury",
-    "name": "Malmesbury Praise (offline)",
+    "name": "Malmesbury Praise (titles; public-domain ones with words)",
     "short": "MP",
     "lang": "en",
     "file": "malmesbury.json",
-    "note": "Local hymns from the Malmesbury Praise hymnal (numbered 1–29 and additional 30–48). Lyrics for offline use."
+    "note": "Numbers 1–48 with titles. Words included only for public-domain hymns; add the others under your church's licence.",
+    "words": "licensed"
   }
 ]

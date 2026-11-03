@@ -297,6 +297,9 @@ input[type=range] { accent-color: var(--next); }
 /* ---------- Hymns ---------- */
 .hymn-split { grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.6fr); }
 .stanza-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; padding: 12px; }
+.licence-panel { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: 1px dashed var(--line); border-radius: 12px; min-width: 0; }
+.licence-panel p { margin: 0; overflow-wrap: anywhere; }
+.licence-panel .row { gap: 8px; }
 .stanza { position: relative; text-align: left; border: 1px solid var(--line); background: var(--panel); border-radius: var(--r); padding: 26px 12px 12px; min-height: 120px; font-size: var(--fs-sm); line-height: 1.45; overflow: hidden; }
 .stanza .ln { display: block; padding-left: 1.1em; text-indent: -1.1em; } /* a wrapped hymn line hangs, so it reads as one line */
 .stanza .lab { position: absolute; top: 6px; left: 10px; font-size: var(--fs-xs); font-weight: 700; color: var(--brass-text); }

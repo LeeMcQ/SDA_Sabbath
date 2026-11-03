@@ -385,7 +385,7 @@ export default function create(ctx) {
           try {
             cache[b.id] = cache[b.id] || await (await fetch('data/hymns/' + b.file)).json();
             const hy = (cache[b.id].hymns || []).find((x) => x.n === +it.n);
-            if (hy && Array.isArray(hy.v)) { model.hymns.push({ n: hy.n, title: hy.t, book: b.short, stanzas: hy.v, chorus: Array.isArray(hy.c) ? hy.c : null }); break; }
+            if (hy && Array.isArray(hy.v) && hy.v.length) { model.hymns.push({ n: hy.n, title: hy.t, book: b.short, stanzas: hy.v, chorus: Array.isArray(hy.c) ? hy.c : null }); break; }
           } catch (e) { /* try the next book */ }
         }
       }

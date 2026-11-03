@@ -56,7 +56,7 @@ const FIELD = {
   done: { label: 'At zero show', ph: 'Welcome' },
 };
 const EXTRAS = [
-  ['logo', 'Logo', 'Your church logo from Settings → Screen (or the Church symbol)'],
+  ['logo', 'Logo', 'Your church logo from Settings → Screen (or the neutral SDA Sabbath mark)'],
   ['date', 'Date', 'The coming Sabbath’s date'],
   ['sunset', 'Sunset time', 'When Sabbath begins or ends, worked out offline'],
   ['qr', 'Giving QR code', 'The giving link from Church details'],

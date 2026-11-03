@@ -111,6 +111,7 @@ export function openWelcome({ onClose, only } = {}) {
         h('label.muted', 'Language of your services'),
         seg(LANGS.map(([k, label]) => [k, label]), lang, (v) => { lang = v; const L = LANGS.find((x) => x[0] === v); Object.entries(L[2]).forEach(([k, val]) => settings.set(k, val)); }),
         h('p.note', 'Sets the Bible translation and hymnbook that open first. Every Bible and hymnbook stays available.'),
+        h('p.note', 'Afrikaans Bible and hymn words are copyrighted, so they are not built in: add your church\'s licensed copy in Settings → Bibles & hymns → Add a Bible, and the hymn words with Hymns → More → Import licensed words. Until then the KJV opens and hymns show their number and title.'),
         churchForm(settings));
       card.append(head('Your church', 'Used on banners (name, sunset times for Sabbath), the logo slide and the stage screen.'), body, nav());
       return;

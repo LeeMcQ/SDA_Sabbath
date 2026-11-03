@@ -1,6 +1,11 @@
 MIT License
 
-Copyright (c) 2026 Leo McQuire
+Copyright (c) 2026 Lee McQuire
+
+This licence covers the SDA Sabbath source code only (the HTML, CSS, JavaScript, Python and Rust files and the
+build scripts written for this project). It does not cover Bible texts, hymn and song words or titles, music files,
+fonts, sound fonts, logos, trademarks or third-party libraries in this repository or in the app. Those keep their
+own licences and copyright owners: see THIRD_PARTY_NOTICES.md.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
