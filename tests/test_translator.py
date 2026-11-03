@@ -13,9 +13,12 @@ def ok(c, m):
 b = L.Bible('web')
 def ref(s):
     m = b.match(s); return b.ref_text(*m[:4]) if m else None
-ok(ref('Want so lief het God die wêreld gehad, dat Hy sy eniggebore Seun gegee het, sodat elkeen wat in Hom glo, nie verlore mag gaan nie, maar die ewige lewe kan hê.') == 'John 3:16', 'whole verse quoted → John 3:16')
-ok(ref('Want so lief het God die wêreld gehad dat Hy sy eniggebore Seun gegee het') == 'John 3:16', 'part of a verse → John 3:16')
-ok(ref('Gedenk die sabbatdag, dat jy dit heilig.') == 'Exodus 20:8', 'the fourth commandment → Exodus 20:8')
+if b.af:   # the licensed Afrikaans Bible is installed on this machine
+    ok(ref('Want so lief het God die wêreld gehad, dat Hy sy eniggebore Seun gegee het, sodat elkeen wat in Hom glo, nie verlore mag gaan nie, maar die ewige lewe kan hê.') == 'John 3:16', 'whole verse quoted → John 3:16')
+    ok(ref('Want so lief het God die wêreld gehad dat Hy sy eniggebore Seun gegee het') == 'John 3:16', 'part of a verse → John 3:16')
+    ok(ref('Gedenk die sabbatdag, dat jy dit heilig.') == 'Exodus 20:8', 'the fourth commandment → Exodus 20:8')
+else:
+    print('SKIP  Bible quote checks: the Afrikaans 1933/53 Bible is licensed and not in this copy')
 ok(b.english(18, 23, 1).startswith('The LORD is my shepherd'), 'World English Bible says "the LORD", as preached')
 for s in ['Want God het die wêreld so lief gehad dat Hy sy Seun gestuur het om ons te red.', 'Die Sabbat is die dag wat God geseën en geheilig het vir ons.',
           'Ons glo dat die Bybel die Woord van God is en dat dit ons lewe kan verander.', 'Die Here Jesus kom weer, broers en susters, en ons moet gereed wees.']:

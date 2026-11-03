@@ -35,6 +35,7 @@ export default function create(ctx) {
   const disBtn = h('button.btn.sm', { type: 'button', onclick: () => { dropErr(); obs.disconnect(); toast('Disconnected from OBS.', '', 2000); } }, icon('x'), h('span', 'Disconnect'));
   const camRow = h('div.st-step', h('div', h('b', '2. '), 'Which scene has your camera? The lower third goes on top of it.'), h('div.row.wrap', camSel, setupBtn));
   const autoCard = card('Connect OBS (automatic)',
+    h('p.note', 'Streaming song words or Bible text: copyrighted songs on a live stream or recording need your church’s CCLI Streaming Licence (a normal CCLI licence does not cover it), and the Bible translation’s own rules apply.'),
     h('p.note', 'One click puts SDA Sabbath into OBS: a “', h('b', obsName('Lower third')), '” overlay on your camera scene, and a “', h('b', S().presScene), '” scene with the slides full screen. Needs OBS 28 or newer: in OBS open ', h('b', 'Tools → WebSocket Server Settings'), ', tick ', h('b', 'Enable WebSocket server'), ', and copy the password from ', h('b', 'Show Connect Info'), '.'),
     h('div.st-step', h('div', h('b', '1. '), 'Connect'), h('div.row.wrap', urlIn, passIn, connBtn, disBtn)),
     camRow,

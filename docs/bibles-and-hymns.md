@@ -2,9 +2,10 @@
 
 ## Bibles
 
-Built in (public domain): **KJV**, **WEB**, **Afrikaanse Bybel 1933/53**.
-**NIV** (© Biblica) and the **1975 Xhosa Bible** (© Bible Society of South Africa) cannot be shipped
-publicly. Each church adds its own licensed copy:
+Built in (public domain): **KJV** and **WEB**.
+The **Afrikaanse Bybel 1933/53** (© Bybelgenootskap van Suid-Afrika 1933, 1953), **NIV** (© Biblica) and the
+**1975 Xhosa Bible** (© Bible Society of South Africa) cannot be shipped publicly; for the Afrikaans Bible a
+complete text in an app needs the Bible Society's written permission (copyright@biblesociety.co.za). Each church adds its own licensed copy:
 
 - **On one device:** Settings → Bibles & hymns → **Add a Bible**. Search the list and press **Add**, or choose a
   file (Zefania XML, OSIS XML, CES XML, JSON, CSV). The `xho75.json` file from Joy in the Journey imports directly.
@@ -22,8 +23,19 @@ publicly. Each church adds its own licensed copy:
 
 ## Hymns
 
-Built in (listed in `data/hymns/index.json`): the SDA Hymnal (698), the 1941 Church Hymnal (703), Advent
-Lofliedere (Afrikaans, 481), Praise Choruses and Malmesbury Praise. Add or replace hymnbooks with
+Built in (listed in `data/hymns/index.json`): the 1941 Church Hymnal (703, with words), and by **number and title
+only** the SDA Hymnal 1985 (698), Advent Lofliedere (Afrikaans, 481), Praise Choruses and Malmesbury Praise — their
+words are copyrighted, so only the public-domain songs in them include words. A church that is licensed (CCLI, or
+the publisher's permission) adds the words on its own devices:
+
+- **Hymns → ⋯ → Import licensed words…**: a SongSelect file (`.usr` or `.txt`, matched to the hymn by title), or a
+  hymnbook file (`.json` or `# 73 Title` text) whose numbers fill in the built-in book.
+- Or pick a hymn and press **Add the words**. For SDA Hymnal hymns that are also in the 1941 Church Hymnal, a button
+  opens the older public-domain words.
+- A hymn without words still has its title slide (number and title), so the congregation can follow in the hymnal.
+- Showing words on a live stream also needs the church's **CCLI Streaming Licence**.
+
+ Add or replace hymnbooks with
 **Hymns → ⋯ → Import a hymnbook**:
 
 - JSON (SDA Sabbath format, formerly "Selah"):

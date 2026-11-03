@@ -20,7 +20,7 @@ about 8 MB of JavaScript memory; with the CPU slowed six times, a 24-verse passa
 
 ```
 python tools/build.py              # update the offline file list (run before deploying)
-python tools/build.py --bibles     # rebuild Bibles from ./sources (KJV, WEB, AFR from Joy in the Journey)
+python tools/build.py --bibles     # rebuild Bibles from ./sources (KJV, WEB; licensed Bibles from ./licensed)
 cd companion && cargo build --release
 ./companion/target/release/sda-sabbath --app-dir .     # serve this folder live while editing
 ```

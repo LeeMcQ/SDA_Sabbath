@@ -29,7 +29,7 @@ export default function create(ctx) {
     { label: 'Clear history', icon: 'trash', onclick: () => { settings.set('bible.history', []); renderHistory(); } },
   ]), { cls: 'sm' });
   // Placeholder options until the list loads, so the toolbar keeps its size (no layout jump on phones).
-  [['kjv', 'KJV'], ['web', 'WEB'], ['afr53', 'AFR']].forEach(([v, a]) => trSel.appendChild(h('option', { value: v }, a)));
+  [['kjv', 'KJV'], ['web', 'WEB']].forEach(([v, a]) => trSel.appendChild(h('option', { value: v }, a)));
   trSel.value = st.tr;
   parSel.appendChild(h('option', { value: '' }, 'No second'));
   const toolbar = h('div.toolbar.bible-bar', h('h2', 'Bible'), refInput, trSel, h('span.faint.hide-sm', { 'aria-hidden': 'true' }, '+'), parSel, h('div.grow'), searchBtn, optsBtn, moreBtn);

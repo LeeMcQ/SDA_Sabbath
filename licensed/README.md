@@ -21,6 +21,19 @@ Optional: add `<name>.meta.json` next to a file to set its labels, e.g. `xho75.m
   "license": "© 1975 Bible Society of South Africa — used with permission" }
 ```
 
+**Afrikaans 1933/53 Bible.** It is © Bybelgenootskap van Suid-Afrika 1933, 1953 and is no longer part of the
+public app. If your church has the Bible Society's permission (copyright@biblesociety.co.za), put your copy here
+as `afr53.json` with this `afr53.meta.json`, then run the build. Keeping the id `afr53` means the Afrikaans
+settings, the live translator's Bible quotes and older service plans find it again:
+
+```json
+{ "id": "afr53", "abbr": "AFR", "name": "Afrikaanse Bybel 1933/53", "lang": "af", "titles": true,
+  "license": "© Bybelgenootskap van Suid-Afrika 1933, 1953 — used with permission" }
+```
+
+For the live translator on the church PC, copy the built `data/bibles-private/afr53` folder into the
+translator's `licensed/` folder.
+
 `lang` (`en`, `af` or `xh`) decides the book names shown (John / Johannes / Yohane).
 
 Supported formats: Zefania XML, JSON (Joy in the Journey flat or nested, thiagobodruk),

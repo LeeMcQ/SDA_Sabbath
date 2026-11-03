@@ -15,7 +15,7 @@ from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 
 ROOT = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), '..'))
 HERE = os.path.dirname(os.path.abspath(__file__))
-PAGES = ['index.html', 'display.html', 'stage.html', 'obs.html', 'privacy.html', 'terms.html', 'companion.html', 'feedback.html', 'admin.html']
+PAGES = ['index.html', 'display.html', 'stage.html', 'obs.html', 'privacy.html', 'terms.html', 'delete-account.html', 'companion.html', 'feedback.html', 'admin.html']
 TABS = ['bible', 'hymns', 'ai', 'slides', 'video', 'web', 'plan', 'tools', 'settings']
 # Requests that are allowed to fail on a plain web server (the companion's /api is only there when it runs).
 # The published website is not what is tested: off github.io the app asks it for shared choruses and the
@@ -266,8 +266,22 @@ def main():
                 assert title and ('73' in title or 'Holy' in title), 'live is %r' % title
             t_hymn()
 
+            @check('a copyrighted hymn shows its title and how to add licensed words')
+            def t_hymn_licensed():
+                pg.evaluate("window.selah.tab('hymns').then(t => t.open({ n: 73, book: 'sda-online' }))"); pg.wait_for_timeout(900)
+                assert pg.locator('.licence-panel').first.is_visible(), 'no licence panel for a hymn without words'
+                assert pg.locator('.licence-panel', has_text='Church Hymnal 1941 #73').count() == 1, 'no link to the public-domain 1941 words'
+                frames = pg.evaluate("window.selah.tab('hymns').then(() => import('./js/tabs/hymns.js')).then(m => { const s = m.parseSongSelect('Amazing Grace\\n\\nVerse 1\\nAmazing grace how sweet the sound\\nThat saved a wretch like me\\n\\nChorus\\nMy chains are gone\\n\\nCCLI Song # 4768151\\n'); return [s.t, s.ccli, s.v.length, !!s.c]; })")
+                assert frames == ['Amazing Grace', '4768151', 1, True], 'SongSelect text not read: %r' % frames
+                usr = pg.evaluate("import('./js/tabs/hymns.js').then(m => { const s = m.parseSongSelect('[S A1234]\\nTitle=Test Song\\nAuthor=A|B\\nFields=Verse 1/tChorus\\nWords=Line one/nLine two/tChorus line\\n'); return [s.t, s.ccli, s.v.length, s.c && s.c[0]]; })")
+                assert usr == ['Test Song', '1234', 1, 'Chorus line'], 'SongSelect .usr not read: %r' % usr
+            t_hymn_licensed()
+
             @check('next / previous step through a hymn')
             def t_steps():
+                # A hymn with words (the 1941 Church Hymnal is included with its words).
+                pg.evaluate("window.selah.tab('hymns').then(t => t.open({ n: 73, book: 'church-1941' }))"); pg.wait_for_timeout(900)
+                pg.click('#presentBtn'); pg.wait_for_timeout(1200)
                 i0 = pg.evaluate("import('./js/core/live.js').then(m => m.live.index)")
                 pg.keyboard.press('ArrowRight'); pg.wait_for_timeout(500)
                 i1 = pg.evaluate("import('./js/core/live.js').then(m => m.live.index)")
@@ -307,10 +321,11 @@ def main():
                 row.locator('.bp-show').click(); pg.wait_for_timeout(1500)
                 i0 = pg.evaluate("import('./js/core/live.js').then(m => m.live.cue ? m.live.index : -1)")
                 assert i0 >= 0, 'Show put nothing on screen'
-                # The slim row steps the slides of what is on screen.
-                pg.click('.bb-slides .bs-b[aria-label="Next slide"]'); pg.wait_for_timeout(600)
-                i1 = pg.evaluate("import('./js/core/live.js').then(m => m.live.index)")
-                assert i1 == i0 + 1, 'slide row: slide %s -> %s' % (i0, i1)
+                # The slim row steps the slides of what is on screen (a hymn without licensed words has only its title slide).
+                if pg.evaluate("import('./js/core/live.js').then(m => m.live.cue.deck.frames.length)") > 1:
+                    pg.click('.bb-slides .bs-b[aria-label="Next slide"]'); pg.wait_for_timeout(600)
+                    i1 = pg.evaluate("import('./js/core/live.js').then(m => m.live.index)")
+                    assert i1 == i0 + 1, 'slide row: slide %s -> %s' % (i0, i1)
                 # The big Next goes to the next part of the service, even with more stanzas left.
                 cur = "window.selah.showTab('plan').then((t) => t.snapshot().cur)"
                 part0 = pg.evaluate(cur)
@@ -360,16 +375,17 @@ def main():
                 pg.evaluate("window.selah.listener.hear('please stand and let us sing great is thy faithfulness')"); pg.wait_for_timeout(1200)
                 ref = pg.locator('.ls-card:not(.ls-follow) .ls-ref').first.inner_text()
                 assert '100' in ref, 'hymn by name offered %r' % ref
-                # Hymn 4 on screen at its title; the congregation sings the third stanza.
-                pg.evaluate("window.selah.tab('hymns').then(t => t.open({ n: 4, book: 'sda-online' }))"); pg.wait_for_timeout(1000)
+                # Hymn 73 (1941 Church Hymnal, with words) on screen at its title; the congregation sings the third stanza.
+                pg.evaluate("window.selah.tab('hymns').then(t => t.open({ n: 73, book: 'church-1941' }))"); pg.wait_for_timeout(1000)
                 pg.click('#presentBtn'); pg.wait_for_timeout(1200)
                 pg.evaluate("import('./js/core/live.js').then(m => m.live.go(0))"); pg.wait_for_timeout(300)
-                pg.evaluate("window.selah.listener.hear('tenderly he shields and spares us well our feeble frame he knows')"); pg.wait_for_timeout(600)
+                pg.evaluate("window.selah.listener.hear('though the darkness hide thee though the eye of man thy great glory may not see')"); pg.wait_for_timeout(600)
                 assert pg.locator('.ls-follow').count() == 1, 'no "being sung now" card'
                 pg.locator('.ls-follow .btn.primary').click(); pg.wait_for_timeout(500)
                 lab = pg.evaluate("import('./js/core/live.js').then(m => m.live.cue.labels[m.live.index])")
                 assert lab.startswith('3'), 'showing %r instead of stanza 3' % lab
                 assert not errs, '; '.join(errs[:3])
+                pg.evaluate("window.selah.tab('hymns').then(t => t.open({ n: 73, book: 'sda-online' }))"); pg.wait_for_timeout(600)   # back to the main hymnal
             t_hymn_listen()
 
             @check('listening through the offline translator (quoted verse, reference, hymn)')

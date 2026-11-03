@@ -20,7 +20,7 @@ export function frameOf(cue, i) {
   return d.frame || null;
 }
 
-/** The default logo slide: the Church symbol (js/core/symbol.js), unaltered, in one solid colour. */
+/** The default logo slide: the neutral SDA Sabbath mark (js/core/symbol.js) in one solid colour. A church's own logo replaces it. */
 const DEFAULT_MARK = SYMBOL_ROUND.replace('<svg ', '<svg class="logo-mark" ');
 
 export const STAGE_W = 1920;
@@ -252,7 +252,7 @@ export function createStage(host, opts = {}) {
       else if (s.logoText) { const d = document.createElement('div'); d.className = 'logo-text'; d.textContent = s.logoText; logoEl.appendChild(d); }
       clearInterval(sabbathTimer); sabbathTimer = 0;
       if (!lu && !s.logoText) {
-        // No logo set: the Church symbol, the church name (or "Welcome") and its conference; from Friday sunset
+        // No logo set: the neutral mark, the church name (or "Welcome") and its conference; from Friday sunset
         // to Sabbath sunset also "Happy Sabbath" and when the Sabbath ends (worked out here, offline).
         const d = document.createElement('div'); d.className = 'logo-default';
         d.innerHTML = DEFAULT_MARK;

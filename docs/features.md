@@ -21,7 +21,7 @@ Status marks: **✔** built and tested · **◐** built, but not yet proven in r
 
 ## 2. Bible
 
-- **Built-in Bibles**: King James, World English Bible, and the Afrikaans 1933/53.
+- **Built-in Bibles**: King James and World English Bible (public domain). Licensed Bibles, such as the Afrikaans 1933/53, are added by each church.
 - **Add more**: any licensed Bible (NIV, ESV, NKJV, 1975 Xhosa…) from a file (Zefania, OSIS, CES, JSON, CSV), or from three online sources (bible.helloao.org, getBible and a ~100-language Bible corpus). Licensed Bibles can also be built into one installation without ever becoming public.
 - **Smart reference entry**: `John 3:16-18`, `Ps 23`, English or Afrikaans book names.
 - **Two translations side by side**, for example English and isiXhosa.
@@ -34,7 +34,7 @@ Status marks: **✔** built and tested · **◐** built, but not yet proven in r
 
 ## 3. Hymns and choruses
 
-- **Built-in books**: SDA Hymnal (698), 1941 Church Hymnal (703), Advent Lofliedere in Afrikaans (481), Praise Choruses, Malmesbury Praise, plus community-shared choruses.
+- **Built-in books**: 1941 Church Hymnal (703, with words); SDA Hymnal (698), Advent Lofliedere in Afrikaans (481), Praise Choruses and Malmesbury Praise by number and title, with **Import licensed words** for the church's own licensed words, plus community-shared choruses.
 - **Find by number or words**.
 - **Title slide, one stanza per slide**, chorus repeated automatically.
 - **Choose which stanzas to sing** (for example 1, 2, 4).
@@ -81,7 +81,7 @@ Status marks: **✔** built and tested · **◐** built, but not yet proven in r
 
 - **Banner types**: Welcome, Bible verse, Announcement, Tithe and offering (with a real giving QR code), Countdown, Sabbath sunset, Closing blessing, Blank and Picture.
 - **Filled in from your church details**: church name, the coming Sabbath's date, sunset time (worked out offline from the church's location) and service time.
-- **Look**: eight readable colour palettes, patterns, **Advent Sans** (the church typeface), serif or clear sans, your logo or the Church symbol, and your own photos as backgrounds (darkened automatically for readable text).
+- **Look**: eight readable colour palettes, patterns, **Advent Sans** (the church typeface), serif or clear sans, your church's own logo or a neutral open-Bible mark, and your own photos as backgrounds (darkened automatically for readable text).
 - **Google-Slides-style editor**:
   - Insert text boxes, pictures (upload, paste, drag), 27 shapes, lines and arrows.
   - Self-filling fields: `{date}`, `{sunset}`, `{church}`, `{town}`, `{service}`, `{today}`.
@@ -146,7 +146,7 @@ Status marks: **✔** built and tested · **◐** built, but not yet proven in r
 ### Live translation: Afrikaans sermon → English captions (offline)
 - **Runs on the church PC** with no internet and no subscription. It is a separate program (Windows installer or zip).
 - **Pipeline**: sound desk → cut at pauses → Afrikaans speech recognition (Fluister) → Bible-quote check → Adventist words → English (OPUS-MT) → caption line.
-- **Exact Bible quotes**: a sentence that matches a verse of the Afrikaans 1933/53 comes out as the English verse itself, with its reference (World English Bible, or KJV).
+- **Exact Bible quotes**: when the church has installed its licensed Afrikaans 1933/53, a sentence that matches a verse comes out as the English verse itself, with its reference (World English Bible, or KJV).
 - **Adventist vocabulary**: Sabbath, Spirit of Prophecy, Second Coming, sanctuary, investigative judgment and more, from an editable word list.
 - **Never-translate dictionary**: names, towns, surnames and words like Amen, Maranata and braai stay as spoken. Your own names are added from the app, and the church name and town are included automatically.
 - **South African and Kaaps slang** is turned into standard Afrikaans before translating; filler words are dropped.
@@ -164,7 +164,7 @@ Status marks: **✔** built and tested · **◐** built, but not yet proven in r
 
 ## 14. Seventh-day Adventist identity
 
-- **Logo slide** with the Seventh-day Adventist® Church symbol, church name, conference and union, with "Happy Sabbath" (or "Geseënde Sabbat" in Afrikaans) from Friday sunset to Sabbath sunset, and a greeting when the Sabbath ends.
+- **Logo slide** with your church's logo (or a neutral mark), church name, conference and union, with "Happy Sabbath" (or "Geseënde Sabbat" in Afrikaans) from Friday sunset to Sabbath sunset, and a greeting when the Sabbath ends.
 - **Sabbath times worked out offline** from the church's location.
 - **Advent Sans** typeface and the Adventist design toolkit, colours and logos.
 - **The top bar greets the media team** according to the time of the week.

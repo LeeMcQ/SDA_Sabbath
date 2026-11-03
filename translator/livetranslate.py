@@ -31,7 +31,11 @@ except Exception:
 HERE = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, 'frozen', False) else __file__))
 MODELS = os.path.join(HERE, 'models')
 # The Bibles: its own copy in the download (translator/bibles), else SDA Sabbath's data folder next to it.
-BIBLES = os.path.join(HERE, 'bibles') if os.path.isdir(os.path.join(HERE, 'bibles', 'afr53')) else os.path.normpath(os.path.join(HERE, '..', 'data', 'bibles'))
+BIBLES = os.path.join(HERE, 'bibles') if os.path.isdir(os.path.join(HERE, 'bibles', 'kjv')) else os.path.normpath(os.path.join(HERE, '..', 'data', 'bibles'))
+# The Afrikaans 1933/53 Bible is (c) Bible Society of South Africa, so it is not shipped. A church that is licensed
+# to use it puts it in one of these folders (same per-book JSON as SDA Sabbath's data/bibles-private/afr53).
+AF_DIRS = [os.path.join(HERE, 'bibles'), os.path.join(HERE, 'licensed'),
+           os.path.normpath(os.path.join(HERE, '..', 'data', 'bibles-private')), BIBLES]
 CONFIG = os.path.join(HERE, 'config.json')
 
 
@@ -124,9 +128,10 @@ class Bible:
 
     def __init__(self, english='web'):
         self.EN, self.AF = load_books()
-        self.af = self._load('afr53')
         self.en_id = english
         self.en = self._load(english)
+        self.af = self._load_af()
+        self.shape = self.af or self.en   # chapter and verse counts for spoken references
         # spoken book names: "johannes", "1 johannes", "eerste johannes", plus a few common variants
         self.names = {}
         for i, n in enumerate(self.AF):
@@ -154,6 +159,18 @@ class Bible:
             raise SystemExit('Bible "%s" not found in %s' % (tid, d))
         return books
 
+    def _load_af(self):
+        """The licensed Afrikaans Bible, if this church installed it; else {} (quotes are then not recognised)."""
+        for d in AF_DIRS:
+            if os.path.isfile(os.path.join(d, 'afr53', '01.json')):
+                books = {}
+                for b in range(1, 67):
+                    p = os.path.join(d, 'afr53', '%02d.json' % b)
+                    if os.path.exists(p):
+                        books[b - 1] = json.load(open(p, encoding='utf-8'))
+                return books
+        return {}
+
     def set_english(self, tid):
         if tid != self.en_id:
             self.en = self._load(tid)
@@ -172,7 +189,7 @@ class Bible:
                     self.verses.append((b, c + 1, v + 1, toks))
                     for t in set(toks):
                         df[t] = df.get(t, 0) + 1
-        n = len(self.verses)
+        n = max(1, len(self.verses))
         self.idf = {t: math.log(n / k) for t, k in df.items()}
         self.inv = {}
         for i, (_, _, _, toks) in enumerate(self.verses):
@@ -253,13 +270,13 @@ class Bible:
             if not nums:
                 continue
             c = nums[0]
-            if b not in self.af or c < 1 or c > len(self.af[b]):
+            if b not in self.shape or c < 1 or c > len(self.shape[b]):
                 continue
             v1 = nums[1] if len(nums) > 1 else None
             v2 = nums[2] if len(nums) > 2 and 'tot' in kinds else None
-            if v1 and not (0 < v1 <= len(self.af[b][c - 1])):
+            if v1 and not (0 < v1 <= len(self.shape[b][c - 1])):
                 v1 = None
-            if v2 and not (v1 and v1 < v2 <= len(self.af[b][c - 1])):
+            if v2 and not (v1 and v1 < v2 <= len(self.shape[b][c - 1])):
                 v2 = None
             q = self.EN[b] + ' %d' % c + (':%d' % v1 if v1 else '') + ('-%d' % v2 if v2 else '')
             out.append(q)
@@ -1101,6 +1118,8 @@ def quality(args, quiet=False, engines=None):
     else:
         gloss, bible = Glossary(), Bible(getattr(args, 'english', 'web'))
         mt = EchoMT() if args.dry else Translator(find_mt(args.mt))
+    if not bible.af:   # verse-quote rows need the licensed Afrikaans Bible; without it they are left out
+        rows = [r for r in rows if not r['ref'].startswith('@')]
     tt = TextTranslator(mt, gloss, bible)
     t0 = time.time()
     res = []
@@ -1289,8 +1308,10 @@ def check(step, hub=None, device=None):
             return {'ok': True, 'detail': 'All parts installed (%s). %s.' % (', '.join(vers[:3]), 'NVIDIA graphics card found' if cuda() else 'No graphics card: the processor does the work')}
         if step == 'words':
             b = hub.bible if hub else Bible('web'); g = hub.gloss if hub else Glossary()
-            return {'ok': len(b.verses) > 30000, 'detail': '%s Afrikaans verses for Bible quotes; %d words never translated, %d Adventist terms, %d slang words.'
-                    % (format(len(b.verses), ','), len(g.keep), len(g.terms_src) + len(g.terms_exact), len(g.slang))}
+            quotes = ('%s Afrikaans verses for Bible quotes' % format(len(b.verses), ',')) if b.af else \
+                'Afrikaans Bible not installed (it is licensed: put your church\'s licensed copy in the licensed folder), so quoted verses are not recognised; spoken references still work'
+            return {'ok': not b.af or len(b.verses) > 30000, 'detail': '%s; %d words never translated, %d Adventist terms, %d slang words.'
+                    % (quotes, len(g.keep), len(g.terms_src) + len(g.terms_exact), len(g.slang))}
         if step == 'mt':
             mt = hub.mt if hub else Translator(find_mt())
             tt = TextTranslator(mt, hub.gloss if hub else Glossary(), hub.bible if hub else Bible('web'))

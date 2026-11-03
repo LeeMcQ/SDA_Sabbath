@@ -29,8 +29,8 @@ import { sabbathNow, sabbathWords } from './core/sabbath.js';
 const lazyWelcome = () => import('./tabs/welcome.js');
 const openFeedback = (c, o) => import('./tabs/account.js').then((m) => m.openFeedback(c, o));
 
-export const VERSION = '1.6.0';
-export const BUILD = '161123d';
+export const VERSION = '1.6.1';
+export const BUILD = 'b06934b';
 
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', file: 'bible.js', load: () => import('./tabs/bible.js') },

@@ -51,13 +51,16 @@ function normaliseBook(j, fallbackName) {
   let hymns = [];
   const list = Array.isArray(j) ? j : j.hymns || j.songs || [];
   list.forEach((x) => {
-    if (x.v) hymns.push({ n: +x.n, t: x.t, a: x.a || '', v: x.v, c: x.c || null });
+    // Copyrighted songs are listed by number and title only ("words": false): the church adds the words under
+    // its own licence (More → Import licensed words, or Add the words), and they stay on its own devices.
+    if (x.words === false && !(x.v && x.v.length)) hymns.push({ n: +x.n, t: x.t || '', a: x.a || '', ccli: x.ccli ? String(x.ccli) : '', v: [], c: null, locked: true });
+    else if (x.v) hymns.push(Object.assign({ n: +x.n, t: x.t, a: x.a || '', v: x.v, c: x.c || null }, x.ccli ? { ccli: String(x.ccli) } : {}));
     else if (x.lyrics || x.words || x.text) {
       const p = parseLyrics(x.lyrics || x.words || x.text);
       hymns.push({ n: +(x.number || x.n || x.no), t: x.title || x.t || '', a: x.author || '', v: p.v, c: p.c });
     }
   });
-  hymns = hymns.filter((x) => x.n && x.v && x.v.length).sort((a, b) => a.n - b.n)
+  hymns = hymns.filter((x) => x.n && x.v && (x.v.length || x.locked)).sort((a, b) => a.n - b.n)
     .map((x) => Object.assign(x, { t: decodeEntities(x.t || ''), a: decodeEntities(x.a || ''), v: decodeDeep(x.v), c: x.c ? decodeDeep(x.c) : null }));
   return { id: j.id || 'book-' + Date.now().toString(36), name: j.name || fallbackName || 'Imported hymns', short: j.short || '', lang: j.lang || 'en', hymns };
 }
@@ -85,6 +88,42 @@ function parseTxtBook(text, name) {
     if (p.v.length) hymns.push({ n: +m[1], t: m[2].trim(), a: '', v: p.v, c: p.c });
   });
   return { id: 'book-' + Date.now().toString(36), name, lang: 'en', hymns };
+}
+
+/** The second line in hymn lists: the first line of the words, or why there are none. */
+const firstLine = (x) => (x.v && x.v[0] && x.v[0][0]) || (x.locked ? (x.ccli ? 'CCLI song ' + x.ccli + ' · ' : '') + 'Words not included (copyrighted)' : '');
+
+/** SongSelect / FreeShow-style files: one song each. ".usr" (SongSelect USR) or SongSelect plain text.
+ *  Returns {t, a, ccli, v, c} or null. */
+export function parseSongSelect(text) {
+  const src = String(text || '').replace(/\r/g, '');
+  if (/^\s*\[S\b/m.test(src) || /^Words=/m.test(src)) {
+    const get = (k) => { const m = new RegExp('^' + k + '=(.*)$', 'm').exec(src); return m ? m[1].trim() : ''; };
+    const head = /^\s*\[S\s+A?(\d+)\]/m.exec(src);
+    const fields = get('Fields').split('/t');
+    const parts = get('Words').split('/t').map((b) => b.split('/n').map((l) => l.trim()).filter(Boolean));
+    const v = []; let c = null;
+    parts.forEach((b, i) => { if (!b.length) return; if (/chorus|refrain/i.test(fields[i] || '')) { if (!c) c = b; } else v.push(b); });
+    if (!v.length && !c) return null;
+    return { t: get('Title'), a: get('Author').replace(/\|/g, ', '), ccli: head ? head[1] : '', v: v.length ? v : [c], c: v.length ? c : null };
+  }
+  const lines = src.split('\n');
+  const t = (lines.find((l) => l.trim()) || '').trim();
+  const HEADS = /^(verse|chorus|refrain|bridge|pre-?chorus|tag|ending|intro|misc)\b[\s\d]*$/i;
+  const v = []; let c = null; let cur = null; let kind = ''; let ccli = '';
+  const flush = () => { if (cur && cur.length) { if (/chorus|refrain/i.test(kind) && !/pre/i.test(kind)) { if (!c) c = cur; } else v.push(cur); } cur = null; };
+  for (const raw of lines.slice(lines.indexOf(lines.find((l) => l.trim())) + 1)) {
+    const l = raw.trim();
+    const m = /^CCLI Song\s*#\s*(\d+)/i.exec(l);
+    if (m) { ccli = m[1]; break; }
+    if (HEADS.test(l)) { flush(); kind = l; cur = []; continue; }
+    if (!l) { if (cur && cur.length) { flush(); kind = ''; } continue; }
+    if (!cur) cur = [];
+    cur.push(l);
+  }
+  flush();
+  if (!t || (!v.length && !c)) return null;
+  return { t, a: '', ccli, v: v.length ? v : [c], c: v.length ? c : null };
 }
 
 export default function create(ctx) {
@@ -136,6 +175,8 @@ export default function create(ctx) {
   const moreBtn = btn('more', 'More', () => menu(moreBtn, [
     { label: 'Find lyrics online', icon: 'search', onclick: () => findLyrics() },
     { label: 'New hymn', icon: 'plus', onclick: () => editHymn(null) },
+    { label: 'Import licensed words…', icon: 'upload', onclick: importLicensed },
+    hymn && hymn.locked ? { label: 'Add the words for this hymn (licensed)…', icon: 'edit', onclick: () => editHymn(hymn) } : null,
     { label: 'Import a hymnbook…', icon: 'upload', onclick: importBook },
     { label: 'Export this hymnbook', icon: 'download', onclick: exportBook },
     { label: 'Add this hymn to the service plan', icon: 'plan', onclick: addToPlan, disabled: !hymn },
@@ -254,7 +295,7 @@ export default function create(ctx) {
     const frag = document.createDocumentFragment();
     list.slice(0, 400).forEach((x) => {
       frag.appendChild(h('button', { type: 'button', tabindex: '-1', 'aria-pressed': String(hymn === x), onclick: () => selectHymn(x), ondblclick: () => { selectHymn(x); live.take(); } },
-        h('span.num', String(x.n)), h('span.grow', h('div.trunc', x.t), h('div.note.trunc', x.v[0][0])),
+        h('span.num', String(x.n)), h('span.grow', h('div.trunc', x.t), h('div.note.trunc', firstLine(x))),
         x.shared ? h('span.hy-shared', { title: 'Shared by a church that uses SDA Sabbath' }, 'Shared') : null,
         musicSet && musicSet.has(x.n) ? h('span.has-music', { title: 'Music available offline' }, icon('music')) : null));
     });
@@ -269,7 +310,7 @@ export default function create(ctx) {
   function partsOf(hy) {
     const parts = [];
     const s = S();
-    if (s.titleSlide) parts.push({ kind: 'title', label: 'T' });
+    if (s.titleSlide || !hy.v.length) parts.push({ kind: 'title', label: 'T' });
     const sel = chosen || new Set(hy.v.map((_, i) => i));
     let choDone = false;
     hy.v.forEach((lines, i) => {
@@ -340,9 +381,10 @@ export default function create(ctx) {
     empty.hidden = true;
     cue = buildCue(hymn);
     titleEl.textContent = hymn.n + '  ' + hymn.t;
-    metaEl.textContent = (hymn.a ? hymn.a + '. ' : '') + 'Sing stanzas:';
+    metaEl.textContent = (hymn.a ? hymn.a + '. ' : '') + (hymn.locked ? (hymn.ccli ? 'CCLI song ' + hymn.ccli + '. ' : '') : 'Sing stanzas:');
     renderChips();
     renderCards();
+    if (hymn.locked) grid.appendChild(licencePanel(hymn));
     ctx.setStaged('hymns', cue);
     renderMusic();
   }
@@ -544,12 +586,13 @@ export default function create(ctx) {
     modal({
       title: hy ? 'Edit hymn ' + hy.n : 'New hymn', wide: true,
       body: h('div.col', h('div.form', h('label', 'Number'), n, h('label', 'Title'), t, h('label', 'Author'), a),
-        h('p.note', 'Leave an empty line between stanzas. Start the chorus with a line “Chorus:”.'), ta),
+        h('p.note', 'Leave an empty line between stanzas. Start the chorus with a line “Chorus:”.' + (hy && hy.locked ? ' Only add words your church is licensed to use; they stay on this device.' : '')), ta),
       actions: [{ label: 'Cancel' }, { label: 'Save', primary: true, onclick: async () => {
         const num = parseInt(n.value, 10);
         const p = parseLyrics(ta.value);
         if (!num || !t.value.trim() || !p.v.length) { toast('A number, a title and at least one stanza are needed.', 'err'); return false; }
         const nh = { n: num, t: t.value.trim(), a: a.value.trim(), v: p.v, c: p.c };
+        if (hy && hy.ccli) nh.ccli = hy.ccli;
         const i = book.hymns.findIndex((x) => x.n === num);
         if (i >= 0) book.hymns[i] = nh; else { book.hymns.push(nh); book.hymns.sort((x, y) => x.n - y.n); }
         await saveBookEdit(nh, i < 0);
@@ -557,6 +600,70 @@ export default function create(ctx) {
         syncLive();
       } }],
     });
+  }
+
+  /** A copyrighted hymn without words: the title slide still works; the church adds the words under its licence. */
+  function licencePanel(hy) {
+    const norm = (t) => normalize(t || '').replace(/[^a-z0-9 ]+/g, '').trim();
+    const pd = book && book.id === 'sda-online' ? books.find((b) => b.id === 'church-1941') : null;
+    const twin = pd ? pd.hymns.find((x) => x.v.length && norm(x.t) === norm(hy.t)) : null;
+    const ss = 'https://songselect.ccli.com/search/results?search=' + encodeURIComponent(hy.ccli || hy.t);
+    return h('div.licence-panel', { role: 'note' },
+      h('b', 'Words not included'),
+      h('p.note', 'This song is under copyright, so SDA Sabbath shows only its number and title (the title slide works). ' +
+        'If your church is licensed (for example CCLI, or the publisher’s permission), add the words: they stay on your own devices and are never shared.'),
+      h('div.row.wrap',
+        h('button.btn.sm.primary', { type: 'button', onclick: () => editHymn(hy) }, icon('edit'), h('span', 'Add the words')),
+        h('button.btn.sm', { type: 'button', onclick: importLicensed }, icon('upload'), h('span', 'Import licensed words…')),
+        twin ? h('button.btn.sm', { type: 'button', title: 'Older public-domain words of this hymn', onclick: () => { setBook(pd.id); selectHymn(twin); } }, icon('hymn'), h('span', 'Church Hymnal 1941 #' + twin.n)) : null,
+        h('a.btn.sm', { href: ss, target: '_blank', rel: 'noopener' }, icon('search'), h('span', hy.ccli ? 'SongSelect (CCLI ' + hy.ccli + ')' : 'Look up on SongSelect'))),
+      h('p.note', 'Showing song words on a live stream needs your church’s CCLI Streaming Licence as well.'));
+  }
+
+  /** Words a licensed church imports for a built-in book: our .json / .txt hymnbook (by number), or one song
+   *  from SongSelect (.usr or .txt, matched by title or put on the chosen hymn), like OpenLP and FreeShow. */
+  async function importLicensed() {
+    if (!book) return;
+    const ok = await confirmBox('Import licensed words',
+      'Only import words your church is licensed to use (CCLI, or the publisher’s permission). They are saved on this device for “' + book.name + '” and are never shared. Accepted: a SongSelect file (.usr or .txt), or a hymnbook file (.json, or .txt with “# 73 Title” before each hymn).',
+      'Choose file…');
+    if (!ok) return;
+    const inp = h('input', { type: 'file', accept: '.json,.txt,.usr', multiple: true });
+    inp.onchange = async () => {
+      const files = Array.from(inp.files || []);
+      let added = 0, last = null;
+      const norm = (t) => normalize(t || '').replace(/[^a-z0-9 ]+/g, '').trim();
+      for (const f of files) {
+        try {
+          const text = await readText(f);
+          let list = [];
+          if (/^\s*[[{]/.test(text)) list = normaliseBook(JSON.parse(text), f.name).hymns;
+          else if (/^\s*#\s*\d+/m.test(text) && !/^\s*\[S\b/m.test(text)) list = parseTxtBook(text, f.name).hymns;
+          else {
+            const sg = parseSongSelect(text);
+            if (sg) {
+              const hit = book.hymns.find((x) => norm(x.t) === norm(sg.t)) || (files.length === 1 && hymn && hymn.locked ? hymn : null);
+              const n = hit ? hit.n : Math.max(0, ...book.hymns.map((x) => x.n)) + 1;
+              list = [{ n, t: hit ? hit.t : sg.t, a: sg.a || (hit && hit.a) || '', v: sg.v, c: sg.c, ccli: sg.ccli || (hit && hit.ccli) || '' }];
+            }
+          }
+          for (const x of list) {
+            if (!x.v || !x.v.length) continue;
+            const nh = { n: x.n, t: x.t, a: x.a || '', v: x.v, c: x.c || null };
+            if (x.ccli) nh.ccli = String(x.ccli);
+            const i = book.hymns.findIndex((y) => y.n === nh.n);
+            if (i >= 0) { if (!nh.t) nh.t = book.hymns[i].t; book.hymns[i] = nh; } else { book.hymns.push(nh); book.hymns.sort((a, b) => a.n - b.n); }
+            await saveBookEdit(nh, i < 0, book, true);
+            added++; last = nh;
+          }
+        } catch (e) { toast('Could not read ' + f.name + ': ' + e.message, 'err', 6000); }
+      }
+      if (!added) { toast('No song words found in the file.', 'err'); return; }
+      toast(added + (added === 1 ? ' song' : ' songs') + ' with words saved on this device.', 'ok');
+      renderList();
+      if (last) selectHymn(book.hymns.find((x) => x.n === last.n));
+    };
+    inp.click();
   }
 
   async function importBook() {
@@ -692,7 +799,7 @@ export default function create(ctx) {
         const hasMusic = await music.entry(bk.id, hy.n).catch(() => null);
         offBox.appendChild(h('button.lyr-item', { type: 'button', onclick: () => { closeModal(); if (book !== bk) setBook(bk.id); selectHymn(hy); } },
           h('div.grow', h('div.row', h('b.grow', hy.n + '  ' + hy.t), hasMusic ? h('span.lyr-badge.midi', 'MIDI') : null),
-            h('div.note.trunc', bk.name + ' · ' + hy.v[0][0])), h('span.lyr-go', 'Open')));
+            h('div.note.trunc', bk.name + ' · ' + firstLine(hy))), h('span.lyr-go', 'Open')));
       });
     }
 
@@ -858,7 +965,8 @@ export default function create(ctx) {
   }
 
   // ------------------------------------------------------------ music (offline MIDI accompaniment)
-  const sungStanzas = () => (chosen ? Array.from(chosen).sort((a, b) => a - b) : hymn.v.map((_, i) => i));
+  const sungStanzas = () => (chosen ? Array.from(chosen).sort((a, b) => a - b)
+    : !hymn.v.length && musicEntry && Array.isArray(musicEntry.v) && musicEntry.v.length ? musicEntry.v.map((_, i) => i) : hymn.v.map((_, i) => i));
   const playingThis = () => music.isPlaying() && cue && music.hymnKey === cue.hymnKey;
   let musicStatus = '';
 

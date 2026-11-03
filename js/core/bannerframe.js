@@ -108,7 +108,7 @@ export function bannerEl(f, urlFor) {
   inner.className = 'fb-in' + (f.layout ? ' has-layout' : '');
   let top = '';
   if (f.logo) top += '<img class="fb-logo" alt="" src="' + esc(urlFor(f.logo)) + '">';
-  else if (f.symbol) top += '<div class="fb-logo fb-symbol">' + SYMBOL_ROUND + '</div>'; // no church logo: the Church symbol
+  else if (f.symbol) top += '<div class="fb-logo fb-symbol">' + SYMBOL_ROUND + '</div>'; // no church logo: the neutral mark
   if (f.kicker && !f.countdown) top += '<div class="fb-kicker" data-part="kicker">' + lines(f.kicker) + '</div>';
   let mid;
   if (f.countdown) {

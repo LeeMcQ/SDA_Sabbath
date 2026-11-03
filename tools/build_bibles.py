@@ -32,9 +32,11 @@ SOURCES = [
          license="Public domain", file="kjv.json"),
     dict(id="web", abbr="WEB", name="World English Bible", lang="en", year="2006",
          license="Public domain", file="web.json"),
-    dict(id="afr53", abbr="AFR", name="Afrikaanse Bybel 1933/53", lang="af", year="1933/1953",
-         license="Public domain (50-year term expired)", file="afr.json"),
 ]
+# Not shipped: the Afrikaans 1933/53 Bible is (c) Bybelgenootskap van Suid-Afrika 1933, 1953 (digital edition (c) 2012),
+# and a complete Bible in an app needs the Bible Society's written permission. A church that holds a licence puts
+# its copy in ./licensed/ as afr53.json with afr53.meta.json (see licensed/README.md); it then builds into the
+# git-ignored data/bibles-private/ for that church's own installation only.
 
 BOOKS_EN = ["Genesis","Exodus","Leviticus","Numbers","Deuteronomy","Joshua","Judges","Ruth",
  "1 Samuel","2 Samuel","1 Kings","2 Kings","1 Chronicles","2 Chronicles","Ezra","Nehemiah",

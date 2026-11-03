@@ -17,7 +17,7 @@ export default function create(ctx) {
   const T = createTranslate(ctx);
   const listenCols = [...L.el.querySelectorAll('.st-grid > .st-col')];
   const trCard = T.el.querySelector('.tr-card');
-  trCard.prepend(h('h3', 'Live translation · Afrikaans sermon → English'));
+  trCard.prepend(h('h3', 'Live translation · Afrikaans sermon → English'), h('p.note', 'Computer translation can be wrong or leave things out. It helps people follow; it is not an exact translation.'));
 
   // ------------------------------------------------------------ translation on phones
   const preview = h('div.trp-prev');
