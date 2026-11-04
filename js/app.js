@@ -2,7 +2,7 @@
 import { $, h, isTyping, keepScreenOn } from './core/util.js';
 import { startInstallPrompt } from './core/installer.js';
 import { icon } from './core/icons.js';
-import { settings } from './core/settings.js';
+import { settings, serviceLang } from './core/settings.js';
 import { db, persistStorage } from './core/db.js';
 import { readinessBadge, autoUpdateAllowed, inServiceHold } from './core/readiness.js';
 import { link, listScreens } from './core/link.js';
@@ -30,7 +30,7 @@ const lazyWelcome = () => import('./tabs/welcome.js');
 const openFeedback = (c, o) => import('./tabs/account.js').then((m) => m.openFeedback(c, o));
 
 export const VERSION = '1.6.1';
-export const BUILD = '9d6f662';
+export const BUILD = 'c6caf7e';
 
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', file: 'bible.js', load: () => import('./tabs/bible.js') },
@@ -904,7 +904,7 @@ const sabbathChip = h('span.sabbath-chip', { hidden: true });
 $('.brand').appendChild(sabbathChip);
 function paintSabbathChip() {
   const c = church(), st = sabbathNow(new Date(), c.lat, c.lon);
-  const w = sabbathWords(st, settings.v.bible.primary === 'afr53' ? 'af' : 'en');
+  const w = sabbathWords(st, serviceLang() === 'af' ? 'af' : 'en');
   sabbathChip.hidden = !st.on; sabbathChip.textContent = w.greeting; sabbathChip.title = w.ends;
 }
 paintSabbathChip();

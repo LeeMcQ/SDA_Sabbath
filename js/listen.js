@@ -12,7 +12,7 @@
 // Automatic uses the translator when it is running on this PC, otherwise the browser. Off by default.
 import { h, clear } from './core/util.js';
 import { icon } from './core/icons.js';
-import { settings } from './core/settings.js';
+import { settings, serviceLang } from './core/settings.js';
 import { findRefs, findHymnTitle, stanzaScores } from './core/spokenref.js';
 import { live } from './core/live.js';
 import { parseRef, refText, EN, AF } from './core/books.js';
@@ -46,7 +46,7 @@ export function createListener({ ctx, getTab, present, ui }) {
   const list = h('div.ls-list', { 'aria-live': 'polite' });
   const box = h('div.listen-box', { 'aria-label': 'Verse and hymn suggestions' }, head, list);
 
-  const lang = () => (settings.v.bible.primary === 'afr53' ? 'af-ZA' : 'en-ZA');
+  const lang = () => (serviceLang() === 'af' ? 'af-ZA' : 'en-ZA');
   const afr = () => lang() === 'af-ZA';
 
   const watchers = new Set(); // Tools → Listen repaints when listening starts or stops

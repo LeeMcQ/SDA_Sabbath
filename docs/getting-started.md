@@ -37,11 +37,17 @@ SDA Sabbath is built to run a whole service with no internet:
 
 ### First start
 
-A short setup runs once (Settings → About → Run the setup again): the language of your services and your church
-(name, conference, location for sunset times), the screens this PC drives, **Hymn music** — this device (church PC,
+A short setup runs once (Settings → About → Run the setup again). After the sign-in (when the cloud is on) it first
+asks to **install SDA Sabbath on this device**. Then **your church**: the languages of your services — English by
+default, plus up to two more chosen from every language that has a hymnbook or Bible in the download lists (isiXhosa,
+isiZulu, Sesotho, Setswana, Afrikaans, French …) — and the name, conference and location for sunset times; the screens
+this PC drives; **Hymn music** — this device (church PC,
 laptop or phone), your hall (small, medium, large) and what the music is heard through (sound desk, small
 speakers, TV) set the best sound, with *Download now* for the Studio or High-quality instruments and *Play a
-test* — and **Ready for Sabbath**: saved for use without internet, install the app, keep the data safe, and a
+test* — then **Bibles and hymns for your languages**: for each language the setup proposes a Bible and a hymnbook
+(you can pick another, or none) and **Download now** fetches them once, so they work without internet on Sabbath.
+The main language's Bible and hymnbook open first and the second language's Bible goes beside it (side by side).
+If you press Next first, they download in the background. Then **Ready for Sabbath**: saved for use without internet, install the app, keep the data safe, and a
 clicker test.
 
 ### 2. Projector setup (PC)

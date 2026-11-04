@@ -68,6 +68,18 @@ async function fillBuiltIn(book) {
   return filled;
 }
 
+/** Download one hymnbook from the list and keep it offline (with the SDA Hymnal words, for the English one).
+ *  Returns { book, filled }. The caller announces the change. */
+export async function installHymnal(e, say = () => {}) {
+  if (navigator.onLine === false) throw new Error('no internet connection');
+  const book = await downloadHymnal(e, say);
+  say('Saving…');
+  await db.put('hymnbooks', book.id, book);
+  const filled = e.id === 'web-rejnac-english' ? await fillBuiltIn(book) : 0;
+  return { book, filled };
+}
+export const announceHymnbooks = announce;
+
 export function addHymnbookDialog(onDone) {
   let filter = 'all';
   let installed = new Map();
@@ -126,11 +138,7 @@ export function addHymnbookDialog(onDone) {
     bt.disabled = true; const old = have ? 'Update' : 'Add';
     const say = (x) => { bt.textContent = x; };
     try {
-      if (navigator.onLine === false) throw new Error('no internet connection');
-      const book = await downloadHymnal(e, say);
-      say('Saving…');
-      await db.put('hymnbooks', book.id, book);
-      const filled = e.id === 'web-rejnac-english' ? await fillBuiltIn(book) : 0;
+      const { book, filled } = await installHymnal(e, say);
       closeModal();
       toast(e.name + ' added (' + book.hymns.length + ' hymns) and available offline.' +
         (filled ? ' The words were also filled in for ' + filled + (filled === 1 ? ' hymn' : ' hymns') + ' of the SDA Hymnal 1985, so they play with their music.' : ''), 'ok', filled ? 7000 : 4000);

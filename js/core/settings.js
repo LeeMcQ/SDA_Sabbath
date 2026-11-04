@@ -62,7 +62,8 @@ export const DEFAULTS = {
   captions: { on: false, url: 'http://127.0.0.1:7790', show: true, suggest: true, clearAfter: 12, english: 'web', device: '', keep: '' },
   ai: { provider: 'openai', apiKey: '', model: '', imageModel: '', auto: {}, keySession: true },
   // The church's details, used by Banners (name, town, sunset times, service countdown, giving QR code).
-  church: { name: '', town: '', conference: '', union: '', lat: null, lon: null, service: '09:30', givingUrl: '', givingLabel: '' },
+  church: { name: '', town: '', conference: '', union: '', lat: null, lon: null, service: '09:30', givingUrl: '', givingLabel: '',
+    languages: ['en', '', ''] }, // the church's service languages (first-start setup): main language, then up to two more
   backup: { slides: true, videos: false, lastDrive: null, lastFile: null, remind: true, remindAt: 0 }, // remind: ask to sign in and back up once a day (js/backupnag.js)
 };
 
@@ -162,6 +163,14 @@ export function exportableSettings(v) {
 }
 
 export const settings = emitter({ v: load() });
+
+/** The church's main service language ('en', 'af', 'xh' …): chosen in the first-start setup, or Afrikaans when the
+ *  Afrikaans 1933/53 Bible opens first (churches set up before languages were chosen). */
+export function serviceLang() {
+  const L = settings.v.church && Array.isArray(settings.v.church.languages) ? settings.v.church.languages : [];
+  if (L[0] && L[0] !== 'en') return L[0];
+  return settings.v.bible && settings.v.bible.primary === 'afr53' ? 'af' : L[0] || 'en';
+}
 
 settings.get = (path) => path.split('.').reduce((o, k) => (o == null ? o : o[k]), settings.v);
 
@@ -282,6 +291,6 @@ settings.displayStyle = () => {
     // …with its conference, and the location and language for the Sabbath greeting and sunset time on it.
     logoConf: [settings.v.church && settings.v.church.conference, settings.v.church && settings.v.church.union].map((x) => (x || '').trim()).filter(Boolean).join(' · '),
     logoLat: settings.v.church ? settings.v.church.lat : null, logoLon: settings.v.church ? settings.v.church.lon : null,
-    logoLang: settings.v.bible && settings.v.bible.primary === 'afr53' ? 'af' : 'en',
+    logoLang: serviceLang() === 'af' ? 'af' : 'en',
   };
 };

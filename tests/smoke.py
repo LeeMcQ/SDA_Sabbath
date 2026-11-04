@@ -686,6 +686,59 @@ def main():
                     ctx.unroute('https://raw.githubusercontent.com/**', raw)
             t_add_hymnbook()
 
+            @check('first-start setup: install first, church languages, their Bible and hymns downloaded')
+            def t_setup_languages():
+                xml = ('<?xml version="1.0" ?><cesDoc version="4"><cesHeader><fileDesc><titleStmt><h.title>Bible(XHO)</h.title></titleStmt></fileDesc>'
+                       '<profileDesc><langUsage><language id="xh" iso639="xho">Xhosa</language></langUsage></profileDesc></cesHeader><text><body>'
+                       '<div id="b.JOH" type="book"><div id="b.JOH.3" type="chapter">'
+                       + ''.join("<seg id='b.JOH.3.%d' type='verse'>Ivesi %d</seg>" % (n, n) for n in range(1, 120)) + '</div></div></body></text></cesDoc>')
+                sdah = json.dumps({'Text': 'SDAH', 'Songs': [{'ID': 73, 'Text': 'Holy, Holy, Holy', 'Verses': [{'Text': 'Holy, holy, holy! Lord God Almighty!'}]}]})
+                H = {'Access-Control-Allow-Origin': '*', 'Content-Type': 'text/plain; charset=utf-8'}
+                def raw(route):
+                    u = route.request.url
+                    if 'bible-corpus' in u: return route.fulfill(status=200, body=xml, headers=H)
+                    if 'sdah-hymnal' in u: return route.fulfill(status=200, body=sdah, headers=H)
+                    if 'sid_hymnal' in u and u.endswith('meta.json'): return route.fulfill(status=200, body=json.dumps({'title': 'x', 'songs': {str(n): 'S%d' % n for n in range(1, 6)}}), headers=H)
+                    if 'sid_hymnal' in u: n = int(u.rsplit('/', 1)[1][:3]); return route.fulfill(status=200, body='## Iculo %d\n\nUmgca %d\nUmgca wesibini\n' % (n, n), headers=H)
+                    route.fulfill(status=404, body='', headers=H)
+                c = b.new_context(viewport={'width': 1280, 'height': 900}, service_workers='block')
+                c.route('https://raw.githubusercontent.com/**', raw)
+                c.route('https://bible.helloao.org/**', lambda r: r.abort())
+                c.route('https://api.getbible.net/**', lambda r: r.abort())
+                q = c.new_page(); qerr = []
+                q.on('pageerror', lambda e: qerr.append(str(e)[:200]))
+                try:
+                    q.goto(base + 'index.html'); q.wait_for_selector('.welcome', timeout=8000); q.wait_for_timeout(600)
+                    title = lambda: q.inner_text('#welcome-title')
+                    if q.locator('.welcome-nav button', has_text='Not now').count() and 'Install' not in title():   # the sign-in step comes first when the cloud is on
+                        q.locator('.welcome-nav button', has_text='Not now').click(); q.wait_for_timeout(400)
+                    assert 'Install' in title(), 'install is not the first step: %r' % title()
+                    q.click('.welcome-nav button.primary'); q.wait_for_timeout(400)
+                    assert 'Your church' in title(), title()
+                    assert q.locator('select[aria-label="Main language"]').input_value() == 'en', 'English is not the default'
+                    q.select_option('select[aria-label="Second language"]', 'xh')
+                    q.select_option('select[aria-label="Third language"]', 'xh')   # the same language twice is cleared
+                    assert q.locator('select[aria-label="Third language"]').input_value() == '', 'a language could be chosen twice'
+                    q.select_option('select[aria-label="Third language"]', 'tn'); q.wait_for_timeout(200)
+                    for _ in range(6):
+                        if 'Bibles and hymns' in title(): break
+                        q.click('.welcome-nav button.primary'); q.wait_for_timeout(600)
+                    assert 'Bibles and hymns' in title(), 'no download step: %r' % title()
+                    q.wait_for_timeout(600)
+                    q.locator('.welcome-card button', has_text='Download now').click()
+                    end = time.time() + 20
+                    while time.time() < end and 'Everything is on this device' not in q.inner_text('.welcome-card'): q.wait_for_timeout(300)
+                    assert 'Everything is on this device' in q.inner_text('.welcome-card'), q.inner_text('.welcome-card')[-400:]
+                    q.wait_for_timeout(500)
+                    st = q.evaluate("[window.selah.settings.v.church.languages, window.selah.settings.v.bible.primary, window.selah.settings.v.bible.parallel, window.selah.settings.v.hymns.book]")
+                    assert st == [['en', 'xh', 'tn'], 'kjv', 'imp-xho-bc', 'sda-online'], 'settings after the downloads: %r' % st
+                    books = q.evaluate("import('./js/tabs/hymn-import.js').then(m => m.addedHymnbooks()).then(l => l.map(b => b.id).sort())")
+                    assert books == ['web-rejnac-english', 'web-sid-tn', 'web-sid-xh'], 'hymnbooks: %r' % books
+                    assert not qerr, '; '.join(qerr[:3])
+                finally:
+                    c.close()
+            t_setup_languages()
+
             @check('remote buttons (Stream Deck) control the app')
             def t_remote():
                 L = lambda: pg.evaluate("import('./js/core/live.js').then(m => ({ live: m.live.cue && m.live.cue.title, i: m.live.index, staged: m.live.staged && m.live.staged.title, blank: m.live.blank }))")

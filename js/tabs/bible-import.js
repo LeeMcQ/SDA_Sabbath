@@ -3,8 +3,7 @@
 import { h, clear } from '../core/util.js';
 import { modal, toast, closeModal } from '../core/ui.js';
 import { parseBibleFile, saveImported, listTranslations } from '../core/bibledata.js';
-import { CORPUS, CORPUS_BASE } from '../core/biblecorpus.js';
-import { GETBIBLE } from '../core/biblegetbible.js';
+import { BIBLE_SOURCES, corpusItems, getbibleItems, loadAoList, loadGbList, addBible } from '../core/biblesources.js';
 import { matches, fuzzyMatch, rank } from '../core/langsearch.js';
 
 export function importBibleDialog(onDone) {
@@ -34,12 +33,10 @@ export function importBibleDialog(onDone) {
     PRESETS.map(([a, n]) => h('button.btn.sm', { type: 'button', onclick: () => { abbr.value = a; name.value = n; lang.value = 'en'; } }, a)));
   // Three sources, searched together. Each one's list loads on its own, so a slow or blocked source never hides the
   // others. getBible and the Bible corpus have built-in lists, so they always show; bible.helloao.org needs its live list.
-  const AO = 'https://bible.helloao.org';
-  const GB = 'https://api.getbible.net';
   const SRC = {
-    ao: { label: 'Free Use Bible API', site: 'bible.helloao.org', items: [], state: 'loading', note: '' },
-    gb: { label: 'getBible', site: 'api.getbible.net', items: [], state: 'loading', note: '' },
-    bc: { label: 'Bible corpus', site: 'github.com/christos-c/bible-corpus', items: [], state: 'ok', note: '' },
+    ao: Object.assign({ items: [], state: 'loading', note: '' }, BIBLE_SOURCES.ao),
+    gb: Object.assign({ items: [], state: 'loading', note: '' }, BIBLE_SOURCES.gb),
+    bc: Object.assign({ items: [], state: 'ok', note: '' }, BIBLE_SOURCES.bc),
   };
   let filter = 'all';
   const searchInp = h('input.field', { type: 'search', placeholder: 'Search: Zulu, Xhosa, Sesotho, Afrikaans, KJV…', 'aria-label': 'Search Bibles', oninput: () => renderAo() });
@@ -48,35 +45,15 @@ export function importBibleDialog(onDone) {
   const gets = h('div.col', { style: { gap: '6px' } },
     h('b', 'Find a Bible'), searchInp, chips, searchBox,
     h('p.note', 'Tap Add: it downloads once and then works offline.'));
-  const withTimeout = (url, ms) => { const c = new AbortController(); const t = setTimeout(() => c.abort(), ms); return fetch(url, { signal: c.signal }).finally(() => clearTimeout(t)); };
-
-  function fromAo(t) {
-    return { src: 'ao', id: t.id, abbr: t.shortName || t.id, name: t.englishName || t.name || t.id, lang: t.language || '',
-      langName: t.languageEnglishName || t.languageName || '', license: t.licenseUrl ? 'licence: ' + String(t.licenseUrl).replace(/^https?:\/\//, '').slice(0, 40) : '',
-      complete: t.completeTranslationApiLink || '', simple: t.simpleCompleteTranslationApiLink || '', books: t.listOfBooksApiLink || ('/api/' + t.id + '/books.json') };
-  }
-  const fromGb = (abbr, name, lang, language, lic) => ({ src: 'gb', id: abbr, abbr, name, lang, langName: language, license: lic ? 'licence: ' + lic : '', link: '/v2/' + encodeURIComponent(abbr) + '.json' });
-  SRC.bc.items = CORPUS.map(([file, iso, lang, kind, abbr, mb]) => ({ src: 'bc', id: abbr, abbr, name: lang + (kind === 'nt' ? ' New Testament' : kind === 'part' ? ' (parts of the Bible)' : ' Bible'),
-    lang: iso, langName: lang, mb, license: 'Bible corpus (github.com/christos-c/bible-corpus); the translation keeps its own copyright', link: CORPUS_BASE + encodeURIComponent(file) }));
-  SRC.gb.items = GETBIBLE.map((r) => fromGb(...r));
+  SRC.bc.items = corpusItems();
+  SRC.gb.items = getbibleItems();
 
   async function loadSource(k) {
     const s = SRC[k];
     s.state = 'loading'; s.note = ''; renderAo();
     try {
-      if (k === 'ao') {
-        const r = await withTimeout(AO + '/api/available_translations.json', 20000);
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const d = await r.json();
-        s.items = (d.translations || []).map(fromAo);
-        if (!s.items.length) throw new Error('empty list');
-      } else if (k === 'gb') {
-        const r = await withTimeout(GB + '/v2/translations.json', 20000);
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const d = await r.json();
-        const live = Object.keys(d || {}).map((key) => { const t = d[key] || {}; return fromGb(t.abbreviation || key, t.translation || key, t.lang || '', t.language || '', String(t.distribution_license || '').slice(0, 40)); });
-        if (live.length) s.items = live;
-      }
+      if (k === 'ao') s.items = await loadAoList();
+      else if (k === 'gb') { const live = await loadGbList(); if (live.length) s.items = live; }
       s.state = 'ok';
     } catch (e) {
       s.state = k === 'gb' ? 'ok' : 'err';   // getBible falls back to its built-in list
@@ -86,7 +63,6 @@ export function importBibleDialog(onDone) {
   }
 
 
-  const langOf = (t) => { const c = String(t.lang).toLowerCase(); return c === 'afr' || c === 'af' ? 'af' : c === 'xho' || c === 'xh' ? 'xh' : c === 'zul' || c === 'zu' ? 'zu' : /afrikaans/i.test(t.langName) ? 'af' : /xhosa/i.test(t.langName) ? 'xh' : /zulu/i.test(t.langName) ? 'zu' : 'en'; };
   const row = (t) => {
     const btn = h('button.btn.sm.primary', { type: 'button' }, 'Add');
     btn.onclick = () => addAo(t, btn);
@@ -132,58 +108,13 @@ export function importBibleDialog(onDone) {
     hits.forEach((t) => searchBox.appendChild(row(t)));
   }
 
-  // helloao: the whole Bible in one file when the site offers it, otherwise chapter by chapter.
-  async function aoDownload(t, say) {
-    for (const link of [t.simple, t.complete, '/api/' + t.id + '/complete.json']) {
-      if (!link) continue;
-      try { const r = await fetch(AO + link); if (r.ok) return await r.blob(); } catch (e) { /* try the next */ }
-    }
-    const r = await fetch(AO + t.books);
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const bl = await r.json();
-    const jobs = [];
-    (bl.books || []).forEach((b) => { for (let c = b.firstChapterNumber || 1; c <= (b.lastChapterNumber || b.numberOfChapters || 0); c++) jobs.push([b, c]); });
-    const books = new Map();
-    let done = 0, i = 0;
-    async function worker() {
-      while (i < jobs.length) {
-        const [b, c] = jobs[i++];
-        let ok = false;
-        for (let tries = 0; tries < 3 && !ok; tries++) {
-          try {
-            const rr = await fetch(AO + '/api/' + encodeURIComponent(t.id) + '/' + encodeURIComponent(b.id) + '/' + c + '.json');
-            if (rr.ok) { const d = await rr.json(); if (!books.has(b.id)) books.set(b.id, { id: b.id, name: b.name, order: b.order, chapters: [] }); books.get(b.id).chapters.push({ chapter: d.chapter }); ok = true; }
-          } catch (e) { /* retry */ }
-        }
-        say('Adding… ' + Math.round((++done / jobs.length) * 100) + '%');
-      }
-    }
-    await Promise.all(Array.from({ length: 8 }, worker));
-    const out = { translation: { shortName: t.abbr, englishName: t.name, language: t.lang }, books: [...books.values()].sort((a, b) => a.order - b.order) };
-    out.books.forEach((b) => b.chapters.sort((x, y) => x.chapter.number - y.chapter.number));
-    return new Blob([JSON.stringify(out)], { type: 'application/json' });
-  }
-
   // One tap: download, convert and save for offline use.
   async function addAo(t, bt) {
     bt.disabled = true; const old = bt.textContent; bt.textContent = 'Adding…';
     const say = (x) => { bt.textContent = x; };
     try {
+      const id = await addBible(t, say);
       const ab = String(t.abbr || t.id).trim().toUpperCase().slice(0, 8);
-      // The source goes into the id, so the same short name from two sources (XHO, SHONA …) never overwrites the other.
-      const id = 'imp-' + ab.toLowerCase().replace(/[^a-z0-9]/g, '') + (t.src === 'ao' ? '' : '-' + t.src);
-      const existing = await listTranslations(true);
-      if (existing.some((x) => x.id === id && x.src !== 'imported')) throw new Error('already built in');
-      let blob;
-      if (t.src === 'ao') blob = await aoDownload(t, say);
-      else {
-        const r = await fetch(t.src === 'gb' ? GB + t.link : t.link);
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        blob = await r.blob();
-      }
-      say('Saving…');
-      const parsed = await parseBibleFile(new File([blob], ab + (t.src === 'bc' ? '.xml' : '.json'), { type: t.src === 'bc' ? 'application/xml' : 'application/json' }));
-      await saveImported({ id, abbr: ab, name: t.name, lang: langOf(t), license: t.src === 'bc' ? t.license : SRC[t.src].site + (t.license ? ', ' + t.license : '') }, parsed);
       closeModal();
       toast(ab + ' added and available offline.', 'ok');
       if (onDone) onDone(id);
