@@ -602,6 +602,90 @@ def main():
                 assert r['xho'], 'Xhosa missing from the corpus list'
             t_corpus()
 
+            @check('hymnbook formats: VideoPsalm (.vpc), SID markdown, Hymnals Data')
+            def t_hymn_formats():
+                import io, zipfile
+                # VideoPsalm writes keys without quotes and each stanza on one line; Tag marks the chorus.
+                vp = ('{Abbreviation:"UE",Text:"UKristu Engomeni",Songs:[{ID:1,Text:"Vuthelani Ixilongo",Verses:['
+                      '{Text:"Mlindi, vuthel’ ixilongo, Banike isiyalo; Lowo uvayo indaba, Angaguquk’ aphile."},'
+                      '{Tag:1,ID:0,Text:"Mlindi, khalis’ ixilongo, Likhalise kakhulu."},'
+                      '{ID:2,Text:"Likhalise entabeni, Kuyo yonke indawo; Base lwandle mememzani, Indaba yokuphila."},'
+                      '{Tag:1,ID:0,Text:"Mlindi, khalis’ ixilongo, Likhalise kakhulu."}]},{ID:2,Text:"Empty",Verses:[]}]}')
+                buf = io.BytesIO()
+                with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as z: z.writestr('UKristu Engomeni.json', vp)
+                md = ('## What a Friend\n\nWhat a friend we have in Jesus,\nall our sins and griefs to bear!\n\nChorus\n'
+                      'Precious Savior,\nstill our refuge\n\nHave we trials and temptations?\nIs there trouble anywhere?\n')
+                gs = {'songs': {'0': {'id': 1, 'title': 'HOLY SABBATH.', 'author': '', 'stanzas': {
+                    '1': 'The pure, unfailing Word of God\r\nFoundation ever sure', '2': 'In paradise where man was led,\r\nThe word will safely guide;'}, 'choruses': {}}}}
+                r = pg.evaluate("""async ([vpc, md, gs]) => {
+                  const m = await import('./js/core/hymnparse.js');
+                  const b = await m.parseHymnFile(new File([new Uint8Array(vpc)], 'UKristu Engomeni.vpc'));
+                  const s = m.fromMarkdownHymn(md, 100);
+                  const g = m.normaliseBook(gs, 'HGPP');
+                  return { name: b.name, short: b.short, n: b.hymns.length, skipped: b.skipped, v1: b.hymns[0].v[0], stanzas: b.hymns[0].v.length, c: b.hymns[0].c,
+                    md: [s.t, s.v.length, s.c && s.c[0]], gs: [g.hymns[0].t, g.hymns[0].v.length, g.hymns[0].v[0][1]] };
+                }""", [list(buf.getvalue()), md, gs])
+                assert [r['name'], r['short'], r['n'], r['skipped']] == ['UKristu Engomeni', 'UE', 1, 1], 'VideoPsalm book %r' % r
+                assert r['v1'] == ['Mlindi, vuthel’ ixilongo,', 'Banike isiyalo;', 'Lowo uvayo indaba,', 'Angaguquk’ aphile.'], 'lines %r' % r['v1']
+                assert r['stanzas'] == 2 and r['c'] == ['Mlindi, khalis’ ixilongo,', 'Likhalise kakhulu.'], 'chorus %r %r' % (r['stanzas'], r['c'])
+                assert r['md'] == ['What a Friend', 2, 'Precious Savior,'], 'SID markdown %r' % r['md']
+                assert r['gs'] == ['Holy Sabbath', 2, 'Foundation ever sure'], 'Hymnals Data %r' % r['gs']
+            t_hymn_formats()
+
+            @check('Add a hymnbook: isiXhosa offline, SDA Hymnal words with music, remove')
+            def t_add_hymnbook():
+                xh = json.dumps({'Abbreviation': 'UE', 'Text': 'UKristu Engomeni', 'Songs': [
+                    {'ID': n, 'Text': 'Iculo %d' % n, 'Verses': [{'Text': 'Umgca wokuqala %d, Umgca wesibini.' % n}]} for n in range(1, 11)]})
+                sdah = json.dumps({'Abbreviation': 'SDAH', 'Text': 'SDAH Hymnal', 'Songs': [
+                    {'ID': 73, 'Text': 'Holy, Holy, Holy', 'Verses': [{'Text': 'Holy, holy, holy! Lord God Almighty! Early in the morning our song shall rise to Thee.'}]},
+                    {'ID': 696, 'Text': 'He Brought Me Out', 'Verses': [{'Text': 'My heart was distressed, Beneath the dread frown.'}]}]})
+                hits = []
+                def raw(route):
+                    u = route.request.url; hits.append(u)
+                    body = xh if 'xhosa-hymnal' in u else sdah if 'sdah-hymnal' in u else None
+                    if body is None: route.fulfill(status=404, body='', headers={'Access-Control-Allow-Origin': '*'}); return
+                    route.fulfill(status=200, body=body, headers={'Content-Type': 'text/plain; charset=utf-8', 'Access-Control-Allow-Origin': '*'})
+                ctx.route('https://raw.githubusercontent.com/**', raw)
+                try:
+                    pg.evaluate("window.selah.showTab('hymns').then((t) => t.whenReady && t.whenReady())"); pg.wait_for_timeout(500)
+                    pg.locator('section .toolbar button[aria-label="More"]:visible').first.click(); pg.wait_for_timeout(200)
+                    pg.locator('.menu button', has_text='Add a hymnbook').click(); pg.wait_for_timeout(400)
+                    pg.locator('.modal input[type=search]').fill('xhose'); pg.wait_for_timeout(200)  # misspelt on purpose: the Bible search finds it too
+                    row = pg.locator('.modal .row', has_text='UKristu Engomeni').filter(has_text='SDA hymnals (Rejnac)')
+                    assert row.count() == 1, 'isiXhosa not found by "xhose"'
+                    row.locator('button').click()
+                    wait_text(pg, 'UKristu Engomeni added')
+                    pg.wait_for_timeout(600)
+                    assert any('/rejnac/xhosa-hymnal/main/' in u for u in hits), 'not downloaded from the rejnac repository: %r' % hits[:2]
+                    assert pg.evaluate("document.querySelector('select[aria-label=Hymnbook]').value") == 'web-rejnac-xhosa', 'the new hymnbook was not opened'
+                    pg.evaluate("window.selah.tab('hymns').then(t => t.open({ n: 3, book: 'web-rejnac-xhosa' }))"); pg.wait_for_timeout(700)
+                    wait_text(pg, 'Umgca wokuqala 3,')
+                    # English SDA Hymnal: also fills the built-in SDA Hymnal (numbers and titles), where the music is.
+                    pg.evaluate("import('./js/tabs/hymn-import.js').then(m => m.addHymnbookDialog())"); pg.wait_for_timeout(400)
+                    pg.locator('.modal input[type=search]').fill('English'); pg.wait_for_timeout(200)
+                    pg.locator('.modal .row', has_text='SDA Hymnal with words').locator('button').click()
+                    wait_text(pg, 'filled in for 1 hymn of the SDA Hymnal')
+                    pg.evaluate("window.selah.tab('hymns').then(t => t.open({ n: 73, book: 'sda-online' }))"); pg.wait_for_timeout(800)
+                    assert pg.locator('.licence-panel:visible').count() == 0, 'SDA Hymnal 73 still has no words'
+                    wait_text(pg, 'Lord God Almighty!')
+                    # Settings lists both, with Remove; removing the English book takes its words out of the SDA Hymnal again.
+                    pg.evaluate("window.selah.showTab('settings')"); pg.wait_for_timeout(400)
+                    pg.locator('.set-nav button', has_text='Bibles & hymns').click(); pg.wait_for_timeout(800)
+                    wait_text(pg, 'UE — UKristu Engomeni')
+                    wait_text(pg, 'words for 1 hymn added on this device')
+                    pg.evaluate("import('./js/tabs/hymn-import.js').then(m => m.removeHymnbook('web-rejnac-english'))"); pg.wait_for_timeout(600)
+                    pg.evaluate("window.selah.tab('hymns').then(t => t.open({ n: 73, book: 'sda-online' }))"); pg.wait_for_timeout(800)
+                    assert pg.locator('.licence-panel:visible').count() == 1, 'the words stayed after the hymnbook was removed'
+                    pg.evaluate("window.selah.showTab('settings')"); pg.wait_for_timeout(500)
+                    pg.locator('button[aria-label="Remove UKristu Engomeni"]').evaluate('b => b.click()'); pg.wait_for_timeout(300)
+                    pg.locator('.modal .modal-f button', has_text='Remove').click(); pg.wait_for_timeout(800)
+                    assert pg.locator('button[aria-label="Remove UKristu Engomeni"]').count() == 0, 'still listed in Settings after Remove'
+                    opts = pg.evaluate("[...document.querySelectorAll('select[aria-label=Hymnbook] option')].map(o => o.value)")
+                    assert 'web-rejnac-xhosa' not in opts and 'sda-online' in opts, 'hymnbook list after removing: %r' % opts
+                finally:
+                    ctx.unroute('https://raw.githubusercontent.com/**', raw)
+            t_add_hymnbook()
+
             @check('remote buttons (Stream Deck) control the app')
             def t_remote():
                 L = lambda: pg.evaluate("import('./js/core/live.js').then(m => ({ live: m.live.cue && m.live.cue.title, i: m.live.index, staged: m.live.staged && m.live.staged.title, blank: m.live.blank }))")

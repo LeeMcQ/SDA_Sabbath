@@ -39,7 +39,8 @@ Status marks: **✔** built and tested · **◐** built, but not yet proven in r
 - **Title slide, one stanza per slide**, chorus repeated automatically.
 - **Choose which stanzas to sing** (for example 1, 2, 4).
 - **Jump to any stanza** while the hymn is on screen.
-- **Edit or add hymns**; import and export hymnbooks.
+- **Add a hymnbook**, the same way as Add a Bible: search the list and press **Add**, and it downloads once and works offline. SDA hymnals in 26 languages from the [rejnac collection](https://github.com/rejnac/compiled-hymnal) (isiXhosa, isiZulu/Ndebele, Sesotho, Setswana, Sepedi, Shona, Tshivenda, Xitsonga, Chichewa, Tonga, Icibemba, Tumbuka, Swahili, Kinyarwanda, Kikuyu, Kamba, Kalenjin, Dholuo, Ekegusii, Maasai, Twi, French, Portuguese, Spanish, Russian and English), the **SID Hymnal** (English, isiXhosa and Setswana with the same numbers) and early Adventist hymnals (Hymns for God's Peculiar People, 1849). The English SDA Hymnal words also fill in the built-in SDA Hymnal, so those hymns keep their offline music. Also from a file: VideoPsalm songbooks (`.vpc` or `.json`), SDA Sabbath hymnbooks and text. In Hymns → More and in Settings → Bibles & hymns (which lists every hymnbook, with Remove).
+- **Edit or add hymns**; export hymnbooks.
 - **Lyrics search online** (when connected).
 
 ## 4. Hymn music (offline)
