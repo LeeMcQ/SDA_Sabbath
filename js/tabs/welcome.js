@@ -1,5 +1,6 @@
-// First start: a short setup — sign in, your church, your language, your screens, the hymn sound, ready for
-// Sabbath without internet, statistics — then the app.
+// First start: a short setup — sign in, install on this device, your church and its languages, your screens, the
+// hymn sound, the Bibles and hymnbooks for your languages (downloaded now, so they work offline), ready for Sabbath
+// without internet, statistics — then the app.
 // Shown once (Settings → About → Run the setup again shows it again). Everything can be changed later.
 import { h, clear } from '../core/util.js';
 import { icon } from '../core/icons.js';
@@ -12,17 +13,14 @@ import { signInBox, statsToggle } from './account.js';
 import { restoreButtons } from './backup-ui.js';
 import { installed, installSteps } from '../core/installer.js';
 import { persistStorage } from '../core/db.js';
+import { languageChoices, langKey, langName, sortBibles, sortHymnals } from '../core/langs.js';
 
 // How this device is used on Sabbath decides the sound preset (js/core/musicengine.js SOUND_PRESETS).
 const ROLES = [['pc', 'The church PC', 'best'], ['laptop', 'A laptop', 'balanced'], ['phone', 'A phone or tablet', 'light']];
 const HALLS = [['small', 'Small'], ['church', 'Medium'], ['large', 'Large']];
 const SPEAKERS = [['pa', 'Sound desk / PA'], ['small', 'Built-in or small speakers'], ['tv', 'TV or projector speakers']];
 
-const LANGS = [
-  ['en', 'English', { 'bible.primary': 'kjv', 'bible.parallel': '', 'hymns.book': 'sda-online' }],
-  ['af', 'Afrikaans', { 'bible.primary': 'afr53', 'bible.parallel': '', 'hymns.book': 'afrikaans-sda' }],
-  ['both', 'English and Afrikaans', { 'bible.primary': 'kjv', 'bible.parallel': 'afr53', 'hymns.book': 'sda-online' }],
-];
+const L3 = () => { const L = settings.v.church && Array.isArray(settings.v.church.languages) ? settings.v.church.languages : []; return [L[0] || 'en', L[1] || '', L[2] || '']; };
 
 export function needsSetup() { return !settings.v.app.setupDone || (cloud.requireSignIn() && !cloud.user && navigator.onLine !== false); }
 
@@ -33,7 +31,7 @@ export function openWelcome({ onClose, only } = {}) {
   // Phones and tablets (touch only) do not drive projector windows, and the statistics step only makes sense
   // when this copy has the cloud switched on.
   const touchOnly = matchMedia('(pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches;
-  if (only !== 'account') steps.push('church', ...(touchOnly ? [] : ['screens']), 'sound', 'ready', ...(cloud.enabled() ? ['stats'] : []), 'done');
+  if (only !== 'account') steps.push(...(installed() ? [] : ['install']), 'church', ...(touchOnly ? [] : ['screens']), 'sound', 'languages', 'ready', ...(cloud.enabled() ? ['stats'] : []), 'done');
   let i = 0;
   const returnTo = document.activeElement;
   const live = h('div.sr', { 'aria-live': 'polite' });
@@ -89,11 +87,11 @@ export function openWelcome({ onClose, only } = {}) {
     const step = steps[i];
     const dots = h('div.welcome-dots', ...steps.map((s, j) => h('span' + (j === i ? '.on' : j < i ? '.done' : ''))));
     head = (title, sub) => h('div', h('div.welcome-brand', h('img', { src: 'icons/favicon.svg', alt: '', width: 34, height: 34 }), h('span', 'SDA Sabbath')), dots, h('h2#welcome-title', { tabindex: '-1' }, title), sub ? h('p.note', sub) : null);
-    const nav = (label = 'Next', { skip = true } = {}) => h('div.welcome-nav',
+    const nav = (label = 'Next', { skip = true, onNext = null } = {}) => h('div.welcome-nav',
       i > 0 ? h('button.btn', { type: 'button', onclick: back }, 'Back') : h('span'),
       h('div.grow'),
-      skip && step !== 'done' && !(step === 'account' && mustSignIn()) ? h('button.btn.ghost', { type: 'button', onclick: step === 'account' ? next : close }, step === 'account' ? 'Not now' : 'Skip the rest') : null,
-      h('button.btn.primary', { type: 'button', onclick: next }, label));
+      skip && step !== 'done' && !(step === 'account' && mustSignIn()) ? h('button.btn.ghost', { type: 'button', onclick: step === 'account' || step === 'install' ? next : close }, step === 'account' || step === 'install' ? 'Not now' : 'Skip the rest') : null,
+      h('button.btn.primary', { type: 'button', onclick: onNext || next }, label));
     navFor = nav;
     let body;
     if (step === 'account') {
@@ -104,19 +102,18 @@ export function openWelcome({ onClose, only } = {}) {
         h('div.welcome-nav', h('div.grow'), mustSignIn() ? null : h('button.btn.ghost', { type: 'button', onclick: next }, 'Not now')));
       return;
     }
+    if (step === 'install') { paintInstall(); return; }
     if (step === 'church') {
-      let lang = settings.v.bible.primary === 'afr53' ? 'af' : settings.v.bible.parallel === 'afr53' ? 'both' : 'en';
       body = h('div.col', { style: { gap: '12px' } },
         restoreButtons(),
-        h('label.muted', 'Language of your services'),
-        seg(LANGS.map(([k, label]) => [k, label]), lang, (v) => { lang = v; const L = LANGS.find((x) => x[0] === v); Object.entries(L[2]).forEach(([k, val]) => settings.set(k, val)); }),
-        h('p.note', 'Sets the Bible translation and hymnbook that open first. Every Bible and hymnbook stays available.'),
-        h('p.note', 'Afrikaans Bible and hymn words are copyrighted, so they are not built in: add your church\'s licensed copy in Settings → Bibles & hymns → Add a Bible, and the hymn words with Hymns → More → Import licensed words. Until then the KJV opens and hymns show their number and title.'),
-        h('p.note', 'Hymnbooks in other languages (isiXhosa, isiZulu, Sesotho, Setswana, Sepedi, Shona, Tshivenda, Xitsonga, Swahili, French, Portuguese, Spanish …) download once and then work offline: Settings → Bibles & hymns → Add a hymnbook.'),
+        h('label.muted', 'Languages of your services'),
+        languagePickers(),
+        h('p.note', 'The main language opens first; the second can be shown beside it (two Bibles side by side). Later in this setup the Bible and hymnbook of each language are downloaded, so they are ready without internet on Sabbath. Change them any time in Settings → Bibles & hymns.'),
         churchForm(settings));
       card.append(head('Your church', 'Used on banners (name, sunset times for Sabbath), the logo slide and the stage screen.'), body, nav());
       return;
     }
+    if (step === 'languages') { paintLanguages(); return; }
     if (step === 'screens') {
       card.append(head('Your screens', 'What does this PC drive on Sabbath? You can change this any time in Settings → Displays.'), screensPanel({ intro: true }), nav());
       return;
@@ -140,6 +137,177 @@ export function openWelcome({ onClose, only } = {}) {
       h('div.welcome-nav', i > 0 ? h('button.btn', { type: 'button', onclick: back }, 'Back') : h('span'), h('div.grow'),
         h('button.btn.primary', { type: 'button', onclick: close }, icon('check'), h('span', 'Start using SDA Sabbath'))));
   }
+  // ------------------------------------------------------------ install first
+  function paintInstall() {
+    const ctx = window.selah || {};
+    const row = h('div.col', { style: { gap: '10px' } });
+    const paintRow = () => {
+      clear(row);
+      if (installed()) { row.append(h('p.inst-ok', icon('check'), h('span', 'Installed. SDA Sabbath now has its own icon and opens without the browser or internet. Carry on with the setup here, or in the app window.'))); return; }
+      row.append(ctx.installPrompt
+        ? h('button.btn.primary', { type: 'button', style: { alignSelf: 'flex-start' }, onclick: async () => { await ctx.promptInstall(); paintRow(); } }, icon('download'), h('span', 'Install SDA Sabbath on this device'))
+        : h('p', h('b', 'To install: '), installSteps()));
+      row.append(h('p.note', 'Installing keeps your plans, Bibles and hymnbooks safe on this device, and SDA Sabbath opens even when the internet is down on Sabbath.'));
+    };
+    paintRow();
+    if (ctx.onInstallChange) ctx.onInstallChange(() => { if (row.isConnected) paintRow(); });
+    card.append(head('Install SDA Sabbath', 'First, put SDA Sabbath on this device as an app.'), row, navFor());
+  }
+
+  // ------------------------------------------------------------ the church's languages
+  function languagePickers() {
+    const all = languageChoices();
+    const groups = [
+      ['Hymns and Bible', all.filter((l) => l.hymns.length && (l.bibles.length || l.builtinBible))],
+      ['Hymns', all.filter((l) => l.hymns.length && !l.bibles.length && !l.builtinBible)],
+      ['Bible', all.filter((l) => !l.hymns.length && (l.bibles.length || l.builtinBible || l.builtinHymns))],
+    ];
+    const opts = (none) => [none ? h('option', { value: '' }, 'None') : null,
+      ...groups.filter(([, ls]) => ls.length).map(([g, ls]) => h('optgroup', { label: g }, ls.map((l) => h('option', { value: l.key }, l.name))))];
+    const L = L3();
+    const sel = [0, 1, 2].map((k) => {
+      const x = h('select.field', { 'aria-label': ['Main language', 'Second language', 'Third language'][k] }, opts(k > 0));
+      x.value = L[k];
+      if (x.value !== L[k]) x.value = k ? '' : 'en';
+      x.addEventListener('change', () => save(k));
+      return x;
+    });
+    function save(changed) {
+      const v = sel.map((x) => x.value);
+      for (let k = 1; k < 3; k++) if (v[k] && v.indexOf(v[k]) < k) { v[k] = ''; sel[k].value = ''; }   // each language once
+      if (!v[0]) { v[0] = 'en'; sel[0].value = 'en'; }
+      settings.set('church.languages', v);
+      // Until the downloads: the built-in books of the main language.
+      if (changed === 0) {
+        if (v[0] === 'en') { settings.set('bible.primary', 'kjv'); settings.set('hymns.book', 'sda-online'); }
+        if (v[0] === 'af') settings.set('hymns.book', 'afrikaans-sda');
+      }
+    }
+    return h('div.form', h('label', 'Main language'), sel[0], h('label', 'Second language'), sel[1], h('label', 'Third language'), sel[2]);
+  }
+
+  // ------------------------------------------------------------ Bibles and hymnbooks for those languages
+  // Choices and downloads live outside the step, so Back / Next and a download still running keep them.
+  const pick = {};            // language → { bible: option value, hymn: option value }
+  const jobs = new Map();     // 'b:xh' / 'h:xh' → { state: 'run' | 'ok' | 'err', text }
+  const statusEls = new Map();
+  let aoItems = null, aoTried = false, running = null;
+  async function paintLanguages() {
+    const [bd, hi, bs] = await Promise.all([import('../core/bibledata.js'), import('./hymn-import.js'), import('../core/biblesources.js')]);
+    if (steps[i] !== 'languages') return;
+    if (!aoTried && navigator.onLine !== false) {   // bible.helloao.org has Bibles the built-in lists lack (Sesotho, Setswana …)
+      aoTried = true;
+      bs.loadAoList(15000).then((x) => { aoItems = x; if (steps[i] === 'languages' && !running) paintLanguages(); }).catch(() => {});
+    }
+    const haveBibles = new Set((await bd.listTranslations(true)).map((t) => t.id));
+    const builtin = (await bd.listTranslations(true)).filter((t) => t.src !== 'imported');
+    const haveHymns = new Set((await hi.addedHymnbooks()).map((b) => String(b.id)));
+    const filled = ((await hi.overlayCounts())['sda-online'] || 0) > 0;
+    if (steps[i] !== 'languages') return;
+    const langs = L3().filter(Boolean).filter((x, k, a) => a.indexOf(x) === k);
+    const all = languageChoices();
+    // Option values: 'have:<translation id>' (built in or already added), 'b:<n>' / 'h:<n>' (to download), 'builtin', ''.
+    const plan = langs.map((key) => {
+      const L = all.find((l) => l.key === key) || { key, name: langName(key), hymns: [], bibles: [] };
+      const extra = (aoItems || []).filter((t) => langKey(t.lang, t.langName) === key);
+      const dlB = sortBibles(L.bibles.concat(extra));
+      const own = builtin.filter((t) => langKey(t.lang) === key || (key === 'af' && t.id === 'afr53'));
+      const bOpts = [
+        ...own.map((t) => ['have:' + t.id, t.name + (t.src === 'private' ? ' (included with this installation)' : ' (built in)')]),
+        ...dlB.map((t, n) => [haveBibles.has(bs.bibleIdOf(t)) ? 'have:' + bs.bibleIdOf(t) : 'b:' + n,
+          t.name + ' · ' + (t.full ? 'whole Bible' : 'New Testament') + (t.mb ? ', ' + t.mb + ' MB' : '') + ' · ' + bs.BIBLE_SOURCES[t.src].label + (haveBibles.has(bs.bibleIdOf(t)) ? ' ✓' : '')]),
+        ['', 'No Bible for this language'],
+      ];
+      const dlH = sortHymnals(L.hymns);
+      const hOpts = [
+        ...dlH.map((e, n) => [haveHymns.has(e.id) || (e.id === 'web-rejnac-english' && filled) ? 'hhave:' + e.id : 'h:' + n,
+          (e.id === 'web-rejnac-english' ? 'SDA Hymnal 1985 with words (keeps the hymn music)' : e.name) + ' · ' + e.hymns + ' hymns' + (haveHymns.has(e.id) ? ' ✓' : '')]),
+        L.builtinHymns ? ['builtin', key === 'en' ? 'Only the built-in books (SDA Hymnal titles, Church Hymnal 1941 words)' : 'Advent Lofliedere (built in, numbers and titles)'] : null,
+        ['', 'No hymnbook for this language'],
+      ].filter(Boolean);
+      const p = pick[key] || (pick[key] = {});
+      if (!bOpts.some(([v]) => v === p.bible)) p.bible = bOpts[0][0];
+      if (!hOpts.some(([v]) => v === p.hymn)) p.hymn = hOpts[0][0];
+      return { key, L, dlB, dlH, bOpts, hOpts, p };
+    });
+    const pending = () => plan.flatMap((x) => [
+      /^b:/.test(x.p.bible) ? { job: 'b:' + x.key, kind: 'bible', item: x.dlB[+x.p.bible.slice(2)], label: x.L.name + ' Bible' } : null,
+      /^h:/.test(x.p.hymn) ? { job: 'h:' + x.key, kind: 'hymn', item: x.dlH[+x.p.hymn.slice(2)], label: x.L.name + ' hymnbook' } : null,
+    ]).filter((j) => j && !(jobs.get(j.job) && jobs.get(j.job).state === 'ok'));
+    statusEls.clear();
+    const status = (job) => { const j = jobs.get(job); const el = h('span.note', j ? j.text : ''); statusEls.set(job, el); return el; };
+    const select = (opts, value, onchange, label) => {
+      const x = h('select.field', { 'aria-label': label }, opts.map(([v, t]) => h('option', { value: v }, t)));
+      x.value = value; x.addEventListener('change', () => { onchange(x.value); paintLanguages(); });
+      return x;
+    };
+    const rows = plan.map((x, n) => h('div.card', { style: { padding: '12px 14px' } },
+      h('b', (n === 0 ? 'Main language: ' : n === 1 ? 'Second language: ' : 'Third language: ') + x.L.name),
+      h('div.form', { style: { marginTop: '8px' } },
+        h('label', 'Bible'), h('div.col', { style: { gap: '4px' } }, select(x.bOpts, x.p.bible, (v) => { x.p.bible = v; }, x.L.name + ' Bible'), status('b:' + x.key)),
+        h('label', 'Hymns'), h('div.col', { style: { gap: '4px' } }, select(x.hOpts, x.p.hymn, (v) => { x.p.hymn = v; }, x.L.name + ' hymnbook'), status('h:' + x.key)))));
+    const todo = pending();
+    const goBtn = h('button.btn.primary', { type: 'button', disabled: !!running || !todo.length || navigator.onLine === false, onclick: () => start() },
+      icon('download'), h('span', running ? 'Downloading…' : todo.length ? 'Download now (' + todo.length + ')' : 'Everything is on this device'));
+    const body = h('div.col', { style: { gap: '10px' } },
+      ...rows,
+      h('div.row.wrap', goBtn,
+        navigator.onLine === false ? h('span.note', 'No internet now: you can add them later in Settings → Bibles & hymns.') : h('span.note', todo.length ? 'Once only; afterwards they work without internet.' : '')),
+      h('p.note', 'Bible and hymn words belong to their owners. These are shared for worship, but check that your church may use them (for example, many SDA Hymnal texts are under copyright, and a live stream needs a CCLI Streaming Licence).'));
+    clear(card);
+    card.append(head('Bibles and hymns for your languages', 'Choose what to download for each language. Everything is kept on this device, so it is ready on Sabbath without internet.'), body,
+      navFor('Next', { onNext: () => { if (!running && pending().length && navigator.onLine !== false) { start(); toast('Your Bibles and hymnbooks are downloading in the background.', '', 4000); } else if (!running) apply(); next(); } }));
+
+    function setJob(job, state, text) { jobs.set(job, { state, text }); const el = statusEls.get(job); if (el && el.isConnected) el.textContent = text; }
+    function start() {
+      if (running) return running;
+      const list = pending();
+      running = (async () => {
+        let ok = 0, bad = 0;
+        for (const j of list) {
+          setJob(j.job, 'run', 'Starting…');
+          try {
+            if (j.kind === 'bible') await bs.addBible(j.item, (t) => setJob(j.job, 'run', t));
+            else await hi.installHymnal(j.item, (t) => setJob(j.job, 'run', t));
+            setJob(j.job, 'ok', 'On this device ✓'); ok++;
+          } catch (e) {
+            setJob(j.job, 'err', 'Failed: ' + (e.name === 'AbortError' ? 'it took too long' : e.name === 'TypeError' ? 'no connection' : e.message) + '. Try again here or in Settings → Bibles & hymns.'); bad++;
+          }
+        }
+        running = null;
+        apply();
+        toast(bad ? ok + ' downloaded, ' + bad + ' failed: try again in Settings → Bibles & hymns.' : 'Your Bibles and hymnbooks are ready without internet.', bad ? 'err' : 'ok', 6000);
+        if (steps[i] === 'languages') paintLanguages();
+      })();
+      paintLanguages();
+      return running;
+    }
+    // The main language opens first; the second language's Bible goes beside it.
+    async function apply() {
+      const ids = new Set((await bd.listTranslations(true)).map((t) => t.id));
+      const books = new Set((await hi.addedHymnbooks()).map((b) => String(b.id)));
+      const bibleId = (x) => {
+        const v = x.p.bible || '';
+        const id = v.startsWith('have:') ? v.slice(5) : v.startsWith('b:') ? bs.bibleIdOf(x.dlB[+v.slice(2)]) : '';
+        return id && ids.has(id) ? id : '';
+      };
+      const hymnBook = (x) => {
+        const v = x.p.hymn || '';
+        const e = v.startsWith('h:') ? x.dlH[+v.slice(2)] : v.startsWith('hhave:') ? x.dlH.find((d) => d.id === v.slice(6)) : null;
+        if (v === 'builtin' || (e && e.id === 'web-rejnac-english')) return x.key === 'af' ? 'afrikaans-sda' : 'sda-online';
+        return e && books.has(e.id) ? e.id : '';
+      };
+      const [m, second] = plan;
+      if (m) {
+        const b = bibleId(m); if (b) settings.set('bible.primary', b);
+        const hb = hymnBook(m) || (second && hymnBook(second)); if (hb) settings.set('hymns.book', hb);
+      }
+      settings.set('bible.parallel', second ? bibleId(second) : '');
+      window.dispatchEvent(new CustomEvent('selah-bibles'));
+      hi.announceHymnbooks(settings.v.hymns.book);
+    }
+  }
+
   // ------------------------------------------------------------ hymn sound
   async function paintSound() {
     const hm = await import('../core/hymnmusic.js');

@@ -204,7 +204,7 @@ Status marks: **✔** built and tested · **◐** built, but not yet proven in r
 
 ## 18. Setup, settings and help
 
-- **First-start setup**: language, church details (name, conference, location for sunset times), screens, hymn music, and **Ready for Sabbath** (saved offline, install, protect data, clicker test). Can be run again.
+- **First-start setup**: **install on this device** first, then church details with the **service languages** (English by default plus up to two more, from every language in the hymnbook and Bible download lists), screens, hymn music, **Bibles and hymns for your languages** (one Bible and one hymnbook per language proposed and downloaded once, so the church's languages are ready offline from the first Sabbath; the main language opens first and the second language's Bible goes side by side), and **Ready for Sabbath** (saved offline, protect data, clicker test). Can be run again.
 - **Settings**: fonts (Atkinson Hyperlegible, serif), colours, background picture, logo, margins, text sizes, text shadow and outline, fade or cut, 4:3, light and dark theme, tabs on the left or right, low-power mode, displays, hymn sound options, backup, Bibles and hymns, church details, AI, offline, updates, version details for problem reports, reset.
 - **Low-power mode** and tuning for 1–2 GB phones and old PCs.
 - **Languages**: English and Afrikaans (Bible and greetings); service in English, Afrikaans or both.

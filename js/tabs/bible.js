@@ -548,7 +548,11 @@ export default function create(ctx) {
   };
   live.on('live', followLive);
   live.on('go', followLive);
-  window.addEventListener('selah-bibles', () => { loadTranslations().then(() => { if (!trList.some((t) => t.id === st.tr) && trList[0]) setTr(trList[0].id); }); });
+  window.addEventListener('selah-bibles', () => { loadTranslations().then(() => {
+    // The first-start setup chooses the church's Bible and then downloads it: open it when it arrives.
+    if (S().primary !== st.tr && trList.some((t) => t.id === S().primary)) setTr(S().primary);
+    else if (!trList.some((t) => t.id === st.tr) && trList[0]) setTr(trList[0].id);
+  }); });
 
   // Placeholder blocks while the Bibles load (they shimmer unless reduced motion is on).
   const skel = (n, cls) => { const f = document.createDocumentFragment(); for (let i = 0; i < n; i++) f.appendChild(h('div.sk' + (cls ? '.' + cls : ''), { 'aria-hidden': 'true' })); return f; };
