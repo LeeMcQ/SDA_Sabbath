@@ -202,7 +202,8 @@ export function openWelcome({ onClose, only } = {}) {
     const haveBibles = new Set((await bd.listTranslations(true)).map((t) => t.id));
     const builtin = (await bd.listTranslations(true)).filter((t) => t.src !== 'imported');
     const haveHymns = new Set((await hi.addedHymnbooks()).map((b) => String(b.id)));
-    const filled = ((await hi.overlayCounts())['sda-online'] || 0) > 0;
+    const counts = await hi.overlayCounts();
+    const filled = (counts['sda-online'] || 0) > 0, afWords = counts['afrikaans-sda'] || 0;
     if (steps[i] !== 'languages') return;
     const langs = L3().filter(Boolean).filter((x, k, a) => a.indexOf(x) === k);
     const all = languageChoices();
@@ -216,19 +217,25 @@ export function openWelcome({ onClose, only } = {}) {
         ...own.map((t) => ['have:' + t.id, t.name + (t.src === 'private' ? ' (included with this installation)' : ' (built in)')]),
         ...dlB.map((t, n) => [haveBibles.has(bs.bibleIdOf(t)) ? 'have:' + bs.bibleIdOf(t) : 'b:' + n,
           t.name + ' · ' + (t.full ? 'whole Bible' : 'New Testament') + (t.mb ? ', ' + t.mb + ' MB' : '') + ' · ' + bs.BIBLE_SOURCES[t.src].label + (haveBibles.has(bs.bibleIdOf(t)) ? ' ✓' : '')]),
+        ...(pick[key] && pick[key].ownBible ? [['have:' + pick[key].ownBible.id, pick[key].ownBible.name + ' (your file) ✓']] : []),
         ['', 'No Bible for this language'],
+        ['file', 'Our church’s own Bible file…'],
       ];
       const dlH = sortHymnals(L.hymns);
       const hOpts = [
         ...dlH.map((e, n) => [haveHymns.has(e.id) || (e.id === 'web-rejnac-english' && filled) ? 'hhave:' + e.id : 'h:' + n,
           (e.id === 'web-rejnac-english' ? 'SDA Hymnal 1985 with words (keeps the hymn music)' : e.name) + ' · ' + e.hymns + ' hymns' + (haveHymns.has(e.id) ? ' ✓' : '')]),
-        L.builtinHymns ? ['builtin', key === 'en' ? 'Only the built-in books (SDA Hymnal titles, Church Hymnal 1941 words)' : 'Advent Lofliedere (built in, numbers and titles)'] : null,
+        L.builtinHymns ? ['builtin', key === 'en' ? 'Only the built-in books (SDA Hymnal titles, Church Hymnal 1941 words)'
+          : 'Advent Lofliedere (built in' + (afWords ? ', words for ' + afWords + ' hymns added ✓)' : ', numbers and titles)')] : null,
+        pick[key] && pick[key].ownHymn ? ['own', pick[key].ownHymn.name + ' (your file) ✓'] : null,
         ['', 'No hymnbook for this language'],
+        ['file', 'Our church’s own hymnbook file…'],
       ].filter(Boolean);
       const p = pick[key] || (pick[key] = {});
-      if (!bOpts.some(([v]) => v === p.bible)) p.bible = bOpts[0][0];
-      if (!hOpts.some(([v]) => v === p.hymn)) p.hymn = hOpts[0][0];
-      return { key, L, dlB, dlH, bOpts, hOpts, p };
+      const first = (opts) => (opts.find(([v]) => v !== 'file') || opts[0])[0];
+      if (!bOpts.some(([v]) => v === p.bible)) p.bible = first(bOpts);
+      if (!hOpts.some(([v]) => v === p.hymn)) p.hymn = first(hOpts);
+      return { key, L, dlB, dlH, bOpts, hOpts, p, own };
     });
     const pending = () => plan.flatMap((x) => [
       /^b:/.test(x.p.bible) ? { job: 'b:' + x.key, kind: 'bible', item: x.dlB[+x.p.bible.slice(2)], label: x.L.name + ' Bible' } : null,
@@ -241,11 +248,56 @@ export function openWelcome({ onClose, only } = {}) {
       x.value = value; x.addEventListener('change', () => { onchange(x.value); paintLanguages(); });
       return x;
     };
+    // A church's own licensed file, where nothing can be downloaded (a Bible Society text, Advent Lofliedere words …).
+    const fileBox = (x, kind) => {
+      const inp = h('input', { type: 'file', accept: kind === 'bible' ? '.json,.xml,.csv,.tsv,.txt' : '.vpc,.json,.txt', 'aria-label': x.L.name + (kind === 'bible' ? ' Bible file' : ' hymnbook file') });
+      const msg = h('span.note', kind === 'bible' ? 'Zefania or OSIS XML, JSON or CSV, from the Bible Society or your church. It stays on this device.'
+        : 'VideoPsalm (.vpc or .json), SDA Sabbath (.json) or text with “# 73 Title”. Only words your church may use; they stay on this device.');
+      inp.addEventListener('change', async () => {
+        const f = inp.files[0]; if (!f) return;
+        msg.textContent = 'Reading ' + f.name + '…';
+        try {
+          if (kind === 'bible') {
+            const parsed = await bd.parseBibleFile(f);
+            const m = parsed.meta || {};
+            const id = 'imp-own-' + x.key.replace(/[^a-z0-9]/g, '');
+            const name = m.name || m.shortname || x.L.name + ' Bible';
+            await bd.saveImported({ id, abbr: String(m.abbr || x.key).toUpperCase().slice(0, 8), name, lang: bs.langOf({ lang: x.key, langName: x.L.name }), license: 'Imported on this device' }, parsed);
+            x.p.ownBible = { id, name }; x.p.bible = 'have:' + id;
+          } else {
+            const book = await (await import('../core/hymnparse.js')).parseHymnFile(f);
+            if (!book.hymns.length) throw new Error('No hymns found in ' + f.name + '.');
+            if (x.key === 'af' || x.key === 'en') {   // the words go into the built-in book, by number
+              const n = await hi.fillBuiltInWords(x.key === 'af' ? 'afrikaans-sda' : 'sda-online', book.hymns);
+              if (!n) throw new Error('None of its numbers match ' + (x.key === 'af' ? 'Advent Lofliedere' : 'the SDA Hymnal') + '.');
+              x.p.hymn = 'builtin';
+              toast('Words added for ' + n + ' hymns.', 'ok');
+            } else {
+              const id = 'book-own-' + x.key.replace(/[^a-z0-9]/g, '');
+              const name = book.name && book.name !== f.name.replace(/\.[^.]+$/, '') ? book.name : x.L.name + ' hymnbook';
+              await (await import('../core/db.js')).db.put('hymnbooks', id, { id, name, short: String(book.short || x.key.toUpperCase()).slice(0, 8), lang: x.key, hymns: book.hymns, licence: 'Imported on this device', added: Date.now() });
+              x.p.ownHymn = { id, name }; x.p.hymn = 'own';
+            }
+            hi.announceHymnbooks(null);
+          }
+          paintLanguages();
+        } catch (e) { msg.textContent = e.message; }
+      });
+      return h('div.col', { style: { gap: '4px' } }, inp, msg);
+    };
+    const gapNote = (x, kind) => {
+      if (kind === 'bible' && !x.dlB.length && !x.own.length && !x.p.ownBible) return h('span.note', 'No ' + x.L.name + ' Bible is openly available to download. If your church has one as a file (for example from the Bible Society), choose “Our church’s own Bible file”.');
+      if (kind === 'hymn' && x.key === 'af' && !afWords) return h('span.note', 'The words of Advent Lofliedere are copyrighted, so they cannot be downloaded. If your church has them as a file (VideoPsalm or another program), choose “Our church’s own hymnbook file”: the words fill the built-in book by number.');
+      if (kind === 'hymn' && !x.dlH.length && !x.L.builtinHymns && !x.p.ownHymn) return h('span.note', 'No ' + x.L.name + ' hymnbook is in the download list yet. If your church has one as a file, choose “Our church’s own hymnbook file”.');
+      return null;
+    };
     const rows = plan.map((x, n) => h('div.card', { style: { padding: '12px 14px' } },
       h('b', (n === 0 ? 'Main language: ' : n === 1 ? 'Second language: ' : 'Third language: ') + x.L.name),
       h('div.form', { style: { marginTop: '8px' } },
-        h('label', 'Bible'), h('div.col', { style: { gap: '4px' } }, select(x.bOpts, x.p.bible, (v) => { x.p.bible = v; }, x.L.name + ' Bible'), status('b:' + x.key)),
-        h('label', 'Hymns'), h('div.col', { style: { gap: '4px' } }, select(x.hOpts, x.p.hymn, (v) => { x.p.hymn = v; }, x.L.name + ' hymnbook'), status('h:' + x.key)))));
+        h('label', 'Bible'), h('div.col', { style: { gap: '4px' } }, select(x.bOpts, x.p.bible, (v) => { x.p.bible = v; }, x.L.name + ' Bible'), status('b:' + x.key),
+          x.p.bible === 'file' ? fileBox(x, 'bible') : gapNote(x, 'bible')),
+        h('label', 'Hymns'), h('div.col', { style: { gap: '4px' } }, select(x.hOpts, x.p.hymn, (v) => { x.p.hymn = v; }, x.L.name + ' hymnbook'), status('h:' + x.key),
+          x.p.hymn === 'file' ? fileBox(x, 'hymn') : gapNote(x, 'hymn')))));
     const todo = pending();
     const goBtn = h('button.btn.primary', { type: 'button', disabled: !!running || !todo.length || navigator.onLine === false, onclick: () => start() },
       icon('download'), h('span', running ? 'Downloading…' : todo.length ? 'Download now (' + todo.length + ')' : 'Everything is on this device'));
@@ -294,6 +346,7 @@ export function openWelcome({ onClose, only } = {}) {
       const hymnBook = (x) => {
         const v = x.p.hymn || '';
         const e = v.startsWith('h:') ? x.dlH[+v.slice(2)] : v.startsWith('hhave:') ? x.dlH.find((d) => d.id === v.slice(6)) : null;
+        if (v === 'own' && x.p.ownHymn) return x.p.ownHymn.id;
         if (v === 'builtin' || (e && e.id === 'web-rejnac-english')) return x.key === 'af' ? 'afrikaans-sda' : 'sda-online';
         return e && books.has(e.id) ? e.id : '';
       };

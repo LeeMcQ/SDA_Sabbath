@@ -18,6 +18,11 @@ complete text in an app needs the Bible Society's written permission (copyright@
   © Bible Society of South Africa). getBible's list is also built in (`js/core/biblegetbible.js`), so it shows
   even when api.getbible.net is slow; bible.helloao.org's list loads live, and a Bible from it downloads in one
   file or, when the site has no single file, chapter by chapter.
+- A fourth source, the **eBible corpus** ([github.com/BibleNLP/ebible](https://github.com/BibleNLP/ebible), openly
+  licensed texts from eBible.org, mostly CC BY-SA from Biblica), adds the Setswana New Testament and modern Bibles in
+  isiNdebele, Chichewa, Shona, Kikuyu, Dholuo, Kiswahili and Twi (`js/core/biblesources.js`, `EBIBLE`). Sesotho,
+  Sepedi, Xitsonga, Tshivenda, siSwati and a full isiZulu Bible have no openly licensed text online: a church adds
+  its Bible Society copy as a file (Add a Bible, or *Our church's own Bible file* in the first-start setup).
 - **For your whole installation:** drop the file into `licensed/` and run `python tools/build.py --bibles`
   (see `licensed/README.md`). The folder is git-ignored, so it never becomes public.
 
@@ -51,6 +56,10 @@ The list (`js/core/hymnsources.js`) is built in, so it shows even when GitHub is
 
 Hymn words belong to their owners. The compilers share these hymnbooks for worship use, but a church still checks that it
 may use the words (many SDA Hymnal texts are under copyright), and a live stream also needs a CCLI Streaming Licence.
+
+**Advent Lofliedere** (Afrikaans) has no words in any download list, because its words are copyrighted. A church
+that has them as a file fills the built-in book by number: Hymns → ⋯ → Import licensed words, or *Our church's own
+hymnbook file* for Afrikaans in the first-start setup. The setup offers the same for any language without a download.
 
 **From a file** (in the same dialog): VideoPsalm songbooks (`.vpc`, which is a zip, or the `.json` inside it), SDA Sabbath
 hymnbooks (`.json`), the Liedboek JSON format, and text with `# 73 Title` before each hymn. **Import licensed words**
