@@ -152,7 +152,7 @@ export function createListener({ ctx, getTab, present, ui }) {
     c.listen(true);
     if (capOff) capOff();
     capOff = c.on((st) => {
-      const p = !st.connected ? 'Offline translator not reachable' : st.status && st.status.error ? st.status.error : '';
+      const p = !st.connected ? (st.blocked || 'Offline translator not reachable') : st.status && st.status.error ? st.status.error : '';
       if (p !== problem) { problem = p; paintHead(); }
     });
     // The translator only hears once it listens to the sound input; Live translation may already have started it.

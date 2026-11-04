@@ -5,6 +5,11 @@ import { icon } from '../core/icons.js';
 import { seg } from '../core/ui.js';
 import { tip } from './translate-part.js';
 
+// Quoted verses (said without naming them) are only recognised when the church installed its licensed Afrikaans
+// Bible in the translator; the translator says so in its status (afBible: number of verses, 0 = not installed).
+const quoteWords = (af) => (af ? 'It also recognises Bible verses the preacher quotes without naming them.'
+  : 'It recognises verses the preacher names (“Johannes drie vers sestien”). Verses quoted without naming them are only recognised once your church’s licensed Afrikaans Bible is installed in the translator.');
+
 export default function create(ctx) {
   const L = ctx.listener;
   const card = (title, ...kids) => h('div.card.st-card', h('h3', title), ...kids);
@@ -26,11 +31,21 @@ export default function create(ctx) {
     (v) => { S.set('app.listenSource', v); if (L && L.on) { L.stop(); L.start(); } });
   const main = card(h('span.tip-h', 'Listen for verses & hymns', tip('Listens through the microphone. When a Bible verse or a hymn is mentioned, it is offered as a card with Put on Next and Present. While a hymn is on the screen it follows the singing and offers the stanza being sung. Nothing goes on the screen by itself.')),
 
-    h('div.ls-src', h('span.ls-src-l', 'Hear with'), hearWith, tip('Offline translator: the SDA Sabbath translator on this PC (Tools → Listen & Translate) listens to the sound desk without internet, for Afrikaans sermons. It also recognises Bible verses the preacher quotes without naming them. Live translation does not need to be switched on. ' +
+    h('div.ls-src', h('span.ls-src-l', 'Hear with'), hearWith, tip('Offline translator: the SDA Sabbath translator on this PC (Tools → Listen & Translate) listens to the sound desk without internet, for Afrikaans sermons. ' + quoteWords(false) + ' Live translation does not need to be switched on. ' +
       'Browser: Chrome or Edge with the internet and the microphone, in English (or Afrikaans when your main Bible is Afrikaans). Automatic uses the translator when it is running on this PC, otherwise the browser.')),
 
     status,
     h('div.row', toggleBtn));
+  const srcTip = main.querySelector('.ls-src .tip');
+  let afShown = false;
+  const paintTip = (st) => {
+    const af = !!(st && st.status && st.status.afBible > 0);
+    if (!srcTip || af === afShown) return;
+    afShown = af;
+    const t = srcTip.dataset.tip.replace(quoteWords(!af), quoteWords(af));
+    srcTip.dataset.tip = t; const sr = srcTip.querySelector('.sr-only'); if (sr) sr.textContent = t;
+  };
+  import('../core/livecaptions.js').then((m) => { paintTip(m.captions.state); m.captions.on(paintTip); }).catch(() => {});
 
   const ex = (said, gets) => h('li', h('span.ls-said', '“' + said + '”'), h('span.note', ' → ' + gets));
   const examples = card('What it listens for',

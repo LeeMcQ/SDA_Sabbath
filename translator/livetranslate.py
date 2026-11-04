@@ -245,6 +245,40 @@ class Bible:
                         best = (group[0][0], group[0][1], group[0][2], group[-1][2], score)
         return best
 
+    def digits(self, af):
+        """Spoken numbers in a reference as digits, so the English shows them as numbers:
+        "Psalm drie-en-twintig" -> "Psalm 23", "Johannes drie vers sestien" -> "Johannes 3 vers 16"."""
+        toks = list(re.finditer(r"[^\W_]+(?:-[^\W_]+)*", af))
+        if not toks:
+            return af
+        folded = [' '.join(words(t.group(0))) for t in toks]
+        out, last, i = [], 0, 0
+        while i < len(toks):
+            hit = 0
+            for n in (3, 2, 1):                                   # longest book name first: "eerste johannes"
+                if i + n <= len(toks) and ' '.join(folded[i:i + n]) in self.names:
+                    hit = n; break
+            if not hit:
+                i += 1; continue
+            j, seen = i + hit, 0
+            while j < len(toks) and j < i + hit + 9:
+                w = folded[j]
+                if w in ('hoofstuk', 'vers', 'verse', 'tot', 'en') and not (w == 'en' and seen == 0):
+                    j += 1; continue
+                n, span = None, 1
+                if j + 2 < len(toks) and folded[j + 1] == 'en':        # "drie en twintig"
+                    n = af_number(folded[j] + 'en' + folded[j + 2])
+                    span = 3 if n is not None else 1
+                if n is None:
+                    n = af_number(w.replace(' ', ''))
+                if n is None or n < 1:
+                    break
+                if not w.isdigit() or span > 1:
+                    out.append(af[last:toks[j].start()] + str(n)); last = toks[j + span - 1].end()
+                seen += 1; j += span
+            i = j if seen else i + hit
+        return ''.join(out) + af[last:]
+
     def refs(self, af_sentence):
         """References the preacher names: "Johannes drie vers sestien", "Johannes 3:16", "Romeine hoofstuk 8 verse 28 tot 30"."""
         f = ' '.join(words(af_sentence.replace(':', ' vers ')))
@@ -318,6 +352,10 @@ class Glossary:
         self.drop = [d.lower() for d in g.get('drop', [])]
         self.slang = [(_word_rx(a), b) for a, b in sorted(g.get('slang', {}).items(), key=lambda kv: -len(kv[0]))]
         self.fillers = [_word_rx(f) for f in sorted(g.get('fillers', []), key=len, reverse=True)]
+        # "ek sê" on its own ("Lekker, ek sê!") adds nothing, but "ek sê vir julle" is "I tell you": only drop these
+        # between punctuation (or at the start or end of the sentence).
+        self.fillers += [re.compile(r'(?:^|(?<=[,.!?;:]))\s*' + re.escape(f).replace(r'\ ', r'\s+') + r'(?=\s*(?:[,.!?;:]|$))', re.I)
+                         for f in sorted(g.get('fillers_alone', []), key=len, reverse=True)]
         self.base_keep = list(g.get('keep', []))
         self.terms_src = dict(g.get('terms', {}))
         self.terms_exact = dict(g.get('terms_exact', {}))
@@ -339,12 +377,16 @@ class Glossary:
         for _ in range(2):                                       # twice: "djy's" -> "jy's" -> "jy is"
             for rx, std in self.slang:
                 af = rx.sub(lambda m, std=std: (std[:1].upper() + std[1:]) if m.group(0)[:1].isupper() else std, af)
+        first_up = af[:1].isupper()
         for rx in self.fillers:
             af = rx.sub('', af)
         af = re.sub(r'\s+([,.!?;:])', r'\1', af)
         af = re.sub(r',\s*,', ',', af)
         af = re.sub(r',\s*([?!.])', r'\1', af)
-        return re.sub(r'\s{2,}', ' ', af).strip(' ,')
+        out = re.sub(r'\s{2,}', ' ', af).strip(' ,')
+        if first_up and out[:1].islower():                       # "Uhm, ons gaan bid" -> "Ons gaan bid"
+            out = out[:1].upper() + out[1:]
+        return out
 
     def protect(self, af):
         """-> (text with markers, [(marker, output)])."""
@@ -395,6 +437,52 @@ class Glossary:
         return any(d in low for d in self.drop)
 
 
+LONG_WORDS = 22          # longer than this, a recognised run-on is split before translating (the model drops words)
+# speech recognition often drops the full stop but keeps the capital: "… vanoggend Die gemeente sal …"
+_STARTER = re.compile(r'\s+(?=(?:Die|Ons|Ek|Dit|Julle|Hulle|Want|Maar|Kom|Laat|As|Wanneer|Toe|Daar|Nou|So|Gedenk|Mag)\s)')
+_CLAUSE = re.compile(r'\s+(?=(?:en|maar|want|omdat|sodat|wanneer|toe|terwyl|dan)\s)', re.I)
+
+
+def split_long(af, limit=LONG_WORDS):
+    """A long run of recognised speech -> pieces of at most about `limit` words: at the end of sentences first,
+    then at commas, then before a capitalised sentence start, then before a joining word (en, maar, want …), and only as a last resort every `limit` words."""
+    if len(af.split()) <= limit:
+        return [af]
+    out = []
+    for sent in re.split(r'(?<=[.!?;:])\s+', af):
+        pieces = [sent]
+        for rx in (re.compile(r'(?<=,)\s+'), _STARTER, _CLAUSE):
+            nxt = []
+            for p in pieces:
+                if len(p.split()) <= limit:
+                    nxt.append(p); continue
+                if rx is _STARTER:                            # every sentence start: whole sentences translate best
+                    nxt += rx.split(p); continue
+                cur = ''
+                for part in rx.split(p):
+                    if cur and len((cur + ' ' + part).split()) > limit:
+                        nxt.append(cur); cur = part
+                    else:
+                        cur = (cur + ' ' + part).strip()
+                if cur:
+                    nxt.append(cur)
+            pieces = nxt
+        for p in pieces:
+            w = p.split()
+            while len(w) > limit + 6:                         # no place to split: every `limit` words
+                out.append(' '.join(w[:limit])); w = w[limit:]
+            if w:
+                out.append(' '.join(w))
+    # a number like "drie en twintig" or a short tail is never left on its own
+    merged = []
+    for p in out:
+        if merged and len(p.split()) < 4:
+            merged[-1] += ' ' + p
+        else:
+            merged.append(p)
+    return [p.strip(' ,') for p in merged if p.strip(' ,')]
+
+
 class TextTranslator:
     """Afrikaans sentences -> what is shown. The live captions and the quality test both use this, so the test
     checks exactly what the congregation sees."""
@@ -404,6 +492,26 @@ class TextTranslator:
         self.marker_ok = self.marker_lost = 0
 
     def __call__(self, batch):
+        # Long recognised speech is translated sentence by sentence (a quoted verse is kept whole), then joined.
+        pieces, owner = [], []
+        for i, af in enumerate(batch):
+            parts = split_long(af)
+            if len(parts) > 1 and self.bible.af and self.bible.match(af):
+                parts = [af]
+            pieces += parts; owner += [i] * len(parts)
+        if len(pieces) == len(batch):
+            return self._translate(batch)
+        res, out = self._translate(pieces), [None] * len(batch)
+        for i, r in zip(owner, res):
+            if out[i] is None:
+                out[i] = dict(r)
+            else:
+                prev = out[i]['en'].rstrip()
+                out[i]['en'] = prev + ('' if re.search(r'[.!?,;:]["”’)]?$', prev) else '.') + ' ' + r['en']
+                out[i]['sent'] = out[i].get('sent', '') + ' ' + r.get('sent', '')
+        return out
+
+    def _translate(self, batch):
         out = [None] * len(batch)
         todo = []
         for i, af in enumerate(batch):
@@ -416,7 +524,7 @@ class TextTranslator:
                 todo.append(i)
         if not todo:
             return out
-        prepared = {i: self.gloss.protect(self.gloss.normalise(batch[i])) for i in todo}
+        prepared = {i: self.gloss.protect(self.gloss.normalise(self.bible.digits(batch[i]))) for i in todo}
         ens = self.mt([prepared[i][0] for i in todo])
         retry = []
         for i, en in zip(todo, ens):
@@ -429,7 +537,7 @@ class TextTranslator:
                 self.marker_ok += 1 if marks else 0
                 out[i] = {'en': self.gloss.after(fixed), 'how': 'mt', 'sent': text}
         if retry:
-            inl = {i: self.gloss.inline(self.gloss.normalise(batch[i])) for i in retry}
+            inl = {i: self.gloss.inline(self.gloss.normalise(self.bible.digits(batch[i]))) for i in retry}
             for i, en in zip(retry, self.mt([inl[i] for i in retry])):
                 out[i] = {'en': self.gloss.after(en), 'how': 'mt-inline', 'sent': inl[i]}
         return out
@@ -849,6 +957,7 @@ class Hub:
                 'device': self.mic.name if self.mic else None, 'devices': devs, 'error': self.error,
                 'asr': os.path.basename(getattr(self.asr, 'path', 'demo')), 'mt': os.path.basename(getattr(self.mt, 'path', 'demo')),
                 'hw': getattr(self.asr, 'device', 'cpu'), 'english': self.bible.en_id, 'rtf': rtf, 'keep': len(self.gloss.keep),
+                'afBible': len(self.bible.verses) if self.bible.af else 0,
                 'behind': self.pipe.audio_q.qsize() if self.pipe else 0, 'busy': self.busy, 'level': self.peak_db if self.mic else None,
                 'model': getattr(self, 'demo_model', None) or os.path.basename(getattr(self.asr, 'path', '')).replace('fluister-', '')}
 
@@ -1215,8 +1324,8 @@ def model_list():
     for size in ORDER:
         mb, acc, rel, words = MODEL_INFO[size]
         est = speeds.get(size, ref * rel if ref is not None else None)
-        if est is not None and est <= LIVE_LIMIT:
-            rec = size                                    # the most accurate one that keeps up
+        if est is not None and est <= LIVE_LIMIT and (size != 'large-v3' or hw == 'cuda'):
+            rec = size                                    # the most accurate one that keeps up (large: graphics card only)
         out.append({'id': size, 'mb': mb, 'accuracy': acc, 'words': words, 'downloaded': asr_ready(size),
                     'speed': round(est, 2) if est is not None else None, 'measured': size in speeds,
                     'live': est is not None and est <= LIVE_LIMIT})
@@ -1225,6 +1334,16 @@ def model_list():
     for m in out:
         m['recommended'] = m['id'] == rec
     return {'models': out, 'current': c.get('asr'), 'recommended': rec, 'hw': hw, 'limit': LIVE_LIMIT}
+
+
+def upgrade_words(cur, ml):
+    """This PC is fast enough for a more accurate speech model than the one in use (usually turbo): say so. The default
+    never changes by itself, so a slow PC keeps the small model."""
+    rec = ml.get('recommended')
+    if not rec or rec == cur or rec not in MODEL_INFO or cur not in MODEL_INFO or MODEL_INFO[rec][1] <= MODEL_INFO[cur][1]:
+        return ''
+    return (' This PC is fast enough for the more accurate %s model (%d MB): choose it under Speech model%s.'
+            % (rec, MODEL_INFO[rec][0], '' if asr_ready(rec) else ' to download it'))
 
 
 def download_asr(size):
@@ -1278,10 +1397,18 @@ STEPS = [('parts', 'Program parts'), ('words', 'Bibles and word list'), ('mt', '
 DEMO = False      # `demo`: made-up answers, to try SDA Sabbath's screens without models
 
 
+def af_words():
+    """How quoted verses are recognised: only with the church's licensed Afrikaans Bible installed."""
+    b = Bible('web')
+    n = len(b.verses) if b.af else 0
+    return ('%s Afrikaans verses for Bible quotes' % format(n, ',')) if n else \
+        'Afrikaans Bible not installed (it is licensed: put your church\'s licensed copy in the licensed folder), so quoted verses are not recognised; spoken references still work'
+
+
 def demo_check(step):
     time.sleep(0.4)
     fake = {'parts': (True, 'All parts installed. No graphics card: the processor does the work.'),
-            'words': (True, '31,170 Afrikaans verses for Bible quotes; 80 words never translated.'),
+            'words': (True, af_words() + '; 80 words never translated.'),
             'mt': (True, '“Ons aanbid God op die Sabbat.” → “We worship God on the Sabbath.”'),
             'speed': (True, 'small model: 0.14 × real time on the processor (keeps up easily). Recommended for this PC: turbo.'),
             'speech': (True, 'Heard 88% of the words right (demo).'),
@@ -1330,7 +1457,8 @@ def check(step, hub=None, device=None):
             return {'ok': True if ok else (None if rtf <= 0.9 else False), 'models': ml, 'current': cur,
                     'detail': '%s model: %.2f × real time on the %s (%s). Recommended for this PC: %s.' % (
                         cur, rtf, 'graphics card' if hw == 'cuda' else 'processor',
-                        'keeps up easily' if ok else 'may fall behind' if rtf <= 0.9 else 'too slow to keep up', ml['recommended'])}
+                        'keeps up easily' if ok else 'may fall behind' if rtf <= 0.9 else 'too slow to keep up', ml['recommended'])
+                    + upgrade_words(cur, ml)}
         if step == 'speech':
             asr = hub.asr if hub else Recogniser(find_asr(config().get('asr')))
             audio = load_audio(os.path.join(QUALITY, 'sample-af.wav'))

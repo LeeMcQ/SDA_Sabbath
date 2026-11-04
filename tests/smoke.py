@@ -399,6 +399,23 @@ def main():
                 assert not errs, '; '.join(errs[:3])
             t_offline_listen()
 
+            @check('translator blocked by Chrome (Local network access): the steps are shown')
+            def t_translator_lna():
+                pg.evaluate("window.selah.showTab('translate')"); pg.wait_for_timeout(800)
+                pg.evaluate("""async () => { const m = await import('./js/core/livecaptions.js');
+                  m.captions.lnaState = async () => 'denied'; m.captions.state.connected = false; await m.captions.checkBlocked(); }""")
+                pg.wait_for_timeout(500)
+                st = pg.inner_text('.tools-part-listen .tr-st')
+                assert 'Local network access' in st and 'Allow' in st, 'translator status: %s' % st
+                pg.evaluate("""async () => { const m = await import('./js/core/livecaptions.js');
+                  m.captions.lnaState = async () => 'granted'; await m.captions.checkBlocked(); }""")
+                pg.wait_for_timeout(300)
+                assert 'Local network access' not in pg.inner_text('.tools-part-listen .tr-st'), 'the message stays after it was allowed'
+                tipw = pg.evaluate("[...document.querySelectorAll('.ls-src .tip')].map(e => e.dataset.tip).join(' ')")
+                assert 'licensed Afrikaans Bible is installed' in tipw and 'It also recognises Bible verses the preacher quotes' not in tipw, 'Listen help: %s' % tipw[:300]
+                assert not errs, '; '.join(errs[:3])
+            t_translator_lna()
+
             @check('translation on phones: QR slide and the phone view')
             def t_tr_phone():
                 pg.evaluate("window.selah.showTab('listen')"); pg.wait_for_timeout(600)
@@ -800,6 +817,20 @@ def main():
                 assert not e3, '; '.join(e3[:3])
                 c3.close()
             t_offline()
+
+            @check('OBS page: not connected after 15 s shows why, with the church-network address')
+            def t_obs_timeout():
+                e4, b4 = [], []
+                q = new_page(ctx, e4, b4)
+                q.goto(base + 'obs.html?mode=lower&lan=http://192.168.1.20:7777'); q.wait_for_timeout(16500)
+                t = q.inner_text('.obs-pill')
+                assert 'not connected after 15 s' in t and 'http://192.168.1.20:7777/obs.html?via=lan&mode=lower' in t, 'OBS banner: %s' % t
+                q.goto(base + 'obs.html?mode=full&lan=javascript:alert(1)'); q.wait_for_timeout(16500)
+                t = q.inner_text('.obs-pill')
+                assert 'http://localhost:7777/obs.html?via=lan&mode=full' in t and 'javascript' not in t, 'OBS banner (bad lan): %s' % t
+                q.close()
+                assert not e4, '; '.join(e4[:3])
+            t_obs_timeout()
 
             @check('no errors on the main page')
             def t_clean():
