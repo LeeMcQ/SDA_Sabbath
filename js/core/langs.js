@@ -2,7 +2,7 @@
 // or a Bible (Add a Bible) in the download lists, with what is available for it. One key per language (ISO 639-1
 // where there is one), so "xho" (Bible corpus), "xh" (hymnals) and "isiXhosa" meet.
 import { HYMNALS } from './hymnsources.js';
-import { corpusItems, getbibleItems } from './biblesources.js';
+import { corpusItems, getbibleItems, ebibleItems } from './biblesources.js';
 import { rank } from './langsearch.js';
 
 const TO_1 = {
@@ -40,7 +40,7 @@ export function languageChoices() {
     return by.get(key);
   };
   HYMNALS.forEach((e) => get(langKey(e.lang), e.langName).hymns.push(e));
-  [...getbibleItems(), ...corpusItems()].forEach((t) => { if (t.langName || t.lang) get(langKey(t.lang, t.langName), t.langName).bibles.push(t); });
+  [...getbibleItems(), ...ebibleItems(), ...corpusItems()].forEach((t) => { if (t.langName || t.lang) get(langKey(t.lang, t.langName), t.langName).bibles.push(t); });
   get('en').builtinBible = 'KJV and WEB are built in';
   get('en').builtinHymns = 'SDA Hymnal 1985 (numbers, titles and music) and Church Hymnal 1941 (words) are built in';
   get('af').builtinHymns = 'Advent Lofliedere (numbers and titles) is built in';
@@ -50,7 +50,7 @@ export function languageChoices() {
   return cache;
 }
 
-const SRC_ORDER = { gb: 0, bc: 1, ao: 2 };
+const SRC_ORDER = { gb: 0, eb: 1, bc: 2, ao: 3 };
 /** Bibles for one language, the likeliest choice first: whole Bibles before New Testaments. */
 export const sortBibles = (list) => list.slice().sort((a, b) => (b.full ? 1 : 0) - (a.full ? 1 : 0) || SRC_ORDER[a.src] - SRC_ORDER[b.src] || a.name.localeCompare(b.name));
 /** Hymnbooks for one language, the likeliest choice first: the ones with real line breaks (SID, Hymnals Data). */

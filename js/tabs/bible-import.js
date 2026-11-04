@@ -3,7 +3,7 @@
 import { h, clear } from '../core/util.js';
 import { modal, toast, closeModal } from '../core/ui.js';
 import { parseBibleFile, saveImported, listTranslations } from '../core/bibledata.js';
-import { BIBLE_SOURCES, corpusItems, getbibleItems, loadAoList, loadGbList, addBible } from '../core/biblesources.js';
+import { BIBLE_SOURCES, corpusItems, getbibleItems, ebibleItems, loadAoList, loadGbList, addBible } from '../core/biblesources.js';
 import { matches, fuzzyMatch, rank } from '../core/langsearch.js';
 
 export function importBibleDialog(onDone) {
@@ -31,12 +31,13 @@ export function importBibleDialog(onDone) {
   const PRESETS = [['NIV', 'New International Version'], ['ESV', 'English Standard Version'], ['NKJV', 'New King James Version']];
   const presets = h('div.row.wrap', { style: { gap: '6px' } }, h('span.note', 'Quick fill:'),
     PRESETS.map(([a, n]) => h('button.btn.sm', { type: 'button', onclick: () => { abbr.value = a; name.value = n; lang.value = 'en'; } }, a)));
-  // Three sources, searched together. Each one's list loads on its own, so a slow or blocked source never hides the
+  // Four sources, searched together. Each one's list loads on its own, so a slow or blocked source never hides the
   // others. getBible and the Bible corpus have built-in lists, so they always show; bible.helloao.org needs its live list.
   const SRC = {
     ao: Object.assign({ items: [], state: 'loading', note: '' }, BIBLE_SOURCES.ao),
     gb: Object.assign({ items: [], state: 'loading', note: '' }, BIBLE_SOURCES.gb),
     bc: Object.assign({ items: [], state: 'ok', note: '' }, BIBLE_SOURCES.bc),
+    eb: Object.assign({ items: [], state: 'ok', note: '' }, BIBLE_SOURCES.eb),
   };
   let filter = 'all';
   const searchInp = h('input.field', { type: 'search', placeholder: 'Search: Zulu, Xhosa, Sesotho, Afrikaans, KJV…', 'aria-label': 'Search Bibles', oninput: () => renderAo() });
@@ -47,6 +48,7 @@ export function importBibleDialog(onDone) {
     h('p.note', 'Tap Add: it downloads once and then works offline.'));
   SRC.bc.items = corpusItems();
   SRC.gb.items = getbibleItems();
+  SRC.eb.items = ebibleItems();
 
   async function loadSource(k) {
     const s = SRC[k];
@@ -71,7 +73,7 @@ export function importBibleDialog(onDone) {
   };
   function paintChips() {
     clear(chips);
-    const all = SRC.ao.items.length + SRC.gb.items.length + SRC.bc.items.length;
+    const all = Object.keys(SRC).reduce((n, k) => n + SRC[k].items.length, 0);
     const chip = (key, text) => h('button.btn.sm' + (filter === key ? '.primary' : ''), { type: 'button', 'aria-pressed': String(filter === key), onclick: () => { filter = key; renderAo(); } }, text);
     chips.append(chip('all', 'All sources (' + all + ')'));
     Object.keys(SRC).forEach((k) => {
@@ -101,7 +103,7 @@ export function importBibleDialog(onDone) {
     if (!hits.length) {
       const waiting = keys.some((k) => SRC[k].state === 'loading');
       searchBox.appendChild(h('p.note', waiting ? 'Loading the Bible lists…'
-        : 'No Bible matches “' + q + '” in ' + (filter === 'all' ? 'the three sources' : SRC[filter].label) + '. If you have the Bible as a file (from the Bible Society or your church), choose it in the form below the list.'));
+        : 'No Bible matches “' + q + '” in ' + (filter === 'all' ? 'the four sources' : SRC[filter].label) + '. If you have the Bible as a file (from the Bible Society or your church), choose it in the form below the list.'));
       return;
     }
     if (fuzzy) searchBox.appendChild(h('p.note', 'No exact match for “' + q + '”. Closest results:'));

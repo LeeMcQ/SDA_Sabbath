@@ -1,7 +1,7 @@
 // Bibles that can be added from the internet: bible.helloao.org (Free Use Bible API, live list), getBible (built-in
 // list) and the multilingual Bible corpus (built-in list). Used by Add a Bible and by the first-start setup.
 // An item is { src: 'ao' | 'gb' | 'bc', id, abbr, name, lang, langName, license, full, mb?, … }.
-import { parseBibleFile, saveImported, listTranslations } from './bibledata.js';
+import { parseBibleFile, saveImported, listTranslations, USFM } from './bibledata.js';
 import { CORPUS, CORPUS_BASE } from './biblecorpus.js';
 import { GETBIBLE } from './biblegetbible.js';
 
@@ -11,7 +11,57 @@ export const BIBLE_SOURCES = {
   ao: { label: 'Free Use Bible API', site: 'bible.helloao.org' },
   gb: { label: 'getBible', site: 'api.getbible.net' },
   bc: { label: 'Bible corpus', site: 'github.com/christos-c/bible-corpus' },
+  eb: { label: 'eBible corpus', site: 'github.com/BibleNLP/ebible' },
 };
+
+// The eBible corpus (BibleNLP, from eBible.org): openly licensed Bibles, one verse per line in the order of
+// metadata/vref.txt. Only African translations not offered by the other sources are listed.
+// Fields: [file, abbreviation, language, title, ISO 639-3, whole Bible, MB, licence].
+const EB_BASE = 'https://raw.githubusercontent.com/BibleNLP/ebible/main/';
+const BIBLICA = 'CC BY-SA 4.0, Biblica, Inc.';
+export const EBIBLE = [
+  ['tsn-tsn', 'TSN', 'Setswana', 'Lefoko: La Botshelo, Kgolagano e Ntsha (New Testament)', 'tsn', false, 1.2, BIBLICA],
+  ['nde-nde', 'NDE', 'isiNdebele', 'IBhayibhili Elingcwele LesiNdebele Elifinyelelekayo', 'nde', true, 3.8, BIBLICA],
+  ['nya-nya', 'NYA', 'Chichewa', 'Tsekulani Mawu a Mulungu mu Chichewa Chalero', 'nya', true, 4.0, BIBLICA],
+  ['sna-sna', 'SNA17', 'Shona', 'Bhaibheri Dzvene Rakasununguka MuChiShona Chanhasi (2017)', 'sna', true, 3.8, BIBLICA],
+  ['kik-kik', 'KIK', 'Kikuyu', 'Kiugo Gĩtheru Kĩa Ngai Kĩhingũre', 'kik', true, 4.7, BIBLICA],
+  ['luo-luo', 'LUO', 'Dholuo', 'Ochiw Thuolo Motingʼo Loko Manyien', 'luo', true, 3.6, BIBLICA],
+  ['swh-swhonen', 'SWHNEN', 'Kiswahili', 'Toleo Wazi Neno: Bibilia Takatifu', 'swh', true, 3.8, BIBLICA],
+  ['swh-swhulb', 'SWHULB', 'Kiswahili', 'Biblia Takatifu (unfoldingWord)', 'swh', true, 3.8, 'CC BY-SA 4.0, Door43 World Missions Community'],
+  ['swh-swh1850', 'SWH1850', 'Kiswahili', 'Biblia Takatifu, Agano Jipya (Krapf, 1850)', 'swh', false, 0.9, 'Public domain'],
+  ['twi-twi', 'TWI', 'Akuapem Twi', 'Nkwa Asɛm (Akuapem)', 'twi', true, 3.6, BIBLICA],
+  ['twi-twiasante', 'TWIAS', 'Asante Twi', 'Nkwa Asɛm (Asante)', 'twi', true, 3.7, BIBLICA],
+];
+export const ebibleItems = () => EBIBLE.map(([file, abbr, langName, name, lang, full, mb, lic]) => ({ src: 'eb', id: abbr, abbr, name, lang, langName, full, mb,
+  license: 'eBible corpus (github.com/BibleNLP/ebible); ' + lic, link: EB_BASE + 'corpus/' + file + '.txt' }));
+let vref = null;
+async function ebibleParsed(t, say) {
+  say('Downloading… ' + t.mb + ' MB');
+  if (!vref) {
+    const r = await fetch(EB_BASE + 'metadata/vref.txt');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    vref = (await r.text()).split('\n');
+  }
+  const r = await fetch(t.link);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const lines = (await r.text()).split('\n');
+  say('Converting…');
+  const books = new Map();
+  let total = 0;
+  lines.forEach((line, i) => {
+    const text = line.trim();
+    if (!text || text === '<range>') return;
+    const m = /^(\w{3}) (\d+):(\d+)$/.exec(vref[i] || '');
+    if (!m) return;
+    const b = USFM.indexOf(m[1]) + 1, c = +m[2], v = +m[3];
+    if (b < 1 || c < 1 || v < 1) return;
+    let bk = books.get(b); if (!bk) books.set(b, bk = []);
+    const ch = bk[c - 1] || (bk[c - 1] = []);
+    ch[v - 1] = text; total++;
+  });
+  if (total < 100) throw new Error('no verses found');
+  return { meta: { abbr: t.abbr, name: t.name }, books, total };
+}
 
 export const withTimeout = (url, ms) => { const c = new AbortController(); const t = setTimeout(() => c.abort(), ms); return fetch(url, { signal: c.signal }).finally(() => clearTimeout(t)); };
 
@@ -89,6 +139,12 @@ export async function addBible(t, say = () => {}) {
   const id = bibleIdOf(t);
   const existing = await listTranslations(true);
   if (existing.some((x) => x.id === id && x.src !== 'imported')) throw new Error('already built in');
+  if (t.src === 'eb') {
+    const parsed = await ebibleParsed(t, say);
+    say('Saving…');
+    await saveImported({ id, abbr: ab, name: t.name, lang: langOf(t), license: t.license }, parsed);
+    return id;
+  }
   let blob;
   if (t.src === 'ao') blob = await aoDownload(t, say);
   else {

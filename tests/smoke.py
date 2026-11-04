@@ -698,6 +698,9 @@ def main():
                     u = route.request.url
                     if 'bible-corpus' in u: return route.fulfill(status=200, body=xml, headers=H)
                     if 'sdah-hymnal' in u: return route.fulfill(status=200, body=sdah, headers=H)
+                    # eBible corpus: one verse per line, in the order of metadata/vref.txt
+                    if 'BibleNLP/ebible' in u and u.endswith('vref.txt'): return route.fulfill(status=200, body='\n'.join('JHN 3:%d' % n for n in range(1, 120)), headers=H)
+                    if 'BibleNLP/ebible' in u: return route.fulfill(status=200, body='\n'.join('Temana %d' % n for n in range(1, 120)), headers=H)
                     if 'sid_hymnal' in u and u.endswith('meta.json'): return route.fulfill(status=200, body=json.dumps({'title': 'x', 'songs': {str(n): 'S%d' % n for n in range(1, 6)}}), headers=H)
                     if 'sid_hymnal' in u: n = int(u.rsplit('/', 1)[1][:3]); return route.fulfill(status=200, body='## Iculo %d\n\nUmgca %d\nUmgca wesibini\n' % (n, n), headers=H)
                     route.fulfill(status=404, body='', headers=H)
@@ -734,6 +737,11 @@ def main():
                     assert st == [['en', 'xh', 'tn'], 'kjv', 'imp-xho-bc', 'sda-online'], 'settings after the downloads: %r' % st
                     books = q.evaluate("import('./js/tabs/hymn-import.js').then(m => m.addedHymnbooks()).then(l => l.map(b => b.id).sort())")
                     assert books == ['web-rejnac-english', 'web-sid-tn', 'web-sid-xh'], 'hymnbooks: %r' % books
+                    tsn = q.evaluate("import('./js/core/bibledata.js').then(m => m.listTranslations(true)).then(l => l.some(t => t.id === 'imp-tsn-eb'))")
+                    assert tsn, 'the Setswana Bible (eBible corpus) was not added'
+                    # Afrikaans: a church's own licensed file fills the built-in Advent Lofliedere by number.
+                    n = q.evaluate("import('./js/tabs/hymn-import.js').then(m => m.fillBuiltInWords('afrikaans-sda', [{ n: 1, t: 'Buig', v: [['Reël een', 'Reël twee']] }, { n: 9999, t: 'x', v: [['y']] }]))")
+                    assert n == 1, 'Advent Lofliedere words filled: %r' % n
                     assert not qerr, '; '.join(qerr[:3])
                 finally:
                     c.close()

@@ -47,20 +47,26 @@ export async function removeHymnbook(id) {
 /** The English SDA Hymnal words (rejnac) also go into the built-in SDA Hymnal 1985, which has numbers and titles
  *  only, so those hymns keep their offline music, plans and "hymn 73". Only hymns whose title matches, and never
  *  over words the church added itself. Returns how many hymns were filled. */
-async function fillBuiltIn(book) {
+async function fillBuiltIn(book) { return fillBuiltInWords(SDAH_BUILTIN, book.hymns, { from: book.id, titles: true }); }
+
+/** Put words into a built-in book that has numbers and titles only (SDA Hymnal 1985, Advent Lofliedere), by number.
+ *  titles: only where the title matches (a downloaded hymnbook); a church's own licensed file goes in by number,
+ *  as Import licensed words does. Built-in words stay; words the church typed itself stay unless they come from
+ *  its own file. from: the downloaded hymnbook, so removing it takes its words out again. Returns how many. */
+export async function fillBuiltInWords(baseId, hymns, { from = null, titles = false } = {}) {
   let base;
-  try { base = await (await fetch('data/hymns/' + SDAH_BUILTIN + '.json')).json(); } catch (e) { return 0; }
-  const key = 'overlay:' + SDAH_BUILTIN;
-  const ov = (await db.get('hymnbooks', key).catch(() => null)) || { id: key, overlayOf: SDAH_BUILTIN, hymns: [] };
+  try { base = await (await fetch('data/hymns/' + (baseId === 'afrikaans-sda' ? 'afrikaans' : baseId) + '.json')).json(); } catch (e) { return 0; }
+  const key = 'overlay:' + baseId;
+  const ov = (await db.get('hymnbooks', key).catch(() => null)) || { id: key, overlayOf: baseId, hymns: [] };
   const have = new Map((Array.isArray(ov.hymns) ? ov.hymns : []).filter((x) => x && x.n).map((x) => [x.n, x]));
   let filled = 0;
   for (const b of (base && base.hymns) || []) {
     if (b.v && b.v.length) continue;                          // words built in
     const mine = have.get(b.n);
-    if (mine && !mine.from && mine.v && mine.v.length) continue; // words this church added itself
-    const hy = book.hymns.find((x) => x.n === b.n);
-    if (!hy || !hy.v.length || !sameTitle(b.t, hy.t)) continue;
-    have.set(b.n, { n: b.n, t: b.t, a: hy.a || '', v: hy.v, c: hy.c || null, from: book.id });
+    if (from && mine && !mine.from && mine.v && mine.v.length) continue; // words this church added itself
+    const hy = hymns.find((x) => x.n === b.n);
+    if (!hy || !hy.v || !hy.v.length || (titles && !sameTitle(b.t, hy.t))) continue;
+    have.set(b.n, Object.assign({ n: b.n, t: b.t, a: hy.a || '', v: hy.v, c: hy.c || null }, from ? { from } : {}));
     filled++;
   }
   ov.hymns = [...have.values()].sort((x, y) => x.n - y.n);
