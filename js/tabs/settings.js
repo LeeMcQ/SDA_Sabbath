@@ -11,6 +11,7 @@ import { db, persistStorage } from '../core/db.js';
 import { createStage } from '../core/render.js';
 import { listTranslations, deleteImported, resetCaches } from '../core/bibledata.js';
 const importBibleDialog = (cb) => import('./bible-import.js').then((m) => m.importBibleDialog(cb));
+const hymnImport = () => import('./hymn-import.js');
 import { listScreens } from '../core/link.js';
 import { sanitizeImportedSettings } from '../core/settings.js';
 import { churchForm } from './church-form.js';
@@ -137,16 +138,37 @@ export default function create(ctx) {
   // ------------------------------------------------------------ Bibles & hymns
   section('bibles', 'Bibles & hymns', async (box) => {
     const list = h('div.list');
+    const hymnList = h('div.list');
     box.append(h('div.row.wrap', { style: { marginBottom: '10px' } },
       h('button.btn.primary', { type: 'button', onclick: () => importBibleDialog(async () => { resetCaches(); rebuild(); }) }, icon('plus'), 'Add a Bible (NIV, Xhosa, …)'),
-      h('button.btn', { type: 'button', onclick: async () => { const t = await ctx.tab('hymns'); await ctx.showTab('hymns'); toast('Use the ⋯ menu in Hymns to import, export or add hymns.'); return t; } }, icon('hymn'), 'Manage hymnbooks')),
+      h('button.btn.primary', { type: 'button', onclick: () => hymnImport().then((m) => m.addHymnbookDialog(() => rebuild())) }, icon('plus'), 'Add a hymnbook (isiXhosa, isiZulu, French, …)')),
+    h('h3', 'Bibles'),
     list,
-    h('p.note', { style: { marginTop: '10px' } }, 'Built in: KJV and WEB (public domain) and the Afrikaans 1933/53 Bible. NIV and the 1975 Xhosa Bible are copyrighted, so each church adds its own licensed copy here; it is converted once and stays offline on this device.'));
+    h('p.note', { style: { marginTop: '10px' } }, 'Built in: KJV and WEB (public domain) and the Afrikaans 1933/53 Bible. NIV and the 1975 Xhosa Bible are copyrighted, so each church adds its own licensed copy here; it is converted once and stays offline on this device.'),
+    h('h3', { style: { marginTop: '18px' } }, 'Hymnbooks'),
+    hymnList,
+    h('p.note', { style: { marginTop: '10px' } }, 'Add a hymnbook downloads SDA hymnals in 26 languages (isiXhosa, isiZulu, Sesotho, Setswana, Sepedi, Shona, Tshivenda, Xitsonga, Swahili, French, Portuguese, Spanish …), the SID Hymnal and early Adventist hymnals, or reads a VideoPsalm or SDA Sabbath hymnbook file. Each is kept offline on this device and in your backups. ',
+      h('button.btn.sm', { type: 'button', onclick: async () => { await ctx.tab('hymns'); await ctx.showTab('hymns'); } }, icon('hymn'), 'Open Hymns')));
     const ts = await listTranslations(true);
     ts.forEach((t) => list.appendChild(h('div.li', icon('bible'), h('span.grow', h('div', t.abbr + ' — ' + t.name), h('div.note', { builtin: 'Built in', private: 'Included with this installation', imported: 'Added on this device' }[t.src] + (t.license ? ' · ' + t.license : ''))),
       t.src === 'imported' ? btn('trash', 'Remove ' + t.abbr, async () => {
         if (await confirmBox('Remove ' + t.abbr + '?', 'Delete the offline copy of ' + t.name + ' from this device?', 'Remove', true)) { await deleteImported(t.id); rebuild(); }
       }, { cls: 'sm' }) : null)));
+    // Hymnbooks: built in (numbers and titles, or public-domain words), then the ones added on this device.
+    const hi = await hymnImport();
+    let builtins = [];
+    try { builtins = (await (await fetch('data/hymns/index.json')).json()) || []; } catch (e) { /* */ }
+    const filled = await hi.overlayCounts();
+    builtins.forEach((b) => hymnList.appendChild(h('div.li', icon('hymn'), h('span.grow', h('div', (b.short ? b.short + ' — ' : '') + b.name),
+      h('div.note', 'Built in' + (filled[b.id] ? ' · words for ' + filled[b.id] + (filled[b.id] === 1 ? ' hymn' : ' hymns') + ' added on this device' : ''))))));
+    (await hi.addedHymnbooks()).sort((a, b) => String(a.name).localeCompare(String(b.name))).forEach((b) => {
+      const n = Array.isArray(b.hymns) ? b.hymns.length : 0;
+      hymnList.appendChild(h('div.li', icon('hymn'), h('span.grow', h('div', (b.short ? b.short + ' — ' : '') + (b.name || 'Hymnbook')),
+        h('div.note', n + ' hymns · Added on this device' + (b.licence && b.licence !== 'Imported on this device' ? ' · ' + b.licence : ''))),
+      btn('trash', 'Remove ' + (b.name || 'hymnbook'), async () => {
+        if (await confirmBox('Remove ' + (b.name || 'hymnbook') + '?', 'Delete the offline copy of ' + (b.name || 'this hymnbook') + ' from this device? You can add it again at any time.', 'Remove', true)) { await hi.removeHymnbook(b.id); rebuild(); }
+      }, { cls: 'sm' })));
+    });
   });
 
   // ------------------------------------------------------------ App

@@ -23,6 +23,46 @@ complete text in an app needs the Bible Society's written permission (copyright@
 
 ## Hymns
 
+### Add a hymnbook (the same way as Add a Bible)
+
+**Hymns → ⋯ → Add a hymnbook**, or **Settings → Bibles & hymns → Add a hymnbook**. Search the list (“Xhosa”, “isiZulu”,
+“Sesotho”, “French” … the same search as Add a Bible, southern African languages first) and press **Add**: the hymnbook
+downloads once from GitHub, is converted and then works offline on that device (and goes into your backups). **Update**
+downloads it again. Settings → Bibles & hymns lists every hymnbook, built in or added, with **Remove** for the added ones.
+
+The list (`js/core/hymnsources.js`) is built in, so it shows even when GitHub is slow. Three sources:
+
+- **SDA hymnals (Rejnac)** — [github.com/rejnac/compiled-hymnal](https://github.com/rejnac/compiled-hymnal): 26 languages,
+  prepared in VideoPsalm by the Rejnac Foundation (MIT licence): Chichewa, Dholuo, Ekegusii, English (SDA Hymnal, 695
+  hymns plus 257 more songs), French (Hymnes et Louanges), Icibemba, isiZulu/Ndebele, Kalenjin, Kamba, Kikuyu,
+  Kinyarwanda, Maasai, Portuguese (Novo Hinário Adventista), Russian, Sepedi, Shona, Sesotho, Spanish (Himnario
+  Adventista), Swahili, Tonga, Setswana, Tumbuka, Twi, Tshivenda, isiXhosa and Xitsonga. These files keep each stanza on
+  one line, so SDA Sabbath breaks it into lines where a new line of the hymn starts (punctuation, then a capital) and
+  halves lines that are still too long.
+  **The English SDA Hymnal** also fills in the words of the built-in *SDA Hymnal 1985* (numbers and titles only) for
+  every hymn whose title matches and that has no words yet, so those hymns play with their offline music, and plans and
+  “hymn 73” keep working. Removing the downloaded book removes those words again; words the church added itself are
+  never replaced.
+- **SID Hymnal** — [github.com/sidadventist/sid_hymnal](https://github.com/sidadventist/sid_hymnal): English, isiXhosa
+  (U-Kristu Engomeni) and Setswana (Keresete Mo Kopelong), with the same numbers in all three. One file per hymn, so it
+  downloads hymn by hymn (8 at a time).
+- **Hymnals Data** — [github.com/GospelSounders/hymnals-data](https://github.com/GospelSounders/hymnals-data): *Hymns for
+  God's Peculiar People* (1849, James White, public domain) and Nyimbo za Kristo (Swahili).
+
+Hymn words belong to their owners. The compilers share these hymnbooks for worship use, but a church still checks that it
+may use the words (many SDA Hymnal texts are under copyright), and a live stream also needs a CCLI Streaming Licence.
+
+**From a file** (in the same dialog): VideoPsalm songbooks (`.vpc`, which is a zip, or the `.json` inside it), SDA Sabbath
+hymnbooks (`.json`), the Liedboek JSON format, and text with `# 73 Title` before each hymn. **Import licensed words**
+reads VideoPsalm songbooks too, so a church with the English SDA Hymnal in VideoPsalm can fill in the built-in book by
+number.
+
+The parsers are in `js/core/hymnparse.js`. To add another hymnbook to the list, add a row to `HYMNALS` in
+`js/core/hymnsources.js` (source, key, name, short name, language code, language, number of hymns, size in KB, path).
+Shipped and added hymnbooks are separate: shipping one with the app is still done in `data/hymns/index.json` (below).
+
+### Built-in hymnbooks
+
 Built in (listed in `data/hymns/index.json`): the 1941 Church Hymnal (703, with words), and by **number and title
 only** the SDA Hymnal 1985 (698), Advent Lofliedere (Afrikaans, 481), Praise Choruses and Malmesbury Praise — their
 words are copyrighted, so only the public-domain songs in them include words. A church that is licensed (CCLI, or
@@ -35,8 +75,8 @@ the publisher's permission) adds the words on its own devices:
 - A hymn without words still has its title slide (number and title), so the congregation can follow in the hymnal.
 - Showing words on a live stream also needs the church's **CCLI Streaming Licence**.
 
- Add or replace hymnbooks with
-**Hymns → ⋯ → Import a hymnbook**:
+Your own hymnbook files go in with
+**Hymns → ⋯ → Add a hymnbook** (the form under the list):
 
 - JSON (SDA Sabbath format, formerly "Selah"):
   ```json

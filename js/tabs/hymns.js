@@ -12,58 +12,11 @@ import { findSongs, lyricsOf, songFromPlain, songText, sourceLinks, matchLabel, 
 import { communitySongs, syncCommunity, shareUrl, songText as sharedText, COMMUNITY_BOOK, FIRST_NUMBER } from '../core/community.js';
 import { church } from '../core/church.js';
 import { zipBlobs } from '../lib/blobzip.js';
+import { parseLyrics, lyricsText, decodeEntities, normaliseBook, parseTxtBook, relaxedJson, parseHymnFile } from '../core/hymnparse.js';
+import { HYMNBOOKS_CHANGED, removeHymnbook, addHymnbookDialog } from './hymn-import.js';
 
-const CHORUS_RE = /^(chorus|refrain|koor|refrein|ikhorasi|c)\s*[:.]?\s*$/i;
-
-/** Parse lyrics text: stanzas separated by blank lines; a stanza that starts with
- *  "Chorus:" / "Refrain:" / "Koor:" is the chorus. */
-export function parseLyrics(text) {
-  const blocks = String(text || '').replace(/\r/g, '').split(/\n\s*\n/).map((b) => b.split('\n').map((l) => l.trim()).filter(Boolean)).filter((b) => b.length);
-  const v = []; let c = null;
-  blocks.forEach((b) => {
-    const first = b[0];
-    const m = /^(chorus|refrain|koor|refrein|ikhorasi)\s*[:.]\s*(.*)$/i.exec(first);
-    if (CHORUS_RE.test(first)) c = b.slice(1);
-    else if (m) c = (m[2] ? [m[2]] : []).concat(b.slice(1));
-    else v.push(b.map((l) => l.replace(/^\d+[.)]\s+/, '')));
-  });
-  return { v, c: c && c.length ? c : null };
-}
-export function lyricsText(hy) {
-  const parts = [];
-  hy.v.forEach((s, i) => { parts.push(s.join('\n')); if (i === 0 && hy.c) parts.push('Chorus:\n' + hy.c.join('\n')); });
-  return parts.join('\n\n');
-}
-
-/** Accepts our format, the Liedboek format [{number,title,lyrics}] or {songs:[...]}. */
-/** Safeguard: hymn text is plain text, so turn any HTML entities left in data (&#8217; &amp; …) into characters. */
-const NAMED = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00a0', rsquo: '\u2019', lsquo: '\u2018', rdquo: '\u201d', ldquo: '\u201c', mdash: '\u2014', ndash: '\u2013', hellip: '\u2026' };
-export function decodeEntities(s) {
-  if (typeof s !== 'string' || s.indexOf('&') < 0) return s;
-  return s.replace(/&(#\d+|#x[0-9a-f]+|[a-z]+);/gi, (m, e) => {
-    if (e[0] === '#') { const cp = e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : +e.slice(1); return cp > 0 && cp < 0x110000 ? String.fromCodePoint(cp) : m; }
-    return Object.prototype.hasOwnProperty.call(NAMED, e.toLowerCase()) ? NAMED[e.toLowerCase()] : m;
-  });
-}
-const decodeDeep = (x) => (typeof x === 'string' ? decodeEntities(x) : Array.isArray(x) ? x.map(decodeDeep) : x);
-
-function normaliseBook(j, fallbackName) {
-  let hymns = [];
-  const list = Array.isArray(j) ? j : j.hymns || j.songs || [];
-  list.forEach((x) => {
-    // Copyrighted songs are listed by number and title only ("words": false): the church adds the words under
-    // its own licence (More → Import licensed words, or Add the words), and they stay on its own devices.
-    if (x.words === false && !(x.v && x.v.length)) hymns.push({ n: +x.n, t: x.t || '', a: x.a || '', ccli: x.ccli ? String(x.ccli) : '', v: [], c: null, locked: true });
-    else if (x.v) hymns.push(Object.assign({ n: +x.n, t: x.t, a: x.a || '', v: x.v, c: x.c || null }, x.ccli ? { ccli: String(x.ccli) } : {}));
-    else if (x.lyrics || x.words || x.text) {
-      const p = parseLyrics(x.lyrics || x.words || x.text);
-      hymns.push({ n: +(x.number || x.n || x.no), t: x.title || x.t || '', a: x.author || '', v: p.v, c: p.c });
-    }
-  });
-  hymns = hymns.filter((x) => x.n && x.v && (x.v.length || x.locked)).sort((a, b) => a.n - b.n)
-    .map((x) => Object.assign(x, { t: decodeEntities(x.t || ''), a: decodeEntities(x.a || ''), v: decodeDeep(x.v), c: x.c ? decodeDeep(x.c) : null }));
-  return { id: j.id || 'book-' + Date.now().toString(36), name: j.name || fallbackName || 'Imported hymns', short: j.short || '', lang: j.lang || 'en', hymns };
-}
+// Parsers live in core/hymnparse.js (shared with Add a hymnbook); these stay exported from here for other code.
+export { parseLyrics, lyricsText, decodeEntities };
 
 /** A hymn saved on this device, checked before use (older versions or a damaged database). */
 const strList = (a) => (Array.isArray(a) ? a.filter((l) => typeof l === 'string') : []);
@@ -77,18 +30,6 @@ function cleanHymn(x) {
   return Object.assign({}, x, { n, t: typeof x.t === 'string' ? x.t : String(x.t == null ? '' : x.t), a: typeof x.a === 'string' ? x.a : '', v, c: c.length ? c : null });
 }
 const cleanHymns = (list) => (Array.isArray(list) ? list.map(cleanHymn).filter(Boolean) : []);
-
-/** Plain-text hymnbook: each hymn starts with "# 73 Holy, Holy, Holy" */
-function parseTxtBook(text, name) {
-  const hymns = [];
-  String(text).replace(/\r/g, '').split(/^#\s*/m).forEach((chunk) => {
-    const m = /^(\d+)\s*[.\-–:]?\s*(.*)\n([\s\S]*)$/.exec(chunk.trim());
-    if (!m) return;
-    const p = parseLyrics(m[3]);
-    if (p.v.length) hymns.push({ n: +m[1], t: m[2].trim(), a: '', v: p.v, c: p.c });
-  });
-  return { id: 'book-' + Date.now().toString(36), name, lang: 'en', hymns };
-}
 
 /** The second line in hymn lists: the first line of the words, or why there are none. */
 const firstLine = (x) => (x.v && x.v[0] && x.v[0][0]) || (x.locked ? (x.ccli ? 'CCLI song ' + x.ccli + ' · ' : '') + 'Words not included (copyrighted)' : '');
@@ -177,7 +118,7 @@ export default function create(ctx) {
     { label: 'New hymn', icon: 'plus', onclick: () => editHymn(null) },
     { label: 'Import licensed words…', icon: 'upload', onclick: importLicensed },
     hymn && hymn.locked ? { label: 'Add the words for this hymn (licensed)…', icon: 'edit', onclick: () => editHymn(hymn) } : null,
-    { label: 'Import a hymnbook…', icon: 'upload', onclick: importBook },
+    { label: 'Add a hymnbook (isiXhosa, isiZulu, French, …)', icon: 'plus', onclick: () => addHymnbookDialog() },
     { label: 'Export this hymnbook', icon: 'download', onclick: exportBook },
     { label: 'Add this hymn to the service plan', icon: 'plan', onclick: addToPlan, disabled: !hymn },
     { label: 'Check for new shared choruses', icon: 'reload', onclick: () => checkShared(true) },
@@ -285,7 +226,7 @@ export default function create(ctx) {
   function renderList() {
     const hadFocus = listEl.contains(document.activeElement);
     clear(listEl);
-    if (!book) { listEl.appendChild(emptyState('hymn', 'No hymnbook installed', 'Use More (…) → Import a hymnbook.')); return; }
+    if (!book) { listEl.appendChild(emptyState('hymn', 'No hymnbook installed', 'Use More (…) → Add a hymnbook.')); return; }
     // Screen readers read an Afrikaans (or other) hymnbook in its own language. The text itself is unchanged.
     const L = book.lang && book.lang !== 'en' ? book.lang : null;
     [listEl, grid, titleEl].forEach((el) => { if (L) el.setAttribute('lang', L); else el.removeAttribute('lang'); });
@@ -625,19 +566,21 @@ export default function create(ctx) {
   async function importLicensed() {
     if (!book) return;
     const ok = await confirmBox('Import licensed words',
-      'Only import words your church is licensed to use (CCLI, or the publisher’s permission). They are saved on this device for “' + book.name + '” and are never shared. Accepted: a SongSelect file (.usr or .txt), or a hymnbook file (.json, or .txt with “# 73 Title” before each hymn).',
+      'Only import words your church is licensed to use (CCLI, or the publisher’s permission). They are saved on this device for “' + book.name + '” and are never shared. Accepted: a SongSelect file (.usr or .txt), or a hymnbook file (VideoPsalm .vpc or .json, SDA Sabbath .json, or .txt with “# 73 Title” before each hymn) whose numbers match this book.',
       'Choose file…');
     if (!ok) return;
-    const inp = h('input', { type: 'file', accept: '.json,.txt,.usr', multiple: true });
+    const inp = h('input', { type: 'file', accept: '.json,.txt,.usr,.vpc', multiple: true });
     inp.onchange = async () => {
       const files = Array.from(inp.files || []);
       let added = 0, last = null;
       const norm = (t) => normalize(t || '').replace(/[^a-z0-9 ]+/g, '').trim();
       for (const f of files) {
         try {
-          const text = await readText(f);
+          const vpc = /\.vpc$/i.test(f.name);            // VideoPsalm songbook (a zip)
+          const text = vpc ? '' : await readText(f);
           let list = [];
-          if (/^\s*[[{]/.test(text)) list = normaliseBook(JSON.parse(text), f.name).hymns;
+          if (vpc) list = (await parseHymnFile(f)).hymns;
+          else if (/^\s*[[{]/.test(text)) list = normaliseBook(relaxedJson(text), f.name).hymns;
           else if (/^\s*#\s*\d+/m.test(text) && !/^\s*\[S\b/m.test(text)) list = parseTxtBook(text, f.name).hymns;
           else {
             const sg = parseSongSelect(text);
@@ -666,25 +609,6 @@ export default function create(ctx) {
     inp.click();
   }
 
-  async function importBook() {
-    const inp = h('input', { type: 'file', accept: '.json,.txt' });
-    inp.onchange = async () => {
-      const f = inp.files[0]; if (!f) return;
-      try {
-        const text = await readText(f);
-        const name = f.name.replace(/\.[^.]+$/, '');
-        const nb = /^\s*[[{]/.test(text) ? normaliseBook(JSON.parse(text), name) : parseTxtBook(text, name);
-        if (!nb.hymns.length) throw new Error('No hymns found in ' + f.name + '.');
-        if (books.some((b) => b.id === nb.id)) nb.id = nb.id + '-' + Date.now().toString(36);
-        await db.put('hymnbooks', nb.id, nb);
-        toast(nb.hymns.length + ' hymns imported from ' + f.name + '.', 'ok');
-        settings.set('hymns.book', nb.id);
-        await loadBooks();
-      } catch (e) { toast('Import failed: ' + e.message, 'err', 6000); }
-    };
-    inp.click();
-  }
-
   function exportBook() {
     if (!book) return;
     const out = { id: book.id, name: book.name, short: book.short, lang: book.lang, hymns: book.hymns.map(({ n, t, a, v, c }) => ({ n, t, a, v, c })) };
@@ -695,8 +619,7 @@ export default function create(ctx) {
   async function deleteBook() {
     if (!book || book.builtin) return;
     if (!(await confirmBox('Delete hymnbook?', 'Remove “' + book.name + '” from this device?', 'Delete', true))) return;
-    await db.del('hymnbooks', book.id);
-    await loadBooks();
+    await removeHymnbook(book.id);   // the 'selah-hymnbooks' event reloads the list
   }
 
   // ------------------------------------------------------------ shared choruses
@@ -1201,5 +1124,15 @@ export default function create(ctx) {
   live.on('go', markCtl);
 
   const ready = loadBooks().then(() => renderList()).then(() => setTimeout(() => checkShared(false), 4000));
+  // A hymnbook was added or removed (Hymns → More, or Settings → Bibles & hymns): reload, keep the hymn, open a new one.
+  window.addEventListener(HYMNBOOKS_CHANGED, async (e) => {
+    const select = e.detail && e.detail.select;
+    if (select) settings.set('hymns.book', select);
+    const keepBook = book && book.id, keepN = hymn ? hymn.n : null;
+    await ready;
+    await loadBooks();
+    if (book && book.id === keepBook && keepN) { const x = book.hymns.find((y) => y.n === keepN); if (x) selectHymn(x); }
+    else { hymn = null; chosen = null; restage(); }
+  });
   return api;
 }

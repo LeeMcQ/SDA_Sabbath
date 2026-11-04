@@ -5,6 +5,7 @@ import { modal, toast, closeModal } from '../core/ui.js';
 import { parseBibleFile, saveImported, listTranslations } from '../core/bibledata.js';
 import { CORPUS, CORPUS_BASE } from '../core/biblecorpus.js';
 import { GETBIBLE } from '../core/biblegetbible.js';
+import { matches, fuzzyMatch, rank } from '../core/langsearch.js';
 
 export function importBibleDialog(onDone) {
   const file = h('input', { type: 'file', accept: '.json,.xml,.csv,.tsv,.txt' });
@@ -85,13 +86,6 @@ export function importBibleDialog(onDone) {
   }
 
 
-  // African languages: southern ones first (ISO 639-3 / 639-1 codes, plus a name check for odd codes).
-  const SOUTH = new Set(['afr', 'xho', 'zul', 'sot', 'tsn', 'nso', 'tso', 'ven', 'ssw', 'nbl', 'nde', 'sna', 'nya', 'her', 'ndo', 'kua', 'loz', 'toi', 'bem', 'tum', 'kmb', 'umb', 'lue', 'kwn', 'af', 'xh', 'zu', 'st', 'tn', 'ts', 've', 'ss', 'nr', 'sn', 'ny', 'nd']);
-  const NORTH = new Set(['swa', 'swh', 'amh', 'yor', 'ibo', 'hau', 'som', 'orm', 'gaz', 'tir', 'lin', 'kin', 'run', 'mlg', 'plt', 'wol', 'aka', 'twi', 'ewe', 'gaa', 'ful', 'fuv', 'lug', 'kik', 'kam', 'luo', 'kon', 'lua', 'sw', 'am', 'yo', 'ig', 'ha', 'so', 'om', 'ti', 'ln', 'rw', 'rn', 'mg', 'wo', 'ak', 'tw', 'ee', 'ff', 'lg', 'ki', 'kg', 'cjk', 'tig', 'ara', 'arz', 'kab', 'ber', 'tzm', 'zgh', 'bam', 'ses', 'dag', 'efi', 'ibb', 'ijo', 'kpe', 'men', 'tem', 'vai', 'sag', 'ktu', 'mos', 'gur', 'dyu', 'bci', 'ctu', 'nym', 'mas', 'kln', 'luy', 'meru', 'mer', 'kdj', 'tuk', 'lgg', 'ach', 'alz', 'teo', 'rub', 'sna']);
-  const SA_NAME = /afrikaans|xhosa|zulu|sotho|tswana|pedi|tsonga|venda|swati|swazi|ndebele|shona|chichewa|nyanja|herero|oshiwambo|ovambo|lozi|tonga|bemba|kwanyama|ndonga|himba|nama|damara|mozambi|zimbab|malawi|namib/i;
-  const AF_NAME = /swahili|kiswahili|amharic|yoruba|igbo|hausa|somali|oromo|tigrinya|lingala|kinyarwanda|rwanda|kirundi|rundi|malagasy|wolof|akan|twi|ewe|fula|fulani|luganda|ganda|kikuyu|kamba|luo|kongo|chokwe|tumbuka|berber|kabyle|tamazight|bambara|dagbani|efik|ibibio|ijaw|kpelle|mende|temne|vai|sango|mossi|dyula|baoule|maasai|luhya|kalenjin|acholi|runyoro|nuer|dinka|african|ethiop|nigeria|ghana|kenya|uganda|tanzan|cameroon|congo|sudan|egypt|arabic \(?(egypt|morocc|alger|tunis|liby)/i;
-  const isSA = (t) => SOUTH.has(String(t.lang).toLowerCase()) || SA_NAME.test(t.langName + ' ' + t.name);
-  const isAfrica = (t) => !isSA(t) && (NORTH.has(String(t.lang).toLowerCase()) || AF_NAME.test(t.langName)) && !/^(eng|en)$/i.test(t.lang);
   const langOf = (t) => { const c = String(t.lang).toLowerCase(); return c === 'afr' || c === 'af' ? 'af' : c === 'xho' || c === 'xh' ? 'xh' : c === 'zul' || c === 'zu' ? 'zu' : /afrikaans/i.test(t.langName) ? 'af' : /xhosa/i.test(t.langName) ? 'xh' : /zulu/i.test(t.langName) ? 'zu' : 'en'; };
   const row = (t) => {
     const btn = h('button.btn.sm.primary', { type: 'button' }, 'Add');
@@ -99,33 +93,6 @@ export function importBibleDialog(onDone) {
     return h('div.row', { style: { gap: '6px', alignItems: 'center' } },
       h('span.grow', { title: t.license || '' }, h('b', t.name), h('span.note', (t.langName ? '  ' + t.langName : '') + ' · ' + SRC[t.src].label + (t.mb ? ', ' + t.mb + ' MB' : ''))), btn);
   };
-  const ALIAS = { xhose: 'xhosa', xosa: 'xhosa', khosa: 'xhosa', xh: 'xho', zulu: 'zulu', isizulu: 'zulu', sesotho: 'sotho', setswana: 'tswana', sepedi: 'pedi', 'northern sotho': 'pedi', tshivenda: 'venda', xitsonga: 'tsonga', siswati: 'swati', isindebele: 'ndebele', chishona: 'shona', chichewa: 'nyanja', afrikaans: 'afrikaans', afrikans: 'afrikaans', afrikaan: 'afrikaans' };
-  const strip = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  const unprefix = (w) => w.replace(/^(isi|ses|se|si|tshi|xi|chi|oshi|ki|ci|ik|ichi|otji|oci)(?=[a-z]{3,})/, '');
-  const words = (x) => strip(x).split(/[^a-z0-9]+/).filter(Boolean).map(unprefix);
-  const canon = (qq) => { const k = strip(qq).trim(); return ALIAS[k] || ALIAS[unprefix(k)] || unprefix(k); };
-  const hay = (t) => strip([t.abbr, t.name, t.lang, t.langName].join(' '));
-  function matches(t, qq) {
-    const c = canon(qq), h2 = hay(t);
-    return h2.includes(strip(qq).trim()) || h2.includes(c) || words(t.name + ' ' + t.langName).some((w) => w === c || w.startsWith(c));
-  }
-  function lev(a, b, max) {
-    if (Math.abs(a.length - b.length) > max) return max + 1;
-    let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
-    for (let i = 1; i <= a.length; i++) {
-      const cur = [i]; let best = i;
-      for (let j = 1; j <= b.length; j++) { cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); if (cur[j] < best) best = cur[j]; }
-      if (best > max) return max + 1;
-      prev = cur;
-    }
-    return prev[b.length];
-  }
-  function fuzzyMatch(t, qq) {
-    const c = canon(qq); if (c.length < 3) return false;
-    const max = c.length >= 7 ? 2 : 1;
-    return words(t.name + ' ' + t.langName + ' ' + t.abbr).some((w) => w.length >= 3 && lev(w.slice(0, c.length + 1), c, max) <= max || lev(w, c, max) <= max);
-  }
-  const rank = (t) => (isSA(t) ? 0 : isAfrica(t) ? 1 : 2);
   function paintChips() {
     clear(chips);
     const all = SRC.ao.items.length + SRC.gb.items.length + SRC.bc.items.length;
