@@ -56,7 +56,7 @@ export default function create(ctx) {
     const running = !!(x && x.running);
     const reachable = !!(s.connected || x);
     dot.className = 'tr-dot' + (running ? ' on' : reachable ? ' ready' : '');
-    stText.textContent = !reachable ? 'Translator not running on this PC'
+    stText.textContent = !reachable ? (s.blocked || 'Translator not running on this PC')
       : running ? 'Listening' + (x.rtf ? (x.rtf < 0.8 ? ' · keeping up' : ' · falling behind: choose a smaller speech model') : '')
       : x && x.error ? x.error : 'Ready';
     clear(startBtn);

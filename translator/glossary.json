@@ -1,5 +1,5 @@
 {
-  "_about": "Adventist and South African words for live translation. Edit freely; the translator reads this file when it starts. 'prompt' steers the Afrikaans recognition. 'keep' are words never translated (names, places, church words): written exactly as here, matched with the same capitals. 'terms' always become this English; 'terms_exact' only with the same capitals (Here = Lord, but here = gentlemen). 'slang' turns everyday South African and Kaaps Afrikaans into standard Afrikaans before translating. 'fillers' are words left out (they add nothing in English). 'fixes' correct the English afterwards. 'drop' are phantom lines from the speech model. Names can also be added in SDA Sabbath: Settings -> Live translation -> Never translate.",
+  "_about": "Adventist and South African words for live translation. Edit freely; the translator reads this file when it starts. 'prompt' steers the Afrikaans recognition. 'keep' are words never translated (names, places, church words): written exactly as here, matched with the same capitals. 'terms' always become this English; 'terms_exact' only with the same capitals (Here = Lord, but here = gentlemen). 'slang' turns everyday South African and Kaaps Afrikaans into standard Afrikaans before translating. 'fillers' are words left out (they add nothing in English); 'fillers_alone' only when they stand alone between commas or at the end of a sentence (\"Lekker, ek sê!\" but not \"ek sê vir julle\"). 'fixes' correct the English afterwards. 'drop' are phantom lines from the speech model. Names can also be added in SDA Sabbath: Settings -> Live translation -> Never translate.",
   "prompt": "Die Sewendedag-Adventiste Kerk. Ons aanbid op die Sabbat. Sabbatskool, die Gees van die Profesie, Ellen G. White, die wederkoms van Christus, die heiligdom, die ondersoekende oordeel, die drie engele se boodskappe, die Here Jesus Christus, die Heilige Gees, Openbaring, Daniël, Johannes, tiendes en offergawes, Padvinders, Avontuurders, Dorkas, die Algemene Konferensie, gesang nommer, Skriflesing, gebed, preek, broers en susters. Amen. Ag, sjoe, lekker, sommer, darem, mos.",
   "keep": [
     "Amen",
@@ -130,9 +130,23 @@
     "ouderling": "elder",
     "diakones": "deaconess",
     "diaken": "deacon",
-    "pastoor": "pastor"
+    "pastoor": "pastor",
+    "buig vir gebed": "bow in prayer",
+    "genade": "grace",
+    "hierdie preek": "this sermon",
+    "preke": "sermons"
   },
   "terms_exact": {
+    "Die preek van vandag": "Today's sermon",
+    "die preek van vandag": "today's sermon",
+    "Laat ons buig vir gebed": "Let us bow in prayer",
+    "laat ons buig vir gebed": "let us bow in prayer",
+    "Kom ons buig vir gebed": "Let us bow in prayer",
+    "kom ons buig vir gebed": "let us bow in prayer",
+    "Laat ons ons koppe buig vir gebed": "Let us bow our heads in prayer",
+    "laat ons ons koppe buig vir gebed": "let us bow our heads in prayer",
+    "die preek": "the sermon",
+    "Die preek": "The sermon",
     "die Here": "the Lord",
     "Die Here": "The Lord",
     "Here Jesus": "Lord Jesus",
@@ -213,6 +227,11 @@
     "hè",
     "neh",
     "nogal",
+    "uhm",
+    "eh",
+    "ag"
+  ],
+  "fillers_alone": [
     "ek sê"
   ],
   "fixes": {

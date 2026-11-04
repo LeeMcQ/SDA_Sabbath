@@ -20,7 +20,7 @@ let watching = false;
 const wanted = () => !!C().on || forListen || watching;
 
 export const captions = {
-  state: { connected: false, status: null, lines: [], level: null, busy: '', modelEvent: null },
+  state: { connected: false, status: null, lines: [], level: null, busy: '', modelEvent: null, blocked: '' },
   /** Set by Tools → Listen while it uses the translator: (type: 'line' | 'ref' | 'hymn', data) for each event. */
   onEvent: null,
   on(f) { listeners.add(f); return () => listeners.delete(f); },
@@ -52,12 +52,33 @@ function suggest(key, label, q) {
   const t = toast(h('span', h('span', 'Preacher: ' + label + ' '), b), '', 15000);
 }
 
+// Chrome (142+) asks before a website may reach programs on this computer ("Local network access", called
+// "Apps on device" from Chrome 145). Blocked or not answered, the translator looks closed — so ask the browser and
+// say the right thing (same check and words as for OBS in obsctl.js).
+async function lnaState() {
+  if (location.protocol !== 'https:' || !navigator.permissions || !navigator.permissions.query) return null;
+  for (const name of ['loopback-network', 'local-network-access']) {
+    try { return (await navigator.permissions.query({ name })).state; } catch (e) { /* this browser does not know the name */ }
+  }
+  return null;
+}
+export const LNA_BLOCKED = 'Chrome is blocking SDA Sabbath from reaching the translator on this computer. Click the site icon left of the address bar → Site settings → “Local network access” (in newer Chrome “Apps on device”) → Allow. Then reload this page.';
+export const LNA_PROMPT = 'Chrome asks whether SDA Sabbath may reach programs on this computer: press Allow in the box under the address bar. (Missed it? Click the site icon left of the address bar → Site settings → “Local network access” / “Apps on device” → Allow, then reload.)';
+async function checkBlocked() {
+  if (captions.state.connected) return;
+  const st = await captions.lnaState();
+  const msg = st === 'denied' ? LNA_BLOCKED : st === 'prompt' ? LNA_PROMPT : '';
+  if (msg !== captions.state.blocked && !captions.state.connected) { captions.state.blocked = msg; emit(); }
+}
+captions.checkBlocked = checkBlocked;
+captions.lnaState = lnaState;   // tests replace it (the check only answers on https)
+
 function connect() {
   disconnect();
   if (!wanted() || typeof EventSource === 'undefined') return;
   es = new EventSource(base() + '/events');
-  es.onopen = () => { captions.state.connected = true; emit(); sendWords(); };
-  es.onerror = () => { captions.state.connected = false; emit(); };   // EventSource tries again by itself
+  es.onopen = () => { captions.state.connected = true; captions.state.blocked = ''; emit(); sendWords(); };
+  es.onerror = () => { captions.state.connected = false; emit(); checkBlocked(); };   // EventSource tries again by itself
   es.addEventListener('status', (e) => { try { captions.state.status = JSON.parse(e.data); } catch (x) { /* */ } emit(); });
   es.addEventListener('line', (e) => {
     let l; try { l = JSON.parse(e.data); } catch (x) { return; }
@@ -83,7 +104,9 @@ function disconnect() {
 }
 
 async function call(path, body) {
-  const r = await fetch(base() + path, { method: body ? 'POST' : 'GET', headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
+  let r;
+  try { r = await fetch(base() + path, { method: body ? 'POST' : 'GET', headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined }); }
+  catch (e) { await checkBlocked(); throw captions.state.blocked ? new Error(captions.state.blocked) : e; }
   const j = await r.json().catch(() => ({}));
   if (!r.ok || j.ok === false) throw new Error(j.error || ('The translator answered ' + r.status));
   captions.state.status = j; emit();

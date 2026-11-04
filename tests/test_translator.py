@@ -49,6 +49,47 @@ for a, b in [("Ek's so bly djy's hie vandag.", 'Ek is so bly jy is hier vandag.'
     ok(g.normalise(a) == b, 'slang: %s → %s' % (a, g.normalise(a)))
 ok(g.after('the Here Jesus') == 'the Lord Jesus', 'English corrected after translating')
 ok(g.junk('Teksting deur Amara.org') and not g.junk('Ons bid saam.'), 'phantom subtitle lines dropped')
+# fillers: "ek sê" only on its own; uhm, eh, ag always
+for a, want in [('Ek sê vir julle, Hy kom weer.', 'Ek sê vir julle, Hy kom weer.'), ('Dit was lekker, ek sê!', 'Dit was lekker!'),
+                ('Luister na wat ek sê.', 'Luister na wat ek sê.'), ('Uhm, ons gaan eh nou bid.', 'Ons gaan nou bid.'), ('Ag, ek weet nie.', 'Ek weet nie.')]:
+    ok(g.normalise(a) == want, 'filler: %s → %s' % (a, g.normalise(a)))
+# church words
+g2 = L.Glossary()
+for a, want in [('Die preek was lank.', ['The sermon']), ('Die preek van vandag gaan oor genade.', ["Today's sermon", 'grace']),
+                ('Laat ons buig vir gebed.', ['Let us bow in prayer']), ('Ons buig vir gebed.', ['bow in prayer']),
+                ]:
+    ok([w for _, w in g2.protect(g2.normalise(a))[1]] == want, 'word list: %s → %s' % (a, [w for _, w in g2.protect(a)[1]]))
+ok('sermon' not in str(g2.protect('Pastoor Botha preek in Riebeek-Kasteel.')[1]), 'the verb "preek" (preaches) is not made "sermon"')
+b = L.Bible('web')
+# spoken numbers in references become digits
+for a, want in [('Psalm drie-en-twintig is my gunsteling.', 'Psalm 23 is my gunsteling.'), ('Kom ons lees uit Johannes drie vers sestien.', 'Kom ons lees uit Johannes 3 vers 16.'),
+                ('Openbaring veertien vers ses tot twaalf praat van die drie engele.', 'Openbaring 14 vers 6 tot 12 praat van die drie engele.'),
+                ('Psalm drie en twintig', 'Psalm 23'), ('Romeine agt vers agt-en-twintig', 'Romeine 8 vers 28'),
+                ('Johannes het vir hulle gesê', 'Johannes het vir hulle gesê'), ('Ons sing lied drie', 'Ons sing lied drie'), ('Johannes 3:16 sê', 'Johannes 3:16 sê')]:
+    ok(b.digits(a) == want, 'reference digits: %s → %s' % (a, b.digits(a)))
+# long run-on speech is split before translating; short sentences are not
+LONG = ('Broers en susters ek wil vanoggend met julle praat oor die liefde van God want so dikwels vergeet ons dat Hy ons elke dag dra '
+        'en as ons terugkyk na die afgelope jaar dan sien ons hoe getrou Hy was in die siekte en in die swaar tye en ook in die goeie tye '
+        'en daarom wil ek julle vra om saam met my te dank en te bid vir die gemeente en vir ons families')
+parts = L.split_long(LONG)
+ok(len(parts) >= 3 and all(len(p.split()) <= L.LONG_WORDS + 6 for p in parts) and ' '.join(parts).split() == LONG.split(),
+   'long speech (%d words) split into %d pieces, no word lost' % (len(LONG.split()), len(parts)))
+ok(L.split_long('Ons bid vir die siekes in ons gemeente.') == ['Ons bid vir die siekes in ons gemeente.'], 'a short sentence is not split')
+class FakeMT:
+    def __call__(self, xs): return ['<%s>' % x for x in xs]
+r = L.TextTranslator(FakeMT(), L.Glossary(), b)([LONG])[0]
+ok(r['en'].count('<') == len(parts), 'long speech: each piece translated, then joined into one caption')
+# speech model: recommend turbo on a fast PC, keep the default on a slow one
+_cfg = L.config
+L.config = lambda: {'speeds': {'small': 0.07}, 'hw': 'cpu', 'asr': 'small'}
+ml = L.model_list(); ok(ml['recommended'] == 'turbo' and 'turbo' in L.upgrade_words('small', ml), 'fast PC without graphics card: turbo recommended (%s)' % ml['recommended'])
+L.config = lambda: {'speeds': {'small': 0.4}, 'hw': 'cpu', 'asr': 'small'}
+ml = L.model_list(); ok(ml['recommended'] == 'small' and L.upgrade_words('small', ml) == '', 'slow PC: stays on small, no upgrade suggested')
+L.config = _cfg
+# the Bible check only promises quoted verses when the licensed Afrikaans Bible is installed
+ok(('Afrikaans verses for Bible quotes' in L.af_words()) == bool(b.af), 'Bible check wording follows the Afrikaans Bible: %s' % L.af_words()[:60])
+L.DEMO = True; ok(('Afrikaans verses' in L.demo_check('words')['detail']) == bool(b.af), 'demo Bible check follows it too'); L.DEMO = False
+
 import argparse
 p_, n_, _ = L.quality(argparse.Namespace(dry=True, mt=None, english='web'), quiet=True)
 ok(p_ == n_, 'quality test set, without a model: %d / %d prepared correctly' % (p_, n_))

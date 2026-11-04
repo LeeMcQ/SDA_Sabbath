@@ -251,13 +251,27 @@ function onMsg(m) {
 const started = Date.now();
 function setConn(state, text) {
   S.conn = state;
-  if (state === 'on') { pill.hidden = true; return; }
+  if (state === 'on') { S.timedOut = false; pill.hidden = true; return; }
   // Only shown while setting up (the first minute), never while OBS is streaming or recording.
   if (PREVIEW || Date.now() - started > 60000 || obsLive) { pill.hidden = true; return; }
   pill.hidden = false;
-  pill.textContent = text || 'SDA Sabbath: connecting…';
+  pill.textContent = S.timedOut ? timeoutWords() : text || 'SDA Sabbath: connecting…';
 }
 setInterval(() => { if (S.conn !== 'on' && !pill.hidden && Date.now() - started > 60000) pill.hidden = true; }, 2000);
+
+// Not connected after a while (no internet, wrong room code, SDA Sabbath closed): say so instead of "connecting…"
+// for ever, with the address that works on the church network without internet (the companion on this PC, or the
+// one given as &lan=… in the address). Same rule as above: only while setting up, never on air.
+const CONNECT_TIMEOUT = 15000;
+const lanBase = () => { const l = get('lan'); return /^https?:\/\/[^\s"<>]+$/i.test(l) ? l.replace(/\/+$/, '') : 'http://localhost:7777'; };
+function timeoutWords() {
+  const offline = navigator.onLine === false;
+  const lan = lanBase() + '/obs.html?via=lan&mode=' + MODE;
+  if (VIA === 'lan') return 'SDA Sabbath: not connected after ' + CONNECT_TIMEOUT / 1000 + ' s. Is the SDA Sabbath companion running on ' + location.host + ', and SDA Sabbath open on that PC at http://localhost:' + (location.port || '7777') + '?';
+  return 'SDA Sabbath: not connected after ' + CONNECT_TIMEOUT / 1000 + ' s. ' + (offline ? 'This PC has no internet. ' : 'Check the internet and that SDA Sabbath is open on the media desk with the same room code. ') +
+    'Without internet, run the SDA Sabbath companion and use this address instead: ' + lan;
+}
+setTimeout(() => { if (S.conn !== 'on') { S.timedOut = true; setConn(S.conn, timeoutWords()); } }, CONNECT_TIMEOUT);
 
 // Inside OBS: know which scene is on air, and whether OBS is live (then nothing but the overlay is ever drawn).
 let obsLive = false;
