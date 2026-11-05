@@ -6,7 +6,8 @@
 // also holds the praise choruses and Malmesbury Praise), 'shared-<code>' for the others.
 import { db } from './db.js';
 
-const SITE = 'https://leemcq.github.io/SDA_Sabbath/';
+import { PUBLIC_SITE, onPublicSite } from './site.js';
+const SITE = PUBLIC_SITE;
 const PATH = 'data/hymns/community/shared.json';
 const KEY = 'community-shared';
 export const COMMUNITY_BOOK = 'choruses'; // Shared Hymns – English
@@ -18,7 +19,7 @@ export const sharedLangOf = (id) => (id === COMMUNITY_BOOK ? 'en' : String(id ||
 export const REPO = 'LeeMcQ/SDA_Sabbath';
 const EVERY = 6 * 3600 * 1000;            // check at most every 6 hours (unless asked)
 
-const remoteBase = () => (/github\.io$/.test(location.hostname) ? new URL('./', location.href).href : SITE);
+const remoteBase = () => (onPublicSite() ? new URL('./', location.href).href : SITE);
 const str = (v, max) => (typeof v === 'string' ? v.replace(/[\u0000-\u0008\u000b-\u001f]/g, '').trim().slice(0, max) : '');
 const lines = (a) => (Array.isArray(a) ? a.filter((l) => typeof l === 'string').map((l) => str(l, 300)).filter(Boolean).slice(0, 40) : []);
 

@@ -82,6 +82,7 @@ a local web address. Everything is explained in the guides below.
 |---|---|
 | [Getting started](docs/getting-started.md) | Install, working offline, projector setup, the companion, casting, phones, several screens, accounts |
 | [Keyboard and clicker](docs/keyboard-and-clicker.md) | Shortcuts and presentation clickers |
+| [New address](docs/new-address.md) | Moving to ssdesk.online: DNS, GitHub Pages, moving each device's data |
 | [Bibles and hymns](docs/bibles-and-hymns.md) | Bible translations, hymnbooks (Add a hymnbook: 26 languages), shared praise choruses, lyrics search, hymn music |
 | [Stage screen and OBS](docs/stage-and-obs.md) | The Tools tab, stage screens, phones and laptops, live streaming with OBS, Stream Deck buttons |
 | [Live translation](translator/README.md) | Afrikaans sermon → English captions, offline on the church PC: exact Bible verses, Adventist words, verse and hymn suggestions |

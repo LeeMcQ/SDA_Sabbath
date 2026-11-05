@@ -23,6 +23,7 @@ import { currentLayout } from './core/screens.js';
 import { remote, startRemote, sendStatus } from './core/remotectl.js';
 import { createListener } from './listen.js';
 import { startBackupReminder } from './backupnag.js';
+import { onOldSite, onNewSite } from './core/site.js';
 import { church } from './core/church.js';
 import { sabbathNow, sabbathWords } from './core/sabbath.js';
 // Loaded when first needed, to keep start-up quick: OBS control, the first-start setup and the feedback form.
@@ -30,7 +31,7 @@ const lazyWelcome = () => import('./tabs/welcome.js');
 const openFeedback = (c, o) => import('./tabs/account.js').then((m) => m.openFeedback(c, o));
 
 export const VERSION = '1.6.1';
-export const BUILD = '1039151';
+export const BUILD = '5068ce5';
 
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', file: 'bible.js', load: () => import('./tabs/bible.js') },
@@ -1115,6 +1116,9 @@ startStats(ctx); // hymns, passages, features, equipment … (js/core/stats.js; 
 // Once, after three services and never during one: how the church heard of the app and how it changed their services.
 setTimeout(() => import('./tabs/story.js').then((m) => m.startStoryPrompt(ctx)).catch(() => {}), 15000);
 ctx.openWelcome = (opts) => lazyWelcome().then((m) => m.openWelcome(opts));
+// New address (ssdesk.online): the old copy offers to move the church's data there; the new one takes it in.
+if (onOldSite()) setTimeout(() => import('./move.js').then((m) => m.checkMove()).catch(() => {}), 9000);
+if (onNewSite() && /#move$/.test(location.hash)) import('./move.js').then((m) => m.receiveMove()).catch(() => {});
 // The setup code (and the account screens it uses) is only downloaded when the setup is actually needed.
 cloud.ready.then(() => {
   const maybe = !settings.v.app.setupDone || (cloud.requireSignIn() && !cloud.user && navigator.onLine !== false);

@@ -756,8 +756,9 @@ hub.newPin = () => {
 };
 // Phones need a secure (https) page for the encrypted link. When this app runs from the companion
 // (http://localhost or the church PC's address), the QR code points to the published site instead.
-export const PUBLIC_BASE = 'https://leemcq.github.io/SDA_Sabbath/';
-const joinBase = () => (location.protocol === 'https:' ? location.href : PUBLIC_BASE);
+export { PUBLIC_SITE as PUBLIC_BASE } from './site.js';
+import { PUBLIC_SITE as PUBLIC_BASE_ } from './site.js';
+const joinBase = () => (location.protocol === 'https:' ? location.href : PUBLIC_BASE_);
 /** Address phones open (the QR code): the code travels after #, so it never reaches any web server. */
 hub.joinUrl = (code, view) => {
   const u = new URL('stage.html', joinBase());
