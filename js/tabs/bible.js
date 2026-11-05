@@ -303,6 +303,17 @@ export default function create(ctx) {
     const r = parseRef(text);
     if (!r) { ctx.toast('Could not read “' + text + '”. Try “John 3:16” or “Ps 23”.', 'err'); return null; }
     if (!info.books[r.book - 1] || !info.books[r.book - 1][1]) { ctx.toast(info.abbr + ' has no ' + EN[r.book - 1] + '.', 'err'); return null; }
+    // A chapter or verse that does not exist (a typo such as "John 99:1") says so and leaves Next as it was,
+    // instead of emptying Next and opening an empty chapter.
+    const counts = info.books[r.book - 1][2] || [], name = (info.names && info.names[r.book - 1]) || EN[r.book - 1];
+    if (counts.length) {
+      const badC = r.segs.find((s) => s.c1 < 1 || s.c1 > counts.length || s.c2 > counts.length);
+      if (badC) { ctx.toast(name + ' has ' + counts.length + (counts.length === 1 ? ' chapter.' : ' chapters.'), 'err'); return null; }
+      if (r.segs.some((s) => s.c2 < s.c1)) { ctx.toast('“' + text + '” runs backwards. Try ' + name + ' ' + r.segs[0].c2 + ':' + r.segs[0].v2 + '–' + r.segs[0].c1 + ':' + r.segs[0].v1 + '.', 'err'); return null; }
+      const badV = r.segs.find((s) => s.v1 != null && (s.v1 < 1 || s.v1 > (counts[s.c1 - 1] || 0)));
+      if (badV) { ctx.toast(name + ' ' + badV.c1 + ' has ' + (counts[badV.c1 - 1] || 0) + ' verses.', 'err'); return null; }
+    }
+    if (!(await versesFor(st.tr, r.book, r.segs)).length) { ctx.toast(info.abbr + ' has no text for “' + text + '”.', 'err'); return null; }
     const cue = await selectVerses(r.book, r.segs);
     if (present && cue) live.take(cue);
     return cue;

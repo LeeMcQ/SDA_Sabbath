@@ -60,7 +60,20 @@ export function resolveBook(token) {
  * or null when nothing sensible was found.
  */
 export function parseRef(input) {
+  const r = parseRefRaw(input);
+  if (!r) return null;
+  // A range typed backwards ("John 3:18-16", "Matt 7-5") means the same verses the right way round.
+  // (A backwards range across chapters, "Gen 50:26-1:2", stays as typed and is refused when it is opened.)
+  r.segs = r.segs.map((x) => ((x.v1 == null && x.c2 < x.c1) || (x.c2 === x.c1 && x.v1 != null && x.v2 != null && x.v2 < x.v1))
+    ? { c1: x.c2, v1: x.v2, c2: x.c1, v2: x.v1 } : x);
+  return r;
+}
+
+function parseRefRaw(input) {
   if (!input) return null;
+  // A passage that runs into another book ("Gen 50:26-Exod 1:2") cannot be one slide set: not read, rather than
+  // read as the wrong verses.
+  if (/\d\s*-\s*(?:[1-3]\s*)?[A-Za-zÀ-ÿ]{2,}/.test(String(input))) return null;
   const s = String(input).trim().replace(/[–—]/g, '-');
   const m = /^\s*([1-3]\s*)?([^\d]+?)\s*(\d.*)?$/.exec(s.replace(/^([1-3])(?=[^\d\s])/, '$1 '));
   if (!m) return null;

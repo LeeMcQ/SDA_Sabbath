@@ -141,6 +141,24 @@ def main():
                 assert not errs, '; '.join(errs[:3])
             t_tabs()
 
+            @check('a mistyped reference keeps Next and says why')
+            def t_bad_ref():
+                r = pg.evaluate("""async () => {
+                  const b = await window.selah.tab('bible'); const { live } = await import('./js/core/live.js');
+                  const t = () => live.staged && live.staged.title, out = {};
+                  for (const q of ['John 99:1', 'John 3:999', 'Psalm 151', 'Gen 50:26-Exod 1:2', 'Gen 50:26-1:2']) {
+                    await b.open({ ref: 'Gen 1:1' }); await b.open({ ref: q });
+                    out[q] = [t(), [...document.querySelectorAll('.toast')].map((x) => x.innerText).pop() || ''];
+                  }
+                  await b.open({ ref: 'John 3:18-16' }); out.backwards = t();
+                  return out; }""")
+                for q in ('John 99:1', 'John 3:999', 'Psalm 151', 'Gen 50:26-Exod 1:2', 'Gen 50:26-1:2'):
+                    assert r[q][0] == 'Genesis 1:1', '%s emptied or changed Next: %r' % (q, r[q])
+                    assert r[q][1], '%s gave no message' % q
+                assert '21 chapters' in r['John 99:1'][1], r['John 99:1']
+                assert r['backwards'] == 'John 3:16–18', 'backwards range: %r' % r['backwards']
+            t_bad_ref()
+
             def present(q):
                 go = pg.locator('input[placeholder^="Go to"]').first
                 go.fill(q); pg.wait_for_timeout(900); go.press('Enter'); pg.wait_for_timeout(900)

@@ -197,8 +197,17 @@ def main():
                 global pg2
                 pg.close()
                 q = watch(ctx.new_page())
-                q.goto(base + 'index.html', timeout=20000); q.wait_for_selector('#presentBtn', timeout=20000); q.wait_for_timeout(1500)
-                assert q.evaluate('!!window.__selahBooted'), 'app did not finish starting'
+                loads = []
+                q.on('load', lambda: loads.append(1))
+                q.goto(base + 'index.html', timeout=20000); q.wait_for_selector('#presentBtn', timeout=20000)
+                # A slow runner (or an old church PC) can need more than a second or two after a cold start: wait for
+                # the app to say it has started, and if it never does, say what was on the page.
+                try: q.wait_for_function('() => !!window.__selahBooted', timeout=20000)
+                except Exception:
+                    why = q.evaluate("(document.getElementById('bootGuard') || {}).innerText || ''")
+                    raise AssertionError('app did not finish starting in 20 s (page loaded %d times; boot guard: %r; errors: %s; failed: %s)'
+                                         % (len(loads), why[:120], '; '.join(errs[:2]), '; '.join(failed[:2])))
+                q.wait_for_timeout(500)
                 txt = q.evaluate("(document.querySelector('.ready-mark') || {}).textContent || ''")
                 assert 'files missing' not in txt and 'Not stored' not in txt, 'badge offline: %r' % txt
                 globals()['pg2'] = q
@@ -241,7 +250,11 @@ def main():
                 for name in PAGES:
                     w = watch(ctx.new_page())
                     try:
-                        w.goto(base + name, timeout=15000); w.wait_for_timeout(700)
+                        # Wait for the page to finish loading before closing it: closing it half-way aborts its own
+                        # file requests, which the next check would report as failures of the app.
+                        w.goto(base + name, timeout=15000, wait_until='load')
+                        if name == 'index.html': w.wait_for_function('() => !!window.__selahBooted', timeout=15000)
+                        w.wait_for_timeout(700)
                         if 'SDA Sabbath' not in w.title(): bad.append(name + ' (' + w.title() + ')')
                     except Exception as e:
                         bad.append(name + ' (' + str(e)[:60] + ')')
