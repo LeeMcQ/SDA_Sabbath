@@ -91,7 +91,6 @@ Status marks: **✔** built and tested · **◐** built, but not yet proven in r
   - Text formatting: 22 fonts, size, bold, italic, underline, colours, spacing, lists, shadow and outline, autofit.
   - Fill and border options.
 - **Saved banners**: set as Next, edit, rename, duplicate, delete, add to plan or loop.
-- **Starter banners**: 18 ready-made banners in six groups (Welcomes, Prayers, Verses, Song service, Announcements, Time banners), three in each, filled in with the church's own name, town, service time and sunset. Edit or delete them like any banner; *Starter banners* in the Saved bar brings back any that were removed.
 - **Pre-service loop**: banners and announcement decks take turns every 5–30 seconds, with a "Service starts in 4:32" clock, switching to your Welcome banner at service time. It runs on the display itself, so it keeps going if the controlling device sleeps.
 - **Topics**: key verses for the **28 Fundamental Beliefs** and about 40 sermon topics, searchable in English or Afrikaans.
 - **Banner music**: background music that starts with the banners and fades out when something else goes on screen.
