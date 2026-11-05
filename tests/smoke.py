@@ -20,7 +20,7 @@ TABS = ['bible', 'hymns', 'ai', 'slides', 'video', 'web', 'plan', 'tools', 'sett
 # Requests that are allowed to fail on a plain web server (the companion's /api is only there when it runs).
 # The published website is not what is tested: off github.io the app asks it for shared choruses and the
 # companion downloads, and before the first deploy of a feature those files are not online yet.
-OK_404 = ('/api/', 'favicon', '://leemcq.github.io/')
+OK_404 = ('/api/', 'favicon', '://leemcq.github.io/', '://ssdesk.online/')
 
 results = []
 
@@ -845,6 +845,53 @@ def main():
                     ctx.unroute('https://leemcq.github.io/**/shared.json*', route)
                     pg.evaluate("window.selah.settings.set('hymns.shared', [])")
             t_shared_hymns()
+
+            @check('new address: the old copy moves its data to ssdesk.online in one step')
+            def t_move_address():
+                def serve_as(prefix):
+                    def handler(route):
+                        from urllib.parse import urlparse
+                        path = urlparse(route.request.url).path
+                        rel = path[len(prefix):] if path.startswith(prefix) else path.lstrip('/')
+                        f = os.path.join(ROOT, rel or 'index.html')
+                        if os.path.isdir(f): f = os.path.join(f, 'index.html')
+                        if os.path.isfile(f): route.fulfill(path=f, headers={'Access-Control-Allow-Origin': '*'})
+                        else: route.fulfill(status=404, body='')
+                    return handler
+                c = b.new_context(viewport={'width': 1280, 'height': 800}, service_workers='block')
+                c.route('https://leemcq.github.io/SDA_Sabbath/**', serve_as('/SDA_Sabbath/'))
+                c.route('https://ssdesk.online/**', serve_as('/'))
+                c.route('https://**.supabase.co/**', lambda r: r.abort())
+                try:
+                    old = c.new_page()
+                    old.goto('https://leemcq.github.io/SDA_Sabbath/index.html'); old.wait_for_timeout(1500)
+                    for _ in range(3):
+                        if old.locator('.welcome').count(): old.keyboard.press('Escape'); old.wait_for_timeout(300)
+                    old.evaluate("""async () => {
+                      window.selah.settings.set('church.name', 'Move Test Church');
+                      const { db } = await import('./js/core/db.js');
+                      await db.put('hymnbooks', 'book-move', { id: 'book-move', name: 'Moved hymnbook', lang: 'en', hymns: [{ n: 1, t: 'Song', v: [['Line']] }] });
+                    }""")
+                    old.evaluate("import('./js/move.js').then(m => m.offerMove())"); old.wait_for_timeout(300)
+                    assert 'ssdesk.online' in old.inner_text('.modal'), 'the move message does not name the new address'
+                    with c.expect_page(timeout=15000) as pop:
+                        old.locator('.modal .modal-f button', has_text='Move my data').click()
+                    new = pop.value
+                    new.wait_for_selector('.modal >> text=Bring in your data', timeout=20000)
+                    assert '1 hymnbooks' in new.inner_text('.modal') or 'hymnbooks' in new.inner_text('.modal'), new.inner_text('.modal')
+                    with new.expect_navigation(timeout=20000):
+                        new.locator('.modal .modal-f button', has_text='Bring it in').click()
+                    new.wait_for_timeout(1500)
+                    got = new.evaluate("""async () => {
+                      const { db } = await import('./js/core/db.js');
+                      const bk = await db.get('hymnbooks', 'book-move');
+                      return [location.hostname, bk && bk.name, window.selah && window.selah.settings.v.church.name];
+                    }""")
+                    assert got == ['ssdesk.online', 'Moved hymnbook', 'Move Test Church'], 'at the new address: %r' % got
+                    wait_text(old, 'Moved ✓')
+                finally:
+                    c.close()
+            t_move_address()
 
             @check('remote buttons (Stream Deck) control the app')
             def t_remote():
