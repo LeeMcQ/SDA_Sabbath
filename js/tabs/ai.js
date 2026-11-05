@@ -40,7 +40,10 @@ const TPL = {
   sunset: { name: 'Sabbath sunset', fields: ['kicker', 'title', 'text', 'foot'], x: { sunset: true }, s: { pal: 'sunset', deco: 'rays' },
     d: (c) => ({ kicker: c.name, title: 'Welcome the Sabbath', text: 'Come, let us worship together as the sun sets.' }),
     mood: 'A peaceful sunset over gentle hills' },
-  closing: { name: 'Closing blessing', fields: ['title', 'text', 'foot'], x: {}, s: { pal: 'plum', deco: 'glow' },
+  title: { name: 'Title', fields: ['title'], x: {}, s: { pal: 'navy', deco: 'none', font: 'advent', pos: 'center', textBold: true },
+    d: () => ({ title: 'Divine Service' }), mood: 'A calm, softly lit abstract background' },
+  // No longer offered (replaced by Title); kept so banners saved with it still open and show.
+  closing: { name: 'Closing blessing', hidden: true, fields: ['title', 'text', 'foot'], x: {}, s: { pal: 'plum', deco: 'glow' },
     d: (c) => ({ title: 'The Lord bless thee, and keep thee', text: 'Numbers 6:24', foot: (c.name ? c.name + ' · ' : '') + 'Go in peace' }),
     mood: 'An evening sky with soft golden clouds' },
   blank: { name: 'Blank', fields: ['kicker', 'title', 'text', 'foot'], x: {}, s: { pal: 'navy', deco: 'none' }, d: () => ({}), mood: 'A peaceful nature scene' },
@@ -382,7 +385,7 @@ export default function create(ctx) {
   const editPane = h('div.pane.bn-edit-pane', fmtHead, editorScroll, formatScroll);
   // Below the slide: Set as Next, Save, More. The name and group are asked when a banner is first saved.
   const saveInfo = h('button.bn-save-info', { type: 'button', title: 'Rename, or move to another group', onclick: () => saveDialog() });
-  const moreBtn = h('button.btn', { type: 'button', 'aria-haspopup': 'menu', onclick: () => menu(moreBtn, [
+  const moreBtn = h('button.btn.bn-more', { type: 'button', 'aria-haspopup': 'menu', 'aria-label': 'More', title: 'More: plan, loop, music, rename, duplicate, new', onclick: () => menu(moreBtn, [
     { label: 'Add to plan', icon: 'plan', onclick: () => addCurToPlan() },
     { label: 'Add to loop', icon: 'loop', hint: loopKind === 'ann' ? 'Announcements' : 'Preservice', onclick: () => addCurToLoop() },
     { label: 'Background music…', icon: 'music', onclick: () => setView('music') },
@@ -400,8 +403,8 @@ export default function create(ctx) {
     h('div.bn-preview-in',
       screen,
       strip,
-      h('div.row.wrap.bn-actions', nextBtn, saveBtn, moreBtn, h('div.grow'), helpBtn),
-      saveInfo));
+      h('div.row.bn-actions', nextBtn, saveBtn, moreBtn),
+      h('div.row.bn-save-row', saveInfo, h('div.grow'), helpBtn)));
   const makeSplit = h('div.split.banner-split', editPane, previewPane);
   const tbRow = h('div.bn-tb-row');
   views.make.classList.add('bn-make');
@@ -588,6 +591,9 @@ export default function create(ctx) {
         try { st.show(await frameOf(x, new Date(), { noAnim: true })); } catch (e) { /* */ }
       });
     });
+    // On phones the toolbar has no room for + Slide, so it sits beside the slides (CSS shows it only there).
+    const add = h('button.bn-strip-add', { type: 'button', title: 'New slide', 'aria-label': 'New slide', onclick: () => newPageMenu(add) }, icon('plus'), h('span', 'Slide'));
+    strip.appendChild(add);
   }
   function plainSlide(x) { return { tpl: x.tpl, f: clone(x.f), x: clone(x.x), s: clone(x.s), els: clone(x.els || []) }; }
   function newPageMenu(anchor) {
@@ -595,7 +601,7 @@ export default function create(ctx) {
       { label: 'Blank slide', icon: 'plus', onclick: () => addPage(Object.assign(newSlide('blank'), { s: Object.assign(newSlide('blank').s, { pal: sl.s.pal, deco: sl.s.deco, img: sl.s.img, dim: sl.s.dim, bgc: sl.s.bgc, bgc2: sl.s.bgc2, bga: sl.s.bga, fgc: sl.s.fgc, acc: sl.s.acc }) })) },
       { label: 'Duplicate this slide', icon: 'dup', hint: 'Ctrl+D', onclick: () => addPage(plainSlide(sl)) },
       '-',
-      ...Object.keys(TPL).filter((k) => k !== 'blank').map((k) => ({ label: TPL[k].name, icon: 'banner', onclick: () => addPage(newSlide(k)) })),
+      ...Object.keys(TPL).filter((k) => k !== 'blank' && !TPL[k].hidden).map((k) => ({ label: TPL[k].name, icon: 'banner', onclick: () => addPage(newSlide(k)) })),
     ]);
   }
   function addPage(x, at = pg + 1) {
@@ -766,7 +772,7 @@ export default function create(ctx) {
 
     // ---- Kind and words
     const kindSel = h('select.field', { 'aria-label': nSlides > 1 ? 'Kind of slide' : 'Kind of banner', onchange: () => switchTemplate(kindSel.value) },
-      Object.keys(TPL).map((k) => h('option', { value: k }, TPL[k].name)));
+      Object.keys(TPL).filter((k) => !TPL[k].hidden || k === sl.tpl).map((k) => h('option', { value: k }, TPL[k].name)));
     kindSel.value = sl.tpl;
     const form = h('div.form.bn-form', h('label', nSlides > 1 ? 'Kind of slide' : 'Kind'), kindSel);
     const t = TPL[sl.tpl];
@@ -777,6 +783,7 @@ export default function create(ctx) {
       if (sl.tpl === 'verse' && k === 'title') label = 'Verse text';
       if (sl.tpl === 'verse' && k === 'kicker') label = 'Top line';
       if (sl.tpl === 'countdown' && k === 'kicker') label = 'Above the clock';
+      if (sl.tpl === 'title' && k === 'title') label = 'Title words';
       if (k === 'ref') {
         const refInp = h('input.field', { value: sl.f.ref || '', placeholder: 'e.g. Psalm 23:1 or John 3:16', 'aria-label': 'Bible reference', style: { flex: '1 1 160px', minWidth: '0' },
           oninput: () => { sl.f.ref = refInp.value; fetchVerseSoon(); } });

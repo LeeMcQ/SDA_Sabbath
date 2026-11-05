@@ -889,6 +889,8 @@ google-cast-launcher, .cast-button, [aria-label*="Cast"], button[title*="Cast"],
 .bn-save-info { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; max-width: 100%; padding: 4px 6px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font: inherit; font-size: 0.8125rem; cursor: pointer; }
 .bn-save-info span:first-of-type { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bn-save-info:hover { background: var(--raised); color: var(--text); }
+.bn-actions { flex-wrap: nowrap; } .bn-actions > .btn { flex: 0 1 auto; min-width: 0; }
+.bn-save-row { gap: 6px; align-items: center; min-width: 0; }
 .se-tb-txt { padding: 0 8px; }
 .bn-edit-pane { display: flex; flex-direction: column; min-height: 0; }
 .bn-edit-pane > .scroll { flex: 1 1 auto; min-height: 0; }
@@ -983,7 +985,7 @@ button.se-sw[aria-pressed="true"] { outline: 2px solid var(--focus, #2f6fe0); ou
 .bn-strip-more { position: absolute; right: 2px; top: 2px; width: 22px; height: 22px; border-radius: 4px; border: 0; background: rgba(0,0,0,.55); color: #fff; display: none; align-items: center; justify-content: center; padding: 0; cursor: pointer; }
 .bn-strip-more svg.i { width: 14px; height: 14px; }
 .bn-strip-it:hover .bn-strip-more, .bn-strip-it[aria-selected="true"] .bn-strip-more { display: flex; }
-.bn-strip-add { flex: none; width: 70px; border: 2px dashed var(--line); border-radius: 6px; background: transparent; color: var(--muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; font: inherit; font-size: 0.75rem; }
+.bn-strip-add { flex: none; width: 70px; border: 2px dashed var(--line); border-radius: 6px; background: transparent; color: var(--muted); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; font: inherit; font-size: 0.75rem; }
 .bn-strip-add:hover { color: var(--text); border-color: var(--next); }
 .bn-insert { gap: 6px; }
 .bn-slide-no { gap: 10px; margin-bottom: 4px; }
@@ -997,7 +999,10 @@ button.se-sw[aria-pressed="true"] { outline: 2px solid var(--focus, #2f6fe0); ou
   .bn-tb-row { position: sticky; top: 0; z-index: 8; padding: 6px 8px; }
   .bn-tb-row > .btn { display: none; }
   .se-toolbar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; min-height: 0 !important; }
-  .se-tb-fields > span:not(.se-caret) { display: none; } /* Fields: the { } icon is enough on a phone, so + Slide fits */
+  .se-tb-fields > span:not(.se-caret) { display: none; } /* Fields: the { } icon is enough on a phone */
+  .se-tb-slide { display: none; }                        /* + Slide sits beside the slide thumbnails on phones */
+  .se-toolbar > .se-sep:last-child { display: none; }
+  .bn-strip .bn-strip-add { display: flex; }
   .se-toolbar > * { flex: none; }
   .bn-strip-it { width: 96px; }
 }
@@ -1640,4 +1645,11 @@ html:not(.lp) .listen-box.on .ls-dot { animation: ls-pulse 1.6s ease-in-out infi
   .modal-back { padding: var(--sa-t) 0 0; }
   .modal { padding-bottom: var(--sa-b); } /* bottom sheets sit on the screen edge */
   .emb-mini { right: calc(8px + var(--sa-r)); bottom: calc(70px + var(--bar-on, 0) * 60px + var(--sa-b)); }
+}
+
+/* Banners → Make on small phones (after the 760 px rules, so these win) */
+@media (max-width: 360px) {
+  .bn-more > span { display: none; }           /* More: the ••• icon alone, so the three buttons share one row */
+  .se-tb { min-width: 32px; padding: 0 3px; }
+  .se-tb .se-caret { margin-left: -2px; }
 }

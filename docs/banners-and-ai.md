@@ -9,7 +9,7 @@ offline from the church’s location; the top bar greets the media team the same
 
 Like every other tab, nothing in **Banners** reaches the projector until **Present**: buttons say **Set as Next**.
 
-- **Make** — Welcome, Bible verse, Announcement, Tithe & offering, Countdown, Sabbath sunset, Closing blessing,
+- **Make** — Welcome, Bible verse, Announcement, Tithe & offering, Countdown, Sabbath sunset, Title (large words in the centre),
   Blank and Picture banners. Banners are drawn live on the display like Bible verses, so the text is sharp, fills
   the screen and fits 4:3 projectors too. The preview updates as you type.
   - **Filled in for you** from **Church details** (Settings → Church): church name, the coming Sabbath’s date,

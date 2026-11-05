@@ -80,7 +80,7 @@ Status marks: **✔** built and tested · **◐** built, but not yet proven in r
 
 ## 8. Banners and music
 
-- **Banner types**: Welcome, Bible verse, Announcement, Tithe and offering (with a real giving QR code), Countdown, Sabbath sunset, Closing blessing, Blank and Picture.
+- **Banner types**: Welcome, Bible verse, Announcement, Tithe and offering (with a real giving QR code), Countdown, Sabbath sunset, Title (large words in the centre), Blank and Picture.
 - **Filled in from your church details**: church name, the coming Sabbath's date, sunset time (worked out offline from the church's location) and service time.
 - **Look**: eight readable colour palettes, patterns, **Advent Sans** (the church typeface), serif or clear sans, your church's own logo or a neutral open-Bible mark, and your own photos as backgrounds (darkened automatically for readable text).
 - **Google-Slides-style editor**:

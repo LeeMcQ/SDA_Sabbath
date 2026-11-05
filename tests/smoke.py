@@ -753,6 +753,11 @@ def main():
                 secs = pg.evaluate("[...document.querySelectorAll('.bn-make .bn-sec')].map(d => [d.querySelector('summary').textContent, d.open])")
                 assert secs == [['Kind and words', True], ['Colours and picture', False], ['Text style', False]], 'sections: %r' % secs
                 assert pg.locator('.bn-make .bn-side-seg, .bn-make .bn-insert').count() == 0, 'the old tabs or Insert section are still there'
+                kinds = pg.evaluate("[...document.querySelectorAll('select[aria-label=\"Kind of banner\"] option')].map(o => o.textContent)")
+                assert 'Title' in kinds and 'Closing blessing' not in kinds, 'kinds: %r' % kinds
+                pg.select_option('select[aria-label="Kind of banner"]', 'title'); pg.wait_for_timeout(600)
+                big = pg.evaluate("(() => { const t = document.querySelector('.bn-screen .fb-title'); return t ? [t.textContent, parseFloat(getComputedStyle(t).fontSize)] : null; })()")
+                assert big and big[0] == 'Divine Service', 'Title slide: %r' % big
                 pg.select_option('select[aria-label="Kind of banner"]', 'announce'); pg.wait_for_timeout(500)
                 assert pg.evaluate("document.querySelector('select[aria-label=\"Kind of banner\"]').value") == 'announce', 'kind not changed'
                 n0 = pg.locator('.bn-strip-it').count()
@@ -772,6 +777,29 @@ def main():
                 pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
                 pg.evaluate("document.querySelector('.menu') && document.querySelector('.menu').remove()")
             t_banner_make()
+
+            @check('Banners → Make on a 320 px phone: toolbar fits, actions on one row, + Slide by the slides')
+            def t_banner_make_phone():
+                c = b.new_context(viewport={'width': 320, 'height': 700}, service_workers='block', is_mobile=True, has_touch=True)
+                q = c.new_page()
+                try:
+                    q.goto(base + 'index.html'); q.wait_for_timeout(1200)
+                    q.evaluate("window.selah.settings.set('app.setupDone', true)")
+                    for _ in range(3):
+                        if q.locator('.welcome').count(): q.keyboard.press('Escape'); q.wait_for_timeout(300)
+                    q.evaluate("window.selah.showTab('ai')"); q.wait_for_timeout(1500)
+                    tb = q.evaluate("(() => { const t = document.querySelector('.bn-make .se-toolbar'); return [t.scrollWidth, t.clientWidth]; })()")
+                    assert tb[0] <= tb[1] + 1, 'toolbar wider than the phone: %r' % tb
+                    tops = q.evaluate("[...document.querySelectorAll('.bn-actions > .btn')].map(x => Math.round(x.getBoundingClientRect().top))")
+                    assert len(set(tops)) == 1, 'action buttons on several rows: %r' % tops
+                    assert q.locator('.bn-strip .bn-strip-add').is_visible(), '+ Slide is not beside the slides'
+                    n0 = q.locator('.bn-strip-it').count()
+                    q.locator('.bn-strip .bn-strip-add').click(); q.wait_for_timeout(200)
+                    q.locator('.menu button', has_text='Blank slide').click(); q.wait_for_timeout(500)
+                    assert q.locator('.bn-strip-it').count() == n0 + 1, '+ Slide did not add a slide on the phone'
+                finally:
+                    c.close()
+            t_banner_make_phone()
 
             @check('remote buttons (Stream Deck) control the app')
             def t_remote():

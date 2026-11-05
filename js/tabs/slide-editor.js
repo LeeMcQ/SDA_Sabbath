@@ -1132,8 +1132,8 @@ export function createSlideEditor(opts) {
         { label: 'Double arrow', icon: 'arrow', onclick: () => setTool({ t: 'line', a2: 'arrow', a1: 'arrow' }) },
       ]), { drop: true, on: tool && tool.t === 'line' }),
       opts.tokens && opts.tokens.length ? tb('field', 'Insert a field that fills itself in (date, sunset, church name)', (b) => menu(b, opts.tokens.map(([tok, label]) => ({ label, hint: tok, onclick: () => insertToken(tok) }))), { drop: true, text: 'Fields', cls: 'se-tb-txt.se-tb-fields' }) : null,
-      opts.addSlide ? sep() : null,
-      opts.addSlide ? tb('plus', 'New slide', (b) => opts.addSlide(b), { text: 'Slide', cls: 'se-tb-txt' }) : null);
+      opts.addSlide ? h('span.se-sep.se-tb-slide') : null,
+      opts.addSlide ? tb('plus', 'New slide', (b) => opts.addSlide(b), { text: 'Slide', cls: 'se-tb-txt.se-tb-slide' }) : null);
     if (!list.length && !parts) {
       toolbar.append(sep(), h('span.se-hint.hide-sm', 'Click an item to edit it · double-click text to type · right-click for more'));
       return;
@@ -1277,7 +1277,7 @@ export function createSlideEditor(opts) {
     if (parts.length && !list.length) {
       panel.append(h('div.card.se-card',
         h('h4', 'Template text'),
-        h('p.note', 'This line comes from the banner’s fields (the Slide panel). To move, resize or format it freely, turn the slide’s text into text boxes.'),
+        h('p.note', 'This line comes from the banner’s fields (Kind and words). To move, resize or format it freely, turn the slide’s text into text boxes.'),
         h('button.btn.sm.primary', { type: 'button', onclick: () => { const pid = parts[0]; partToEl(pid).then((id) => { if (id) select([id]); }); } }, icon('textbox'), h('span', 'Edit text on the slide'))));
       return;
     }
