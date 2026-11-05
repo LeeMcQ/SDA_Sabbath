@@ -155,7 +155,7 @@ export function bannerEl(f, urlFor) {
   }
   const t = (f.title || '').trim(), x = (f.text || '').trim();
   // Short headings may grow large; a heading with a message, or a long verse, stays calmer.
-  const maxF = !t ? 130 : x ? 175 : t.length < 40 ? 230 : 170;
+  const maxF = f.tpl === 'title' ? 280 : !t ? 130 : x ? 175 : t.length < 40 ? 230 : 170;   // Title: large words in the centre
   const after = () => { const l = el.querySelector('.fe-layer'); if (l) finishEls(l); };
   return { el, maxF, stop, after };
 }

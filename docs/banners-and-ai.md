@@ -9,7 +9,7 @@ offline from the church’s location; the top bar greets the media team the same
 
 Like every other tab, nothing in **Banners** reaches the projector until **Present**: buttons say **Set as Next**.
 
-- **Make** — Welcome, Bible verse, Announcement, Tithe & offering, Countdown, Sabbath sunset, Closing blessing,
+- **Make** — Welcome, Bible verse, Announcement, Tithe & offering, Countdown, Sabbath sunset, Title (large words in the centre),
   Blank and Picture banners. Banners are drawn live on the display like Bible verses, so the text is sharp, fills
   the screen and fits 4:3 projectors too. The preview updates as you type.
   - **Filled in for you** from **Church details** (Settings → Church): church name, the coming Sabbath’s date,
@@ -36,13 +36,18 @@ Service plans can link banners, the pre-service loop and topic verses (Plan → 
 
 ### Editing a banner on the slide (like Google Slides)
 
-**Banners & Music → Make** is a slide editor. The toolbar above the slide and the **Format options** panel work
-like Google Slides:
+**Banners & Music → Make** is a slide editor. The panel on the left has three sections: **Kind and words** (the kind
+of banner, its words, and what else to show: logo, date, sunset, giving QR code), **Colours and picture** and
+**Text style**; only the first is open at the start. Click an item on the slide and the panel shows that item's
+options instead (**← Banner** goes back). Under the slide: **Set as Next**, **Save** (asks a name and group the first
+time) and **More** (Add to plan, Add to loop, Background music, Rename or move to group, Duplicate, New banner).
+Changing the kind of a saved banner asks whether to start a new banner or change this one. The toolbar above the
+slide works like Google Slides:
 
-- **Insert:** text boxes, pictures (upload, paste, or drag a photo onto the slide), 27 shapes (rectangles, ovals,
+- **Insert** (toolbar only): text boxes, pictures (upload, paste, or drag a photo onto the slide), 27 shapes (rectangles, ovals,
   stars, arrows, hearts, speech bubbles, ribbons …), lines and arrows, and **fields** that fill themselves in:
   `{date}` (the coming Sabbath), `{sunset}`, `{church}`, `{town}`, `{service}`, `{today}`. Pick a tool and drag on
-  the slide to draw, or click for the usual size.
+  the slide to draw, or click for the usual size. **+ Slide** adds a slide (blank, a copy, or any kind of banner).
 - **Select and move:** click, Shift/Ctrl-click or drag a box around several items. Drag to move (red guides snap to
   the slide's edges and centre and to other items; Alt turns snapping off, Shift keeps a straight line). Eight handles
   resize (Shift keeps proportions), the round handle rotates (Shift: steps of 15°). Arrow keys nudge; Shift+arrow
@@ -92,7 +97,7 @@ Claude — text only), paste your key and press **Test key**: it shows the model
 choose a text and a picture model (or leave both on Automatic). If a model is retired, SDA Sabbath picks a
 current one by itself and remembers it.
 
-- Banners → Make has **two AI picture makers**:
+- Banners → Make → Colours and picture → **Make with AI** offers **two AI picture makers**:
   1. **Make background** makes a **background picture without text**; the banner words stay sharp on top.
   2. **Make full banner…** makes **one finished picture with all your words in it** (church name, heading,
      message, bottom line, anything else) built around **pictures you attach** (a photo of the church, people, your

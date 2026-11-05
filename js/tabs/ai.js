@@ -40,7 +40,10 @@ const TPL = {
   sunset: { name: 'Sabbath sunset', fields: ['kicker', 'title', 'text', 'foot'], x: { sunset: true }, s: { pal: 'sunset', deco: 'rays' },
     d: (c) => ({ kicker: c.name, title: 'Welcome the Sabbath', text: 'Come, let us worship together as the sun sets.' }),
     mood: 'A peaceful sunset over gentle hills' },
-  closing: { name: 'Closing blessing', fields: ['title', 'text', 'foot'], x: {}, s: { pal: 'plum', deco: 'glow' },
+  title: { name: 'Title', fields: ['title'], x: {}, s: { pal: 'navy', deco: 'none', font: 'advent', pos: 'center', textBold: true },
+    d: () => ({ title: 'Divine Service' }), mood: 'A calm, softly lit abstract background' },
+  // No longer offered (replaced by Title); kept so banners saved with it still open and show.
+  closing: { name: 'Closing blessing', hidden: true, fields: ['title', 'text', 'foot'], x: {}, s: { pal: 'plum', deco: 'glow' },
     d: (c) => ({ title: 'The Lord bless thee, and keep thee', text: 'Numbers 6:24', foot: (c.name ? c.name + ' · ' : '') + 'Go in peace' }),
     mood: 'An evening sky with soft golden clouds' },
   blank: { name: 'Blank', fields: ['kicker', 'title', 'text', 'foot'], x: {}, s: { pal: 'navy', deco: 'none' }, d: () => ({}), mood: 'A peaceful nature scene' },
@@ -340,18 +343,22 @@ export default function create(ctx) {
   const host = h('div.stage-host');
   const screen = h('div.screen.bn-screen', host);
   const stage = createStage(host, { placeholderOnly: true });
-  const nameInp = h('input.field', { placeholder: 'Name (for the Saved list)', 'aria-label': 'Banner name', style: { flex: '1 1 160px', minWidth: '0' },
+  const nameInp = h('input.field', { placeholder: 'Name (for the Saved list)', 'aria-label': 'Banner name', style: { width: '100%' },
     oninput: () => { cur.name = nameInp.value; changed(false); } });
-  const saveBtn = h('button.btn', { type: 'button', onclick: () => saveCurrent(true) }, icon('save'), h('span', 'Save'));
+  const saveBtn = h('button.btn', { type: 'button', onclick: () => (cur.id && lib.some((b) => b.id === cur.id) ? saveCurrent(true) : saveDialog()) }, icon('save'), h('span', 'Save'));
   const nextBtn = h('button.btn.primary', { type: 'button', title: 'Put this banner on the green Next screen (from the slide you are on). Press Present (F5) to show it.', onclick: () => setNext() }, icon('next'), h('span', 'Set as Next'));
   const editorScroll = h('div.scroll.pad.bn-editor');
   // Group of the banner being edited (it is saved with the banner).
   const groupSel = h('select.field.sm', { 'aria-label': 'Group for this banner', onchange: async () => {
-    if (groupSel.value === '+') { const g = await newGroup(); groupSel.value = ''; if (g) { cur.group = g.id; } renderGroupSel(); changed(false); return; }
+    if (groupSel.value === '+') {
+      const keepName = nameInp.value, reopen = inSaveDialog;
+      const g = await newGroup(); groupSel.value = ''; if (g) { cur.group = g.id; } renderGroupSel(); changed(false);
+      if (reopen) { saveDialog(); nameInp.value = keepName; }   // the group question replaced the Save box: bring it back
+      return;
+    }
     if (groupSel.value) cur.group = groupSel.value; else delete cur.group;
     changed(false);
   } });
-  const groupRow = h('label.row.bn-group-row', icon('folder'), h('span.note', 'Group'), groupSel);
   function renderGroupSel() {
     clear(groupSel);
     groupSel.appendChild(h('option', { value: '' }, '(No group)'));
@@ -366,30 +373,38 @@ export default function create(ctx) {
   const wideBtn = h('button.btn.sm', { type: 'button', title: 'Bigger slide: make the editing area wider', 'aria-pressed': 'false', onclick: () => setWide(!wide) }, icon('wide'), h('span.hide-sm', 'Wide'));
   let wide = false;
   try { wide = localStorage.getItem(lsKey('bn-wide')) === '1'; } catch (e) { /* */ }
-  const sideSeg = h('div.seg.bn-side-seg', { role: 'tablist', 'aria-label': 'Panel' });
+  // The panel follows the slide: the banner's settings, or (when something on the slide is selected) that item's.
   let side = 'slide';
-  function renderSideSeg() {
-    clear(sideSeg);
-    [['slide', 'Slide'], ['format', 'Format options']].forEach(([k, l]) => sideSeg.appendChild(h('button', { type: 'button', role: 'tab', 'aria-selected': String(side === k), onclick: () => setSide(k) }, l)));
-  }
+  const fmtHead = h('div.row.bn-fmt-head',
+    h('button.btn.sm', { type: 'button', title: 'Back to the banner settings (Esc)', onclick: () => editor.deselect() }, '← Banner'),
+    h('span.note', 'Selected item'));
   function setSide(k) {
-    side = k; renderSideSeg();
-    editorScroll.hidden = k !== 'slide'; formatScroll.hidden = k !== 'format';
-    if (k === 'format' && !formatScroll.firstChild.childNodes.length) formatScroll.firstChild.replaceChildren(h('p.note', 'Select something on the slide to see its options: size, fill, border, text, picture adjustments, animation and arrange.'));
+    side = k;
+    editorScroll.hidden = k !== 'slide'; formatScroll.hidden = k !== 'format'; fmtHead.hidden = k !== 'format';
   }
-  const editPane = h('div.pane.bn-edit-pane', h('div.bn-side-bar', sideSeg), editorScroll, formatScroll);
+  const editPane = h('div.pane.bn-edit-pane', fmtHead, editorScroll, formatScroll);
+  // Below the slide: Set as Next, Save, More. The name and group are asked when a banner is first saved.
+  const saveInfo = h('button.bn-save-info', { type: 'button', title: 'Rename, or move to another group', onclick: () => saveDialog() });
+  const moreBtn = h('button.btn.bn-more', { type: 'button', 'aria-haspopup': 'menu', 'aria-label': 'More', title: 'More: plan, loop, music, rename, duplicate, new', onclick: () => menu(moreBtn, [
+    { label: 'Add to plan', icon: 'plan', onclick: () => addCurToPlan() },
+    { label: 'Add to loop', icon: 'loop', hint: loopKind === 'ann' ? 'Announcements' : 'Preservice', onclick: () => addCurToLoop() },
+    { label: 'Background music…', icon: 'music', onclick: () => setView('music') },
+    '-',
+    { label: 'Rename or move to group…', icon: 'edit', onclick: () => saveDialog() },
+    { label: 'Duplicate this banner', icon: 'dup', onclick: () => duplicateCur() },
+    { label: 'New banner', icon: 'plus', onclick: () => startNew() },
+  ]) }, icon('more'), h('span', 'More'));
+  const helpBtn = btn('info', 'How the banner editor works', () => modal({ title: 'Making a banner', body: h('div.col', { style: { gap: '8px' } },
+    h('p', 'Choose the kind of banner and type its words on the left. Click anything on the slide to change it; double-click text to type. Right-click for more.'),
+    h('p', 'The toolbar inserts text boxes, pictures, shapes, lines, self-filling fields (date, sunset, church name) and new slides.'),
+    h('p', h('b', 'Set as Next'), ' puts the banner on the green Next screen; ', h('b', 'Present (F5)'), ' shows it. ', h('b', 'Save'), ' keeps it in the Saved list.')),
+    actions: [{ label: 'OK', primary: true }] }), { cls: 'sm' });
   const previewPane = h('div.pane.bn-preview-pane',
     h('div.bn-preview-in',
       screen,
       strip,
-      h('div.row.wrap.bn-actions', nextBtn, saveBtn,
-        h('button.btn', { type: 'button', title: 'Add to the current service plan', onclick: () => addCurToPlan() }, icon('plan'), h('span', 'Add to plan')),
-        h('button.btn', { type: 'button', title: 'Add to the current Service loop (Preservice or Announcements)', onclick: () => addCurToLoop() }, icon('loop'), h('span', 'Add to loop'))),
-      h('div.row', nameInp,
-        h('button.btn.sm', { type: 'button', title: 'Start a new banner', onclick: () => startNew() }, icon('plus'), h('span', 'New'))),
-      groupRow,
-      musicChip(ctx, () => setView('music')),
-      h('p.note', 'Click anything on the slide to change it; double-click text to type. Insert text boxes, pictures, shapes and lines from the toolbar. Right-click for more. Set as Next puts the banner on the green Next screen; Present (F5) shows it.')));
+      h('div.row.bn-actions', nextBtn, saveBtn, moreBtn),
+      h('div.row.bn-save-row', saveInfo, h('div.grow'), helpBtn)));
   const makeSplit = h('div.split.banner-split', editPane, previewPane);
   const tbRow = h('div.bn-tb-row');
   views.make.classList.add('bn-make');
@@ -480,6 +495,7 @@ export default function create(ctx) {
     canConvert: () => sl.tpl !== 'countdown',
     convertParts: (list) => convertParts(list),
     onSelect: (ids) => { if (ids.length) setSide('format'); else if (side === 'format') setSide('slide'); },
+    addSlide: (anchor) => newPageMenu(anchor),
     preview: () => replayAnimations(),
   });
   tbRow.append(editor.toolbar, wideBtn);
@@ -493,7 +509,7 @@ export default function create(ctx) {
     else if (k === 'y' || (k === 'z' && ev.shiftKey)) { ev.preventDefault(); ev.stopPropagation(); hist.go(1); }
   });
   formatScroll.appendChild(editor.panel);
-  renderSideSeg(); setSide('slide');
+  setSide('slide');
   if (wide) makeSplit.classList.add('bn-wide');
   wideBtn.setAttribute('aria-pressed', String(wide));
 
@@ -575,7 +591,8 @@ export default function create(ctx) {
         try { st.show(await frameOf(x, new Date(), { noAnim: true })); } catch (e) { /* */ }
       });
     });
-    const add = h('button.bn-strip-add', { type: 'button', title: 'New slide', onclick: () => newPageMenu(add) }, icon('plus'), h('span', 'Slide'));
+    // On phones the toolbar has no room for + Slide, so it sits beside the slides (CSS shows it only there).
+    const add = h('button.bn-strip-add', { type: 'button', title: 'New slide', 'aria-label': 'New slide', onclick: () => newPageMenu(add) }, icon('plus'), h('span', 'Slide'));
     strip.appendChild(add);
   }
   function plainSlide(x) { return { tpl: x.tpl, f: clone(x.f), x: clone(x.x), s: clone(x.s), els: clone(x.els || []) }; }
@@ -584,7 +601,7 @@ export default function create(ctx) {
       { label: 'Blank slide', icon: 'plus', onclick: () => addPage(Object.assign(newSlide('blank'), { s: Object.assign(newSlide('blank').s, { pal: sl.s.pal, deco: sl.s.deco, img: sl.s.img, dim: sl.s.dim, bgc: sl.s.bgc, bgc2: sl.s.bgc2, bga: sl.s.bga, fgc: sl.s.fgc, acc: sl.s.acc }) })) },
       { label: 'Duplicate this slide', icon: 'dup', hint: 'Ctrl+D', onclick: () => addPage(plainSlide(sl)) },
       '-',
-      ...Object.keys(TPL).filter((k) => k !== 'blank').map((k) => ({ label: TPL[k].name, icon: 'banner', onclick: () => addPage(newSlide(k)) })),
+      ...Object.keys(TPL).filter((k) => k !== 'blank' && !TPL[k].hidden).map((k) => ({ label: TPL[k].name, icon: 'banner', onclick: () => addPage(newSlide(k)) })),
     ]);
   }
   function addPage(x, at = pg + 1) {
@@ -639,6 +656,27 @@ export default function create(ctx) {
     const clean = savedSig && savedSig === sig(cur) && cur.id && lib.some((b) => b.id === cur.id);
     saveBtn.disabled = !!clean;
     saveBtn.lastChild.textContent = clean ? 'Saved' : 'Save';
+    const saved = cur.id && lib.some((b) => b.id === cur.id);
+    const g = cur.group && groups.find((x) => x.id === cur.group);
+    saveInfo.replaceChildren(...[icon(saved ? 'banner' : 'edit'), h('span', saved ? (cur.name || nameOf(cur)) + (g ? '  ·  ' + g.name : '') : 'Not saved yet'), saved ? h('span.note', ' · rename') : null].filter(Boolean));
+  }
+  /** Name and group: asked on the first Save, and from More → Rename. */
+  let inSaveDialog = false;
+  function saveDialog() {
+    renderGroupSel();
+    nameInp.value = cur.name || '';
+    inSaveDialog = true;
+    modal({ onclose: () => { inSaveDialog = false; }, title: cur.id && lib.some((b) => b.id === cur.id) ? 'Rename banner' : 'Save banner',
+      body: h('div.form', h('label', 'Name'), nameInp, h('label', 'Group'), groupSel),
+      actions: [{ label: 'Cancel', onclick: () => { inSaveDialog = false; } }, { label: 'Save', primary: true, onclick: async () => { inSaveDialog = false; cur.name = nameInp.value.trim(); await saveCurrent(true); } }] });
+    setTimeout(() => { nameInp.focus(); nameInp.select(); }, 40);
+  }
+  function duplicateCur() {
+    const copy = clone(cur);
+    copy.id = null; copy.name = (cur.name || nameOf(cur)) + ' (copy)';
+    setDoc(copy); savedSig = null; nameInp.value = copy.name;
+    changed(true);
+    toast('A copy is open. Save it to keep it.', '', 3000);
   }
 
   async function setNext() {
@@ -714,41 +752,38 @@ export default function create(ctx) {
 
   // ------------------------------------------------------------ editor
   let trList = [];
+  // Sections of the banner panel: only "Kind and words" starts open; what the person opens stays open.
+  const secOpen = { words: true, look: false, text: false };
+  function section(key, title, ...kids) {
+    const d = h('details.bn-sec', { open: secOpen[key] }, h('summary', title), h('div.bn-sec-in', ...kids));
+    d.addEventListener('toggle', () => { secOpen[key] = d.open; });
+    return d;
+  }
   function renderEditor() {
+    const keepTop = editorScroll.scrollTop;
     clear(editorScroll);
     const c = church();
     if (!c.name) {
-      editorScroll.appendChild(h('div.card.bn-church', h('div.row.wrap',
-        icon('pin'), h('div.grow', h('b', 'Add your church’s name once'), h('div.note', 'Banners fill it in, with the date, sunset time and giving QR code.')),
-        h('button.btn.sm.primary', { type: 'button', onclick: () => churchDialog() }, 'Church details'))));
+      editorScroll.appendChild(h('button.bn-church-line', { type: 'button', onclick: () => churchDialog() },
+        icon('pin'), h('span', 'Add your church’s name once: banners fill it in with the date and sunset'), h('b', ' → Church details')));
     }
     const nSlides = slidesOf(cur).length;
-    if (nSlides > 1) editorScroll.appendChild(h('div.row.bn-slide-no', h('b', 'Slide ' + (pg + 1) + ' of ' + nSlides), h('span.note', 'Each slide has its own kind, text and look.')));
-    // Insert: the same as the toolbar, for people who look here first.
-    editorScroll.append(h('h3.bn-h', 'Insert'), h('div.row.wrap.bn-insert',
-      h('button.btn.sm', { type: 'button', onclick: () => editor.insertText() }, icon('textbox'), h('span', 'Text box')),
-      h('button.btn.sm', { type: 'button', onclick: () => editor.insertImage() }, icon('image'), h('span', 'Picture')),
-      h('button.btn.sm', { type: 'button', onclick: () => editor.insertShape('round') }, icon('shape'), h('span', 'Shape')),
-      h('button.btn.sm', { type: 'button', onclick: () => editor.insertLine('arrow') }, icon('arrow'), h('span', 'Arrow')),
-      h('button.btn.sm', { type: 'button', onclick: (ev) => newPageMenu(ev.currentTarget) }, icon('plus'), h('span', 'New slide'))));
-    // Template chips
-    const tplRow = h('div.row.wrap.bn-tpls');
-    Object.keys(TPL).forEach((k) => tplRow.appendChild(h('button.chip', { type: 'button', 'aria-pressed': String(sl.tpl === k), onclick: () => switchTemplate(k) }, TPL[k].name)));
-    editorScroll.append(h('h3.bn-h', nSlides > 1 ? 'Kind of slide' : 'Kind of banner'), tplRow);
+    if (nSlides > 1) editorScroll.appendChild(h('div.row.bn-slide-no', h('b', 'Slide ' + (pg + 1) + ' of ' + nSlides), h('span.note', 'Each slide has its own kind, words and look.')));
 
-    // Fields
-    const form = h('div.form.bn-form');
+    // ---- Kind and words
+    const kindSel = h('select.field', { 'aria-label': nSlides > 1 ? 'Kind of slide' : 'Kind of banner', onchange: () => switchTemplate(kindSel.value) },
+      Object.keys(TPL).filter((k) => !TPL[k].hidden || k === sl.tpl).map((k) => h('option', { value: k }, TPL[k].name)));
+    kindSel.value = sl.tpl;
+    const form = h('div.form.bn-form', h('label', nSlides > 1 ? 'Kind of slide' : 'Kind'), kindSel);
     const t = TPL[sl.tpl];
     const free = !!sl.s.free;
-    if (free) {
-      editorScroll.appendChild(h('div.card.bn-free', h('b', 'Text is on the slide'), h('p.note', 'This slide’s words are in text boxes now. Click one on the slide to move or format it; double-click to type. Use Insert → Text box to add more.')));
-    }
     (free ? [] : t.fields).forEach((k) => {
       const F = FIELD[k];
       let label = F.label;
       if (sl.tpl === 'verse' && k === 'title') label = 'Verse text';
       if (sl.tpl === 'verse' && k === 'kicker') label = 'Top line';
       if (sl.tpl === 'countdown' && k === 'kicker') label = 'Above the clock';
+      if (sl.tpl === 'title' && k === 'title') label = 'Title words';
       if (k === 'ref') {
         const refInp = h('input.field', { value: sl.f.ref || '', placeholder: 'e.g. Psalm 23:1 or John 3:16', 'aria-label': 'Bible reference', style: { flex: '1 1 160px', minWidth: '0' },
           oninput: () => { sl.f.ref = refInp.value; fetchVerseSoon(); } });
@@ -776,9 +811,7 @@ export default function create(ctx) {
       t.presets.forEach((r) => pr.appendChild(h('button.chip', { type: 'button', title: 'Use this verse as the message', onclick: () => presetVerse(r) }, r)));
       form.append(h('label', 'Verse'), pr);
     }
-    editorScroll.appendChild(form);
-
-    // Extras
+    // Also show: the logo, date, sunset, giving QR code and the mark.
     const ex = h('div.row.wrap.bn-extras');
     const hasLogo = !!(settings.v.display.logo);
     EXTRAS.forEach(([k, label, title]) => {
@@ -791,9 +824,11 @@ export default function create(ctx) {
         onclick: () => { if (why) { toast(why, '', 4000); if (k !== 'logo') churchDialog(); return; } sl.x[k] = !sl.x[k]; changed(true); } },
       on ? icon('check') : null, label));
     });
-    editorScroll.append(h('h3.bn-h', 'Also show'), ex);
+    form.append(h('label', 'Also show'), ex);
+    const words = [form];
+    if (free) words.unshift(h('div.card.bn-free', h('b', 'Text is on the slide'), h('p.note', 'This slide’s words are in text boxes now. Click one on the slide to move or format it; double-click to type. Add more with the Text box button in the toolbar.')));
 
-    // Look
+    // ---- Colours and picture
     const sw = h('div.row.wrap.bn-swatches');
     Object.keys(PALETTES).forEach((k) => {
       const p = PALETTES[k];
@@ -801,19 +836,6 @@ export default function create(ctx) {
         style: { background: 'linear-gradient(135deg,' + p.bg[0] + ',' + p.bg[1] + ')', color: p.accent }, onclick: () => { sl.s.pal = k; changed(true); } }, 'Aa'));
     });
     const decoSeg = seg(Object.keys(DECOS).map((k) => [k, DECOS[k]]), sl.s.deco || 'none', (v) => { sl.s.deco = v; changed(false); });
-    const posSeg = seg(POS, sl.s.pos || 'center', (v) => { sl.s.pos = v; changed(false); });
-    const fontSeg = seg([['sans', 'Clear sans'], ['advent', 'Advent Sans'], ['serif', 'Serif']], sl.s.font || 'sans', (v) => { sl.s.font = v; changed(false); });
-    const boldBtn = h('button.chip', { type: 'button', 'aria-pressed': String(!!sl.s.textBold), title: 'Bold title', onclick: () => { sl.s.textBold = !sl.s.textBold; changed(false); } }, 'B');
-    const italicBtn = h('button.chip', { type: 'button', 'aria-pressed': String(!!sl.s.textItalic), title: 'Italic title', onclick: () => { sl.s.textItalic = !sl.s.textItalic; changed(false); } }, 'I');
-    const sizeOut = h('span.note', (sl.s.textSize || 100) + '%');
-    const sizeR = h('input', { type: 'range', min: 60, max: 160, step: 5, 'aria-label': 'Text size', style: { flex: '1', maxWidth: '180px' },
-      oninput: () => { sl.s.textSize = +sizeR.value; sizeOut.textContent = sl.s.textSize + '%'; changed(false); } });
-    sizeR.value = sl.s.textSize || 100;
-    const spaceOut = h('span.note', (sl.s.textSpacing || 1.24).toFixed(2));
-    const spaceR = h('input', { type: 'range', min: 1.0, max: 1.8, step: 0.04, 'aria-label': 'Line spacing', style: { flex: '1', maxWidth: '180px' },
-      oninput: () => { sl.s.textSpacing = +spaceR.value; spaceOut.textContent = sl.s.textSpacing.toFixed(2); changed(false); } });
-    spaceR.value = sl.s.textSpacing || 1.24;
-    // Background and text colours of your own (beyond the ready-made colour sets).
     const colBtn = (label, val, onPick, none) => { const b = h('button.btn.sm.se-cb', { type: 'button', onclick: () => colorPop(b, val, onPick, { none: !!none, noneLabel: 'Use the colour set' }) }, h('span.se-sw', { style: { background: val || 'transparent' } }), label); return b; };
     const bgKind = !sl.s.bgc ? 'set' : sl.s.bgc2 ? 'grad' : 'solid';
     const bgRow = h('div.col', { style: { gap: '8px' } },
@@ -823,32 +845,63 @@ export default function create(ctx) {
         changed(true);
       }),
       bgKind !== 'set' ? h('div.row.wrap',
-        colBtn(bgKind === 'grad' ? 'From' : 'Colour', sl.s.bgc, (c) => { if (c) sl.s.bgc = c; changed(true); }),
-        bgKind === 'grad' ? colBtn('To', sl.s.bgc2, (c) => { if (c) sl.s.bgc2 = c; changed(true); }) : null,
+        colBtn(bgKind === 'grad' ? 'From' : 'Colour', sl.s.bgc, (c2) => { if (c2) sl.s.bgc = c2; changed(true); }),
+        bgKind === 'grad' ? colBtn('To', sl.s.bgc2, (c2) => { if (c2) sl.s.bgc2 = c2; changed(true); }) : null,
         bgKind === 'grad' ? (() => { const r = h('input', { type: 'range', min: 0, max: 360, step: 5, 'aria-label': 'Gradient angle', style: { maxWidth: '140px' }, oninput: () => { sl.s.bga = +r.value; changed(false); } }); r.value = sl.s.bga == null ? 135 : sl.s.bga; return h('label.row', h('span.note', 'Angle'), r); })() : null) : null,
       sl.s.img ? h('p.note', 'A picture is chosen, so it shows instead of the background colour.') : null);
-    const txtCols = h('div.row.wrap',
-      colBtn('Text', sl.s.fgc || PALETTES[sl.s.pal || 'navy'].fg, (c) => { if (c) sl.s.fgc = c; else delete sl.s.fgc; changed(true); }, true),
-      colBtn('Accent (top & bottom lines)', sl.s.acc || PALETTES[sl.s.pal || 'navy'].accent, (c) => { if (c) sl.s.acc = c; else delete sl.s.acc; changed(true); }, true));
     const look = h('div.form.bn-form',
       h('label', 'Colours'), sw,
       h('label', 'Background'), bgRow,
       h('label', 'Pattern'), decoSeg,
       h('label', 'Picture'), pictureRow(),
       sl.s.img ? h('label', 'Picture settings') : null, sl.s.img ? pictureSettings() : null,
-      sl.s.img ? h('label', 'Darken picture') : null, sl.s.img ? dimRow() : null,
-      free ? null : h('label', 'Text colours'), free ? null : txtCols,
-      free ? null : h('label', 'Text position'), free ? null : posSeg,
-      free ? null : h('label', 'Font'), free ? null : fontSeg,
-      free ? null : h('label', 'Style'), free ? null : h('div.row', boldBtn, italicBtn),
-      free ? null : h('label', 'Text size'), free ? null : h('div.row', sizeR, sizeOut),
-      free ? null : h('label', 'Line spacing'), free ? null : h('div.row', spaceR, spaceOut));
-    editorScroll.append(h('h3.bn-h', 'Look'), look);
-    if (sl.s.img) decoSeg.querySelectorAll('button').forEach((b) => { b.disabled = true; b.title = 'Patterns are for plain colours (a picture is chosen)'; });
+      sl.s.img ? h('label', 'Darken picture') : null, sl.s.img ? dimRow() : null);
+    if (sl.s.img) decoSeg.querySelectorAll('button').forEach((b2) => { b2.disabled = true; b2.title = 'Patterns are for plain colours (a picture is chosen)'; });
+
+    // ---- Text style
+    let textBox;
+    if (free) textBox = h('p.note', 'The words are in text boxes: click one on the slide to change its font, size and colour.');
+    else {
+      const posSeg = seg(POS, sl.s.pos || 'center', (v) => { sl.s.pos = v; changed(false); });
+      const fontSeg = seg([['sans', 'Clear sans'], ['advent', 'Advent Sans'], ['serif', 'Serif']], sl.s.font || 'sans', (v) => { sl.s.font = v; changed(false); });
+      const boldBtn = h('button.chip', { type: 'button', 'aria-pressed': String(!!sl.s.textBold), title: 'Bold title', onclick: () => { sl.s.textBold = !sl.s.textBold; changed(true); } }, 'B');
+      const italicBtn = h('button.chip', { type: 'button', 'aria-pressed': String(!!sl.s.textItalic), title: 'Italic title', onclick: () => { sl.s.textItalic = !sl.s.textItalic; changed(true); } }, 'I');
+      const sizeOut = h('span.note', (sl.s.textSize || 100) + '%');
+      const sizeR = h('input', { type: 'range', min: 60, max: 160, step: 5, 'aria-label': 'Text size', style: { flex: '1', maxWidth: '180px' },
+        oninput: () => { sl.s.textSize = +sizeR.value; sizeOut.textContent = sl.s.textSize + '%'; changed(false); } });
+      sizeR.value = sl.s.textSize || 100;
+      const spaceOut = h('span.note', (sl.s.textSpacing || 1.24).toFixed(2));
+      const spaceR = h('input', { type: 'range', min: 1.0, max: 1.8, step: 0.04, 'aria-label': 'Line spacing', style: { flex: '1', maxWidth: '180px' },
+        oninput: () => { sl.s.textSpacing = +spaceR.value; spaceOut.textContent = sl.s.textSpacing.toFixed(2); changed(false); } });
+      spaceR.value = sl.s.textSpacing || 1.24;
+      const txtCols = h('div.row.wrap',
+        colBtn('Text', sl.s.fgc || PALETTES[sl.s.pal || 'navy'].fg, (c2) => { if (c2) sl.s.fgc = c2; else delete sl.s.fgc; changed(true); }, true),
+        colBtn('Accent (top & bottom lines)', sl.s.acc || PALETTES[sl.s.pal || 'navy'].accent, (c2) => { if (c2) sl.s.acc = c2; else delete sl.s.acc; changed(true); }, true));
+      textBox = h('div.form.bn-form',
+        h('label', 'Position'), posSeg,
+        h('label', 'Font'), fontSeg,
+        h('label', 'Style'), h('div.row', boldBtn, italicBtn),
+        h('label', 'Size'), h('div.row', sizeR, sizeOut),
+        h('label', 'Line spacing'), h('div.row', spaceR, spaceOut),
+        h('label', 'Colours'), txtCols);
+    }
+
+    editorScroll.append(
+      section('words', 'Kind and words', ...words),
+      section('look', 'Colours and picture', look),
+      section('text', 'Text style', textBox));
+    editorScroll.scrollTop = keepTop;
   }
 
-  function switchTemplate(k) {
+  /** Another kind for a saved one-slide banner: ask whether to change it or start a new banner. */
+  function switchTemplate(k, how) {
     if (k === sl.tpl) return;
+    if (!how && !cur.pages.length && !(sl.els || []).length && cur.id && lib.some((b) => b.id === cur.id)) {
+      modal({ title: 'Change to ' + TPL[k].name + '?', body: h('p', '“' + (cur.name || nameOf(cur)) + '” is saved. Start a new ' + TPL[k].name + ' banner, or change this banner into one?'),
+        onclose: () => renderEditor(),
+        actions: [{ label: 'Cancel' }, { label: 'Change this banner', onclick: () => switchTemplate(k, 'this') }, { label: 'New banner', primary: true, onclick: () => switchTemplate(k, 'new') }] });
+      return;
+    }
     const keep = { id: null, name: '', s: Object.assign({}, sl.s) };
     const nb = newBanner(k);
     // Keep a chosen picture; take the new kind's colours only when no picture is used.
@@ -856,7 +909,7 @@ export default function create(ctx) {
     ['bgc', 'bgc2', 'bga'].forEach((x) => { if (keep.s[x] != null) nb.s[x] = keep.s[x]; });
     nb.els = sl.els || [];
     editor.deselect();
-    if (!cur.pages.length && !nb.els.length) {
+    if (!cur.pages.length && !nb.els.length && how !== 'this') {
       // A one-slide banner: another kind starts a new banner, so a saved one is never overwritten by accident.
       setDoc(Object.assign(newBanner(k), { s: nb.s }), true); cur.id = null; cur.name = ''; savedSig = null; nameInp.value = '';
       hist.mark(false);
@@ -916,6 +969,7 @@ export default function create(ctx) {
         if (flags.length) { toast('Please describe a picture suitable for church.', 'err'); return; }
         const blob = await ai.aiImage(prompt);
         await usePicture(await storePicture(blob, 'AI picture ' + new Date().toLocaleDateString()));
+        closeModal();
         toast('AI picture added. It is saved on this device and works offline from now on.', 'ok', 4000);
       } catch (e) { toast(ai.friendlyAiError(e), 'err', 8000); }
       finally { aiBtn.disabled = false; aiBtn.lastChild.textContent = lbl; }
@@ -924,16 +978,19 @@ export default function create(ctx) {
     const fullBtn = h('button.btn.sm', { type: 'button', title: 'Make one finished banner picture with all your words and your own pictures built in', onclick: () => fullBannerDialog() },
       icon('sparkle'), h('span', 'Make full banner…'));
     const gallery = h('div.bn-gallery');
+    const aiOk = ai.hasKey() && ai.canImage();
+    const aiMenu = h('button.btn.sm', { type: 'button', title: aiOk ? 'Make a picture with online AI' : 'Online AI needs a key in Settings → AI', onclick: () => {
+      if (!aiOk) { toast('Online AI pictures need a key in Settings → AI (OpenAI, Gemini, Grok, Together or OpenRouter).', '', 6000); return; }
+      modal({ title: 'Make with AI', body: h('div.col.bn-aimakers', { style: { gap: '12px' } },
+        h('div.bn-maker', h('b', 'Background'), h('p.note', 'A picture with no words. Your banner words are drawn sharp on top by the app.'), h('div.row.wrap', aiDesc, aiBtn)),
+        h('div.bn-maker', h('b', 'Full banner'), h('p.note', 'One finished picture with all your words in it, built around pictures you attach. Check the spelling.'), h('div.row.wrap', fullBtn))),
+        actions: [{ label: 'Close' }] });
+    } }, icon('sparkle'), h('span', 'Make with AI'));
     row.append(h('div.row.wrap',
       h('button.btn.sm', { type: 'button', onclick: () => inp.click() }, icon('upload'), h('span', 'Choose picture…')),
+      aiMenu,
       sl.s.img ? h('button.btn.sm', { type: 'button', title: 'Remove the picture from this banner only', onclick: () => { sl.s.img = null; changed(true); } }, icon('x'), h('span', 'No picture')) : null,
       inp), gallery);
-    if (ai.hasKey() && ai.canImage()) {
-      row.append(h('div.card.bn-aimakers',
-        h('h4', icon('sparkle'), ' Two online AI picture makers'),
-        h('div.bn-maker', h('b', '1. Background'), h('p.note', 'A picture with no words. Your banner words are drawn sharp on top by the app.'), h('div.row.wrap', aiDesc, aiBtn)),
-        h('div.bn-maker', h('b', '2. Full banner'), h('p.note', 'One finished picture with all your words in it, built around pictures you attach. Check the spelling.'), h('div.row.wrap', fullBtn))));
-    } else row.append(h('p.note', 'Two online AI picture makers (background, and full banner with your words and pictures): add a key in Settings → AI (OpenAI, Gemini, Grok, Together or OpenRouter).'));
     fillGallery(gallery);
     return row;
   }

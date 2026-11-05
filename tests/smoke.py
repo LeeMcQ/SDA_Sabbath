@@ -747,6 +747,60 @@ def main():
                     c.close()
             t_setup_languages()
 
+            @check('Banners → Make: three sections, + Slide in the toolbar, Save asks the name, More menu')
+            def t_banner_make():
+                pg.evaluate("window.selah.showTab('ai')"); pg.wait_for_timeout(1200)
+                secs = pg.evaluate("[...document.querySelectorAll('.bn-make .bn-sec')].map(d => [d.querySelector('summary').textContent, d.open])")
+                assert secs == [['Kind and words', True], ['Colours and picture', False], ['Text style', False]], 'sections: %r' % secs
+                assert pg.locator('.bn-make .bn-side-seg, .bn-make .bn-insert').count() == 0, 'the old tabs or Insert section are still there'
+                kinds = pg.evaluate("[...document.querySelectorAll('select[aria-label=\"Kind of banner\"] option')].map(o => o.textContent)")
+                assert 'Title' in kinds and 'Closing blessing' not in kinds, 'kinds: %r' % kinds
+                pg.select_option('select[aria-label="Kind of banner"]', 'title'); pg.wait_for_timeout(600)
+                big = pg.evaluate("(() => { const t = document.querySelector('.bn-screen .fb-title'); return t ? [t.textContent, parseFloat(getComputedStyle(t).fontSize)] : null; })()")
+                assert big and big[0] == 'Divine Service', 'Title slide: %r' % big
+                pg.select_option('select[aria-label="Kind of banner"]', 'announce'); pg.wait_for_timeout(500)
+                assert pg.evaluate("document.querySelector('select[aria-label=\"Kind of banner\"]').value") == 'announce', 'kind not changed'
+                n0 = pg.locator('.bn-strip-it').count()
+                pg.locator('.se-toolbar button[aria-label="New slide"]').click(); pg.wait_for_timeout(200)
+                pg.locator('.menu button', has_text='Blank slide').click(); pg.wait_for_timeout(600)
+                assert pg.locator('.bn-strip-it').count() == n0 + 1, 'the toolbar + Slide did not add a slide'
+                assert 'Not saved yet' in pg.inner_text('.bn-save-info'), pg.inner_text('.bn-save-info')
+                pg.locator('.bn-actions button', has_text='Save').click(); pg.wait_for_timeout(300)
+                assert pg.locator('.modal', has_text='Save banner').count() == 1, 'Save did not ask for a name'
+                pg.fill('.modal input[aria-label="Banner name"]', 'Test notice')
+                pg.locator('.modal .modal-f button', has_text='Save').click(); pg.wait_for_timeout(600)
+                assert 'Test notice' in pg.inner_text('.bn-save-info'), 'saved name not shown: %r' % pg.inner_text('.bn-save-info')
+                pg.locator('.bn-actions button', has_text='More').click(); pg.wait_for_timeout(200)
+                items = pg.evaluate("[...document.querySelectorAll('.menu button')].map(b => b.textContent)")
+                for want in ['Add to plan', 'Add to loop', 'Background music', 'Rename or move to group', 'Duplicate this banner', 'New banner']:
+                    assert any(want in x for x in items), 'More menu lacks %r: %r' % (want, items)
+                pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
+                pg.evaluate("document.querySelector('.menu') && document.querySelector('.menu').remove()")
+            t_banner_make()
+
+            @check('Banners → Make on a 320 px phone: toolbar fits, actions on one row, + Slide by the slides')
+            def t_banner_make_phone():
+                c = b.new_context(viewport={'width': 320, 'height': 700}, service_workers='block', is_mobile=True, has_touch=True)
+                q = c.new_page()
+                try:
+                    q.goto(base + 'index.html'); q.wait_for_timeout(1200)
+                    q.evaluate("window.selah.settings.set('app.setupDone', true)")
+                    for _ in range(3):
+                        if q.locator('.welcome').count(): q.keyboard.press('Escape'); q.wait_for_timeout(300)
+                    q.evaluate("window.selah.showTab('ai')"); q.wait_for_timeout(1500)
+                    tb = q.evaluate("(() => { const t = document.querySelector('.bn-make .se-toolbar'); return [t.scrollWidth, t.clientWidth]; })()")
+                    assert tb[0] <= tb[1] + 1, 'toolbar wider than the phone: %r' % tb
+                    tops = q.evaluate("[...document.querySelectorAll('.bn-actions > .btn')].map(x => Math.round(x.getBoundingClientRect().top))")
+                    assert len(set(tops)) == 1, 'action buttons on several rows: %r' % tops
+                    assert q.locator('.bn-strip .bn-strip-add').is_visible(), '+ Slide is not beside the slides'
+                    n0 = q.locator('.bn-strip-it').count()
+                    q.locator('.bn-strip .bn-strip-add').click(); q.wait_for_timeout(200)
+                    q.locator('.menu button', has_text='Blank slide').click(); q.wait_for_timeout(500)
+                    assert q.locator('.bn-strip-it').count() == n0 + 1, '+ Slide did not add a slide on the phone'
+                finally:
+                    c.close()
+            t_banner_make_phone()
+
             @check('remote buttons (Stream Deck) control the app')
             def t_remote():
                 L = lambda: pg.evaluate("import('./js/core/live.js').then(m => ({ live: m.live.cue && m.live.cue.title, i: m.live.index, staged: m.live.staged && m.live.staged.title, blank: m.live.blank }))")
