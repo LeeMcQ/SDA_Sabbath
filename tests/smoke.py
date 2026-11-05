@@ -767,17 +767,34 @@ def main():
                     ctx.unroute('https://raw.githubusercontent.com/**', raw)
             t_add_hymnbook()
 
-            @check('Add a hymnbook lists Advent Lofliedere: choose your licensed words file')
-            def t_lofliedere_row():
-                pg.evaluate("window.selah.showTab('hymns').then((t) => t.whenReady && t.whenReady())"); pg.wait_for_timeout(400)
-                pg.evaluate("import('./js/tabs/hymn-import.js').then(m => m.addHymnbookDialog())"); pg.wait_for_timeout(400)
-                pg.locator('.modal input[type=search]').fill('lofliedere'); pg.wait_for_timeout(300)
-                assert pg.locator('.modal .lof-row').count() == 1, 'Advent Lofliedere is not in the Add a hymnbook list'
-                pg.locator('.modal .lof-row button').click(); pg.wait_for_timeout(900)
-                wait_text(pg, 'Import licensed words')
-                assert pg.evaluate("document.querySelector('select[aria-label=Hymnbook]').value") == 'afrikaans-sda', 'the Lofliedere was not opened'
-                pg.keyboard.press('Escape'); pg.wait_for_timeout(300)
-            t_lofliedere_row()
+            @check('Add a hymnbook: Advent Lofliedere words fill the built-in book, with the SDA Hymnal tunes')
+            def t_lofliedere_words():
+                body = json.dumps({'hymns': [{'n': 11, 't': 'Kom, O Almagtige Heer', 'v': [['Kom, o almagtige Heer', 'Toets-woorde van die toets']]}]})
+                def raw(route):
+                    if 'downloads/lofliedere-words.json' in route.request.url:
+                        return route.fulfill(status=200, body=body, headers={'Content-Type': 'text/plain; charset=utf-8', 'Access-Control-Allow-Origin': '*'})
+                    route.fulfill(status=404, body='', headers={'Access-Control-Allow-Origin': '*'})
+                ctx.route('https://raw.githubusercontent.com/**', raw)
+                try:
+                    pg.evaluate("window.selah.showTab('hymns').then((t) => t.whenReady && t.whenReady())"); pg.wait_for_timeout(400)
+                    pg.evaluate("import('./js/tabs/hymn-import.js').then(m => m.addHymnbookDialog())"); pg.wait_for_timeout(400)
+                    pg.locator('.modal input[type=search]').fill('lofliedere'); pg.wait_for_timeout(300)
+                    row = pg.locator('.modal .row', has_text='Advent Lofliedere (Afrikaans, with words)')
+                    assert row.count() == 1, 'Advent Lofliedere is not in the Add a hymnbook list'
+                    row.locator('button').click()
+                    wait_text(pg, 'filled in for 1 hymn')
+                    pg.wait_for_timeout(500)
+                    opts = pg.evaluate("[...document.querySelectorAll('select[aria-label=Hymnbook] option')].map(o => o.textContent)")
+                    assert sum('Lofliedere' in o for o in opts) == 1, 'the Lofliedere is listed twice: %r' % opts
+                    pg.evaluate("window.selah.tab('hymns').then(t => t.open({ n: 11, book: 'afrikaans-sda' }))"); pg.wait_for_timeout(900)
+                    wait_text(pg, 'Toets-woorde van die toets')
+                    wait_text(pg, 'Play music')
+                    pg.evaluate("import('./js/tabs/hymn-import.js').then(m => m.removeHymnbook('web-own-lofliedere'))"); pg.wait_for_timeout(600)
+                    pg.evaluate("window.selah.tab('hymns').then(t => t.open({ n: 11, book: 'afrikaans-sda' }))"); pg.wait_for_timeout(800)
+                    assert pg.locator('.licence-panel:visible').count() == 1, 'the words stayed after removing the download'
+                finally:
+                    ctx.unroute('https://raw.githubusercontent.com/**', raw)
+            t_lofliedere_words()
 
             @check('first-start setup: install first, church languages, their Bible and hymns downloaded')
             def t_setup_languages():

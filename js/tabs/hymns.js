@@ -181,7 +181,7 @@ export default function create(ctx) {
     try {
       const saved = (await db.all('hymnbooks')) || [];
       saved.forEach((sb) => {
-        if (!sb || typeof sb !== 'object' || !sb.id) return;
+        if (!sb || typeof sb !== 'object' || !sb.id || sb.hidden) return;
         if (sb.overlayOf) {
           const base = books.find((b) => b.id === sb.overlayOf);
           if (base) cleanHymns(sb.hymns).forEach((hy) => { const i = base.hymns.findIndex((x) => x.n === hy.n); if (i >= 0) base.hymns[i] = hy; else base.hymns.push(hy); });
