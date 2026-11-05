@@ -27,11 +27,14 @@ export function needsSetup() { return !settings.v.app.setupDone || (cloud.requir
 /** Show the setup. onClose is called when it is finished or skipped. */
 export function openWelcome({ onClose, only } = {}) {
   const steps = [];
+  // Installing comes first of all (before signing in): the app then has its own icon and works offline, and the
+  // rest of the setup can carry on in the installed app.
+  if (only !== 'account' && !installed()) steps.push('install');
   if (cloud.enabled() && (!cloud.user || only === 'account')) steps.push('account');
   // Phones and tablets (touch only) do not drive projector windows, and the statistics step only makes sense
   // when this copy has the cloud switched on.
   const touchOnly = matchMedia('(pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches;
-  if (only !== 'account') steps.push(...(installed() ? [] : ['install']), 'church', ...(touchOnly ? [] : ['screens']), 'sound', 'languages', 'ready', ...(cloud.enabled() ? ['stats'] : []), 'done');
+  if (only !== 'account') steps.push('church', ...(touchOnly ? [] : ['screens']), 'sound', 'languages', 'ready', ...(cloud.enabled() ? ['stats'] : []), 'done');
   let i = 0;
   const returnTo = document.activeElement;
   const live = h('div.sr', { 'aria-live': 'polite' });
@@ -69,7 +72,7 @@ export function openWelcome({ onClose, only } = {}) {
   const stopTest = () => import('../core/hymnmusic.js').then((m) => { if (m.music.state && m.music.state.title === 'Sound test') m.music.stop(); }).catch(() => {});
   const close = () => {
     stopTest();
-    if (mustSignIn()) { i = 0; paint(); toast('Please sign in first. (Without internet you can carry on and sign in later.)', 'err', 5000); return; }
+    if (mustSignIn()) { i = Math.max(0, steps.indexOf('account')); paint(); toast('Please sign in first. (Without internet you can carry on and sign in later.)', 'err', 5000); return; }
     if (only !== 'account') settings.set('app.setupDone', true);
     wrap.remove();
     behind.forEach((el) => { el.inert = false; });

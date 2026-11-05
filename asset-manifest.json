@@ -1,6 +1,6 @@
 {
-"version": "bec278480c32",
-"bytes": 20306421,
+"version": "49ca5ab5776a",
+"bytes": 20306656,
 "files": [
 "index.html",
 "display.html",
@@ -321,7 +321,7 @@
 "css/stage.css": "5d631edc7db85bc5",
 "css/stagescreen.css": "120efa80055cf368",
 "js/admin-main.js": "b6747fc81672a505",
-"js/app.js": "089d929717195af9",
+"js/app.js": "9a646b4d2cd5330b",
 "js/backupnag.js": "4d1f8f4263989b62",
 "js/boot-guard.js": "275740dc481c4b88",
 "js/clickerui.js": "ceb58c892b9c95ba",
@@ -426,7 +426,7 @@
 "js/tabs/video.js": "da0287637927be0b",
 "js/tabs/web.js": "7928c63786939973",
 "js/tabs/webpc.js": "ae80b00af9305fe7",
-"js/tabs/welcome.js": "660b839534598d84",
+"js/tabs/welcome.js": "da1bb0532049c88e",
 "vendor/fflate-unzip.min.js": "6e460045bc2342dd",
 "vendor/qrcode.min.js": "51935dfba7e86cf4",
 "vendor/hls/hls.light.min.js": "35ef1cf70c95aea4",

@@ -750,15 +750,15 @@ def main():
                 try:
                     q.goto(base + 'index.html'); q.wait_for_selector('.welcome', timeout=8000); q.wait_for_timeout(600)
                     title = lambda: q.inner_text('#welcome-title')
-                    if q.locator('.welcome-nav button', has_text='Not now').count() and 'Install' not in title():   # the sign-in step comes first when the cloud is on
-                        q.locator('.welcome-nav button', has_text='Not now').click(); q.wait_for_timeout(400)
-                    assert 'Install' in title(), 'install is not the first step: %r' % title()
+                    assert 'Install' in title(), 'install is not the first page: %r' % title()   # before signing in
                     # The first page has one Install button; without the browser's install window it shows the steps.
                     ib = q.locator('.welcome-card button', has_text='Install SDA Sabbath')
                     assert ib.count() == 1, 'no Install button on the first page'
                     ib.click(); q.wait_for_timeout(200)
                     assert 'install' in q.inner_text('.welcome-card').lower() and 'address bar' in q.inner_text('.welcome-card'), 'Install button showed no steps'
                     q.click('.welcome-nav button.primary'); q.wait_for_timeout(400)
+                    if 'Welcome' in title():   # the sign-in step follows when the cloud is on
+                        q.locator('.welcome-nav button', has_text='Not now').click(); q.wait_for_timeout(400)
                     assert 'Your church' in title(), title()
                     # Languages: one A-to-Z list of names, no headings, Afrikaans included.
                     lo = q.evaluate("""() => { const s = document.querySelector('select[aria-label="Second language"]');
