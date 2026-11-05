@@ -46,7 +46,7 @@ If any check fails, the deploy stops and the website keeps the last version that
   list before it is stored. A login page (or any wrong or stale file) is never stored, and one stored by an older
   version is found and replaced by the self-check.
 - **Wi-Fi with no internet ("lie-fi"):** no request waits forever. Downloads give up when they do not start
-  within 15 s or stall for 20 s; pages fall back to the stored copy after 4 s. The folder address (…/SDA_Sabbath/)
+  within 15 s or stall for 20 s; pages fall back to the stored copy after 4 s. The start address (ssdesk.online/)
   opens straight from the stored copy.
 - **First install:** the app itself (pages, scripts, styles, fonts, icons) is downloaded first and must be
   complete before it takes over; Bibles, hymns and music may follow and are fetched by the self-check later.

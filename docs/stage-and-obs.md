@@ -49,7 +49,7 @@ show/hide next, plan, notes and picture, 12/24-hour clock, and **mirror** for te
 |---|---|
 | **Another monitor on this PC** | Tools → Stage → **Open stage screen** (or the **Stage** button in the top bar). It opens full screen on a screen that is neither this one nor the projector; **Choose screen…** picks one. |
 | **Cast** | **Cast stage screen** — Chromecast, Google TV, Android TV (a second cast session, separate from the projector). Miracast TVs: connect them in Windows (Win + K → Extend) and use *Open stage screen*. |
-| **Phones, tablets, laptops (internet)** | Turn on **Phones & laptops**. People scan the **QR code**, or open the short address **leemcq.github.io/SDA_Sabbath/stage** and type the **room code** (e.g. `K7F Q2M`). No app, no account. |
+| **Phones, tablets, laptops (internet)** | Turn on **Phones & laptops**. People scan the **QR code**, or open the short address **ssdesk.online/stage** and type the **room code** (e.g. `K7F Q2M`). No app, no account. |
 | **Church network without internet** | With the SDA Sabbath companion running, screens on the church Wi-Fi open `http://<pc>:7777/stage.html?via=lan`. |
 
 How the phone link works: the slides go **directly from the media-desk PC to each phone** over an encrypted WebRTC

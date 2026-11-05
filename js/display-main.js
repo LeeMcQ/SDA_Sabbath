@@ -37,7 +37,7 @@ window.SelahDisplay = disp; // direct API used by the opener window (streams, sn
 
 // 1) Opener / a control window of this app that messages us
 // Only windows of this app (same folder on the web address) may drive or claim the display. Every app on
-// leemcq.github.io shares one origin, so the origin check alone is not enough; a same-origin window's address
+// One origin can serve several apps (the old GitHub address did), so the origin check alone is not enough; a same-origin window's address
 // can be read, so its folder is checked as well.
 const APP_PATH = new URL('./', location.href).pathname;
 const fromThisApp = (w) => { try { return !!w && (w === window.opener || String(w.location.pathname).startsWith(APP_PATH)); } catch (e) { return false; } };

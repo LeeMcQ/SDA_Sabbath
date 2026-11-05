@@ -20,7 +20,7 @@ TABS = ['bible', 'hymns', 'ai', 'slides', 'video', 'web', 'plan', 'tools', 'sett
 # Requests that are allowed to fail on a plain web server (the companion's /api is only there when it runs).
 # The published website is not what is tested: off github.io the app asks it for shared choruses and the
 # companion downloads, and before the first deploy of a feature those files are not online yet.
-OK_404 = ('/api/', 'favicon', '://leemcq.github.io/', '://ssdesk.online/')
+OK_404 = ('/api/', 'favicon', '://ssdesk.online/')
 
 results = []
 
@@ -814,7 +814,7 @@ def main():
                 # Shared hymns from other churches, by language (the list on GitHub, mocked here).
                 doc = json.dumps({'rev': 1, 'updated': '2026-11-05', 'songs': [{'n': 501, 'lang': 'af', 't': 'Ek Sal Die Heer Loof', 'v': [['Ek sal die Heer loof', 'al my dae']], 'added': '2026-11-05'}]})
                 route = lambda r: r.fulfill(status=200, body=doc, headers={'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'})
-                ctx.route('https://leemcq.github.io/**/shared.json*', route)
+                ctx.route('https://ssdesk.online/**/shared.json*', route)
                 try:
                     pg.evaluate("window.selah.settings.set('hymns.shared', ['en', 'af'])")
                     r = pg.evaluate("import('./js/core/community.js').then(m => m.syncCommunity({ force: true }))")
@@ -842,7 +842,7 @@ def main():
                     assert 'Afrikaans (2)' in opts, 'the new song is not in Afrikaans: %r' % opts
                     assert pg.locator('button', has_text='Share with all churches').first.is_visible(), 'cannot share the new song'
                 finally:
-                    ctx.unroute('https://leemcq.github.io/**/shared.json*', route)
+                    ctx.unroute('https://ssdesk.online/**/shared.json*', route)
                     pg.evaluate("window.selah.settings.set('hymns.shared', [])")
             t_shared_hymns()
 
@@ -892,6 +892,24 @@ def main():
                 finally:
                     c.close()
             t_move_address()
+
+            @check('every page names ssdesk.online, never the old address')
+            def t_new_address():
+                q = ctx.new_page()
+                try:
+                    for u in PAGES:
+                        q.goto(base + u); q.wait_for_timeout(400)
+                        html_ = q.content()
+                        assert 'leemcq.github.io' not in html_, u + ' still names the old address'
+                        can = q.evaluate("(document.querySelector('link[rel=canonical]') || {}).href || ''")
+                        assert not can or can.startswith('https://ssdesk.online/'), '%s canonical: %r' % (u, can)
+                    m = q.evaluate("import('./js/core/site.js').then(m => [m.LIVE, m.PUBLIC_SITE])")
+                    assert m == [True, 'https://ssdesk.online/'], 'site: %r' % m
+                    j = q.evaluate("import('./js/core/stagehub.js').then(m => m.PUBLIC_BASE)")
+                    assert j == 'https://ssdesk.online/', 'stage QR address: %r' % j
+                finally:
+                    q.close()
+            t_new_address()
 
             @check('remote buttons (Stream Deck) control the app')
             def t_remote():

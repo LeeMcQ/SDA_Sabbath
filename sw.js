@@ -1,7 +1,7 @@
 // SDA Sabbath service worker: installs the whole app (Bibles, hymns, fonts, pdf.js) in one go
 // so it runs with no internet. VERSION is rewritten by tools/build.py on every build.
-const VERSION = 'c457dd40e510';
-// Caches are named per address ('selah-/SDA_Sabbath/|<version>'), so two apps on the same site
+const VERSION = '80876e2af255';
+// Caches are named per address ('selah-/|<version>' at ssdesk.online), so two apps on the same site
 // (for example this one and an older copy under another folder) never delete each other's offline files.
 const SCOPE = new URL(self.registration.scope).pathname;
 const PREFIX = 'selah-' + SCOPE + '|';

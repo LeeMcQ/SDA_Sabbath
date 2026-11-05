@@ -35,8 +35,8 @@ backup big; a backup must stay under 4 GB.
      100; add the churches' emails). Press **Publish app** to let everyone in: `drive.file` needs no Google
      review, but Google may ask you to verify the website domain (Search Console) for the app name and logo.
 4. **Clients → Create client**, type **Web application**, name *SDA Sabbath web*:
-   - Authorised JavaScript origins: `https://leemcq.github.io` and `http://localhost:7777`
-   - Authorised redirect URIs: `https://leemcq.github.io/SDA_Sabbath/oauth.html` and
+   - Authorised JavaScript origins: `https://ssdesk.online` and `http://localhost:7777`
+   - Authorised redirect URIs: `https://ssdesk.online/oauth.html` and
      `http://localhost:7777/oauth.html`
    - Press **Create** and copy the **Client ID** (it ends in `.apps.googleusercontent.com`). It is not a secret.
 5. Paste it into `js/core/cloud-config.js`:

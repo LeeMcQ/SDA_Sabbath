@@ -1,6 +1,6 @@
 // Keeps this app's saved data apart from any other app on the same website.
 //
-// leemcq.github.io serves several apps from one origin (SDA_Sabbath, Church_Service, …). A browser gives one
+// The old GitHub address served several apps from one origin (SDA_Sabbath, Church_Service, …). A browser gives one
 // origin a single localStorage, sessionStorage, IndexedDB and Cache Storage, so names decide what is shared.
 //
 // SDA_Sabbath is the app that first used the 'selah…' names, so what it saved before stays exactly where it is
@@ -12,7 +12,7 @@
 // it never picks up what another app saved under the old shared names (a Google or cloud sign-in, for example).
 import { APP_SCOPE } from './util.js';
 
-export const NS = 'ss' + APP_SCOPE;                 // 'ss/SDA_Sabbath/'
+export const NS = 'ss' + APP_SCOPE;                 // 'ss/' at ssdesk.online
 
 /** This app's names from before the separation (short name → stored name): kept so existing data carries on. */
 const KEPT = {
