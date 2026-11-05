@@ -34,6 +34,23 @@ REFERRAL = {'church': 'another church', 'conference': 'their conference or union
             'facebook': 'Facebook / social media', 'search': 'an internet search', 'event': 'a camp meeting or event', 'other': 'something else', 'not said': 'not said'}
 
 
+SHARED = os.path.join(ROOT, 'data', 'hymns', 'community', 'shared.json')
+LANG_NAMES = {'en': 'English', 'af': 'Afrikaans', 'xh': 'isiXhosa', 'zu': 'isiZulu', 'st': 'Sesotho', 'tn': 'Setswana', 'nso': 'Sepedi',
+              'ts': 'Xitsonga', 've': 'Tshivenda', 'ss': 'siSwati', 'nd': 'isiNdebele', 'sn': 'Shona', 'ny': 'Chichewa', 'sw': 'Kiswahili',
+              'fr': 'French', 'pt': 'Portuguese', 'es': 'Spanish', 'ru': 'Russian'}
+
+
+def new_shared(first, last):
+    """Shared Hymns approved in the month (from the repository's data/hymns/community/shared.json), oldest first."""
+    try:
+        songs = json.load(open(SHARED, encoding='utf-8')).get('songs', [])
+    except Exception:
+        return []
+    out = [x for x in songs if first <= str(x.get('added') or '') <= last]
+    out.sort(key=lambda x: (x.get('added') or '', x.get('lang') or '', x.get('n') or 0))
+    return [{'lang': x.get('lang') or 'en', 'n': x.get('n'), 't': x.get('t') or '', 'by': x.get('by') or '', 'added': x.get('added') or ''} for x in out]
+
+
 def cloud_url():
     src = open(os.path.join(ROOT, 'js', 'core', 'cloud-config.js'), encoding='utf-8').read()
     m = re.search(r"url:\s*'([^']*)'", src)
@@ -98,6 +115,15 @@ def highlights(r):
     if n(c['services']):
         off, offp = pct(n(c['offline_services']), n(c['services'])), pct(n(p['offline_services']), n(p['services']))
         add(90, '%s were run, %d %% of them without internet (%d %% the month before).' % (plural(n(c['services']), 'service'), off, offp))
+    # New Shared Hymns (what churches added to the collection this month)
+    sh = r.get('shared_new') or []
+    if sh:
+        by = {}
+        for x in sh:
+            by.setdefault(x['lang'], []).append(x)
+        parts = ['%s %d (%s)' % (LANG_NAMES.get(lg, lg), len(xs), ', '.join('%s “%s”' % (x['n'], x['t']) for x in xs[:4]) + (' …' if len(xs) > 4 else '')) for lg, xs in by.items()]
+        txt = 'New Shared Hymns: %s — %s.' % (plural(len(sh), 'song'), '; '.join(parts))
+        add(98, txt, '<b>%s</b>' % html.escape(txt))
     # New and quiet churches
     new = r.get('new_churches') or []
     if new:
@@ -190,23 +216,31 @@ def render(r):
                      % (esc(s.get('story') or ''), esc(s.get('church') or 'A church'), ', ' + esc(s['town']) if s.get('town') else '',
                         ' · may be quoted' if s.get('may_quote') else ' · private') for s in stories[:6])
     langs = ', '.join('%s %d' % (LANG.get(k, k), v) for k, v in sorted((r.get('languages') or {}).items(), key=lambda x: -x[1]))
+    sh = r.get('shared_new') or []
+    shared_rows = ''.join('<tr><td style="padding:4px 8px">%s</td><td style="padding:4px 8px">%s</td><td style="padding:4px 8px">%s</td><td style="padding:4px 8px">%s</td><td style="padding:4px 8px;color:#5a6475">%s</td></tr>'
+                          % (esc(LANG_NAMES.get(x['lang'], x['lang'])), esc(str(x['n'])), esc(x['t']), esc(x['by'] or '—'), esc(x['added'])) for x in sh)
+    shared_html = ('<h2 style="font-size:16px;margin:16px 0 6px">🎵 New Shared Hymns this month (%d)</h2><table style="border-collapse:collapse;font-size:14px;background:#fffbe9;border-radius:8px">'
+                   '<tr style="color:#5a6475"><th style="text-align:left;padding:4px 8px">Language</th><th style="text-align:left;padding:4px 8px">No.</th><th style="text-align:left;padding:4px 8px">Song</th>'
+                   '<th style="text-align:left;padding:4px 8px">Shared by</th><th style="text-align:left;padding:4px 8px">Added</th></tr>%s</table>' % (len(sh), shared_rows)) if sh else ''
     body = (
         '<div style="font-family:Segoe UI,Roboto,Arial,sans-serif;max-width:760px;margin:auto;color:#1d2330;background:#f6f5f1;padding:20px">'
         '<h1 style="font-size:22px;margin:0 0 4px">%s in %s</h1><p style="color:#5a6475;margin:0 0 14px">Compared with %s.</p>'
         '<h2 style="font-size:16px;margin:16px 0 6px">The main changes</h2><ul style="padding-left:20px;margin:0">%s</ul>'
         '<table role="presentation" style="border-collapse:separate;border-spacing:6px;margin:14px -6px;width:100%%"><tr>%s</tr></table>'
-        '%s%s%s'
+        '%s%s%s%s'
         '<p style="margin-top:20px"><a href="%sadmin.html" style="background:#1f4e79;color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none">Open the dashboard</a></p>'
         '<p style="color:#5a6475;font-size:12px">Counts from churches that are signed in with statistics switched on. A church counts once, however many devices it uses. '
         'A service is a day with at least 15 minutes presenting; "without internet" when at least half of it was presented offline.</p></div>'
     ) % (esc(APP), esc(month), esc(dt.date.fromisoformat(r['period']['prev_from']).strftime('%B %Y')),
-         ''.join('<li style="margin:5px 0">%s</li>' % h for _, h, _ in hl[:10]), tile_html,
+         ''.join('<li style="margin:5px 0">%s</li>' % h for _, h, _ in hl[:10]), tile_html, shared_html,
          ('<h2 style="font-size:16px;margin:16px 0 6px">Most-sung hymns</h2><table style="border-collapse:collapse;font-size:14px">'
           '<tr style="color:#5a6475"><th style="text-align:left;padding:4px 8px">No.</th><th style="text-align:left;padding:4px 8px">Hymn</th><th style="text-align:right;padding:4px 8px">Churches</th></tr>%s</table>' % hymns) if hymns else '',
          ('<p style="margin-top:14px"><b>Service languages:</b> %s</p>' % esc(langs)) if langs else '',
          ('<h2 style="font-size:16px;margin:16px 0 6px">In their words</h2>%s' % quotes) if quotes else '', SITE)
-    text = '%s in %s\n\nThe main changes\n%s\n\nDashboard: %sadmin.html\n' % (APP, month, '\n'.join('- ' + t for _, _, t in hl[:10]), SITE)
-    subject = '%s – %s: %s, %s' % (APP, month, plural(n(c['churches']), 'church', 'churches'), plural(n(c['services']), 'service'))
+    text = '%s in %s\n\nThe main changes\n%s\n%s\nDashboard: %sadmin.html\n' % (APP, month, '\n'.join('- ' + t for _, _, t in hl[:10]),
+        ('\nNew Shared Hymns this month\n' + '\n'.join('- %s %s “%s”%s (%s)' % (LANG_NAMES.get(x['lang'], x['lang']), x['n'], x['t'], ' – ' + x['by'] if x['by'] else '', x['added']) for x in sh) + '\n') if sh else '', SITE)
+    subject = '%s – %s: %s, %s%s' % (APP, month, plural(n(c['churches']), 'church', 'churches'), plural(n(c['services']), 'service'),
+                                   ', %s' % plural(len(sh), 'new shared hymn') if sh else '')
     return subject, body, text
 
 
@@ -261,6 +295,8 @@ def main():
             return
         first, last = month_range(month)
         r = fetch(first, last, os.environ.get('REPORT_APP') or None)
+    if 'shared_new' not in r:
+        r['shared_new'] = new_shared(r['period']['from'], r['period']['to'])
     subject, body, text = render(r)
     open(os.path.join(ROOT, 'report.html'), 'w', encoding='utf-8').write(body)
     open(os.path.join(ROOT, 'report.txt'), 'w', encoding='utf-8').write(subject + '\n\n' + text)

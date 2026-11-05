@@ -1329,7 +1329,7 @@ a.btn { text-decoration: none; }
 @media (pointer: coarse) { input[type=range] { min-height: 28px; } }
 
 /* Install SDA Sabbath card (js/core/installer.js) */
-.inst-card { position: fixed; z-index: 95; right: 16px; bottom: calc(var(--bar-h) * var(--bar-on, 0) + 16px); width: min(420px, calc(100vw - 32px)); background: var(--raised); color: var(--text);
+.inst-card { position: fixed; z-index: 75; /* under dialogs (80), so it never covers their buttons */ right: 16px; bottom: calc(var(--bar-h) * var(--bar-on, 0) + 16px); width: min(420px, calc(100vw - 32px)); background: var(--raised); color: var(--text);
   border: 1px solid var(--line); border-left: 4px solid var(--brass); border-radius: var(--r-lg); padding: 14px 16px; box-shadow: 0 12px 40px rgb(0 0 0 / .45); display: flex; flex-direction: column; gap: 8px; }
 .inst-card .inst-h { display: flex; gap: 12px; align-items: center; }
 .inst-card .inst-h img { border-radius: 10px; flex: none; }

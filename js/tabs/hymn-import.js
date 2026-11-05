@@ -9,6 +9,22 @@ import { parseHymnFile } from '../core/hymnparse.js';
 import { HYMNALS, SOURCES, NOTES, downloadHymnal, sameTitle } from '../core/hymnsources.js';
 import { matches, fuzzyMatch, rank } from '../core/langsearch.js';
 
+/** The languages whose "Shared Hymns" book this church has: chosen in the first-start setup (its service
+ *  languages) and with Hymns → More → Shared Hymns in another language. */
+export function sharedLangs(settings) {
+  const ok = (x) => typeof x === 'string' && /^[a-z]{2,3}$/.test(x);
+  const s = settings.v.hymns && settings.v.hymns.shared;
+  if (Array.isArray(s) && s.filter(ok).length) return [...new Set(s.filter(ok))];
+  const L = (settings.v.church && Array.isArray(settings.v.church.languages) ? settings.v.church.languages : []).filter(ok);
+  const out = L.length ? L.slice() : ['en'];
+  if (settings.v.bible && settings.v.bible.primary === 'afr53' && !out.includes('af')) out.push('af');
+  return [...new Set(out)];
+}
+export function setSharedLangs(settings, list) {
+  settings.set('hymns.shared', [...new Set(list.filter((x) => /^[a-z]{2,3}$/.test(x)))]);
+  announce(null);
+}
+
 /** Fired on window when hymnbooks were added or removed: detail.select is the hymnbook to open, if any. */
 export const HYMNBOOKS_CHANGED = 'selah-hymnbooks';
 const announce = (select) => window.dispatchEvent(new CustomEvent(HYMNBOOKS_CHANGED, { detail: { select: select || null } }));

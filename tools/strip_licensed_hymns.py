@@ -16,11 +16,12 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BOOKS = {
     'sda-online.json': set(),        # SDA Hymnal 1985: compilation and edited texts (c) Review and Herald / GC
     'afrikaans.json': set(),         # Advent Lofliedere: translations (c) the church / translators
-    'choruses.json': {8, 14, 35, 43},  # Give Me Oil in My Lamp, Kum Ba Yah, God Is So Good, What a Mighty God We Serve (traditional)
-    'malmesbury.json': {6, 19, 22, 24, 26},  # Love Lifted Me (1912), Just As I Am (1835), His Eye Is on the Sparrow (1905),
-                                             # When We All Get to Heaven (1898), Amazing Grace (1779)
+    # Shared Hymns – English: choruses 1-45 and Malmesbury Praise 101-148 (MP 1-48, merged 5 Nov 2026).
+    'choruses.json': {8, 14, 35, 43,     # Give Me Oil in My Lamp, Kum Ba Yah, God Is So Good, What a Mighty God We Serve (traditional)
+                      106, 119, 122, 124, 126},  # Love Lifted Me (1912), Just As I Am (1835), His Eye Is on the Sparrow (1905),
+                                                 # When We All Get to Heaven (1898), Amazing Grace (1779)
 }
-KEEP_FIELDS = ('n', 't', 'a', 'ccli')
+KEEP_FIELDS = ('n', 't', 'a', 'ccli', 'from')
 
 for name, keep in BOOKS.items():
     path = os.path.join(ROOT, 'data', 'hymns', name)

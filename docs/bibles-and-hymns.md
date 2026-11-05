@@ -73,7 +73,7 @@ Shipped and added hymnbooks are separate: shipping one with the app is still don
 ### Built-in hymnbooks
 
 Built in (listed in `data/hymns/index.json`): the 1941 Church Hymnal (703, with words), and by **number and title
-only** the SDA Hymnal 1985 (698), Advent Lofliedere (Afrikaans, 481), Praise Choruses and Malmesbury Praise — their
+only** the SDA Hymnal 1985 (698), Advent Lofliedere (Afrikaans, 481) and the songs of **Shared Hymns – English** — their
 words are copyrighted, so only the public-domain songs in them include words. A church that is licensed (CCLI, or
 the publisher's permission) adds the words on its own devices:
 
@@ -99,24 +99,41 @@ Your own hymnbook files go in with
 
 To ship a hymnbook with the app, put the JSON in `data/hymns/` and list it in `data/hymns/index.json`.
 
-### Shared praise choruses (every church gets new songs)
+### Shared Hymns (every language grows, every church gets new songs)
 
-Choruses that churches share and the maintainer approves join **Praise Choruses** in every copy of SDA Sabbath,
-numbered **CHR 501** and up (marked *Shared*), with their MIDI music when there is one. The app checks for new ones a
-few seconds after it starts (at most every 6 hours, and whenever the internet comes back); **Hymns → ⋯ → Check for new
-shared choruses** checks at once. They work offline afterwards.
+The hymnbook list has two groups: **Hymnals** (SDA Hymnal 1985, Church Hymnal 1941, Advent Lofliedere and any you add)
+and **Shared Hymns**, with one book per language: *English*, *Afrikaans*, *isiXhosa* …
 
-**Sharing a chorus:** add it in Praise Choruses (⋯ → Find lyrics online, or New hymn), pick it, and press **Share with all
-churches**. Say whether the words may be shared (public domain, written by your church, or with the writer's permission;
-CCLI songs may not be shared), then **Share on GitHub** opens a ready-filled "Share a praise chorus" issue (a free GitHub
-account is needed; **Copy the song** sends it another way).
+- **Which languages:** the church's service languages from the first-start setup are added automatically (the setup's
+  last language step says so); **Hymns → ⋯ → Shared Hymns in another language…** or **Settings → Bibles & hymns** adds
+  or removes others (`hymns.shared` in the settings).
+- **Shared Hymns – English** holds the praise choruses (1–45) and **Malmesbury Praise (101–148: MP 1 is 101)** with
+  their own titles. Plans made before the merge, words and MIDI files a church added to Malmesbury Praise move along
+  by themselves.
+- **Numbers:** 501 and up are the songs shared by all churches, in every language. A song a church adds itself takes
+  the next free number below 501 (English: 149 and up; other languages: 1 and up).
+- **Adding a song:** **Hymns → ⋯ → New song** asks the **language** first, gives the next number, and the rest is as
+  before (title, writer, words). Find lyrics online keeps songs in Shared Hymns too.
+- **Sharing:** pick your song and press **Share with all churches**. Say whether the words may be shared (public domain,
+  written by your church, or with the writer's permission; CCLI songs may not be shared), then **Share on GitHub** opens
+  a ready-filled "Share a hymn" issue with the language filled in (a free GitHub account is needed; **Copy the song**
+  sends it another way).
+- **Getting new songs:** the app checks a few seconds after it starts (at most every 6 hours, and whenever the internet
+  comes back); **Hymns → ⋯ → Check for new shared hymns** checks at once. It says how many arrived per language
+  ("2 new shared hymns: Afrikaans 1, English 1"). They are marked *Shared* and work offline afterwards.
 
-**The chorus robot** (`.github/workflows/chorus.yml`, `tools/chorus_bot.py`) answers on the issue within minutes: it tidies the
-words (capitals, spaces, quotes), refuses songs already in SDA Sabbath or not cleared for sharing, flags typos and near-duplicates,
-compares the words with a public lyrics database (LRCLIB) to catch mistakes (and to warn when it is a published song), and looks
-for a MIDI file (a .zip dropped into the issue, or a close title match on BitMidi, flagged for a check). **The maintainer adds the
-label `chorus-approved`** and the robot adds the song to `data/hymns/community/choruses.json`, rebuilds the website and closes
-the issue. To publish songs that pass every check without waiting, set the repository variable `AUTO_PUBLISH_CHORUSES` to `true`.
+**The robot** (`.github/workflows/chorus.yml`, `tools/chorus_bot.py`) answers on the issue within minutes: it reads the
+language, tidies the words (capitals, spaces, quotes), refuses songs already in SDA Sabbath in that language or not cleared
+for sharing, flags typos and near-duplicates, compares the words with a public lyrics database (LRCLIB), and looks for a MIDI
+file (a .zip dropped into the issue, or a close title match on BitMidi). **The maintainer adds the label `chorus-approved`** and
+the robot adds the song to `data/hymns/community/shared.json` with its language and the next shared number in that language,
+rebuilds the website and closes the issue. (English songs are also written to `choruses.json` for app copies older than
+5 November 2026.) To publish songs that pass every check without waiting, set the repository variable
+`AUTO_PUBLISH_CHORUSES` to `true`.
+
+**Monthly report:** the maintainer's monthly email (`tools/monthly_report.py`) puts the new Shared Hymns of the month near
+the top ("New Shared Hymns: 2 songs — Afrikaans 1 (501 …); English 1 (501 …)"), lists them by language with the church that
+shared them, and adds the count to the subject line.
 
 ### Find lyrics online
 
@@ -125,7 +142,7 @@ or any words (add “by singer” to narrow it). Songs already on the device are
 ranked with a match label and a preview, so you can pick the right one; if an AI key is set, **Ask AI to help
 identify** can also suggest which songs the words belong to (the lyrics always come from the lyric sites, never
 from AI). The chosen words are split into stanzas and a chorus (shown as the slides they will become), can be
-corrected, and are kept **offline** in a book (Praise Choruses by default) with **Add and put on Next**.
+corrected, and are kept **offline** in a book (Shared Hymns – English by default) with **Add and put on Next**.
 If nothing is found, links to other sites and a paste box are offered. Song words belong to their owners: check
 that your church’s CCLI (or other) licence covers showing them.
 

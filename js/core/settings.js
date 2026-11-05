@@ -24,7 +24,8 @@ export const DEFAULTS = {
     italics: false, refPos: 'bottom', continue: true, history: [],
   },
   hymns: {
-    book: 'sda-sample', chorusRepeat: true, titleSlide: true, showNumber: true, maxLines: 0, caps: false, refPos: 'bottom',
+    book: 'sda-sample', shared: [], // shared: the languages whose Shared Hymns book this church has ([] = its service languages)
+    chorusRepeat: true, titleSlide: true, showNumber: true, maxLines: 0, caps: false, refPos: 'bottom',
     // Hymn music (MIDI accompaniment through GeneralUser GS)
     musicIntro: true, musicFollow: true, musicInstrument: 'arranged', musicTempo: 100, musicKey: 0, musicVolume: 1.3,
     musicReverb: 59, musicChorus: 43, musicOutput: 'auto',

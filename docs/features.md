@@ -34,7 +34,8 @@ Status marks: **✔** built and tested · **◐** built, but not yet proven in r
 
 ## 3. Hymns and choruses
 
-- **Built-in books**: 1941 Church Hymnal (703, with words); SDA Hymnal (698), Advent Lofliedere in Afrikaans (481), Praise Choruses and Malmesbury Praise by number and title, with **Import licensed words** for the church's own licensed words, plus community-shared choruses.
+- **Built-in books**: 1941 Church Hymnal (703, with words); SDA Hymnal 1985 (698) and Advent Lofliedere in Afrikaans (481) by number and title, with **Import licensed words** for the church's own licensed words.
+- **Shared Hymns in every language**: one book per language (English, Afrikaans, isiXhosa …), added for the church's service languages in the setup. English holds the praise choruses and Malmesbury Praise (101–148). **New song** asks the language first and gives the next number; **Share with all churches** sends it for approval, and every church with that language gets it (501 and up). The monthly report highlights new shared hymns.
 - **Find by number or words**.
 - **Title slide, one stanza per slide**, chorus repeated automatically.
 - **Choose which stanzas to sing** (for example 1, 2, 4).

@@ -159,8 +159,18 @@ export default function create(ctx) {
     let builtins = [];
     try { builtins = (await (await fetch('data/hymns/index.json')).json()) || []; } catch (e) { /* */ }
     const filled = await hi.overlayCounts();
-    builtins.forEach((b) => hymnList.appendChild(h('div.li', icon('hymn'), h('span.grow', h('div', (b.short ? b.short + ' — ' : '') + b.name),
+    builtins.filter((b) => !b.shared).forEach((b) => hymnList.appendChild(h('div.li', icon('hymn'), h('span.grow', h('div', (b.short ? b.short + ' — ' : '') + b.name),
       h('div.note', 'Built in' + (filled[b.id] ? ' · words for ' + filled[b.id] + (filled[b.id] === 1 ? ' hymn' : ' hymns') + ' added on this device' : ''))))));
+    // Shared Hymns: one book per language, chosen in the setup; songs churches share arrive by themselves.
+    const { langName } = await import('../core/langs.js');
+    const shared = hi.sharedLangs(settings);
+    shared.forEach((lg) => hymnList.appendChild(h('div.li', icon('hymn'), h('span.grow', h('div', 'Shared Hymns — ' + langName(lg)),
+      h('div.note', (lg === 'en' ? 'Praise choruses, Malmesbury Praise (101–148) and songs shared by churches (501 and up)' : 'Songs shared by churches in ' + langName(lg) + ' (501 and up)') + ' · grows by itself when online')),
+      btn('trash', 'Remove Shared Hymns ' + langName(lg), async () => {
+        if (await confirmBox('Remove Shared Hymns – ' + langName(lg) + '?', 'Songs your church added to it stay saved and come back if you add the language again.', 'Remove', true)) { hi.setSharedLangs(settings, shared.filter((x) => x !== lg)); rebuild(); }
+      }, { cls: 'sm' }))));
+    hymnList.appendChild(h('div.li', h('button.btn.sm', { type: 'button', onclick: async () => { const t = await ctx.showTab('hymns'); if (t && t.addSharedLanguage) t.addSharedLanguage(); } }, icon('plus'), h('span', 'Shared Hymns in another language…'))));
+
     (await hi.addedHymnbooks()).sort((a, b) => String(a.name).localeCompare(String(b.name))).forEach((b) => {
       const n = Array.isArray(b.hymns) ? b.hymns.length : 0;
       hymnList.appendChild(h('div.li', icon('hymn'), h('span.grow', h('div', (b.short ? b.short + ' — ' : '') + (b.name || 'Hymnbook')),

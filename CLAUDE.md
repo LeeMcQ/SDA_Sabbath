@@ -62,6 +62,9 @@ docs/                         user docs; docs/features.md is the full feature li
 ```
 - Events on `window`: `selah-bibles` (Bible list changed), `selah-hymnbooks` (hymnbooks changed; `detail.select` opens one).
 - Words for a built-in numbers-and-titles book are an overlay record `overlay:<book id>` in the `hymnbooks` store.
+- Shared Hymns: a book per language, `choruses` (English: choruses 1–45, Malmesbury Praise 101–148) and `shared-<code>`; the
+  church's languages are `hymns.shared` (`sharedLangs()` in hymn-import.js). Songs shared by churches: `data/hymns/community/shared.json`
+  (`lang`, numbers 501+ per language), written by `tools/chorus_bot.py`; `js/core/community.js` syncs them.
 
 ## When a feature changes
 

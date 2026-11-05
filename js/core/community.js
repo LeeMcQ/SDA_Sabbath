@@ -1,14 +1,20 @@
-// Shared Praise Choruses: songs that churches shared from the Hymns tab and the maintainer approved.
-// They live in the repository (data/hymns/community/choruses.json, MIDI files in …/midi/) and every copy of
-// SDA Sabbath fetches the list when it is online, so everyone gets new choruses without an app update.
+// Shared Hymns: songs that churches shared from the Hymns tab, in any language, and the maintainer approved.
+// They live in the repository (data/hymns/community/shared.json, MIDI files in …/midi/) and every copy of
+// SDA Sabbath fetches the list when it is online, so everyone gets new hymns without an app update.
 // The copy in the app's own files is used until the first successful check (and offline).
+// Each language is its own book under "Shared Hymns" in the Hymns tab: 'choruses' for English (the book that
+// also holds the praise choruses and Malmesbury Praise), 'shared-<code>' for the others.
 import { db } from './db.js';
 
 const SITE = 'https://leemcq.github.io/SDA_Sabbath/';
-const PATH = 'data/hymns/community/choruses.json';
-const KEY = 'community-choruses';
-export const COMMUNITY_BOOK = 'choruses';
-export const FIRST_NUMBER = 501;          // shared choruses are numbered 501 upwards in every church
+const PATH = 'data/hymns/community/shared.json';
+const KEY = 'community-shared';
+export const COMMUNITY_BOOK = 'choruses'; // Shared Hymns – English
+export const FIRST_NUMBER = 501;          // shared hymns are numbered 501 upwards, in every language and every church
+/** The Hymns-tab book that holds a language's shared hymns. */
+export const sharedBookId = (lang) => (!lang || lang === 'en' ? COMMUNITY_BOOK : 'shared-' + lang);
+export const isSharedBookId = (id) => id === COMMUNITY_BOOK || /^shared-[a-z]{2,3}$/.test(String(id || ''));
+export const sharedLangOf = (id) => (id === COMMUNITY_BOOK ? 'en' : String(id || '').replace(/^shared-/, ''));
 export const REPO = 'LeeMcQ/SDA_Sabbath';
 const EVERY = 6 * 3600 * 1000;            // check at most every 6 hours (unless asked)
 
@@ -24,20 +30,21 @@ function clean(doc) {
   for (const s of doc.songs.slice(0, 5000)) {
     if (!s || typeof s !== 'object') continue;
     const n = +s.n;
-    if (!Number.isInteger(n) || n < FIRST_NUMBER || n > 99999 || seen.has(n)) continue;
+    const lang = /^[a-z]{2,3}$/.test(s.lang || '') ? s.lang : 'en';
+    if (!Number.isInteger(n) || n < FIRST_NUMBER || n > 99999 || seen.has(lang + n)) continue;
     const v = (Array.isArray(s.v) ? s.v : []).map(lines).filter((x) => x.length).slice(0, 20);
     const c = lines(s.c);
     const t = str(s.t, 120);
     if (!t || (!v.length && !c.length)) continue;
-    seen.add(n);
-    songs.push({ n, t, a: str(s.a, 120), v: v.length ? v : [c], c: v.length && c.length ? c : null,
+    seen.add(lang + n);
+    songs.push({ n, lang, t, a: str(s.a, 120), v: v.length ? v : [c], c: v.length && c.length ? c : null,
       id: str(s.id, 80), by: str(s.by, 80), added: str(s.added, 20),
       midi: /^data\/hymns\/community\/midi\/[a-z0-9-]+\.mid$/.test(s.midi || '') ? s.midi : '' });
   }
   return { rev: +doc.rev || 0, updated: str(doc.updated, 40), songs };
 }
 
-/** The shared choruses known on this device (newest of: last download, the app's own copy). */
+/** The shared hymns known on this device (newest of: last download, the app's own copy). */
 export async function communitySongs() {
   let saved = null, bundled = null;
   try { saved = clean(await db.get('kv', KEY)); } catch (e) { saved = null; }
@@ -46,7 +53,7 @@ export async function communitySongs() {
   return best || { rev: 0, updated: '', songs: [] };
 }
 
-/** Look for new shared choruses (and their MIDI). Returns {changed, added, error}. */
+/** Look for new shared hymns (and their MIDI). Returns {changed, added, byLang: {code: count}, error}. */
 export async function syncCommunity({ force = false } = {}) {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return { changed: false, added: 0, offline: true };
   const last = await db.get('kv', KEY + ':checked').catch(() => 0);
@@ -60,13 +67,13 @@ export async function syncCommunity({ force = false } = {}) {
     clearTimeout(t);
     if (!r.ok) throw new Error('HTTP ' + r.status);
     doc = clean(await r.json());
-    if (!doc) throw new Error('not a chorus list');
+    if (!doc) throw new Error('not a list of shared hymns');
   } catch (e) { return { changed: false, added: 0, error: e.message || String(e) }; }
   await db.put('kv', KEY + ':checked', Date.now()).catch(() => {});
-  // MIDI for shared choruses, kept on this device so it plays offline.
+  // MIDI for shared hymns, kept on this device so it plays offline.
   for (const s of doc.songs) {
     if (!s.midi) continue;
-    const id = 'cmidi:' + COMMUNITY_BOOK + ':' + s.n;
+    const id = 'cmidi:' + sharedBookId(s.lang) + ':' + s.n;
     const got = await db.get('files', id).catch(() => null);
     if (got && got.src === s.midi) continue;
     try {
@@ -80,8 +87,11 @@ export async function syncCommunity({ force = false } = {}) {
   }
   if (doc.rev <= have.rev && doc.songs.length <= have.songs.length) return { changed: false, added: 0 };
   await db.put('kv', KEY, doc);
-  const old = new Set(have.songs.map((s) => s.n));
-  return { changed: true, added: doc.songs.filter((s) => !old.has(s.n)).length };
+  const old = new Set(have.songs.map((s) => s.lang + s.n));
+  const fresh = doc.songs.filter((s) => !old.has(s.lang + s.n));
+  const byLang = {};
+  fresh.forEach((s) => { byLang[s.lang] = (byLang[s.lang] || 0) + 1; });
+  return { changed: true, added: fresh.length, byLang };
 }
 
 /** A song as plain text with "Chorus:" marking the chorus (the format of the Hymns editor and the issue form). */
@@ -99,9 +109,9 @@ export function feedbackUrl(kind, text, info) {
 }
 export const FEEDBACK_PUBLIC_NOTE = 'Sending opens a public page on GitHub (a free account is needed) with your message filled in: press “Create”. Anyone can read it, so leave out names, phone numbers and email addresses.';
 
-/** The address of a new GitHub issue with the song filled in (the "Share a chorus" form). */
-export function shareUrl(hy, { church = '', rights = '' } = {}) {
-  const p = new URLSearchParams({ template: 'chorus.yml', title: 'Chorus: ' + hy.t, 'song-title': hy.t, author: hy.a || '', lyrics: songText(hy), church });
+/** The address of a new GitHub issue with the song filled in (the "Share a hymn" form). language: 'Afrikaans (af)'. */
+export function shareUrl(hy, { church = '', rights = '', language = 'English (en)' } = {}) {
+  const p = new URLSearchParams({ template: 'chorus.yml', title: 'Hymn: ' + hy.t, 'song-title': hy.t, language, author: hy.a || '', lyrics: songText(hy), church });
   if (rights) p.set('rights', rights);
   return 'https://github.com/' + REPO + '/issues/new?' + p.toString();
 }
