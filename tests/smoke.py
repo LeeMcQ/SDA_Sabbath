@@ -141,39 +141,6 @@ def main():
                 assert not errs, '; '.join(errs[:3])
             t_tabs()
 
-            @check('starter banners: 6 groups of 3, kept when deleted, added again on request')
-            def t_starters():
-                c = b.new_context(viewport={'width': 1280, 'height': 800}, service_workers='block')
-                q = c.new_page(); qe = []
-                q.on('pageerror', lambda e: qe.append(str(e)[:200]))
-                try:
-                    q.goto(base + 'index.html'); q.wait_for_function('() => !!window.__selahBooted', timeout=20000)
-                    q.evaluate("import('./js/core/settings.js').then(m => (m.settings.set('app.setupDone', true), m.settings.set('backup', Object.assign({}, m.settings.v.backup, { remindAt: Date.now() }))))")
-                    q.reload(); q.wait_for_function('() => !!window.__selahBooted', timeout=20000)
-                    q.evaluate("window.selah.showTab('ai')"); q.wait_for_timeout(1500)
-                    st = lambda: q.evaluate("""async () => { const { db } = await import('./js/core/db.js');
-                      const lib = await db.get('kv', 'banners') || [], gr = await db.get('kv', 'banner-groups') || [];
-                      return { groups: gr.map((g) => g.name), per: gr.map((g) => lib.filter((x) => x.group === g.id).length), ids: lib.map((x) => x.id) }; }""")
-                    s = st()
-                    assert s['groups'] == ['Welcomes', 'Prayers', 'Verses', 'Song service', 'Announcements', 'Time banners'], 'groups: %r' % s['groups']
-                    assert s['per'] == [3, 3, 3, 3, 3, 3], 'banners per group: %r' % s['per']
-                    q.locator('.bn-views button', has_text='Saved').click(); q.wait_for_timeout(800)
-                    assert 'Starter banners' not in q.inner_text('.bn-lib-bar'), 'Starter button shown with nothing missing'
-                    # A deleted starter banner stays deleted after a restart, and the bar then offers it again.
-                    q.evaluate("""async () => { const { db } = await import('./js/core/db.js');
-                      const lib = await db.get('kv', 'banners'); await db.put('kv', 'banners', lib.filter((x) => x.id !== 'b-start-verse-sabbath')); }""")
-                    q.reload(); q.wait_for_function('() => !!window.__selahBooted', timeout=20000)
-                    q.evaluate("window.selah.showTab('ai')"); q.wait_for_timeout(1500)
-                    assert 'b-start-verse-sabbath' not in st()['ids'], 'a deleted starter banner came back by itself'
-                    q.locator('.bn-views button', has_text='Saved').click(); q.wait_for_timeout(800)
-                    q.locator('.bn-lib-bar button', has_text='Starter banners (1)').click(); q.wait_for_timeout(800)
-                    s = st()
-                    assert 'b-start-verse-sabbath' in s['ids'] and s['per'] == [3, 3, 3, 3, 3, 3] and len(s['groups']) == 6, 'not added again: %r' % s
-                    assert not qe, '; '.join(qe[:3])
-                finally:
-                    c.close()
-            t_starters()
-
             @check('an install offer that comes before the app has loaded is kept')
             def t_early_install():
                 c = b.new_context(viewport={'width': 1280, 'height': 800}, service_workers='block')

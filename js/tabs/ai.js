@@ -20,7 +20,6 @@ import { openFullBanner } from './ai-full.js';
 import { createMusicView, musicChip } from './banner-music.js';
 import { createSlideEditor, colorPop } from './slide-editor.js';
 import { cleanEls, htmlText, okColor } from '../core/slideels.js';
-import { STARTER_GROUPS, STARTER_BANNERS, STARTER_VERSION } from '../core/starterbanners.js';
 
 // ------------------------------------------------------------ templates
 const TPL = {
@@ -176,31 +175,6 @@ export default function create(ctx) {
     const dc = d && repair(d.cur);
     if (dc) { setDoc(dc); savedSig = typeof d.savedSig === 'string' ? d.savedSig : null; }
     await migrateOldHistory().catch((e) => console.warn('old banners', e));
-    await addStarters(false).catch((e) => console.warn('starter banners', e));
-  }
-  // Starter banners (js/core/starterbanners.js): added once by themselves; afterwards only when asked
-  // (Saved banners → Starter banners), and then only the ones that are missing. Nothing the church changed is touched.
-  const startersMissing = () => STARTER_BANNERS.filter((d) => !lib.some((b) => b.id === d.id));
-  async function addStarters(asked) {
-    const done = await db.get('kv', 'banner-starter').catch(() => null);
-    if (!asked && done >= STARTER_VERSION) return 0;
-    const gid = {};
-    STARTER_GROUPS.forEach((sg) => {
-      // A group of the church's own with the same name is used rather than made twice.
-      const have = groups.find((g) => g.id === sg.id) || groups.find((g) => g.name.trim().toLowerCase() === sg.name.toLowerCase());
-      if (have) gid[sg.id] = have.id; else { groups.push({ id: sg.id, name: sg.name }); gid[sg.id] = sg.id; }
-    });
-    const now = Date.now();
-    const add = startersMissing().map((d) => {
-      const base = newBanner(d.tpl);
-      return repair(Object.assign(base, { id: d.id, name: d.name, group: gid[d.group], f: clone(d.f), x: Object.assign({ logo: false, date: false, sunset: false, qr: false, mark: false }, d.x), s: Object.assign(base.s, clone(d.s)), created: now, updated: now }));
-    }).filter(Boolean);
-    // Groups nobody uses (all their starter banners were deleted earlier) are not brought back empty.
-    groups = groups.filter((g) => !STARTER_GROUPS.some((sg) => sg.id === g.id) || add.some((b) => b.group === g.id) || lib.some((b) => b.group === g.id));
-    lib.push(...add);
-    await saveGroups(); await saveLib();
-    await db.put('kv', 'banner-starter', STARTER_VERSION);
-    return add.length;
   }
   // Banners saved by the old Banner tab were pictures in browser storage (about 5 MB, easily full).
   // Move them into the app's database once, as Picture banners.
@@ -293,14 +267,6 @@ export default function create(ctx) {
     const foot = [b.tpl === 'verse' ? f.refLabel || f.ref : f.foot, x.date ? sabbathDateLine(now) : '', x.sunset ? sabbathSunsetLine(now) : '']
       .map((t) => (t || '').trim()).filter(Boolean);
     fr.foot = foot.join('  ·  ');
-    // {church}, {town}, {service}, {date}, {sunset}, {today} in the template's own lines fill themselves in too
-    // (the starter banners use them). These lines are plain text: the frame escapes them when drawn.
-    if (/\{(date|sunset|church|service|today|town)\}/.test(fr.kicker + fr.title + fr.text + fr.foot)) {
-      const fv = fieldValues(now);
-      const fill = (t) => t.replace(/\{(date|sunset|church|service|today|town)\}/g, (m, k) => fv[k] || '')
-        .replace(/^\s*[·,]\s*|\s*[·,]\s*$/g, '').replace(/\s*·\s*·\s*/g, ' · ').trim();
-      ['kicker', 'title', 'text', 'foot'].forEach((k) => { fr[k] = fill(fr[k]); });
-    }
     if (b.tpl === 'countdown') {
       const at = nextTime(f.at || c.service, now);
       fr.title = ''; fr.countdown = { at: at ? at.getTime() : Date.now(), done: f.done || 'Welcome' };
@@ -1187,11 +1153,7 @@ export default function create(ctx) {
       libFilter = '';
       await saveGroups(); await saveLib(); renderLibrary(); renderGroupSel();
     } }, icon('trash'), h('span', 'Remove group')) : null;
-    const miss = startersMissing().length;
-    const starters = miss ? h('button.btn.sm', { type: 'button', title: 'Add the ready-made banners (Welcomes, Prayers, Verses, Song service, Announcements, Time banners) that are not here',
-      onclick: async () => { const n = await addStarters(true); renderLibrary(); renderGroupSel(); renderViewSeg(); toast(n + ' starter banner' + (n === 1 ? '' : 's') + ' added.', 'ok', 2500); } },
-      icon('plus'), h('span', 'Starter banners (' + miss + ')')) : null;
-    box.appendChild(h('div.row.wrap.bn-lib-bar', qIn, gSel, newGrp, renGrp, delGrp, starters));
+    box.appendChild(h('div.row.wrap.bn-lib-bar', qIn, gSel, newGrp, renGrp, delGrp));
     // Filter
     const q = normalize(libQuery.trim()).toLowerCase();
     const inGroup = (b) => !libFilter || (libFilter === '-' ? !b.group || !groups.some((x) => x.id === b.group) : b.group === libFilter);
