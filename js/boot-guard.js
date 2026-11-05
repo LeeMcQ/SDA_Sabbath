@@ -1,6 +1,9 @@
 // Start-up safety net (a plain script, so it runs even if the app's modules cannot load).
 // If SDA Sabbath has not started after a while, explain what to do instead of showing a blank page.
 (function () {
+  // The browser's "can be installed" signal often comes before the app's modules have loaded, and it is not sent
+  // again: keep it here so the Install button can use it (js/app.js picks it up from window.__installPrompt).
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); window.__installPrompt = e; });
   var shown = false;
   function online(cb) {
     // A file the service worker never stores: only reachable with real internet.

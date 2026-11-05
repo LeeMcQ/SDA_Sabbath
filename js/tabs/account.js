@@ -57,8 +57,9 @@ export function signInBox({ onDone, compact = false } = {}) {
 export function statsToggle() {
   return h('div.col', { style: { gap: '6px' } },
     toggle('Help improve SDA Sabbath: send usage statistics', settings.v.app.stats === true, (v) => { settings.set('app.stats', v); if (v) cloud.ping(); }),
-    h('p.note', 'Recorded only while you are signed in, also without internet (sent when you are online again). Switch it off here at any time. Counted: minutes the app is used and presenting (and how many without internet); which hymns (number and title) and Bible passages (the reference) go on screen; which features are used; searches for a hymn number or reference that found nothing; the equipment (system, screen size, extra screens, sound set-up); your church’s name, town and approximate place (to about 10 km); the language of your services; and when the setup was finished. Never your slides, pictures, videos, sermons or anything you type. ',
-      h('a', { href: 'privacy.html', target: '_blank', rel: 'noopener' }, 'Privacy notice')));
+    // Short on purpose: the full list of what is counted is in the privacy notice.
+    h('p.note', 'Counts how the app is used (time, features, which hymns and verses go on screen) and your church’s name and town. Never your slides, videos or anything you type. Switch it off any time. ',
+      h('a', { href: 'privacy.html', target: '_blank', rel: 'noopener' }, 'What is counted')));
 }
 
 /** Comments and suggestions. */

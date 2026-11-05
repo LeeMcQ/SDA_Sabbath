@@ -141,6 +141,25 @@ def main():
                 assert not errs, '; '.join(errs[:3])
             t_tabs()
 
+            @check('an install offer that comes before the app has loaded is kept')
+            def t_early_install():
+                c = b.new_context(viewport={'width': 1280, 'height': 800}, service_workers='block')
+                # The browser's offer, sent while the page is still loading (before the app's modules run).
+                c.add_init_script("""document.addEventListener('readystatechange', () => {
+                  if (document.readyState !== 'interactive') return;
+                  const e = new Event('beforeinstallprompt', { cancelable: true });
+                  e.prompt = () => { window.__prompted = true; }; e.userChoice = Promise.resolve({ outcome: 'accepted' });
+                  window.dispatchEvent(e); });""")
+                q = c.new_page()
+                try:
+                    q.goto(base + 'index.html'); q.wait_for_function('() => !!window.__selahBooted', timeout=20000)
+                    assert q.evaluate('!!window.selah.installPrompt'), 'the early install offer was lost'
+                    q.evaluate('window.selah.promptInstall()'); q.wait_for_timeout(200)
+                    assert q.evaluate('!!window.__prompted'), 'Install did not open the browser install window'
+                finally:
+                    c.close()
+            t_early_install()
+
             @check('a mistyped reference keeps Next and says why')
             def t_bad_ref():
                 r = pg.evaluate("""async () => {
@@ -734,8 +753,23 @@ def main():
                     if q.locator('.welcome-nav button', has_text='Not now').count() and 'Install' not in title():   # the sign-in step comes first when the cloud is on
                         q.locator('.welcome-nav button', has_text='Not now').click(); q.wait_for_timeout(400)
                     assert 'Install' in title(), 'install is not the first step: %r' % title()
+                    # The first page has one Install button; without the browser's install window it shows the steps.
+                    ib = q.locator('.welcome-card button', has_text='Install SDA Sabbath')
+                    assert ib.count() == 1, 'no Install button on the first page'
+                    ib.click(); q.wait_for_timeout(200)
+                    assert 'install' in q.inner_text('.welcome-card').lower() and 'address bar' in q.inner_text('.welcome-card'), 'Install button showed no steps'
                     q.click('.welcome-nav button.primary'); q.wait_for_timeout(400)
                     assert 'Your church' in title(), title()
+                    # Languages: one A-to-Z list of names, no headings, Afrikaans included.
+                    lo = q.evaluate("""() => { const s = document.querySelector('select[aria-label="Second language"]');
+                      return { groups: s.querySelectorAll('optgroup').length, names: [...s.options].slice(1).map((o) => o.textContent) }; }""")
+                    assert lo['groups'] == 0, 'the language list still has headings'
+                    assert 'Afrikaans' in lo['names'], 'Afrikaans is missing'
+                    key = "(s) => (/^[^\\u0000-\\u024f]/.test(s) && /\\(([^)]+)\\)\\s*$/.test(s) ? /\\(([^)]+)\\)\\s*$/.exec(s)[1] : s)"
+                    assert lo['names'] == q.evaluate("(n) => { const k = " + key + "; return n.slice().sort((a, b) => k(a).localeCompare(k(b), 'en', { sensitivity: 'base' })); }", lo['names']), 'not A to Z: %r' % lo['names'][:12]
+                    ru = lo['names'].index('Русский (Russian)')
+                    assert lo['names'].index('Romanian') < ru < lo['names'].index('Sepedi'), 'Russian is not under R: %r' % lo['names'][ru - 2:ru + 2]
+                    assert 'tlh' not in lo['names'] and not any(n.islower() and len(n) <= 3 for n in lo['names']), 'code-only names: %r' % [n for n in lo['names'] if len(n) <= 3]
                     assert q.locator('select[aria-label="Main language"]').input_value() == 'en', 'English is not the default'
                     q.select_option('select[aria-label="Second language"]', 'xh')
                     q.select_option('select[aria-label="Third language"]', 'xh')   # the same language twice is cleared
