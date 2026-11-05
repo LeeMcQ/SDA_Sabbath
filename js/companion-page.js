@@ -1,8 +1,8 @@
 // companion.html: lists the companion programs built with the website (download/index.json) and puts the
 // one for this computer first. Opened from the companion itself, it fetches the list from the website.
 (function () {
-  const SITE = 'https://leemcq.github.io/SDA_Sabbath/';   // redirects to https://ssdesk.online/ once that is live
-  const onSite = /github\.io$/.test(location.hostname) || /(^|\.)ssdesk\.online$/.test(location.hostname);
+  const SITE = 'https://ssdesk.online/';
+  const onSite = /(^|\.)ssdesk\.online$/.test(location.hostname);
   const base = (onSite ? new URL('download/', location.href).href : SITE + 'download/');
   const box = document.getElementById('dl'), meta = document.getElementById('meta');
   const LABEL = {
@@ -27,7 +27,6 @@
     });
     meta.textContent = 'Built ' + (info.built || '') + (info.commit ? ' from version ' + info.commit : '') + '.';
   }).catch(() => {
-    box.replaceChildren(el('p', { className: 'err' }, 'The download list could not be loaded. Check the internet connection and reload, or get the files from '),
-      el('a', { href: 'https://github.com/LeeMcQ/SDA_Sabbath/actions/workflows/pages.yml' }, 'the latest website build on GitHub'));
+    box.replaceChildren(el('p', { className: 'err' }, 'The download list could not be loaded. Check the internet connection and reload this page (ssdesk.online/companion.html).'));
   });
 })();

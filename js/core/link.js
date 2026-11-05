@@ -84,7 +84,7 @@ link.closeMirror = () => { if (mirrorAlive()) { try { link.mirror.close(); } cat
 setInterval(() => { if (link.mirror && link.mirror.closed) { link.mirror = null; link.emit('mirror'); } }, 1500);
 
 // Only windows of this app (same folder on the web address) may claim to be the display. Every app on
-// leemcq.github.io shares one origin, so the origin check alone is not enough; a same-origin window's address
+// A web host can serve several apps from one origin (leemcq.github.io did), so the origin check alone is not enough; a same-origin window's address
 // can be read, so its folder is checked as well.
 const APP_PATH = new URL('./', location.href).pathname;
 const fromThisApp = (w) => { try { return !!w && (w === window.opener || String(w.location.pathname).startsWith(APP_PATH)); } catch (e) { return false; } };

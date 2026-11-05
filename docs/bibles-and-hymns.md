@@ -115,19 +115,22 @@ and **Shared Hymns**, with one book per language: *English*, *Afrikaans*, *isiXh
 - **Adding a song:** **Hymns → ⋯ → New song** asks the **language** first, gives the next number, and the rest is as
   before (title, writer, words). Find lyrics online keeps songs in Shared Hymns too.
 - **Sharing:** pick your song and press **Share with all churches**. Say whether the words may be shared (public domain,
-  written by your church, or with the writer's permission; CCLI songs may not be shared), then **Share on GitHub** opens
-  a ready-filled "Share a hymn" issue with the language filled in (a free GitHub account is needed; **Copy the song**
-  sends it another way).
+  written by your church, or with the writer's permission; CCLI songs may not be shared) and press **Send**. It goes
+  through the SDA Sabbath cloud (no other account is needed), with the language and the church's MIDI if it is small; the
+  answer appears in **Settings → Account → My messages and replies**. Without the cloud, **Copy the song** sends it
+  another way.
 - **Getting new songs:** the app checks a few seconds after it starts (at most every 6 hours, and whenever the internet
   comes back); **Hymns → ⋯ → Check for new shared hymns** checks at once. It says how many arrived per language
   ("2 new shared hymns: Afrikaans 1, English 1"). They are marked *Shared* and work offline afterwards.
 
-**The robot** (`.github/workflows/chorus.yml`, `tools/chorus_bot.py`) answers on the issue within minutes: it reads the
+**The inbox** (`.github/workflows/hymn-inbox.yml`, `tools/hymn_inbox.py`, every hour; needs the `SUPABASE_SERVICE_KEY` secret)
+turns each song sent from the app into a "Hymn:" issue for the maintainer and runs **the robot**'s checks
+(`.github/workflows/chorus.yml`, `tools/chorus_bot.py`): it reads the
 language, tidies the words (capitals, spaces, quotes), refuses songs already in SDA Sabbath in that language or not cleared
 for sharing, flags typos and near-duplicates, compares the words with a public lyrics database (LRCLIB), and looks for a MIDI
 file (a .zip dropped into the issue, or a close title match on BitMidi). **The maintainer adds the label `chorus-approved`** and
 the robot adds the song to `data/hymns/community/shared.json` with its language and the next shared number in that language,
-rebuilds the website and closes the issue. (English songs are also written to `choruses.json` for app copies older than
+rebuilds the website, closes the issue and tells the church in the app ("Published as number 503 in Shared Hymns – Afrikaans"). (English songs are also written to `choruses.json` for app copies older than
 5 November 2026.) To publish songs that pass every check without waiting, set the repository variable
 `AUTO_PUBLISH_CHORUSES` to `true`.
 

@@ -1,8 +1,8 @@
 // Where SDA Sabbath is published. The new address is ssdesk.online ("Sabbath Service Desk"); the old one,
 // leemcq.github.io/SDA_Sabbath/, redirects there once GitHub Pages has the custom domain.
-// LIVE: set to true (one line) once https://ssdesk.online/ opens the app; until then copies that run elsewhere
-// (the companion, localhost) keep using the old address, which keeps working (it redirects after the switch).
-export const LIVE = false;
+// LIVE: true since https://ssdesk.online/ opens the app; copies that run elsewhere (the companion, localhost) use it.
+// The old address is kept here only so copies installed there can move their data (js/move.js).
+export const LIVE = true;   // ssdesk.online opens the app (5 Nov 2026)
 export const NEW_HOST = 'ssdesk.online';
 export const NEW_SITE = 'https://ssdesk.online/';
 export const OLD_ORIGIN = 'https://leemcq.github.io';

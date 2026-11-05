@@ -69,7 +69,7 @@ built into the display.
 
 ## Quick start
 
-1. Open **https://leemcq.github.io/SDA_Sabbath/** in Chrome or Edge and press **Install** (it then works offline).
+1. Open **https://ssdesk.online/** in Chrome or Edge and press **Install** (it then works offline).
 2. Connect the projector as an *extended* screen, press **Present** (F5) and choose the projector.
 3. Type `John 3:16` or `hymn 73` in **Go to…**, press Enter, then **Present**.
 

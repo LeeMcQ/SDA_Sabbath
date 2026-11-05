@@ -143,7 +143,7 @@ Compare models with `--asr small` / `--asr turbo`.
   - `GET /status` and `GET /events` (server-sent events: `line`, `ref`, `hymn`, `status`);
   - `POST /start {device}`, `POST /stop`, `POST /config {english}`.
 - Only SDA Sabbath's own addresses are accepted:
-  - leemcq.github.io, this PC, and the church network;
+  - ssdesk.online, this PC, and the church network;
   - a page from any other website gets 403 and cannot switch on the microphone.
 - `--lan` makes it reachable from other PCs on the church network.
 - `livetranslate.py demo` sends fake captions, for testing the app without models.

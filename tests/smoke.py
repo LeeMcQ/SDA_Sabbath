@@ -814,7 +814,7 @@ def main():
                 # Shared hymns from other churches, by language (the list on GitHub, mocked here).
                 doc = json.dumps({'rev': 1, 'updated': '2026-11-05', 'songs': [{'n': 501, 'lang': 'af', 't': 'Ek Sal Die Heer Loof', 'v': [['Ek sal die Heer loof', 'al my dae']], 'added': '2026-11-05'}]})
                 route = lambda r: r.fulfill(status=200, body=doc, headers={'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'})
-                ctx.route('https://leemcq.github.io/**/shared.json*', route)
+                ctx.route('https://ssdesk.online/**/shared.json*', route)
                 try:
                     pg.evaluate("window.selah.settings.set('hymns.shared', ['en', 'af'])")
                     r = pg.evaluate("import('./js/core/community.js').then(m => m.syncCommunity({ force: true }))")
@@ -841,8 +841,22 @@ def main():
                     opts = pg.evaluate("[...document.querySelectorAll('select[aria-label=Hymnbook] optgroup[label=\"Shared Hymns\"] option')].map(o => o.textContent)")
                     assert 'Afrikaans (2)' in opts, 'the new song is not in Afrikaans: %r' % opts
                     assert pg.locator('button', has_text='Share with all churches').first.is_visible(), 'cannot share the new song'
+                    # Sharing goes through the SDA Sabbath cloud: no GitHub page, no other account.
+                    sent = []
+                    def rpc(r):
+                        sent.append(json.loads(r.request.post_data or '{}'))
+                        r.fulfill(status=200, body='1', headers={'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'})
+                    ctx.route('**/rest/v1/rpc/send_feedback', rpc)
+                    try:
+                        pg.locator('button', has_text='Share with all churches').first.click(); pg.wait_for_timeout(400)
+                        assert 'github' not in pg.inner_text('.modal').lower(), 'the share dialog still mentions GitHub'
+                        pg.locator('.modal input[value="own"]').check()
+                        pg.locator('.modal .modal-f button', has_text='Send').click(); pg.wait_for_timeout(800)
+                        assert sent and sent[0].get('p_page') == 'share-hymn' and (sent[0].get('p_info') or {}).get('lang') == 'af' and (sent[0].get('p_info') or {}).get('t') == 'Ons Lied', 'sent: %r' % sent[:1]
+                    finally:
+                        ctx.unroute('**/rest/v1/rpc/send_feedback', rpc)
                 finally:
-                    ctx.unroute('https://leemcq.github.io/**/shared.json*', route)
+                    ctx.unroute('https://ssdesk.online/**/shared.json*', route)
                     pg.evaluate("window.selah.settings.set('hymns.shared', [])")
             t_shared_hymns()
 
@@ -892,6 +906,26 @@ def main():
                 finally:
                     c.close()
             t_move_address()
+
+            @check('the website names ssdesk.online, never GitHub or the old address')
+            def t_no_github():
+                q = ctx.new_page()
+                try:
+                    for u in ['index.html', 'terms.html', 'delete-account.html', 'feedback.html', 'companion.html']:
+                        q.goto(base + u); q.wait_for_timeout(600)
+                        can = q.evaluate("(document.querySelector('link[rel=canonical]') || {}).href || ''")
+                        assert can.startswith('https://ssdesk.online/'), '%s canonical: %r' % (u, can)
+                        html_ = q.content().lower()
+                        bad = [w for w in ('leemcq.github.io', 'github.com/leemcq', 'on github') if w in html_]
+                        assert not bad, '%s still has %r' % (u, bad)
+                        if u != 'index.html': assert 'github' not in q.inner_text('body').lower(), u + ' shows GitHub'
+                    m = q.evaluate("import('./js/core/site.js').then(m => [m.LIVE, m.PUBLIC_SITE])")
+                    assert m == [True, 'https://ssdesk.online/'], 'site: %r' % m
+                    u2 = q.evaluate("import('./js/tabs/translate-part.js').then(m => m.INSTALLER_URL)")
+                    assert u2.startswith('https://ssdesk.online/download/'), 'translator download: %r' % u2
+                finally:
+                    q.close()
+            t_no_github()
 
             @check('remote buttons (Stream Deck) control the app')
             def t_remote():

@@ -10,9 +10,9 @@ import { normaliseBook, relaxedJson, fromMarkdownHymn } from './hymnparse.js';
 
 const RAW = 'https://raw.githubusercontent.com/';
 export const SOURCES = {
-  rejnac: { label: 'SDA hymnals (Rejnac)', site: 'github.com/rejnac/compiled-hymnal', licence: 'Rejnac Foundation (VideoPsalm songbook, MIT licence); the hymns keep their own copyright' },
-  sid: { label: 'SID Hymnal', site: 'github.com/sidadventist/sid_hymnal', licence: 'SID Hymnal (Southern Africa-Indian Ocean Division app); the hymns keep their own copyright' },
-  gs: { label: 'Hymnals Data', site: 'github.com/GospelSounders/hymnals-data', licence: 'Hymnals Data by Gospel Sounders; the hymns keep their own copyright' },
+  rejnac: { label: 'SDA hymnals (Rejnac)', site: 'the Rejnac hymnals', licence: 'Rejnac Foundation (VideoPsalm songbook, MIT licence); the hymns keep their own copyright' },
+  sid: { label: 'SID Hymnal', site: 'the SID Hymnal', licence: 'SID Hymnal (Southern Africa-Indian Ocean Division app); the hymns keep their own copyright' },
+  gs: { label: 'Hymnals Data', site: 'Hymnals Data (Gospel Sounders)', licence: 'Hymnals Data by Gospel Sounders; the hymns keep their own copyright' },
 };
 
 // [source, key, hymnbook, short name, language code (ISO 639), language, hymns with words, size in KB, path]

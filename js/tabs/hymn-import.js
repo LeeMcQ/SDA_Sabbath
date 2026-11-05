@@ -1,5 +1,5 @@
 // "Add a hymnbook" dialog — the hymn counterpart of Add a Bible (bible-import.js). Pick a hymnbook from the list
-// (SDA hymnals in 26 languages, the SID Hymnal, early Adventist hymnals): it downloads once from GitHub and is
+// (SDA hymnals in 26 languages, the SID Hymnal, early Adventist hymnals): it downloads once and is
 // kept offline on this device. Or choose a hymnbook file (VideoPsalm .vpc / .json, SDA Sabbath .json, text).
 // Opened from Hymns → More and from Settings → Bibles & hymns; both refresh through the 'selah-hymnbooks' event.
 import { h, clear } from '../core/util.js';
@@ -168,7 +168,7 @@ export function addHymnbookDialog(onDone) {
       if (onDone) onDone(book.id);
       return;
     } catch (err) {
-      say('Failed: ' + (err.name === 'AbortError' ? 'it took too long' : err.name === 'TypeError' ? 'no connection to GitHub' : err.message));
+      say('Failed: ' + (err.name === 'AbortError' ? 'it took too long' : err.name === 'TypeError' ? 'no connection to the hymnbook’s website' : err.message));
     }
     setTimeout(() => { bt.disabled = false; bt.textContent = old; }, 4000);
   }

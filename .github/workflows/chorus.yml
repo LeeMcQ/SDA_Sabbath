@@ -33,3 +33,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AUTO_PUBLISH: ${{ vars.AUTO_PUBLISH_CHORUSES }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}   # songs sent from the app: their MIDI, and the answer to the church

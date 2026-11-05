@@ -1,7 +1,7 @@
 # SDA Sabbath — notes for Claude
 
 Offline church presenter for Seventh-day Adventist media teams (Bible, hymns, slides, video, banners, plans, stage
-screen, OBS, live translation). A PWA on GitHub Pages: https://leemcq.github.io/SDA_Sabbath/. Maintainer: Leo
+screen, OBS, live translation). A PWA at https://ssdesk.online/ (GitHub Pages with a custom domain; the old leemcq.github.io/SDA_Sabbath/ redirects). Maintainer: Leo
 (LeeMcQ). Users are church volunteers on old PCs and phones, often with no internet on Sabbath.
 
 ## Working rules
@@ -37,6 +37,7 @@ python tests/offline.py        # 17 offline checks, ~3 min
   Leo's flow: branch → pull request → merge. In Claude sessions `gh pr create` fails (GraphQL blocked): use
   `gh api repos/LeeMcQ/SDA_Sabbath/pulls --method POST …` and `…/pulls/N/merge --method PUT`.
 - Don't wait on the deploy unless asked; GitHub reports a failed deploy.
+- Addresses: `js/core/site.js` (ssdesk.online; the old address only for `js/move.js`). Never link to GitHub in the app or pages.
 - `MIN_APP_VERSION` in `tools/build.py` refuses an old `js/app.js` (another tool once overwrote newer work).
 
 ## Where things are

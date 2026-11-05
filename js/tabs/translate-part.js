@@ -7,7 +7,7 @@ import { h, clear } from '../core/util.js';
 import { icon } from '../core/icons.js';
 import { seg, toggle, toast, modal, confirmBox } from '../core/ui.js';
 
-export const INSTALLER_URL = 'https://github.com/LeeMcQ/SDA_Sabbath/releases/download/translator/SDA-Sabbath-Translator-Setup.exe';
+export const INSTALLER_URL = 'https://ssdesk.online/download/SDA-Sabbath-Translator-Setup.exe';
 
 /** An (i) that shows its words when pointed at, focused or tapped. */
 let tipN = 0;

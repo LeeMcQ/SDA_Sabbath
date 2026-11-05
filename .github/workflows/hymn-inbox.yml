@@ -1,0 +1,35 @@
+# Shared Hymns inbox: songs sent from the app (Hymns → Share with all churches) arrive in the SDA Sabbath cloud.
+# Every hour this turns each new one into a "Hymn:" issue, runs the robot's checks and tells the church it arrived
+# (tools/hymn_inbox.py). Needs the SUPABASE_SERVICE_KEY secret (the same one as the monthly report).
+name: Shared Hymns inbox
+
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: chorus-robot
+  cancel-in-progress: false
+
+jobs:
+  inbox:
+    permissions:
+      contents: write
+      issues: write
+      actions: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { ref: main }
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with: { python-version: '3.12' }
+      - name: Bring in songs sent from the app
+        run: python tools/hymn_inbox.py
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          AUTO_PUBLISH: ${{ vars.AUTO_PUBLISH_CHORUSES }}

@@ -10,8 +10,8 @@ export const GB = 'https://api.getbible.net';
 export const BIBLE_SOURCES = {
   ao: { label: 'Free Use Bible API', site: 'bible.helloao.org' },
   gb: { label: 'getBible', site: 'api.getbible.net' },
-  bc: { label: 'Bible corpus', site: 'github.com/christos-c/bible-corpus' },
-  eb: { label: 'eBible corpus', site: 'github.com/BibleNLP/ebible' },
+  bc: { label: 'Bible corpus', site: 'the Bible corpus (Christodoulopoulos & Steedman)' },
+  eb: { label: 'eBible corpus', site: 'the eBible corpus (eBible.org, BibleNLP)' },
 };
 
 // The eBible corpus (BibleNLP, from eBible.org): openly licensed Bibles, one verse per line in the order of
@@ -33,7 +33,7 @@ export const EBIBLE = [
   ['twi-twiasante', 'TWIAS', 'Asante Twi', 'Nkwa Asɛm (Asante)', 'twi', true, 3.7, BIBLICA],
 ];
 export const ebibleItems = () => EBIBLE.map(([file, abbr, langName, name, lang, full, mb, lic]) => ({ src: 'eb', id: abbr, abbr, name, lang, langName, full, mb,
-  license: 'eBible corpus (github.com/BibleNLP/ebible); ' + lic, link: EB_BASE + 'corpus/' + file + '.txt' }));
+  license: 'eBible corpus (eBible.org, BibleNLP); ' + lic, link: EB_BASE + 'corpus/' + file + '.txt' }));
 let vref = null;
 async function ebibleParsed(t, say) {
   say('Downloading… ' + t.mb + ' MB');
@@ -74,7 +74,7 @@ export function fromAo(t) {
 export const fromGb = (abbr, name, lang, language, lic) => ({ src: 'gb', id: abbr, abbr, name, lang, langName: language, license: lic ? 'licence: ' + lic : '',
   full: !/\bNT\b|New Testament/i.test(name), link: '/v2/' + encodeURIComponent(abbr) + '.json' });
 export const corpusItems = () => CORPUS.map(([file, iso, lang, kind, abbr, mb]) => ({ src: 'bc', id: abbr, abbr, name: lang + (kind === 'nt' ? ' New Testament' : kind === 'part' ? ' (parts of the Bible)' : ' Bible'),
-  lang: iso, langName: lang, mb, full: !kind, license: 'Bible corpus (github.com/christos-c/bible-corpus); the translation keeps its own copyright', link: CORPUS_BASE + encodeURIComponent(file) }));
+  lang: iso, langName: lang, mb, full: !kind, license: 'Bible corpus (Christodoulopoulos & Steedman); the translation keeps its own copyright', link: CORPUS_BASE + encodeURIComponent(file) }));
 export const getbibleItems = () => GETBIBLE.map((r) => fromGb(...r));
 
 /** bible.helloao.org's list (live only). */

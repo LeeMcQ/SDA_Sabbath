@@ -99,6 +99,10 @@ jobs:
           rm -rf /tmp/tr/sda-sabbath-translator/models /tmp/tr/sda-sabbath-translator/.venv /tmp/tr/sda-sabbath-translator/bin
           cp -r data/bibles/web data/bibles/kjv /tmp/tr/sda-sabbath-translator/bibles/
           cd /tmp/tr && zip -qr9 "$GITHUB_WORKSPACE/site/download/sda-sabbath-translator.zip" sda-sabbath-translator
+      - name: Add the translator installer
+        # Built by translator-exe.yml into the "translator" release; served from the website (ssdesk.online/download/).
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: gh release download translator --repo "$GITHUB_REPOSITORY" -p 'SDA-Sabbath-Translator-Setup.exe' -D site/download --clobber || echo "::warning::translator installer not found in the release"
       - name: List the downloads
         run: |
           mkdir -p site/download

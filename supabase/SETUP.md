@@ -34,8 +34,8 @@ It uses a free [Supabase](https://supabase.com) project. Steps (about 15 minutes
    <p>Or <a href="{{ .ConfirmationURL }}">sign in on this device</a>.</p>
    ```
    Do the same for **Confirm signup** (a new person's first email).
-3. **Authentication → URL Configuration**: *Site URL* `https://leemcq.github.io/SDA_Sabbath/`, and under
-   *Redirect URLs* add `https://leemcq.github.io/SDA_Sabbath/**` and `http://localhost:7777/**` (the companion).
+3. **Authentication → URL Configuration**: *Site URL* `https://ssdesk.online/`, and under
+   *Redirect URLs* add `https://ssdesk.online/**` and `http://localhost:7777/**` (the companion). Keep `https://ssdesk.online/**` too while old copies move.
 4. Email sending: Supabase's built-in email sends only a few emails per hour. Before many churches sign in,
    add your own SMTP (**Project Settings → Authentication → SMTP**), for example a free Resend or Brevo account.
 
@@ -74,7 +74,7 @@ days and are sent when it is online). Each church can switch them off (Settings 
 After an update of the app, run `supabase/schema.sql` again (step 2): it is safe to re-run and adds what is new.
 
 ## Looking at the numbers
-Open **https://leemcq.github.io/SDA_Sabbath/admin.html** (or Settings → Account → *Statistics and feedback*),
+Open **https://ssdesk.online/admin.html** (or Settings → Account → *Statistics and feedback*),
 sign in with your maintainer email. Change a message's status (planned, done …) and type a reply: the sender sees
 it under *My messages* in the app.
 

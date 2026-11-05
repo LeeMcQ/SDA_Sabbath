@@ -9,10 +9,9 @@ import { music, INSTRUMENTS, packFor, PACKS, hqStored, hqRemove, hqPrefetch, EQ_
 import { fmtTime } from '../core/util.js';
 import * as ai from '../core/ai.js';
 import { findSongs, lyricsOf, songFromPlain, songText, sourceLinks, matchLabel, splitQuery, findMidi, fetchMidi } from '../core/lyrics.js';
-import { communitySongs, syncCommunity, shareUrl, songText as sharedText, COMMUNITY_BOOK, FIRST_NUMBER, sharedBookId, isSharedBookId, sharedLangOf } from '../core/community.js';
+import { communitySongs, syncCommunity, songText as sharedText, COMMUNITY_BOOK, FIRST_NUMBER, sharedBookId, isSharedBookId, sharedLangOf } from '../core/community.js';
 import { languageChoices, langName } from '../core/langs.js';
 import { church } from '../core/church.js';
-import { zipBlobs } from '../lib/blobzip.js';
 import { parseLyrics, lyricsText, decodeEntities, normaliseBook, parseTxtBook, relaxedJson, parseHymnFile } from '../core/hymnparse.js';
 import { HYMNBOOKS_CHANGED, removeHymnbook, addHymnbookDialog, sharedLangs, setSharedLangs } from './hymn-import.js';
 
@@ -741,12 +740,14 @@ export default function create(ctx) {
   }
   window.addEventListener('online', () => setTimeout(() => checkShared(false), 3000));
 
-  /** Send a chorus to the shared list: a GitHub issue with the words filled in; the chorus robot checks it
-   *  and the maintainer approves it, then every church gets it. */
+  /** Send a song to Shared Hymns: it goes through the SDA Sabbath cloud (no other account needed). A robot hands
+   *  it to the checks; once the maintainer approves it, every church with this language gets it. Without the cloud
+   *  (or a connection that never comes) the song can be copied and sent to the maintainer another way. */
   async function shareChorus(hy) {
     const myMidi = await db.get('files', 'midi:' + book.id + ':' + hy.n).catch(() => null);
     const lg = book.lang || 'en', lgName = langName(lg);
-    const name = h('input.field', { value: church().name, placeholder: 'Your church (optional, shown publicly)' });
+    const { cloud } = await import('../core/cloud.js');
+    const name = h('input.field', { value: church().name, placeholder: 'Your church (optional, shown with the song)' });
     const RIGHTS = [
       ['public-domain', 'Public domain (an old song, or the writer died more than 70 years ago)'],
       ['own', 'We wrote it (our church or a member)'],
@@ -757,39 +758,39 @@ export default function create(ctx) {
     const rightsList = h('div.col', { role: 'radiogroup', 'aria-label': 'May these words be shared?', style: { gap: '4px' } },
       ...RIGHTS.map(([k, lab]) => h('label.switch', h('input', { type: 'radio', name: 'chorus-rights', value: k, onchange: () => { rights = k; } }), h('span', lab))));
     const preview = h('pre.note', { style: { whiteSpace: 'pre-wrap', maxHeight: '180px', overflow: 'auto', margin: '0', padding: '8px', border: '1px solid var(--line)', borderRadius: '8px' } }, sharedText(hy));
-    const midiRow = myMidi && myMidi.blob ? h('div.row.wrap', h('span.note', 'Your MIDI file for this song can go with it: save it, then drag the .zip into the GitHub page.'),
-      h('button.btn.sm', { type: 'button', onclick: async () => {
-        const z = await zipBlobs([{ name: (hy.t.replace(/[^\w\- ]+/g, '').trim() || 'chorus') + '.mid', blob: myMidi.blob }]);
-        download(z, (hy.t.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_') || 'chorus') + '_midi.zip');
-      } }, icon('download'), h('span', 'Save MIDI as .zip'))) : h('p.note', 'No MIDI? The robot looks for one and attaches it if it finds a good match.');
+    const smallMidi = myMidi && myMidi.blob && myMidi.blob.size <= 200 * 1024 ? myMidi.blob : null;
     const body = h('div.col', { style: { gap: '10px' } },
-      h('p', 'Every church that has Shared Hymns – ' + lgName + ' gets this song there (with the music, if there is a MIDI), with the next shared number (501 and up). The SDA Sabbath maintainer checks each song first.'),
+      h('p', 'Every church that has Shared Hymns – ' + lgName + ' gets this song there' + (smallMidi ? ', with your MIDI music,' : '') + ' with the next shared number (501 and up). The SDA Sabbath maintainer checks each song first.'),
       h('b', hy.t + (hy.a ? ' — ' + hy.a : '')), preview,
       h('label.muted', 'May these words be shared with every church?'), rightsList,
       h('p.note', 'Songs from CCLI or other song publishers (most modern worship songs) may not be shared, even if your church has a licence to sing them.'),
       h('label.muted', 'Shared by'), name,
-      midiRow,
-      h('p.note', 'Sending uses GitHub (a free account is needed). The words are filled in for you: press “Create” / “Submit new issue” on the page that opens.'));
-    const go = () => {
+      cloud.enabled() ? h('p.note', 'You see the answer in Settings → Account → My messages and replies. No MIDI? The robot looks for one.')
+        : h('p.note', 'This copy of SDA Sabbath cannot send songs: copy the song and send it to the person who looks after SDA Sabbath.'));
+    const asText = () => 'Song for SDA Sabbath (Shared Hymns – ' + lgName + ')\nTitle: ' + hy.t + '\nWriter: ' + (hy.a || '') + '\nShared by: ' + name.value.trim() + '\nMay be shared: ' + (RIGHTS.find((r) => r[0] === rights) || ['', 'not said'])[1] + '\n\n' + sharedText(hy);
+    const checkRights = () => {
       if (!rights) { toast('Choose whether the words may be shared.', 'err'); return false; }
       if (rights === 'unsure') { toast('Please find out who wrote it first. Only songs that may be shared can go to every church.', 'err', 6000); return false; }
-      const url = shareUrl(hy, { church: name.value.trim(), rights, language: lgName + ' (' + lg + ')' });
-      if (url.length > 7800) {
-        navigator.clipboard && navigator.clipboard.writeText(sharedText(hy)).catch(() => {});
-        window.open(shareUrl(Object.assign({}, hy, { v: [['(paste the words here)']], c: null }), { church: name.value.trim(), rights, language: lgName + ' (' + lg + ')' }), '_blank', 'noopener');
-        toast('The words are long, so they were copied: paste them into the Lyrics box on GitHub.', '', 8000);
-      } else window.open(url, '_blank', 'noopener');
-      toast('Thank you! When the song is approved, every church with ' + lgName + ' gets it with its next update check.', 'ok', 7000);
       return true;
+    };
+    const go = async () => {
+      if (!checkRights()) return false;
+      let midi = '';
+      if (smallMidi) { const b = new Uint8Array(await smallMidi.arrayBuffer()); let bin = ''; for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); midi = btoa(bin); }
+      try {
+        const r = await cloud.feedback({ kind: 'other', message: 'Shared hymn: ' + hy.t + ' (' + lgName + ')', page: 'share-hymn',
+          info: { share: 'hymn', t: hy.t, a: hy.a || '', lang: lg, language: lgName + ' (' + lg + ')', rights, church: name.value.trim(), lyrics: sharedText(hy), midi } });
+        toast(r === 'queued' ? 'Saved: it is sent when this device is online. Thank you!' : 'Thank you! Your song was sent. When it is approved, every church with ' + lgName + ' gets it.', 'ok', 7000);
+        return true;
+      } catch (e) { toast('Could not send the song: ' + (e.message || e) + '. Use “Copy the song” instead.', 'err', 8000); return false; }
     };
     modal({ title: 'Share “' + hy.t + '” with all churches', body, wide: true, actions: [
       { label: 'Cancel' },
-      { label: 'No GitHub account? Copy the song', onclick: () => {
-        const txt = 'Song for SDA Sabbath (Shared Hymns – ' + lgName + ')\nTitle: ' + hy.t + '\nWriter: ' + (hy.a || '') + '\nShared by: ' + name.value.trim() + '\nMay be shared: ' + (RIGHTS.find((r) => r[0] === rights) || ['', 'not said'])[1] + '\n\n' + sharedText(hy);
-        if (navigator.clipboard) navigator.clipboard.writeText(txt).then(() => toast('Copied. Send it to the person who looks after SDA Sabbath, or to the maintainer on GitHub.', 'ok', 7000), () => toast('Could not copy.', 'err'));
+      { label: 'Copy the song', onclick: () => {
+        if (navigator.clipboard) navigator.clipboard.writeText(asText()).then(() => toast('Copied. Send it to the person who looks after SDA Sabbath.', 'ok', 7000), () => toast('Could not copy.', 'err'));
         return false;
       } },
-      { label: 'Share on GitHub', primary: true, onclick: go }] });
+      cloud.enabled() ? { label: 'Send', primary: true, onclick: go } : null].filter(Boolean) });
   }
 
   async function addToPlan() { if (cue) (await ctx.tab('plan')).addItem(cue.plan); }

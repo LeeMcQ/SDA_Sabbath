@@ -36,6 +36,50 @@ TOKEN = os.environ.get('GH_TOKEN', '')
 UA = 'SDA-Sabbath-chorus-robot (+https://github.com/' + REPO + ')'
 
 
+# ------------------------------------------------------------ the SDA Sabbath cloud (songs sent from the app)
+CLOUD_MARK = re.compile(r'<!-- cloud-message: (\d+) -->')
+
+
+def cloud_url():
+    src = open(os.path.join(ROOT, 'js', 'core', 'cloud-config.js'), encoding='utf-8').read()
+    m = re.search(r"url:\s*'([^']*)'", src)
+    return (os.environ.get('SUPABASE_URL') or (m.group(1) if m else '')).rstrip('/')
+
+
+def cloud(method, path, data=None):
+    key = os.environ.get('SUPABASE_SERVICE_KEY', '')
+    req = urllib.request.Request(cloud_url() + '/rest/v1/' + path, method=method, data=json.dumps(data).encode() if data is not None else None,
+                                 headers={'apikey': key, 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        body = r.read().decode()
+        return json.loads(body) if body.strip() else None
+
+
+def cloud_answer(fid, status, reply):
+    """The church sees this in the app (Settings → Account → My messages and replies)."""
+    if not fid or not os.environ.get('SUPABASE_SERVICE_KEY'):
+        return
+    try:
+        cloud('PATCH', 'feedback?id=eq.%d' % int(fid), {'status': status, 'reply': reply})
+    except Exception as e:
+        print('could not answer cloud message', fid, e)
+
+
+def cloud_midi(fid):
+    """The MIDI file a church sent with its song (small files only), or None."""
+    if not fid or not os.environ.get('SUPABASE_SERVICE_KEY'):
+        return None
+    try:
+        import base64
+        rows = cloud('GET', 'feedback?id=eq.%d&select=info' % int(fid)) or []
+        b64 = ((rows[0] if rows else {}).get('info') or {}).get('midi') or ''
+        raw = base64.b64decode(b64)[:2 * 1048576] if b64 else b''
+        return raw if raw[:4] == b'MThd' else None
+    except Exception as e:
+        print('no MIDI from the cloud', e)
+        return None
+
+
 # ------------------------------------------------------------ GitHub
 def api(method, path, data=None):
     req = urllib.request.Request('https://api.github.com' + path, method=method,
@@ -448,12 +492,19 @@ def main():
             return
     if errors:
         comment(num, report(song, errors, warns, info, False) + '\n\n**Not published:** fix the problems above first.')
+        m = CLOUD_MARK.search(issue.get('body') or '')
+        if m and approve:
+            cloud_answer(int(m.group(1)), 'seen', 'Thank you for “%s”. It cannot be shared yet: %s' % (song['t'], ' '.join(errors)[:900]))
         set_labels(num, remove=['chorus-approved'])
         return
+    m = CLOUD_MARK.search(issue.get('body') or '')
+    fid = int(m.group(1)) if m else None
+    midi = cloud_midi(fid) or midi
     n = publish(num, f, song, midi, approve)
     if n is None:
         return
     lg = song.get('lang') or 'en'
+    cloud_answer(fid, 'done', 'Published as number %d in Shared Hymns – %s. Every church with %s gets it when it is online. Thank you!' % (n, lang_name(lg), lang_name(lg)))
     api('POST', '/repos/%s/issues/%d/comments' % (REPO, num), {'body': '🎵 **Published as number %d in Shared Hymns – %s**%s. Every SDA Sabbath with %s gets it when it is online (the website updates in about 5 minutes). Thank you for sharing!' % (n, lang_name(lg), ' with its MIDI' if midi else '', lang_name(lg))})
     set_labels(num, add=['chorus-published'], remove=['chorus-checked', 'chorus-needs-attention'])
     api('PATCH', '/repos/%s/issues/%d' % (REPO, num), {'state': 'closed', 'state_reason': 'completed'})

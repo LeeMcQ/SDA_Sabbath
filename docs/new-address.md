@@ -1,5 +1,9 @@
 # Moving to ssdesk.online
 
+**Done on 5 November 2026:** ssdesk.online is live and the app, pages, stage QR codes, companion page, translator
+download and monthly report use it. Still to do in your accounts: tick **Enforce HTTPS** (GitHub → Pages), and the
+Supabase and Google settings in step 4.
+
 SDA Sabbath's new address is **https://ssdesk.online/** ("Sabbath Service Desk", registered at domains.co.za). It is
 still published by GitHub Pages from this repository; only the address changes.
 
@@ -45,8 +49,7 @@ Actions, so no `CNAME` file is needed in the repository.)
 
 ## 4. After the new address works (Claude)
 
-- `js/core/site.js`: `LIVE = true` (the companion and localhost copies then use ssdesk.online), and the addresses in
-  `index.html` (canonical, social preview), the other pages, `tools/monthly_report.py`, README and docs.
+- ✓ `js/core/site.js`: `LIVE = true`, and the addresses in the pages, `tools/monthly_report.py`, README and docs.
 - **Supabase → Authentication → URL Configuration**: Site URL `https://ssdesk.online/`; add `https://ssdesk.online/**` to the
   redirect URLs (keep the old ones for now).
 - **Google Cloud console → OAuth client**: add `https://ssdesk.online` to the authorised JavaScript origins and
