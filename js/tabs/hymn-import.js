@@ -140,7 +140,17 @@ export function addHymnbookDialog(onDone) {
     let fuzzy = false;
     if (qq && !hits.length) { hits = list.filter((e) => fuzzyMatch(e, qq)); fuzzy = hits.length > 0; }
     hits = hits.slice().sort((x, y) => rank(x) - rank(y) || x.langName.localeCompare(y.langName) || x.name.localeCompare(y.name));
+    // Advent Lofliedere: built in as numbers and titles (its words are copyrighted); the church adds the words from its own licensed file.
+    const showLof = filter === 'all' && (!qq || /lofl|afrik|advent|^af/.test(qq));
+    if (showLof) {
+      box.appendChild(h('div.row.lof-row', { style: { gap: '6px', alignItems: 'center' } },
+        h('span.grow', { lang: 'af' }, h('b', 'Advent Lofliedere'),
+          h('span.note', '  Afrikaans · 481 hymns · numbers and titles built in'),
+          h('div.note', 'The words are copyrighted: choose the words file your church is licensed to use. The tunes are added for you (about 150 hymns).')),
+        h('button.btn.sm.primary', { type: 'button', onclick: () => { closeModal(); if (window.selah) window.selah.tab('hymns').then((t) => t.addLicensedWords('afrikaans-sda')); } }, 'Choose file…')));
+    }
     if (!hits.length) {
+      if (showLof) return;
       box.appendChild(h('p.note', 'No hymnbook matches “' + q + '”' + (filter === 'all' ? '' : ' in ' + SOURCES[filter].label) +
         '. If your church has the hymnbook as a file (VideoPsalm, or another presentation program), choose it in the form below the list.'));
       return;

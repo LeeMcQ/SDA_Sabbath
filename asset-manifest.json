@@ -1,6 +1,6 @@
 {
-"version": "f7bb07428546",
-"bytes": 20332280,
+"version": "a30e1078de7f",
+"bytes": 20333395,
 "files": [
 "index.html",
 "display.html",
@@ -321,7 +321,7 @@
 "css/stage.css": "5d631edc7db85bc5",
 "css/stagescreen.css": "120efa80055cf368",
 "js/admin-main.js": "b6747fc81672a505",
-"js/app.js": "210ae6b66f945d4d",
+"js/app.js": "73cadc035138868e",
 "js/backupnag.js": "4d1f8f4263989b62",
 "js/boot-guard.js": "275740dc481c4b88",
 "js/clickerui.js": "ceb58c892b9c95ba",
@@ -406,8 +406,8 @@
 "js/tabs/bible-import.js": "5835640917050629",
 "js/tabs/bible.js": "9b609475f4260261",
 "js/tabs/church-form.js": "96b23c240ebc14e1",
-"js/tabs/hymn-import.js": "efbe76d8cd3f8b50",
-"js/tabs/hymns.js": "0677e57c320f6ce8",
+"js/tabs/hymn-import.js": "f4ed6ca0499100dd",
+"js/tabs/hymns.js": "8a3fc07601d9e16d",
 "js/tabs/listen-part.js": "f394e88aa979deab",
 "js/tabs/listen-translate.js": "a27f550eba212a08",
 "js/tabs/plan-basic.js": "6ff58cf4aa33d4fe",

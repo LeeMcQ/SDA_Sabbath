@@ -723,6 +723,18 @@ def main():
                     ctx.unroute('https://raw.githubusercontent.com/**', raw)
             t_add_hymnbook()
 
+            @check('Add a hymnbook lists Advent Lofliedere: choose your licensed words file')
+            def t_lofliedere_row():
+                pg.evaluate("window.selah.showTab('hymns').then((t) => t.whenReady && t.whenReady())"); pg.wait_for_timeout(400)
+                pg.evaluate("import('./js/tabs/hymn-import.js').then(m => m.addHymnbookDialog())"); pg.wait_for_timeout(400)
+                pg.locator('.modal input[type=search]').fill('lofliedere'); pg.wait_for_timeout(300)
+                assert pg.locator('.modal .lof-row').count() == 1, 'Advent Lofliedere is not in the Add a hymnbook list'
+                pg.locator('.modal .lof-row button').click(); pg.wait_for_timeout(900)
+                wait_text(pg, 'Import licensed words')
+                assert pg.evaluate("document.querySelector('select[aria-label=Hymnbook]').value") == 'afrikaans-sda', 'the Lofliedere was not opened'
+                pg.keyboard.press('Escape'); pg.wait_for_timeout(300)
+            t_lofliedere_row()
+
             @check('first-start setup: install first, church languages, their Bible and hymns downloaded')
             def t_setup_languages():
                 xml = ('<?xml version="1.0" ?><cesDoc version="4"><cesHeader><fileDesc><titleStmt><h.title>Bible(XHO)</h.title></titleStmt></fileDesc>'

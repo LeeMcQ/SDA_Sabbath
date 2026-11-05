@@ -1124,6 +1124,8 @@ export default function create(ctx) {
       return out;
     },
     whenReady() { return ready; },
+    /** Opens a built-in book and asks for the church's licensed words file (from the Add a hymnbook list). */
+    async addLicensedWords(id) { await ready; if (books.some((b) => b.id === id)) setBook(id); return importLicensed(); },
     /** Number, title and first line of every hymn in the open book, plus its id (for hymns announced by name). */
     catalog() {
       if (!book) return { id: '', list: [] };
