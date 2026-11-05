@@ -177,6 +177,8 @@ export function openWelcome({ onClose, only } = {}) {
       for (let k = 1; k < 3; k++) if (v[k] && v.indexOf(v[k]) < k) { v[k] = ''; sel[k].value = ''; }   // each language once
       if (!v[0]) { v[0] = 'en'; sel[0].value = 'en'; }
       settings.set('church.languages', v);
+      // Each service language gets its Shared Hymns book (songs churches share in that language).
+      import('./hymn-import.js').then((m) => m.setSharedLangs(settings, v.filter(Boolean))).catch(() => {});
       // Until the downloads: the built-in books of the main language.
       if (changed === 0) {
         if (v[0] === 'en') { settings.set('bible.primary', 'kjv'); settings.set('hymns.book', 'sda-online'); }
@@ -297,7 +299,8 @@ export function openWelcome({ onClose, only } = {}) {
         h('label', 'Bible'), h('div.col', { style: { gap: '4px' } }, select(x.bOpts, x.p.bible, (v) => { x.p.bible = v; }, x.L.name + ' Bible'), status('b:' + x.key),
           x.p.bible === 'file' ? fileBox(x, 'bible') : gapNote(x, 'bible')),
         h('label', 'Hymns'), h('div.col', { style: { gap: '4px' } }, select(x.hOpts, x.p.hymn, (v) => { x.p.hymn = v; }, x.L.name + ' hymnbook'), status('h:' + x.key),
-          x.p.hymn === 'file' ? fileBox(x, 'hymn') : gapNote(x, 'hymn')))));
+          x.p.hymn === 'file' ? fileBox(x, 'hymn') : gapNote(x, 'hymn')),
+        h('label', 'Shared Hymns'), h('p.inst-ok', icon('check'), h('span', 'Shared Hymns – ' + x.L.name + ' is added: songs churches share in ' + x.L.name + ' arrive by themselves when online, and you can add your own.')))));
     const todo = pending();
     const goBtn = h('button.btn.primary', { type: 'button', disabled: !!running || !todo.length || navigator.onLine === false, onclick: () => start() },
       icon('download'), h('span', running ? 'Downloading…' : todo.length ? 'Download now (' + todo.length + ')' : 'Everything is on this device'));

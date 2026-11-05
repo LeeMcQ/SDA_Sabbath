@@ -9,11 +9,12 @@ import { music, INSTRUMENTS, packFor, PACKS, hqStored, hqRemove, hqPrefetch, EQ_
 import { fmtTime } from '../core/util.js';
 import * as ai from '../core/ai.js';
 import { findSongs, lyricsOf, songFromPlain, songText, sourceLinks, matchLabel, splitQuery, findMidi, fetchMidi } from '../core/lyrics.js';
-import { communitySongs, syncCommunity, shareUrl, songText as sharedText, COMMUNITY_BOOK, FIRST_NUMBER } from '../core/community.js';
+import { communitySongs, syncCommunity, shareUrl, songText as sharedText, COMMUNITY_BOOK, FIRST_NUMBER, sharedBookId, isSharedBookId, sharedLangOf } from '../core/community.js';
+import { languageChoices, langName } from '../core/langs.js';
 import { church } from '../core/church.js';
 import { zipBlobs } from '../lib/blobzip.js';
 import { parseLyrics, lyricsText, decodeEntities, normaliseBook, parseTxtBook, relaxedJson, parseHymnFile } from '../core/hymnparse.js';
-import { HYMNBOOKS_CHANGED, removeHymnbook, addHymnbookDialog } from './hymn-import.js';
+import { HYMNBOOKS_CHANGED, removeHymnbook, addHymnbookDialog, sharedLangs, setSharedLangs } from './hymn-import.js';
 
 // Parsers live in core/hymnparse.js (shared with Add a hymnbook); these stay exported from here for other code.
 export { parseLyrics, lyricsText, decodeEntities };
@@ -110,20 +111,21 @@ export default function create(ctx) {
   let musicSet = null;     // hymn numbers with music in the current book
   let musicEntry = null;   // music index entry of the selected hymn
   const editBtn = btn('edit', 'Edit this hymn', () => hymn && editHymn(hymn), { cls: 'sm' });
-  // A chorus this church added itself can be shared with every church (Praise Choruses only).
-  const shareBtn = h('button.btn.sm', { type: 'button', hidden: true, title: 'Share this chorus with all churches that use SDA Sabbath', onclick: () => hymn && shareChorus(hymn) }, icon('send'), h('span', 'Share with all churches'));
-  const isOwnChorus = (hy) => !!(hy && book && book.id === COMMUNITY_BOOK && !hy.shared && !(book.builtinNs && book.builtinNs.has(hy.n)));
+  // A song this church added itself to a Shared Hymns book can be shared with every church (in that language).
+  const shareBtn = h('button.btn.sm', { type: 'button', hidden: true, title: 'Share this hymn with all churches that use SDA Sabbath', onclick: () => hymn && shareChorus(hymn) }, icon('send'), h('span', 'Share with all churches'));
+  const isOwnChorus = (hy) => !!(hy && book && book.shared && !hy.shared && !(book.builtinNs && book.builtinNs.has(hy.n)));
   const moreBtn = btn('more', 'More', () => menu(moreBtn, [
     { label: 'Find lyrics online', icon: 'search', onclick: () => findLyrics() },
-    { label: 'New hymn', icon: 'plus', onclick: () => editHymn(null) },
+    { label: 'New song (choose its language)', icon: 'plus', onclick: () => editHymn(null) },
     { label: 'Import licensed words…', icon: 'upload', onclick: importLicensed },
     hymn && hymn.locked ? { label: 'Add the words for this hymn (licensed)…', icon: 'edit', onclick: () => editHymn(hymn) } : null,
     { label: 'Add a hymnbook (isiXhosa, isiZulu, French, …)', icon: 'plus', onclick: () => addHymnbookDialog() },
     { label: 'Export this hymnbook', icon: 'download', onclick: exportBook },
     { label: 'Add this hymn to the service plan', icon: 'plan', onclick: addToPlan, disabled: !hymn },
-    { label: 'Check for new shared choruses', icon: 'reload', onclick: () => checkShared(true) },
-    isOwnChorus(hymn) ? { label: 'Share this chorus with all churches…', icon: 'send', onclick: () => shareChorus(hymn) } : null,
-    book && !book.builtin ? { label: 'Delete this hymnbook', icon: 'trash', onclick: deleteBook } : null,
+    { label: 'Check for new shared hymns', icon: 'reload', onclick: () => checkShared(true) },
+    { label: 'Shared Hymns in another language…', icon: 'plus', onclick: () => addSharedLanguage() },
+    isOwnChorus(hymn) ? { label: 'Share this hymn with all churches…', icon: 'send', onclick: () => shareChorus(hymn) } : null,
+    book && (!book.builtin || book.shared) ? { label: book.shared ? 'Remove Shared Hymns – ' + book.name + ' from this device' : 'Delete this hymnbook', icon: 'trash', onclick: deleteBook } : null,
   ]), { cls: 'sm' });
 
   const el = h('section',
@@ -133,18 +135,49 @@ export default function create(ctx) {
       h('div.pane', h('div.pane-h', titleEl, shareBtn, editBtn), musicBar, h('div', { style: { padding: '8px 12px 0' } }, metaEl, verseChips), h('div.scroll', { style: { flex: '1' } }, grid, empty))));
 
   // ------------------------------------------------------------ data
+  /** Malmesbury Praise became part of Shared Hymns – English (5 Nov 2026), numbered 101–148 (MP 1 = 101).
+   *  Words and MIDI files this device added for it move along once. */
+  const MP_OFFSET = 100;
+  async function moveMalmesbury() {
+    if (await db.get('kv', 'moved-malmesbury').catch(() => null)) return;
+    try {
+      const old = await db.get('hymnbooks', 'overlay:malmesbury');
+      if (old && Array.isArray(old.hymns) && old.hymns.length) {
+        const key = 'overlay:' + COMMUNITY_BOOK;
+        const ov = (await db.get('hymnbooks', key)) || { id: key, overlayOf: COMMUNITY_BOOK, hymns: [] };
+        old.hymns.forEach((x) => { if (x && x.n > 0 && x.n <= 99) { const n = x.n + MP_OFFSET; if (!ov.hymns.some((y) => y.n === n)) ov.hymns.push(Object.assign({}, x, { n })); } });
+        await db.put('hymnbooks', key, ov);
+        await db.del('hymnbooks', 'overlay:malmesbury');
+      }
+      for (const f of ((await db.all('files')) || []).filter((x) => x && typeof x.id === 'string' && x.id.startsWith('midi:malmesbury:'))) {
+        const n = +f.id.split(':')[2] + MP_OFFSET;
+        await db.put('files', 'midi:' + COMMUNITY_BOOK + ':' + n, Object.assign({}, f, { id: 'midi:' + COMMUNITY_BOOK + ':' + n }));
+        await db.del('files', f.id);
+      }
+      if (S().book === 'malmesbury') settings.set('hymns.book', COMMUNITY_BOOK);
+      await db.put('kv', 'moved-malmesbury', Date.now());
+    } catch (e) { console.warn('moving Malmesbury Praise', e); }
+  }
   async function loadBooks() {
+    await moveMalmesbury();
     books = [];
     try {
       const idx = await (await fetch('data/hymns/index.json')).json();
       for (const b of idx) {
         try {
           const j = await (await fetch('data/hymns/' + b.file)).json();
-          const nb = normaliseBook(j, b.name); nb.id = b.id; nb.short = b.short || nb.short; nb.builtin = true; nb.builtinNs = new Set(nb.hymns.map((x) => x.n));
+          const nb = normaliseBook(j, b.name); nb.id = b.id; nb.name = b.name || nb.name; nb.short = b.short || nb.short; nb.builtin = true; nb.builtinNs = new Set(nb.hymns.map((x) => x.n));
+          if (b.shared) { nb.shared = true; nb.lang = b.lang || 'en'; nb.name = langName(nb.lang); }
+          if (b.shared && !sharedLangs(settings).includes(nb.lang)) continue;   // the church removed this language
           books.push(nb);
         } catch (e) { console.warn('hymnbook', b.file, e); }
       }
     } catch (e) { console.warn('hymn index', e); }
+    // Shared Hymns for the church's languages: a book per language (English is built in with its choruses).
+    sharedLangs(settings).forEach((lg) => {
+      const id = sharedBookId(lg);
+      if (!books.some((b) => b.id === id)) books.push({ id, name: langName(lg), short: 'SH-' + lg.toUpperCase(), lang: lg, hymns: [], builtin: true, shared: true, builtinNs: new Set() });
+    });
     try {
       const saved = (await db.all('hymnbooks')) || [];
       saved.forEach((sb) => {
@@ -157,26 +190,30 @@ export default function create(ctx) {
           lang: typeof sb.lang === 'string' ? sb.lang : 'en', hymns: cleanHymns(sb.hymns).sort((a, b) => a.n - b.n) });
       });
     } catch (e) { console.warn(e); }
-    // Choruses shared by other churches (approved by the maintainer) join the Praise Choruses book.
+    // Hymns shared by other churches (approved by the maintainer) join the Shared Hymns book of their language.
     try {
-      const cb = books.find((b) => b.id === COMMUNITY_BOOK);
-      if (cb) {
-        const cs = await communitySongs();
-        const key = (x) => normalize(x.t) + '|' + normalize(((x.v && x.v[0]) || [])[0] || '');
-        const sharedKeys = new Set(cs.songs.map(key));
-        // A chorus this church added and later shared now arrives as the shared copy: show it once.
-        cb.hymns = cb.hymns.filter((x) => cb.builtinNs.has(x.n) || !sharedKeys.has(key(x)) || cs.songs.some((y) => y.n === x.n));
-        cs.songs.forEach((sg) => {
+      const cs = await communitySongs();
+      const key = (x) => normalize(x.t) + '|' + normalize(((x.v && x.v[0]) || [])[0] || '');
+      books.filter((b) => b.shared).forEach((cb) => {
+        const mine = cs.songs.filter((sg) => sg.lang === cb.lang);
+        const sharedKeys = new Set(mine.map(key));
+        // A song this church added and later shared now arrives as the shared copy: show it once.
+        cb.hymns = cb.hymns.filter((x) => cb.builtinNs.has(x.n) || !sharedKeys.has(key(x)) || mine.some((y) => y.n === x.n));
+        mine.forEach((sg) => {
           const hy = Object.assign({}, sg, { shared: true });
           const i = cb.hymns.findIndex((x) => x.n === sg.n);
           if (i >= 0) cb.hymns[i] = hy; else cb.hymns.push(hy);
         });
         cb.hymns.sort((a, b) => a.n - b.n);
-        cb.sharedCount = cs.songs.length;
-      }
-    } catch (e) { console.warn('shared choruses', e); }
+        cb.sharedCount = mine.length;
+      });
+    } catch (e) { console.warn('shared hymns', e); }
+    // Hymnals first, then "Shared Hymns" with a line per language.
     clear(bookSel);
-    books.forEach((b) => bookSel.appendChild(h('option', { value: b.id }, b.name + ' (' + b.hymns.length + ')')));
+    const opt = (b) => h('option', { value: b.id }, b.name + ' (' + b.hymns.length + ')');
+    const hymnals = books.filter((b) => !b.shared), shared = books.filter((b) => b.shared);
+    if (hymnals.length) bookSel.appendChild(h('optgroup', { label: 'Hymnals' }, hymnals.map(opt)));
+    if (shared.length) bookSel.appendChild(h('optgroup', { label: 'Shared Hymns' }, shared.map(opt)));
     setBook(books.some((b) => b.id === S().book) ? S().book : books[0] && books[0].id);
   }
 
@@ -243,7 +280,10 @@ export default function create(ctx) {
     listEl.appendChild(frag);
     rovingStop();
     if (hadFocus) { const t = listEl.querySelector(':scope > button[tabindex="0"]'); if (t) t.focus({ preventScroll: true }); }
-    if (!list.length) listEl.appendChild(emptyState('search', 'No hymn matches “' + qq + '”', 'Try a number like 73 or a few words from the hymn.',
+    if (!book.hymns.length && book.shared) listEl.appendChild(emptyState('hymn', 'No shared hymns in ' + book.name + ' yet',
+      'Churches add songs here and share them with every church that has ' + book.name + '. New ones arrive by themselves when this device is online.',
+      { label: 'Add the first song', icon: 'plus', onclick: () => editHymn(null, book.id) }));
+    else if (!list.length) listEl.appendChild(emptyState('search', 'No hymn matches “' + qq + '”', 'Try a number like 73 or a few words from the hymn.',
       { label: 'Clear search', icon: 'x', onclick: () => { q.value = ''; renderList(); q.focus(); } }));
   }
 
@@ -514,29 +554,67 @@ export default function create(ctx) {
       if (i >= 0) ov.hymns[i] = hy; else ov.hymns.push(hy);
       await db.put('hymnbooks', key, ov);
     } else await db.put('hymnbooks', bk.id, { id: bk.id, name: bk.name, short: bk.short, lang: bk.lang, hymns: bk.hymns });
+    const o = Array.from(bookSel.options).find((x) => x.value === bk.id);   // the count in the book list
+    if (o) o.textContent = bk.name + ' (' + bk.hymns.length + ')';
     if (quiet) return;
     if (isNew) toast('Hymn ' + hy.n + ' added.', 'ok'); else toast('Hymn ' + hy.n + ' saved.', 'ok');
   }
 
-  function editHymn(hy) {
-    const n = h('input.field', { type: 'number', min: 1, value: hy ? hy.n : '', style: { width: '110px' } });
+  /** The next free number for a song a church adds itself. In Shared Hymns, 501 and up belong to the songs shared
+   *  by all churches, so a church's own songs take the next number below 501. */
+  function nextNumber(bk) {
+    const below = bk.shared ? bk.hymns.filter((x) => x.n < FIRST_NUMBER) : bk.hymns;
+    let num = below.reduce((m, x) => Math.max(m, +x.n || 0), 0) + 1;
+    if (bk.shared && num >= FIRST_NUMBER) num = bk.hymns.reduce((m, x) => Math.max(m, +x.n || 0), 0) + 1;
+    return num;
+  }
+
+  /** hy: the hymn to edit, or null for a new song (the language is asked first, then a number is given). */
+  function editHymn(hy, intoId) {
+    const n = h('input.field', { type: 'number', min: 1, value: hy ? hy.n : '', style: { width: '110px' }, oninput: () => { n.dataset.touched = '1'; } });
     const t = h('input.field', { value: hy ? hy.t : '', placeholder: 'Title' });
     const a = h('input.field', { value: hy ? hy.a || '' : '', placeholder: 'Author (optional)' });
     const ta = h('textarea.field', { rows: 14, value: hy ? lyricsText(hy) : '', placeholder: 'Stanza 1 line 1\nStanza 1 line 2\n\nChorus:\nChorus line 1\n\nStanza 2 line 1…' });
     ta.value = hy ? lyricsText(hy) : '';
+    // New song: which language (Shared Hymns book) it goes in. A downloaded or own hymnbook that is open can take it too.
+    let into = book;
+    let langRow = null;
+    if (!hy) {
+      const shared = books.filter((b) => b.shared);
+      const ownOpen = book && !book.builtin && !book.shared ? book : null;
+      const first = ((settings.v.church && settings.v.church.languages) || []).find((x) => x && shared.some((b) => b.lang === x));
+      into = books.find((b) => b.id === intoId) || (book && book.shared ? book : ownOpen) || shared.find((b) => b.lang === first) || shared[0] || book;
+      const sel = h('select.field', { 'aria-label': 'Language of the new song' },
+        shared.length ? h('optgroup', { label: 'Shared Hymns' }, shared.map((b) => h('option', { value: b.id }, b.name))) : null,
+        ownOpen ? h('optgroup', { label: 'This hymnbook' }, h('option', { value: ownOpen.id }, ownOpen.name)) : null,
+        h('option', { value: '+' }, 'Another language…'));
+      sel.value = into ? into.id : '+';
+      const numFor = () => { if (!n.dataset.touched && into) n.value = nextNumber(into); };
+      sel.addEventListener('change', () => {
+        if (sel.value === '+') { addSharedLanguage((code) => loadBooks().then(() => editHymn(null, sharedBookId(code)))); return; }
+        into = books.find((b) => b.id === sel.value); numFor();
+      });
+      numFor();
+      langRow = [h('label', 'Language'), sel];
+    }
     modal({
-      title: hy ? 'Edit hymn ' + hy.n : 'New hymn', wide: true,
-      body: h('div.col', h('div.form', h('label', 'Number'), n, h('label', 'Title'), t, h('label', 'Author'), a),
-        h('p.note', 'Leave an empty line between stanzas. Start the chorus with a line “Chorus:”.' + (hy && hy.locked ? ' Only add words your church is licensed to use; they stay on this device.' : '')), ta),
+      title: hy ? 'Edit hymn ' + hy.n : 'New song', wide: true,
+      body: h('div.col', h('div.form', ...(langRow || []), h('label', 'Number'), n, h('label', 'Title'), t, h('label', 'Author'), a),
+        h('p.note', 'Leave an empty line between stanzas. Start the chorus with a line “Chorus:”.' + (hy && hy.locked ? ' Only add words your church is licensed to use; they stay on this device.' : '')
+          + (!hy ? ' After saving, “Share with all churches” offers it to every church that has this language.' : '')), ta),
       actions: [{ label: 'Cancel' }, { label: 'Save', primary: true, onclick: async () => {
+        const bk = hy ? book : into;
+        if (!bk) { toast('Choose a language first.', 'err'); return false; }
         const num = parseInt(n.value, 10);
         const p = parseLyrics(ta.value);
         if (!num || !t.value.trim() || !p.v.length) { toast('A number, a title and at least one stanza are needed.', 'err'); return false; }
+        if (!hy && bk.hymns.some((x) => x.n === num) && !(await confirmBox('Number ' + num + ' is taken', 'Number ' + num + ' is already “' + bk.hymns.find((x) => x.n === num).t + '” in ' + bk.name + '. Replace it?', 'Replace', true))) return false;
         const nh = { n: num, t: t.value.trim(), a: a.value.trim(), v: p.v, c: p.c };
         if (hy && hy.ccli) nh.ccli = hy.ccli;
-        const i = book.hymns.findIndex((x) => x.n === num);
-        if (i >= 0) book.hymns[i] = nh; else { book.hymns.push(nh); book.hymns.sort((x, y) => x.n - y.n); }
-        await saveBookEdit(nh, i < 0);
+        const i = bk.hymns.findIndex((x) => x.n === num);
+        if (i >= 0) bk.hymns[i] = nh; else { bk.hymns.push(nh); bk.hymns.sort((x, y) => x.n - y.n); }
+        await saveBookEdit(nh, i < 0, bk);
+        if (book !== bk) setBook(bk.id);
         selectHymn(nh);
         syncLive();
       } }],
@@ -616,7 +694,26 @@ export default function create(ctx) {
     toast('Exported. Before you share this file: song words belong to their owners — songs from CCLI or other publishers may not be passed on, even if your church may sing them.', '', 8000);
   }
 
+  /** Add the Shared Hymns book of another language (any language with a Bible or hymnbook in the download lists). */
+  function addSharedLanguage(then) {
+    const have = sharedLangs(settings);
+    const sel = h('select.field', { 'aria-label': 'Language' }, languageChoices().filter((l) => !have.includes(l.key)).map((l) => h('option', { value: l.key }, l.name)));
+    modal({ title: 'Shared Hymns in another language', body: h('div.col', { style: { gap: '10px' } },
+      h('p.note', 'Every language has its own Shared Hymns. Churches add songs to it and share them; when they are approved every church that has the language gets them.'),
+      h('div.form', h('label', 'Language'), sel)),
+    actions: [{ label: 'Cancel' }, { label: 'Add', primary: true, onclick: () => {
+      setSharedLangs(settings, have.concat(sel.value));
+      settings.set('hymns.book', sharedBookId(sel.value));
+      toast('Shared Hymns – ' + langName(sel.value) + ' added.', 'ok');
+      if (then) then(sel.value);
+    } }] });
+  }
   async function deleteBook() {
+    if (book && book.shared) {
+      if (!(await confirmBox('Remove Shared Hymns – ' + book.name + '?', 'Take this language’s Shared Hymns off this device? Songs your church added to it stay saved and come back if you add the language again (Hymns → More → Shared Hymns in another language).', 'Remove', true))) return;
+      setSharedLangs(settings, sharedLangs(settings).filter((x) => x !== book.lang));   // the 'selah-hymnbooks' event reloads the list
+      return;
+    }
     if (!book || book.builtin) return;
     if (!(await confirmBox('Delete hymnbook?', 'Remove “' + book.name + '” from this device?', 'Delete', true))) return;
     await removeHymnbook(book.id);   // the 'selah-hymnbooks' event reloads the list
@@ -635,8 +732,11 @@ export default function create(ctx) {
         await loadBooks();
         if (keep) setBook(keep);
         if (keepN && book) { const x = book.hymns.find((y) => y.n === keepN); if (x) selectHymn(x); }
-        toast(r.added ? r.added + ' new shared chorus' + (r.added === 1 ? '' : 'es') + ' added to Praise Choruses.' : 'Shared choruses updated.', 'ok', 5000);
-      } else if (asked) toast(r.offline ? 'No internet connection. Shared choruses are checked when this device is online.' : r.error ? 'Could not check for shared choruses: ' + r.error : 'You have all the shared choruses.', r.error ? 'err' : '', 4000);
+        // Only the languages this church has: "2 new shared hymns: Afrikaans 1, English 1".
+        const mine = Object.entries(r.byLang || {}).filter(([lg]) => sharedLangs(settings).includes(lg));
+        const cnt = mine.reduce((m, [, c]) => m + c, 0);
+        toast(cnt ? cnt + ' new shared hymn' + (cnt === 1 ? '' : 's') + ': ' + mine.map(([lg, c]) => langName(lg) + ' ' + c).join(', ') + '. Find them in Shared Hymns.' : 'Shared Hymns updated.', 'ok', 6000);
+      } else if (asked) toast(r.offline ? 'No internet connection. Shared Hymns are checked when this device is online.' : r.error ? 'Could not check for shared hymns: ' + r.error : 'You have all the shared hymns.', r.error ? 'err' : '', 4000);
     } finally { checking = false; }
   }
   window.addEventListener('online', () => setTimeout(() => checkShared(false), 3000));
@@ -644,7 +744,8 @@ export default function create(ctx) {
   /** Send a chorus to the shared list: a GitHub issue with the words filled in; the chorus robot checks it
    *  and the maintainer approves it, then every church gets it. */
   async function shareChorus(hy) {
-    const myMidi = await db.get('files', 'midi:' + COMMUNITY_BOOK + ':' + hy.n).catch(() => null);
+    const myMidi = await db.get('files', 'midi:' + book.id + ':' + hy.n).catch(() => null);
+    const lg = book.lang || 'en', lgName = langName(lg);
     const name = h('input.field', { value: church().name, placeholder: 'Your church (optional, shown publicly)' });
     const RIGHTS = [
       ['public-domain', 'Public domain (an old song, or the writer died more than 70 years ago)'],
@@ -656,13 +757,13 @@ export default function create(ctx) {
     const rightsList = h('div.col', { role: 'radiogroup', 'aria-label': 'May these words be shared?', style: { gap: '4px' } },
       ...RIGHTS.map(([k, lab]) => h('label.switch', h('input', { type: 'radio', name: 'chorus-rights', value: k, onchange: () => { rights = k; } }), h('span', lab))));
     const preview = h('pre.note', { style: { whiteSpace: 'pre-wrap', maxHeight: '180px', overflow: 'auto', margin: '0', padding: '8px', border: '1px solid var(--line)', borderRadius: '8px' } }, sharedText(hy));
-    const midiRow = myMidi && myMidi.blob ? h('div.row.wrap', h('span.note', 'Your MIDI file for this chorus can go with it: save it, then drag the .zip into the GitHub page.'),
+    const midiRow = myMidi && myMidi.blob ? h('div.row.wrap', h('span.note', 'Your MIDI file for this song can go with it: save it, then drag the .zip into the GitHub page.'),
       h('button.btn.sm', { type: 'button', onclick: async () => {
         const z = await zipBlobs([{ name: (hy.t.replace(/[^\w\- ]+/g, '').trim() || 'chorus') + '.mid', blob: myMidi.blob }]);
         download(z, (hy.t.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_') || 'chorus') + '_midi.zip');
-      } }, icon('download'), h('span', 'Save MIDI as .zip'))) : h('p.note', 'No MIDI? The chorus robot looks for one and attaches it if it finds a good match.');
+      } }, icon('download'), h('span', 'Save MIDI as .zip'))) : h('p.note', 'No MIDI? The robot looks for one and attaches it if it finds a good match.');
     const body = h('div.col', { style: { gap: '10px' } },
-      h('p', 'Every church that uses SDA Sabbath gets shared choruses in Praise Choruses (with the music, if there is a MIDI). The SDA Sabbath maintainer checks each song first.'),
+      h('p', 'Every church that has Shared Hymns – ' + lgName + ' gets this song there (with the music, if there is a MIDI), with the next shared number (501 and up). The SDA Sabbath maintainer checks each song first.'),
       h('b', hy.t + (hy.a ? ' — ' + hy.a : '')), preview,
       h('label.muted', 'May these words be shared with every church?'), rightsList,
       h('p.note', 'Songs from CCLI or other song publishers (most modern worship songs) may not be shared, even if your church has a licence to sing them.'),
@@ -672,19 +773,19 @@ export default function create(ctx) {
     const go = () => {
       if (!rights) { toast('Choose whether the words may be shared.', 'err'); return false; }
       if (rights === 'unsure') { toast('Please find out who wrote it first. Only songs that may be shared can go to every church.', 'err', 6000); return false; }
-      const url = shareUrl(hy, { church: name.value.trim(), rights });
+      const url = shareUrl(hy, { church: name.value.trim(), rights, language: lgName + ' (' + lg + ')' });
       if (url.length > 7800) {
         navigator.clipboard && navigator.clipboard.writeText(sharedText(hy)).catch(() => {});
-        window.open(shareUrl(Object.assign({}, hy, { v: [['(paste the words here)']], c: null }), { church: name.value.trim(), rights }), '_blank', 'noopener');
+        window.open(shareUrl(Object.assign({}, hy, { v: [['(paste the words here)']], c: null }), { church: name.value.trim(), rights, language: lgName + ' (' + lg + ')' }), '_blank', 'noopener');
         toast('The words are long, so they were copied: paste them into the Lyrics box on GitHub.', '', 8000);
       } else window.open(url, '_blank', 'noopener');
-      toast('Thank you! When the chorus is approved, every church gets it with its next update check.', 'ok', 7000);
+      toast('Thank you! When the song is approved, every church with ' + lgName + ' gets it with its next update check.', 'ok', 7000);
       return true;
     };
     modal({ title: 'Share “' + hy.t + '” with all churches', body, wide: true, actions: [
       { label: 'Cancel' },
       { label: 'No GitHub account? Copy the song', onclick: () => {
-        const txt = 'Chorus for SDA Sabbath (Praise Choruses)\nTitle: ' + hy.t + '\nWriter: ' + (hy.a || '') + '\nShared by: ' + name.value.trim() + '\nMay be shared: ' + (RIGHTS.find((r) => r[0] === rights) || ['', 'not said'])[1] + '\n\n' + sharedText(hy);
+        const txt = 'Song for SDA Sabbath (Shared Hymns – ' + lgName + ')\nTitle: ' + hy.t + '\nWriter: ' + (hy.a || '') + '\nShared by: ' + name.value.trim() + '\nMay be shared: ' + (RIGHTS.find((r) => r[0] === rights) || ['', 'not said'])[1] + '\n\n' + sharedText(hy);
         if (navigator.clipboard) navigator.clipboard.writeText(txt).then(() => toast('Copied. Send it to the person who looks after SDA Sabbath, or to the maintainer on GitHub.', 'ok', 7000), () => toast('Could not copy.', 'err'));
         return false;
       } },
@@ -695,7 +796,7 @@ export default function create(ctx) {
 
   // ------------------------------------------------------------ online lyrics
   // Search public lyric sources, show the likeliest songs, let the person pick one, check the words as slides
-  // and keep it offline in a book (Praise Choruses by default) so it can be found again like any other song.
+  // and keep it offline in a book (Shared Hymns – English by default) so it can be found again like any other song.
   function findLyrics() {
     let aiOn = ai.hasKey();
     let seq = 0, picked = null;
@@ -814,8 +915,8 @@ export default function create(ctx) {
       };
       ta.addEventListener('input', debounce(refresh, 150));
       const bookSel2 = h('select.field', { 'aria-label': 'Add to book' });
-      books.forEach((bk) => bookSel2.appendChild(h('option', { value: bk.id }, bk.name)));
-      bookSel2.value = books.some((b) => b.id === 'choruses') ? 'choruses' : book ? book.id : (books[0] && books[0].id) || '';
+      books.forEach((bk) => bookSel2.appendChild(h('option', { value: bk.id }, (bk.shared ? 'Shared Hymns – ' : '') + bk.name)));
+      bookSel2.value = book && (book.shared || !book.builtin) ? book.id : books.some((b) => b.id === COMMUNITY_BOOK) ? COMMUNITY_BOOK : book ? book.id : (books[0] && books[0].id) || '';
       // MIDI picker
       let chosenMidi = (o.midis && o.midis[0]) || null;
       const midiBox = h('div.col', { style: { gap: '4px' } });
@@ -838,10 +939,7 @@ export default function create(ctx) {
         const title = titleIn.value.trim() || 'Untitled song';
         if (bk.hymns.some((x) => normalize(x.t) === normalize(title)) &&
           !(await confirmBox('Already in this book', '“' + title + '” is already in ' + bk.name + '. Add another copy?', 'Add anyway'))) return;
-        // In Praise Choruses, 501 and up are the shared choruses: a church's own additions stay below them.
-        const below = bk.id === COMMUNITY_BOOK ? bk.hymns.filter((x) => x.n < FIRST_NUMBER) : bk.hymns;
-        let num = below.reduce((m, x) => Math.max(m, +x.n || 0), 0) + 1;
-        if (bk.id === COMMUNITY_BOOK && num >= FIRST_NUMBER) num = bk.hymns.reduce((m, x) => Math.max(m, +x.n || 0), 0) + 1;
+        const num = nextNumber(bk);   // in Shared Hymns, 501 and up are the songs shared by all churches
         const nh = { n: num, t: title, a: authorIn.value.trim(), v: p.v.length ? p.v : [p.c], c: p.v.length ? p.c : null };
         bk.hymns.push(nh); bk.hymns.sort((a, b) => a.n - b.n);
         try { await saveBookEdit(nh, true, bk, true); }
@@ -1010,6 +1108,7 @@ export default function create(ctx) {
 
   // ------------------------------------------------------------ public API
   const api = {
+    addSharedLanguage: () => addSharedLanguage(),
     el,
     lookup(n) {
       const out = [];
@@ -1039,6 +1138,7 @@ export default function create(ctx) {
     },
     async open({ n, book: bid, index = 0 }) {
       await ready;
+      if (bid === 'malmesbury') { bid = COMMUNITY_BOOK; n = +n + MP_OFFSET; }   // plans made before the merge
       if (bid && bid !== (book && book.id) && books.some((b) => b.id === bid)) setBook(bid);
       let x = book && book.hymns.find((y) => y.n === +n);
       // Plan items made before a hymnbook was chosen (or after it was switched): use any book that has it.

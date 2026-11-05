@@ -801,6 +801,51 @@ def main():
                     c.close()
             t_banner_make_phone()
 
+            @check('Shared Hymns: grouped list, Malmesbury in English 101–148, a book per language, new song asks the language')
+            def t_shared_hymns():
+                pg.evaluate("window.selah.showTab('hymns').then((t) => t.whenReady && t.whenReady())"); pg.wait_for_timeout(600)
+                groups = pg.evaluate("[...document.querySelectorAll('select[aria-label=Hymnbook] optgroup')].map(g => [g.label, [...g.children].map(o => o.textContent)])")
+                assert groups and groups[0][0] == 'Hymnals' and 'SDA Hymnal 1985 (698)' in groups[0][1], 'hymnals: %r' % groups
+                assert groups[-1][0] == 'Shared Hymns' and 'English (92)' in groups[-1][1], 'shared: %r' % groups
+                assert not any('Malmesbury' in o for g in groups for o in g[1]), 'Malmesbury Praise is still a separate book'
+                # A plan made before the merge: Malmesbury Praise 1 opens as Shared Hymns – English 101.
+                t = pg.evaluate("window.selah.tab('hymns').then(t => t.open({ n: 1, book: 'malmesbury' })).then(c => c && c.title)")
+                assert t and 'Fill My Cup Lord' in t and '101' in t, 'old Malmesbury plan item: %r' % t
+                # Shared hymns from other churches, by language (the list on GitHub, mocked here).
+                doc = json.dumps({'rev': 1, 'updated': '2026-11-05', 'songs': [{'n': 501, 'lang': 'af', 't': 'Ek Sal Die Heer Loof', 'v': [['Ek sal die Heer loof', 'al my dae']], 'added': '2026-11-05'}]})
+                route = lambda r: r.fulfill(status=200, body=doc, headers={'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'})
+                ctx.route('https://leemcq.github.io/**/shared.json*', route)
+                try:
+                    pg.evaluate("window.selah.settings.set('hymns.shared', ['en', 'af'])")
+                    r = pg.evaluate("import('./js/core/community.js').then(m => m.syncCommunity({ force: true }))")
+                    assert r.get('byLang') == {'af': 1}, 'sync: %r' % r
+                    pg.evaluate("window.dispatchEvent(new CustomEvent('selah-hymnbooks', { detail: { select: 'shared-af' } }))"); pg.wait_for_timeout(900)
+                    opts = pg.evaluate("[...document.querySelectorAll('select[aria-label=Hymnbook] optgroup[label=\"Shared Hymns\"] option')].map(o => o.textContent)")
+                    assert 'Afrikaans (1)' in opts, 'Afrikaans shared book: %r' % opts
+                    wait_text(pg, 'Ek Sal Die Heer Loof')
+                    # New song: the language first, then the next number (below 501 for a church's own songs).
+                    pg.locator('section .toolbar button[aria-label="More"]:visible').first.click(); pg.wait_for_timeout(200)
+                    pg.locator('.menu button', has_text='New song').click(); pg.wait_for_timeout(400)
+                    sel = 'select[aria-label="Language of the new song"]'
+                    assert pg.locator(sel).input_value() == 'shared-af', 'language not preset to the open book'
+                    num = lambda: pg.locator('.modal input[type=number]').input_value()
+                    assert num() == '1', 'first own Afrikaans number: %r' % num()
+                    pg.select_option(sel, 'choruses'); pg.wait_for_timeout(200)
+                    assert num() == '149', 'next own English number: %r' % num()
+                    pg.select_option(sel, 'shared-af'); pg.wait_for_timeout(200)
+                    pg.locator('.modal input[placeholder="Title"]').fill('Ons Lied')
+                    pg.locator('.modal textarea').fill('Reël een\nReël twee')
+                    # The install card must never cover a dialog's buttons (it did, 5 Nov 2026).
+                    assert pg.evaluate("(() => { const b = [...document.querySelectorAll('.modal .modal-f button')].find(x => x.textContent === 'Save'); const r = b.getBoundingClientRect(); const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return !!top && (top === b || b.contains(top)); })()"), 'something covers the Save button of the dialog'
+                    pg.locator('.modal .modal-f button', has_text='Save').click(); pg.wait_for_timeout(600)
+                    opts = pg.evaluate("[...document.querySelectorAll('select[aria-label=Hymnbook] optgroup[label=\"Shared Hymns\"] option')].map(o => o.textContent)")
+                    assert 'Afrikaans (2)' in opts, 'the new song is not in Afrikaans: %r' % opts
+                    assert pg.locator('button', has_text='Share with all churches').first.is_visible(), 'cannot share the new song'
+                finally:
+                    ctx.unroute('https://leemcq.github.io/**/shared.json*', route)
+                    pg.evaluate("window.selah.settings.set('hymns.shared', [])")
+            t_shared_hymns()
+
             @check('remote buttons (Stream Deck) control the app')
             def t_remote():
                 L = lambda: pg.evaluate("import('./js/core/live.js').then(m => ({ live: m.live.cue && m.live.cue.title, i: m.live.index, staged: m.live.staged && m.live.staged.title, blank: m.live.blank }))")

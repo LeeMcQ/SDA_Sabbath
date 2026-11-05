@@ -1,18 +1,26 @@
 #!/usr/bin/env python3
-"""Chorus robot (run by .github/workflows/chorus.yml on "Share a praise chorus" issues).
+"""Shared-hymns robot (run by .github/workflows/chorus.yml on "Share a hymn" issues, any language).
 
   check    the issue was opened or edited: read the form, tidy the words, check them (format, duplicates,
            a public lyrics database), look for a MIDI file, and write the result as a comment.
   publish  the maintainer added the label "chorus-approved" (or AUTO_PUBLISH_CHORUSES is "true" and every
-           check passed): add the chorus to data/hymns/community/choruses.json (and its MIDI), push, start
-           the website build, comment and close the issue. Every SDA Sabbath then gets it when online.
+           check passed): add the song to data/hymns/community/shared.json with its language and the next
+           shared number in that language (501 and up), with its MIDI; push, start the website build, comment
+           and close the issue. Every SDA Sabbath that has that language's Shared Hymns gets it when online.
+           English songs are also copied to choruses.json for app copies older than 5 Nov 2026.
 
 The issue text is untrusted: it is only parsed as text here, never run.
 """
 import datetime, difflib, io, json, os, re, subprocess, sys, unicodedata, urllib.parse, urllib.request, zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-COMMUNITY = os.path.join(ROOT, 'data', 'hymns', 'community', 'choruses.json')
+COMMUNITY = os.path.join(ROOT, 'data', 'hymns', 'community', 'shared.json')
+LEGACY = os.path.join(ROOT, 'data', 'hymns', 'community', 'choruses.json')   # English only, read by older app copies
+LANGS = {'en': 'English', 'af': 'Afrikaans', 'xh': 'isiXhosa', 'zu': 'isiZulu', 'st': 'Sesotho', 'tn': 'Setswana', 'nso': 'Sepedi',
+         'ts': 'Xitsonga', 've': 'Tshivenda', 'ss': 'siSwati', 'nd': 'isiNdebele', 'nr': 'isiNdebele', 'sn': 'Shona', 'ny': 'Chichewa',
+         'sw': 'Kiswahili', 'fr': 'French', 'pt': 'Portuguese', 'es': 'Spanish', 'ru': 'Russian', 'de': 'German', 'nl': 'Dutch',
+         'rw': 'Kinyarwanda', 'ki': 'Kikuyu', 'tw': 'Twi', 'bem': 'Icibemba', 'toi': 'Tonga', 'tum': 'Tumbuka', 'luo': 'Dholuo',
+         'kam': 'Kikamba', 'kln': 'Kalenjin', 'guz': 'Ekegusii', 'mas': 'Maasai', 'am': 'Amharic', 'mg': 'Malagasy'}
 MIDI_DIR = os.path.join(ROOT, 'data', 'hymns', 'community', 'midi')
 FIRST = 501
 MARK = '<!-- chorus-bot -->'
@@ -21,7 +29,7 @@ LABELS = {
     'chorus-checked': ('2b7f3e', 'The chorus robot found no problems'),
     'chorus-needs-attention': ('b45309', 'The chorus robot found something to look at'),
     'chorus-approved': ('1f4068', 'Maintainer: publish this chorus to every church'),
-    'chorus-published': ('0e7490', 'In the shared Praise Choruses'),
+    'chorus-published': ('0e7490', 'In Shared Hymns (every church with that language)'),
 }
 REPO = os.environ.get('GITHUB_REPOSITORY', 'LeeMcQ/SDA_Sabbath')
 TOKEN = os.environ.get('GH_TOKEN', '')
@@ -71,7 +79,7 @@ def comment(num, text):
 
 
 # ------------------------------------------------------------ reading the form
-FIELDS = {'song title': 'title', 'writer': 'author', 'lyrics': 'lyrics', 'may these words be shared with every church?': 'rights',
+FIELDS = {'song title': 'title', 'language': 'language', 'writer': 'author', 'lyrics': 'lyrics', 'may these words be shared with every church?': 'rights',
           'shared by (church)': 'church', 'midi file (optional)': 'midi', 'confirmation': 'confirm'}
 
 
@@ -89,6 +97,22 @@ def parse_form(body):
         out[key] = val
     out['confirmed'] = bool(re.search(r'-\s*\[[xX]\]', out.get('confirm', '')))
     return out
+
+
+def lang_of(f):
+    """The language code from the form: "Afrikaans (af)", "af" or "Afrikaans". English when not given."""
+    v = (f.get('language') or '').strip()
+    m = re.search(r'\(([a-z]{2,3})\)\s*$', v) or re.match(r'^([a-z]{2,3})$', v.lower())
+    if m:
+        return m.group(1).lower()
+    for code, name in LANGS.items():
+        if v and v.lower() == name.lower():
+            return code
+    return 'en'
+
+
+def lang_name(code):
+    return LANGS.get(code, code)
 
 
 def clean_text(s, n):
@@ -141,6 +165,7 @@ def words(s):
 
 
 def all_songs():
+    """(book, number, title, first line, language) of every song in SDA Sabbath."""
     out = []
     d = os.path.join(ROOT, 'data', 'hymns')
     for f in sorted(os.listdir(d)):
@@ -151,19 +176,22 @@ def all_songs():
         except Exception:
             continue
         for h in j.get('hymns', []):
-            out.append((j.get('short') or f, h.get('n'), h.get('t', ''), (h.get('v') or [[]])[0][:1]))
+            out.append((j.get('short') or f, h.get('n'), h.get('t', ''), (h.get('v') or [[]])[0][:1], j.get('lang') or 'en'))
     try:
         for h in json.load(open(COMMUNITY, encoding='utf-8')).get('songs', []):
-            out.append(('CHR (shared)', h.get('n'), h.get('t', ''), (h.get('v') or [[]])[0][:1]))
+            lg = h.get('lang') or 'en'
+            out.append(('Shared Hymns – %s' % lang_name(lg), h.get('n'), h.get('t', ''), (h.get('v') or [[]])[0][:1], lg))
     except Exception:
         pass
     return out
 
 
-def find_duplicates(title, first):
+def find_duplicates(title, first, lang='en'):
     nt, nf = norm(title), norm(first)
     same, near = [], []
-    for book, n, t, f1 in all_songs():
+    for book, n, t, f1, lg in all_songs():
+        if lg != lang:
+            continue
         tt, ff = norm(t), norm(f1[0] if f1 else '')
         if not tt:
             continue
@@ -278,8 +306,8 @@ def run_checks(f):
     if not v:
         errors.append('There are no words.')
     n_lines = sum(len(s) for s in v) + len(c or [])
-    if n_lines > 80:
-        errors.append('The words are very long (%d lines). Praise choruses are short songs.' % n_lines)
+    if n_lines > 160:
+        errors.append('The words are very long (%d lines). Check that only one song was pasted.' % n_lines)
     doubled = [l for st in v for l in st if re.search(r'\b(the|a|an|and|to|of|in|is|my)\s+\1\b', l, re.I)]
     if doubled:
         warns.append('A word may be typed twice: ' + '; '.join(doubled[:3]))
@@ -291,9 +319,9 @@ def run_checks(f):
     if not f.get('confirmed'):
         errors.append('The confirmation box is not ticked.')
     if title and v:
-        same, near = find_duplicates(title, v[0][0])
+        same, near = find_duplicates(title, v[0][0], lang_of(f))
         if same:
-            errors.append('This chorus is already in SDA Sabbath: ' + ', '.join(same) + '.')
+            errors.append('This song is already in SDA Sabbath: ' + ', '.join(same) + '.')
         elif near:
             warns.append('Similar songs are already in SDA Sabbath: ' + ', '.join(near) + '. Check that this is a different song.')
         ratio, label, differ = lyrics_check(title, author, v, c)
@@ -313,15 +341,17 @@ def run_checks(f):
     if midi:
         info.append('MIDI: %s (%d KB).' % (src, max(1, len(midi) // 1024)))
     else:
-        info.append('No MIDI found. The chorus works without one; a MIDI can be added later.')
-    song = {'t': title, 'a': author, 'v': v, 'c': c}
+        info.append('No MIDI found. The song works without one; a MIDI can be added later.')
+    lg = lang_of(f)
+    info.insert(0, 'Language: %s (%s) — it goes to Shared Hymns – %s.' % (lang_name(lg), lg, lang_name(lg)))
+    song = {'t': title, 'a': author, 'v': v, 'c': c, 'lang': lg}
     return song, midi, errors, warns, info
 
 
 def report(song, errors, warns, info, auto):
-    out = ['### Chorus robot']
+    out = ['### Shared Hymns robot']
     if errors:
-        out.append('❌ **This chorus cannot be shared yet.** Edit the issue (⋯ → Edit) to fix it; the robot checks again.')
+        out.append('❌ **This song cannot be shared yet.** Edit the issue (⋯ → Edit) to fix it; the robot checks again.')
     elif warns:
         out.append('⚠️ **Ready for the maintainer, with notes.**')
     else:
@@ -335,7 +365,7 @@ def report(song, errors, warns, info, auto):
                 txt.append('Chorus:\n' + '\n'.join(song['c']))
         out.append('\n<details><summary>The words as they will appear (tidied)</summary>\n\n```text\n' + song['t'] + '\n\n' + '\n\n'.join(txt) + '\n```\n</details>')
     if not errors and not auto:
-        out.append('\n**Maintainer:** add the label `chorus-approved` to publish it to every church.')
+        out.append('\n**Maintainer:** add the label `chorus-approved` to publish it to every church with %s.' % lang_name(song.get('lang', 'en')))
     return '\n'.join(out)
 
 
@@ -349,9 +379,10 @@ def publish(num, f, song, midi, by_label):
     songs = doc.get('songs', [])
     if any(s.get('issue') == num for s in songs):
         return None
-    n = max([FIRST - 1] + [int(s.get('n', 0)) for s in songs]) + 1
-    sid = '%s-%d' % (slug(song['t']), n)
-    entry = {'n': n, 'id': sid, 't': song['t'], 'a': song['a'], 'v': song['v']}
+    lg = song.get('lang') or 'en'
+    n = max([FIRST - 1] + [int(s.get('n', 0)) for s in songs if (s.get('lang') or 'en') == lg]) + 1
+    sid = '%s-%s-%d' % (lg, slug(song['t']), n)
+    entry = {'n': n, 'lang': lg, 'id': sid, 't': song['t'], 'a': song['a'], 'v': song['v']}
     if song.get('c'):
         entry['c'] = song['c']
     entry['by'] = clean_text(f.get('church'), 80)
@@ -366,11 +397,20 @@ def publish(num, f, song, midi, by_label):
     doc['rev'] = int(doc.get('rev', 0)) + 1
     doc['updated'] = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
     open(COMMUNITY, 'w', encoding='utf-8').write(json.dumps(doc, ensure_ascii=False, indent=1) + '\n')
+    if lg == 'en':   # older app copies read the English list from choruses.json
+        try:
+            old = json.load(open(LEGACY, encoding='utf-8'))
+        except Exception:
+            old = {'songs': []}
+        old['songs'] = [x for x in old.get('songs', []) if x.get('n') != n] + [{k: v for k, v in entry.items() if k != 'lang'}]
+        old['rev'] = int(old.get('rev', 0)) + 1
+        old['updated'] = doc['updated']
+        open(LEGACY, 'w', encoding='utf-8').write(json.dumps(old, ensure_ascii=False, indent=1) + '\n')
     git = lambda *a: subprocess.run(['git'] + list(a), cwd=ROOT, check=True)
     git('config', 'user.name', 'github-actions[bot]')
     git('config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com')
     git('add', 'data/hymns/community')
-    git('commit', '-m', 'Shared chorus CHR %d: %s (#%d)' % (n, song['t'], num))
+    git('commit', '-m', 'Shared Hymns – %s %d: %s (#%d)' % (lang_name(lg), n, song['t'], num))
     for _ in range(3):
         if subprocess.run(['git', 'push', 'origin', 'HEAD:main'], cwd=ROOT).returncode == 0:
             break
@@ -413,7 +453,8 @@ def main():
     n = publish(num, f, song, midi, approve)
     if n is None:
         return
-    api('POST', '/repos/%s/issues/%d/comments' % (REPO, num), {'body': '🎵 **Published as CHR %d** in the shared Praise Choruses%s. Every SDA Sabbath gets it when it is online (the website updates in about 5 minutes). Thank you for sharing!' % (n, ' with its MIDI' if midi else '')})
+    lg = song.get('lang') or 'en'
+    api('POST', '/repos/%s/issues/%d/comments' % (REPO, num), {'body': '🎵 **Published as number %d in Shared Hymns – %s**%s. Every SDA Sabbath with %s gets it when it is online (the website updates in about 5 minutes). Thank you for sharing!' % (n, lang_name(lg), ' with its MIDI' if midi else '', lang_name(lg))})
     set_labels(num, add=['chorus-published'], remove=['chorus-checked', 'chorus-needs-attention'])
     api('PATCH', '/repos/%s/issues/%d' % (REPO, num), {'state': 'closed', 'state_reason': 'completed'})
 

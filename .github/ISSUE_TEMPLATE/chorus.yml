@@ -1,12 +1,12 @@
-name: Share a praise chorus
-description: Send a chorus to every church that uses SDA Sabbath (Hymns → Praise Choruses). The chorus robot checks it, the maintainer approves it.
-title: "Chorus: "
+name: Share a hymn
+description: Send a song to every church that uses SDA Sabbath in its language (Hymns → Shared Hymns). The robot checks it, the maintainer approves it.
+title: "Hymn: "
 labels: ["chorus"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thank you for sharing! The **chorus robot** checks the words and looks for a MIDI file within a few minutes and writes the result below. Once the maintainer approves it, every copy of SDA Sabbath gets the chorus when it is online.
+        Thank you for sharing! The **robot** checks the words and looks for a MIDI file within a few minutes and writes the result below. Once the maintainer approves it, every copy of SDA Sabbath that has **Shared Hymns** in this language gets it when it is online, with the next shared number (501 and up).
         **Only songs that may be shared:** public domain, written by your church, or shared with the writer's permission. Most modern worship songs (CCLI) may not be shared.
   - type: input
     id: song-title
@@ -15,6 +15,12 @@ body:
       placeholder: e.g. Give Me Oil in My Lamp
     validations:
       required: true
+  - type: input
+    id: language
+    attributes:
+      label: Language
+      description: The language of the words, e.g. "Afrikaans (af)" or "isiXhosa (xh)". SDA Sabbath fills this in.
+      placeholder: English (en)
   - type: input
     id: author
     attributes:

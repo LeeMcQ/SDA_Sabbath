@@ -1,7 +1,7 @@
 [
   {
     "id": "sda-online",
-    "name": "SDA Hymnal 1985 (numbers and titles)",
+    "name": "SDA Hymnal 1985",
     "short": "SDAH",
     "lang": "en",
     "file": "sda-online.json",
@@ -10,7 +10,7 @@
   },
   {
     "id": "church-1941",
-    "name": "Church Hymnal 1941 (offline)",
+    "name": "Church Hymnal 1941",
     "short": "CH41",
     "lang": "en",
     "file": "church-1941.json",
@@ -18,7 +18,7 @@
   },
   {
     "id": "afrikaans-sda",
-    "name": "Advent Lofliedere (Afrikaans, numbers and titles)",
+    "name": "Advent Lofliedere",
     "short": "AL",
     "lang": "af",
     "file": "afrikaans.json",
@@ -27,20 +27,12 @@
   },
   {
     "id": "choruses",
-    "name": "Praise Choruses (titles; traditional ones with words)",
-    "short": "CHR",
+    "name": "English",
+    "short": "SH",
     "lang": "en",
     "file": "choruses.json",
-    "note": "Titles, authors and CCLI look-up. Words included only for traditional (public-domain) choruses; add the others under your church's CCLI licence.",
-    "words": "licensed"
-  },
-  {
-    "id": "malmesbury",
-    "name": "Malmesbury Praise (titles; public-domain ones with words)",
-    "short": "MP",
-    "lang": "en",
-    "file": "malmesbury.json",
-    "note": "Numbers 1–48 with titles. Words included only for public-domain hymns; add the others under your church's licence.",
-    "words": "licensed"
+    "note": "Shared Hymns in English: praise choruses (1–45), Malmesbury Praise (101–148, with their own titles) and hymns shared by SDA Sabbath churches (501 and up). Words are included for public-domain songs; add the others under your church's licence.",
+    "words": "licensed",
+    "shared": true
   }
 ]
