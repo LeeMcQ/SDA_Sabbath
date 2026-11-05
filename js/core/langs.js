@@ -21,6 +21,7 @@ const NAMES = {
   tum: 'Tumbuka', sw: 'Kiswahili', rw: 'Kinyarwanda', ki: 'Gĩkũyũ (Kikuyu)', kam: 'Kikamba', kln: 'Kalenjin', luo: 'Dholuo', guz: 'Ekegusii',
   mas: 'Maasai', tw: 'Twi', fr: 'Français (French)', pt: 'Português (Portuguese)', es: 'Español (Spanish)', ru: 'Русский (Russian)',
   de: 'Deutsch (German)', nl: 'Nederlands (Dutch)', zh: 'Chinese', no: 'Norwegian', el: 'Greek', he: 'Hebrew', mg: 'Malagasy', am: 'Amharic',
+  grc: 'Greek (ancient)', hbo: 'Hebrew (ancient)', my: 'Burmese (Myanmar)', tpi: 'Tok Pisin',
 };
 
 export function langKey(code, name) {

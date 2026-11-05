@@ -124,7 +124,7 @@ export function openWelcome({ onClose, only } = {}) {
       card.append(head('Help make SDA Sabbath better'),
         h('div.col', { style: { gap: '12px' } },
           statsToggle(),
-          h('p', 'Ideas or problems? Use ', h('b', 'the speech-bubble button'), ' at the top, or Settings → Account, to send a comment or suggestion at any time.')),
+          h('p.note', 'Ideas or problems? Press the speech bubble at the top.')),
         nav());
       return;
     }
@@ -144,10 +144,15 @@ export function openWelcome({ onClose, only } = {}) {
     const paintRow = () => {
       clear(row);
       if (installed()) { row.append(h('p.inst-ok', icon('check'), h('span', 'Installed. SDA Sabbath now has its own icon and opens without the browser or internet. Carry on with the setup here, or in the app window.'))); return; }
-      row.append(ctx.installPrompt
-        ? h('button.btn.primary', { type: 'button', style: { alignSelf: 'flex-start' }, onclick: async () => { await ctx.promptInstall(); paintRow(); } }, icon('download'), h('span', 'Install SDA Sabbath on this device'))
-        : h('p', h('b', 'To install: '), installSteps()));
-      row.append(h('p.note', 'Installing keeps your plans, Bibles and hymnbooks safe on this device, and SDA Sabbath opens even when the internet is down on Sabbath.'));
+      // One clear button on the first page. When the browser offers its own install window, the button opens it;
+      // when it does not (Safari, Firefox, or the browser is not ready yet), the button shows the steps instead.
+      const steps = h('p', { hidden: true }, installSteps());
+      const btn = h('button.btn.primary', { type: 'button', style: { alignSelf: 'flex-start' }, onclick: async () => {
+        if (ctx.installPrompt) { await ctx.promptInstall(); paintRow(); return; }
+        steps.hidden = false;
+      } }, icon('download'), h('span', 'Install SDA Sabbath'));
+      row.append(btn, steps,
+        h('p.note', 'It then opens from its own icon and works without internet on Sabbath.'));
     };
     paintRow();
     if (ctx.onInstallChange) ctx.onInstallChange(() => { if (row.isConnected) paintRow(); });
@@ -155,15 +160,15 @@ export function openWelcome({ onClose, only } = {}) {
   }
 
   // ------------------------------------------------------------ the church's languages
+  // A name in another script sorts by its English name in brackets: "Русский (Russian)" under R, not after Z.
+  const langSortKey = (n) => (/^[^\u0000-ɏ]/.test(n) && /\(([^)]+)\)\s*$/.test(n) ? /\(([^)]+)\)\s*$/.exec(n)[1] : n);
   function languagePickers() {
-    const all = languageChoices();
-    const groups = [
-      ['Hymns and Bible', all.filter((l) => l.hymns.length && (l.bibles.length || l.builtinBible))],
-      ['Hymns', all.filter((l) => l.hymns.length && !l.bibles.length && !l.builtinBible)],
-      ['Bible', all.filter((l) => !l.hymns.length && (l.bibles.length || l.builtinBible || l.builtinHymns))],
-    ];
-    const opts = (none) => [none ? h('option', { value: '' }, 'None') : null,
-      ...groups.filter(([, ls]) => ls.length).map(([g, ls]) => h('optgroup', { label: g }, ls.map((l) => h('option', { value: l.key }, l.name))))];
+    // Only the languages, A to Z (no headings): every one has a Bible or a hymnbook to download, or one built in.
+    // Left out: names that are only a code, and Klingon (in the Bible lists, not a language of a service).
+    const list = languageChoices()
+      .filter((l) => (l.hymns.length || l.bibles.length || l.builtinBible || l.builtinHymns) && l.name !== l.key && l.key !== 'tlh')
+      .sort((a, b) => langSortKey(a.name).localeCompare(langSortKey(b.name), 'en', { sensitivity: 'base' }));
+    const opts = (none) => [none ? h('option', { value: '' }, 'None') : null, ...list.map((l) => h('option', { value: l.key }, l.name))];
     const L = L3();
     const sel = [0, 1, 2].map((k) => {
       const x = h('select.field', { 'aria-label': ['Main language', 'Second language', 'Third language'][k] }, opts(k > 0));
@@ -396,9 +401,11 @@ export function openWelcome({ onClose, only } = {}) {
       if (await hqStored(pack)) { packBox.append(h('p.inst-ok', icon('check'), h('span', P.label + ' instruments are downloaded on this device and work without internet.'))); return; }
       const prog = h('span.note');
       const dl = h('button.btn', { type: 'button', onclick: async () => {
-        dl.disabled = true;
+        dl.disabled = true; prog.textContent = 'Starting…';
         const ok = await hqPrefetch(pack, (t, pct) => { prog.textContent = pct + '%'; });
-        if (ok) paintPack(); else { dl.disabled = false; prog.textContent = navigator.onLine === false ? 'Needs internet once.' : 'Could not download now; it is tried again later.'; }
+        // Say what happened and what to do: the download only works while this device can reach the website.
+        if (ok) paintPack(); else { dl.disabled = false; prog.textContent = navigator.onLine === false ? 'No internet. Connect, then press Download again.'
+          : 'Could not reach ' + location.host + '. Check the internet, then press Download again.'; }
       } }, icon('download'), h('span', 'Download now (' + P.mb + ' MB, once)'));
       packBox.append(h('p.note', (pack === 'studio'
         ? 'Studio instruments: a concert grand recorded at 16 loudness levels with its full natural ring, and a pipe organ with five stops. '

@@ -1,6 +1,6 @@
 // SDA Sabbath control app boot: tabs, Present button, display menu, shortcuts, service worker.
 import { $, h, isTyping, keepScreenOn } from './core/util.js';
-import { startInstallPrompt } from './core/installer.js';
+import { startInstallPrompt, installed } from './core/installer.js';
 import { icon } from './core/icons.js';
 import { settings, serviceLang } from './core/settings.js';
 import { db, persistStorage } from './core/db.js';
@@ -31,7 +31,7 @@ const lazyWelcome = () => import('./tabs/welcome.js');
 const openFeedback = (c, o) => import('./tabs/account.js').then((m) => m.openFeedback(c, o));
 
 export const VERSION = '1.6.1';
-export const BUILD = '4c5cde0';
+export const BUILD = 'fcff973';
 
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', file: 'bible.js', load: () => import('./tabs/bible.js') },
@@ -661,6 +661,9 @@ window.addEventListener('selah-health', instNotify);
 const instCard = startInstallPrompt({ promptInstall, installAvailable: () => !!ctx.installPrompt, offline: offlineState, onChange: (f) => instFns.add(f) });
 ctx.offlineState = offlineState;                 // the first-start setup shows these too
 ctx.onInstallChange = (f) => instFns.add(f);
+// The signal may have come before this module ran (js/boot-guard.js kept it).
+if (window.__installPrompt && !ctx.installPrompt && !installed()) { ctx.installPrompt = window.__installPrompt; installBtn.hidden = false; instNotify(); }
+window.__installPrompt = null;
 // Live translation (optional): loads only once switched on in Tools → Listen & Translate.
 const capLoad = () => import('./core/livecaptions.js').then((m) => m.initCaptions(ctx)).catch(() => {});
 if (settings.v.captions && settings.v.captions.on) capLoad();
