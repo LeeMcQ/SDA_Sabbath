@@ -1024,6 +1024,22 @@ def main():
                 assert r > 0.05, 'no sound (peak %.3f)' % r
             t_music()
 
+            @check('Advent Lofliedere hymns share the SDA Hymnal tunes (matched list)')
+            def t_music_af():
+                r = pg.evaluate("""async () => {
+                  const { music } = await import('./js/core/hymnmusic.js');
+                  const idx = await (await fetch('data/music/index.json')).json();
+                  const af = idx.books['afrikaans-sda'], en = idx.books['sda-online'];
+                  const files = new Set(Object.values(en.hymns).map((x) => x.f));
+                  const bad = Object.entries(af.hymns).filter(([n, x]) => !files.has(x.f)).map(([n]) => n);
+                  const e11 = await music.entry('afrikaans-sda', 11), e71 = await music.entry('sda-online', 71);
+                  return { n: Object.keys(af.hymns).length, bad, same: !!e11 && !!e71 && e11.f === e71.f, none: await music.entry('afrikaans-sda', 2) };
+                }""")
+                assert r['n'] >= 100 and not r['bad'], 'Lofliedere music list wrong: %r' % r
+                assert r['same'], 'Lofliedere 11 (Kom, o almagtige Heer) should use the tune of SDA Hymnal 71'
+                assert not r['none'], 'Lofliedere 2 has no matched tune yet'
+            t_music_af()
+
             @check('high-quality piano and organ, church echo')
             def t_music_hq():
                 r = pg.evaluate("""async () => {

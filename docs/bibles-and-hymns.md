@@ -81,6 +81,7 @@ the publisher's permission) adds the words on its own devices:
   hymnbook file (`.json` or `# 73 Title` text) whose numbers fill in the built-in book.
 - Or pick a hymn and press **Add the words**. For SDA Hymnal hymns that are also in the 1941 Church Hymnal, a button
   opens the older public-domain words.
+- **Afrikaans Lofliedere music:** hymns that are the same hymn as one in the SDA Hymnal (about 150, matched by number) play the SDA Hymnal's tune. Other Lofliedere hymns can take a MIDI file of your own (Add MIDI file…).
 - A hymn without words still has its title slide (number and title), so the congregation can follow in the hymnal.
 - Showing words on a live stream also needs the church's **CCLI Streaming Licence**.
 
