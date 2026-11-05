@@ -178,6 +178,50 @@ def main():
                 assert r['backwards'] == 'John 3:16–18', 'backwards range: %r' % r['backwards']
             t_bad_ref()
 
+            @check('Listen (browser) keeps answering: every mention, finished sentences only')
+            def t_listen_browser():
+                # A stand-in for Chrome's speech recogniser: words arrive as interim results, then the finished
+                # sentence; this one also ends after each sentence, as Chrome and Edge often do.
+                mock = """(() => { window.__sr = null; class F { constructor() { this.results = []; window.__sr = this; }
+                  start() { } stop() { this._end(); } abort() { this._end(); }
+                  _end() { if (this.ended) return; this.ended = true; if (window.__sr === this) window.__sr = null; setTimeout(() => this.onend && this.onend(), 10); }
+                  _emit(t, fin) { let i = this.results.length; if (i && !this.results[i - 1].isFinal) i--;
+                    this.results[i] = Object.assign([{ transcript: t }], { isFinal: fin }); this.results.length = i + 1;
+                    this.onresult && this.onresult({ resultIndex: i, results: this.results }); if (fin) setTimeout(() => this._end(), 30); } }
+                  window.__say = async (text) => { for (let n = 0; n < 60 && !window.__sr; n++) await new Promise((r) => setTimeout(r, 50));
+                    const s = window.__sr, w = text.split(' '); if (!s) return false;
+                    for (let k = 1; k < w.length; k++) s._emit(w.slice(0, k).join(' '), false); s._emit(text, true); return true; };
+                  window.SpeechRecognition = window.webkitSpeechRecognition = F; })();"""
+                c = b.new_context(viewport={'width': 1400, 'height': 900}, service_workers='block')
+                c.add_init_script(mock)
+                q = c.new_page(); qerr = []
+                q.on('pageerror', lambda e: qerr.append(str(e)[:200]))
+                try:
+                    q.goto(base + 'index.html'); q.wait_for_function('() => !!window.__selahBooted', timeout=30000)
+                    q.evaluate("""async () => { const s = (await import('./js/core/settings.js')).settings;
+                      s.set('app.listenOk', true); s.set('app.setupDone', true); }""")
+                    q.wait_for_timeout(300); q.reload(); q.wait_for_function('() => !!window.__selahBooted', timeout=30000)
+                    q.wait_for_timeout(800)
+                    assert not q.locator('.welcome').count(), 'the setup opened again'
+                    q.evaluate("() => window.selah.showTab('tools')")
+                    q.get_by_text('Listen & Translate', exact=True).first.click(); q.wait_for_timeout(500)
+                    q.get_by_text('Browser (online)', exact=True).first.click()
+                    q.locator('button', has_text='Start listening').first.click(); q.wait_for_timeout(600)
+                    cards = "() => [...document.querySelectorAll('.ls-card:not(.ls-follow) .ls-ref')].map((e) => e.textContent.split(' · ')[0])"
+                    seen = []
+                    for said in ('turn with me to John chapter three verse sixteen', 'let us sing hymn number one hundred',
+                                 'turn with me to Romans 8 28', 'please turn to number 73 in your hymnal',
+                                 'as it says in John chapter three verse sixteen'):
+                        assert q.evaluate('(t) => window.__say(t)', said), 'the listener stopped listening before: %r' % said
+                        q.wait_for_timeout(900); seen.append(q.evaluate(cards))
+                    assert seen[0] == ['John 3:16'], seen[0]
+                    assert seen[1] == ['Hymn 100', 'John 3:16'], 'half-heard speech gave a card: %r' % seen[1]
+                    assert seen[3][0] == 'Hymn 73' and seen[4][0] == 'John 3:16', 'a reference said again got no answer: %r' % seen
+                    assert not qerr, qerr[:2]
+                finally:
+                    c.close()
+            t_listen_browser()
+
             def present(q):
                 go = pg.locator('input[placeholder^="Go to"]').first
                 go.fill(q); pg.wait_for_timeout(900); go.press('Enter'); pg.wait_for_timeout(900)

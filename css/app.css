@@ -1488,6 +1488,10 @@ html:not(.lp) .listen-box.on .ls-dot { animation: ls-pulse 1.6s ease-in-out infi
 }
 /* "Being sung now": following the singing of the hymn on screen (green, like Next). */
 .ls-card.ls-follow { border-color: var(--next); }
+/* Said again: the card moves to the top and lights up once. */
+.ls-card.ls-again { animation: ls-again 1.2s ease-out; }
+@keyframes ls-again { 0% { box-shadow: 0 0 0 3px var(--brass); } 100% { box-shadow: 0 0 0 0 transparent; } }
+@media (prefers-reduced-motion: reduce) { .ls-card.ls-again { animation: none; } }
 .ls-card.ls-follow .ls-k { color: var(--next); }
 /* Tools → Listen */
 .ls-status { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; padding: 10px 12px; border-radius: var(--r); background: var(--sunk); }

@@ -20,7 +20,6 @@ import { versesFor, verseText } from './core/bibledata.js';
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const KEEP_MS = 3 * 60 * 1000;   // a suggestion disappears after three minutes
-const REPEAT_MS = 90 * 1000;     // the same reference is not offered again within 90 seconds
 const MAX_CARDS = 3;
 
 export function createListener({ ctx, getTab, present, ui }) {
@@ -31,7 +30,7 @@ export function createListener({ ctx, getTab, present, ui }) {
   // Live translation → Suggestions: the translator's finds become cards here even while Listen itself is off.
   const fromLive = () => !!(settings.v.captions && settings.v.captions.on && settings.v.captions.suggest !== false);
   const active = () => on || testing || fromLive();
-  const seen = new Map(); // key -> time offered
+  const pending = new Set(); // cards being made (the same reference reported twice at once gives one card)
   const cards = [];       // { key, el, t }
   let hyApi = null;       // the Hymns tab, once loaded (its hymn list is used to find hymns announced by name)
   let music = null;       // hymn music: while it plays, the slides already follow the music
@@ -109,7 +108,7 @@ export function createListener({ ctx, getTab, present, ui }) {
     ui.modal({
       title: 'Listen for verses and hymns',
       body: h('div.col', { style: { gap: '10px' } },
-        h('p', 'Church Service listens through the microphone. When a Bible verse or a hymn is mentioned (by number, “hymn 100”, or by name, “let us sing Great Is Thy Faithfulness”), it is offered here. While a hymn is on the screen it also follows the singing and offers the stanza being sung.'),
+        h('p', 'SDA Sabbath listens through the microphone. When a Bible verse or a hymn is mentioned (by number, “hymn 100”, or by name, “let us sing Great Is Thy Faithfulness”), it is offered here. While a hymn is on the screen it also follows the singing and offers the stanza being sung.'),
         h('p', 'You choose whether to put it on Next or show it. Nothing goes on the screen by itself.'),
         h('p.note', 'The offline translator is not running on this PC, so the browser listens instead: it turns speech into text with its own online speech service (Google for Chrome, Microsoft for Edge), so it needs the internet while it listens. It only listens while “Listening” shows, and you can stop it at any time.'),
         h('p.note', 'Language: ' + (afr() ? 'Afrikaans' : 'English') + ' (follows your main Bible in Settings).')),
@@ -133,7 +132,7 @@ export function createListener({ ctx, getTab, present, ui }) {
       rec.onerror = (e) => {
         if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
           stop();
-          ui.toast('The microphone is blocked for Church Service. Allow it with the lock icon in the address bar, then try again.', 'err', 8000);
+          ui.toast('The microphone is blocked for SDA Sabbath. Allow it with the lock icon in the address bar, then try again.', 'err', 8000);
         } else if (e.error === 'network') { problem = 'No internet: listening paused'; paintHead(); }
         else if (e.error === 'audio-capture') { problem = 'No microphone found'; paintHead(); }
       };
@@ -212,6 +211,10 @@ export function createListener({ ctx, getTab, present, ui }) {
 
   // ------------------------------------------------------------ suggestions
   function heard(text, final) {
+    // Cards come from the finished sentence only: half-heard speech ("hymn number one…" on the way to "one
+    // hundred") would offer the wrong hymn or verse and push the right card out. Following the singing still
+    // uses the words as they come.
+    if (!final) { followSinging(text, final); return; }
     const found = findRefs(text);
     found.forEach((r) => offer(r, text, final));
     // A hymn announced by name ("our closing hymn is Blessed Assurance"): only on the finished sentence.
@@ -260,13 +263,22 @@ export function createListener({ ctx, getTab, present, ui }) {
   async function offer(r, text, final) {
     const key = r.kind === 'hymn' ? 'h' + r.n : 'b' + String(r.ref).replace(/[–—]/g, '-'); // the translator and the browser write ranges alike
     const now = Date.now();
-    if (seen.has(key) && now - seen.get(key) < REPEAT_MS) return;
+    // Mentioned again while its card is still showing: move that card to the top instead of a second card.
+    const shown = cards.find((c) => c.key === key);
+    if (shown) {
+      clearTimeout(shown.timer); shown.t = now; shown.timer = setTimeout(() => drop(shown), KEEP_MS);
+      cards.splice(cards.indexOf(shown), 1); cards.unshift(shown); list.prepend(shown.el);
+      shown.el.classList.remove('ls-again'); void shown.el.offsetWidth; shown.el.classList.add('ls-again');
+      return;
+    }
+    // A card that was used, dismissed or pushed out is offered again whenever the reference is said again.
+    if (pending.has(key)) return;
     // Wait for the finished sentence before offering a whole chapter: "John 3" usually becomes "John 3:16".
     if (r.kind === 'bible' && r.v == null && !final) return;
-    seen.set(key, now);
+    pending.add(key);
     let card = null;
-    if (r.kind === 'bible') card = await bibleCard(r, text);
-    else card = await hymnCard(r, text);
+    try { card = r.kind === 'bible' ? await bibleCard(r, text) : await hymnCard(r, text); }
+    finally { pending.delete(key); }
     if (!card || !active()) return;
     // A verse replaces the bare chapter offered a moment ago ("John 3" -> "John 3:16").
     if (r.kind === 'bible' && r.v != null) {
