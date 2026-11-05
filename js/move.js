@@ -1,5 +1,5 @@
 // Moving to the new address (ssdesk.online). A browser keeps each address's data apart, so plans, hymnbooks,
-// Bibles, banners and settings saved at leemcq.github.io stay there. Once the new address answers, the copy at the
+// Bibles, banners and settings saved at the previous address stay there. Once the new address answers, the copy at the
 // old address offers to carry everything over in one step: it makes a backup and hands it to the new address
 // (the new address must be opened from here, and checks where the backup came from). Slides are included;
 // videos are not (they are often large: add them again, or keep using them at the old address).
@@ -75,7 +75,7 @@ export function receiveMove() {
     try { pkg = await b.readBackup(ev.data.blob); } catch (e) { from.postMessage({ t: 'move-fail', why: e.message }, OLD_ORIGIN); return; }
     const st = pkg.manifest.stats || {};
     const w = document.querySelector('.welcome'); if (w) w.hidden = true;   // the first-start setup waits
-    const ok = await confirmBox('Bring in your data from the old address?', 'From leemcq.github.io: ' + [st.plans + ' plans', st.hymnbooks + ' hymnbooks', st.bibles + ' Bibles', st.banners + ' banners', st.slides + ' slide decks'].join(', ') + ', and the settings. The app restarts afterwards.', 'Bring it in');
+    const ok = await confirmBox('Bring in your data from the old address?', 'From the old address: ' + [st.plans + ' plans', st.hymnbooks + ' hymnbooks', st.bibles + ' Bibles', st.banners + ' banners', st.slides + ' slide decks'].join(', ') + ', and the settings. The app restarts afterwards.', 'Bring it in');
     if (!ok) { if (w) w.hidden = false; from.postMessage({ t: 'move-fail', why: 'not accepted' }, OLD_ORIGIN); return; }
     try {
       await b.restoreBackup(pkg, () => {});

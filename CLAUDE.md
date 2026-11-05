@@ -1,7 +1,7 @@
 # SDA Sabbath — notes for Claude
 
 Offline church presenter for Seventh-day Adventist media teams (Bible, hymns, slides, video, banners, plans, stage
-screen, OBS, live translation). A PWA on GitHub Pages: https://leemcq.github.io/SDA_Sabbath/. Maintainer: Leo
+screen, OBS, live translation). A PWA on GitHub Pages: https://ssdesk.online/. Maintainer: Leo
 (LeeMcQ). Users are church volunteers on old PCs and phones, often with no internet on Sabbath.
 
 ## Working rules

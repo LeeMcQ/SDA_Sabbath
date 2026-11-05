@@ -841,7 +841,7 @@ def input_devices():
 
 
 # ---------------------------------------------------------------------------------------------- server for SDA Sabbath
-ORIGIN_OK = re.compile(r'^(https://leemcq\.github\.io|https://(www\.)?ssdesk\.online|https?://(localhost|127\.0\.0\.1|\[::1\]|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?)$')
+ORIGIN_OK = re.compile(r'^(https://(www\.)?ssdesk\.online|https?://(localhost|127\.0\.0\.1|\[::1\]|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?)$')
 
 
 class Hub:

@@ -1,7 +1,8 @@
-# Moving to ssdesk.online
+# The address: ssdesk.online
 
-SDA Sabbath's new address is **https://ssdesk.online/** ("Sabbath Service Desk", registered at domains.co.za). It is
-still published by GitHub Pages from this repository; only the address changes.
+SDA Sabbath lives at **https://ssdesk.online/** ("Sabbath Service Desk", registered at domains.co.za), **live since
+5 November 2026**. It is published by GitHub Pages from this repository with a custom domain; the previous GitHub
+address redirects to it. The steps below are kept for reference.
 
 ## 1. DNS at domains.co.za (Leo)
 
@@ -43,15 +44,17 @@ Actions, so no `CNAME` file is needed in the repository.)
   restored at the new address does the same.
 - The app, the stage-screen QR codes, shared hymns and the companion download page work at both addresses.
 
-## 4. After the new address works (Claude)
+## 4. After the switch
 
-- `js/core/site.js`: `LIVE = true` (the companion and localhost copies then use ssdesk.online), and the addresses in
-  `index.html` (canonical, social preview), the other pages, `tools/monthly_report.py`, README and docs.
+- Done (5 Nov 2026): `js/core/site.js` `LIVE = true` (the companion and localhost copies use ssdesk.online), every page,
+  the docs, the monthly report and the translator installer use ssdesk.online. The old address remains only in
+  `js/core/site.js`, so copies still installed there can move their data.
+- **Still to do in your accounts (Leo):**
 - **Supabase → Authentication → URL Configuration**: Site URL `https://ssdesk.online/`; add `https://ssdesk.online/**` to the
   redirect URLs (keep the old ones for now).
 - **Google Cloud console → OAuth client**: add `https://ssdesk.online` to the authorised JavaScript origins and
   `https://ssdesk.online/oauth.html` to the redirect URIs (Google Drive backup and Google sign-in).
-- **Live translator:** allows ssdesk.online from its next build (`translator/livetranslate.py`). Churches that use it
-  install the new version (Tools → Translate shows the download).
+- **Live translator:** accepts only ssdesk.online (and this PC / the church network) from its next build
+  (`translator/livetranslate.py`). Churches that use it install the new version (Tools → Translate shows the download).
 
 [← Back to the README](../README.md)

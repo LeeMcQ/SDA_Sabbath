@@ -2,7 +2,7 @@
 
 ### 1. Open the app and install it
 
-The app is published from this repository to **https://leemcq.github.io/SDA_Sabbath/** by the
+The app is published from this repository to **https://ssdesk.online/** by the
 included GitHub Pages workflow (repository **Settings → Pages → Source: GitHub Actions**).
 
 On each church PC or phone, open that address once with internet. Every file (Bibles, hymns, fonts, PDF
@@ -65,11 +65,11 @@ clicker test.
 
 One program (about 25 MB — most of it the hymn-music instrument sounds; no installer, no other software) that contains the whole app:
 
-- **Windows:** download `sda-sabbath-windows-x64.exe` from the **[companion download page](https://leemcq.github.io/SDA_Sabbath/companion.html)** (also linked in the app under Settings and Tools → Stream; it is rebuilt with every website update) and double-click it.
+- **Windows:** download `sda-sabbath-windows-x64.exe` from the **[companion download page](https://ssdesk.online/companion.html)** (also linked in the app under Settings and Tools → Stream; it is rebuilt with every website update) and double-click it.
   SDA Sabbath opens at `http://localhost:7777`. To add Start-menu and desktop shortcuts in one go:
 
   ```powershell
-  irm https://leemcq.github.io/SDA_Sabbath/download/sda-sabbath-windows-x64.exe -OutFile $env:TEMP\sda-sabbath.exe; & $env:TEMP\sda-sabbath.exe --install
+  irm https://ssdesk.online/download/sda-sabbath-windows-x64.exe -OutFile $env:TEMP\sda-sabbath.exe; & $env:TEMP\sda-sabbath.exe --install
   ```
 - **Raspberry Pi / Linux / Mac:** `sda-sabbath-linux-arm64`, `sda-sabbath-linux-x64`, `sda-sabbath-macos-arm64` — `chmod +x` and run.
 

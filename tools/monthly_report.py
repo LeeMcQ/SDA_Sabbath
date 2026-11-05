@@ -23,7 +23,7 @@ from email.message import EmailMessage
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 APP = 'Church Service' if os.path.basename(ROOT).lower().startswith('church') or 'church-service' in open(os.path.join(ROOT, 'js', 'core', 'cloud.js'), encoding='utf-8').read() else 'SDA Sabbath'
-SITE = 'https://leemcq.github.io/' + ('Church_Service' if APP == 'Church Service' else 'SDA_Sabbath') + '/'
+SITE = 'https://leemcq.github.io/Church_Service/' if APP == 'Church Service' else 'https://ssdesk.online/'
 
 FEATURE = {'plan_basic': 'Plan – Basic view', 'plan_advanced': 'Plan – Advanced view', 'listen': 'Listen (verse and hymn suggestions)',
            'translate': 'Live translation', 'music': 'Hymn music', 'two_projectors': 'Two projectors', 'stage_screens': 'Stage screens',
