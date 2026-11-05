@@ -614,8 +614,6 @@ google-cast-launcher, .cast-button, [aria-label*="Cast"], button[title*="Cast"],
 .bn-preview-in { display: flex; flex-direction: column; gap: 10px; padding: 14px; overflow: auto; }
 .bn-screen { border-color: var(--next); }
 .bn-actions { gap: 8px; }
-.bn-h { font-size: var(--fs-md); margin: 18px 0 8px; color: var(--muted); }
-.bn-h:first-of-type { margin-top: 4px; }
 .bn-form { margin-bottom: 4px; }
 .bn-editor .bn-form { grid-template-columns: minmax(96px, 128px) minmax(0, 1fr); }
 .bn-ta { width: 100%; height: auto; min-height: 60px; padding: 8px 10px; resize: vertical; line-height: 1.4; font: inherit; }
@@ -879,8 +877,19 @@ google-cast-launcher, .cast-button, [aria-label*="Cast"], button[title*="Cast"],
 .webpc-part > .toolbar > h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; margin: 0; }
 
 /* ---------- Banner slide editor (Google Slides style) ---------- */
-.bn-side-bar { padding: 10px 14px 0; }
-.bn-side-seg { width: 100%; } .bn-side-seg button { flex: 1 1 0; }
+/* Make: the banner panel in three sections; the selected item's options with a way back */
+.bn-fmt-head { gap: 10px; padding: 10px 14px 0; align-items: center; }
+.bn-sec { border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--panel); margin-bottom: 10px; }
+.bn-sec > summary { cursor: pointer; padding: 10px 12px; font-weight: 700; list-style-position: inside; }
+.bn-sec > summary:hover { color: var(--text); background: var(--raised); border-radius: var(--r-sm); }
+.bn-sec-in { padding: 4px 12px 12px; display: flex; flex-direction: column; gap: 10px; }
+.bn-church-line { display: flex; align-items: center; gap: 6px; width: 100%; margin-bottom: 10px; padding: 8px 10px; border: 1px dashed var(--brass); border-radius: var(--r-sm); background: transparent; color: var(--muted); font: inherit; font-size: 0.8125rem; text-align: left; cursor: pointer; }
+.bn-church-line svg.i { color: var(--brass); flex: none; }
+.bn-church-line b { color: var(--text); white-space: nowrap; }
+.bn-save-info { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; max-width: 100%; padding: 4px 6px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font: inherit; font-size: 0.8125rem; cursor: pointer; }
+.bn-save-info span:first-of-type { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bn-save-info:hover { background: var(--raised); color: var(--text); }
+.se-tb-txt { padding: 0 8px; }
 .bn-edit-pane { display: flex; flex-direction: column; min-height: 0; }
 .bn-edit-pane > .scroll { flex: 1 1 auto; min-height: 0; }
 .banner-split.bn-wide { grid-template-columns: minmax(280px, .55fr) minmax(420px, 1.6fr); }
@@ -988,6 +997,7 @@ button.se-sw[aria-pressed="true"] { outline: 2px solid var(--focus, #2f6fe0); ou
   .bn-tb-row { position: sticky; top: 0; z-index: 8; padding: 6px 8px; }
   .bn-tb-row > .btn { display: none; }
   .se-toolbar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; min-height: 0 !important; }
+  .se-tb-fields > span:not(.se-caret) { display: none; } /* Fields: the { } icon is enough on a phone, so + Slide fits */
   .se-toolbar > * { flex: none; }
   .bn-strip-it { width: 96px; }
 }

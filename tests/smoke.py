@@ -747,6 +747,32 @@ def main():
                     c.close()
             t_setup_languages()
 
+            @check('Banners → Make: three sections, + Slide in the toolbar, Save asks the name, More menu')
+            def t_banner_make():
+                pg.evaluate("window.selah.showTab('ai')"); pg.wait_for_timeout(1200)
+                secs = pg.evaluate("[...document.querySelectorAll('.bn-make .bn-sec')].map(d => [d.querySelector('summary').textContent, d.open])")
+                assert secs == [['Kind and words', True], ['Colours and picture', False], ['Text style', False]], 'sections: %r' % secs
+                assert pg.locator('.bn-make .bn-side-seg, .bn-make .bn-insert').count() == 0, 'the old tabs or Insert section are still there'
+                pg.select_option('select[aria-label="Kind of banner"]', 'announce'); pg.wait_for_timeout(500)
+                assert pg.evaluate("document.querySelector('select[aria-label=\"Kind of banner\"]').value") == 'announce', 'kind not changed'
+                n0 = pg.locator('.bn-strip-it').count()
+                pg.locator('.se-toolbar button[aria-label="New slide"]').click(); pg.wait_for_timeout(200)
+                pg.locator('.menu button', has_text='Blank slide').click(); pg.wait_for_timeout(600)
+                assert pg.locator('.bn-strip-it').count() == n0 + 1, 'the toolbar + Slide did not add a slide'
+                assert 'Not saved yet' in pg.inner_text('.bn-save-info'), pg.inner_text('.bn-save-info')
+                pg.locator('.bn-actions button', has_text='Save').click(); pg.wait_for_timeout(300)
+                assert pg.locator('.modal', has_text='Save banner').count() == 1, 'Save did not ask for a name'
+                pg.fill('.modal input[aria-label="Banner name"]', 'Test notice')
+                pg.locator('.modal .modal-f button', has_text='Save').click(); pg.wait_for_timeout(600)
+                assert 'Test notice' in pg.inner_text('.bn-save-info'), 'saved name not shown: %r' % pg.inner_text('.bn-save-info')
+                pg.locator('.bn-actions button', has_text='More').click(); pg.wait_for_timeout(200)
+                items = pg.evaluate("[...document.querySelectorAll('.menu button')].map(b => b.textContent)")
+                for want in ['Add to plan', 'Add to loop', 'Background music', 'Rename or move to group', 'Duplicate this banner', 'New banner']:
+                    assert any(want in x for x in items), 'More menu lacks %r: %r' % (want, items)
+                pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
+                pg.evaluate("document.querySelector('.menu') && document.querySelector('.menu').remove()")
+            t_banner_make()
+
             @check('remote buttons (Stream Deck) control the app')
             def t_remote():
                 L = lambda: pg.evaluate("import('./js/core/live.js').then(m => ({ live: m.live.cue && m.live.cue.title, i: m.live.index, staged: m.live.staged && m.live.staged.title, blank: m.live.blank }))")

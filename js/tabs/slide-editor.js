@@ -62,7 +62,7 @@ export function colorPop(anchor, value, onPick, opts = {}) {
 /**
  * opts: { screen, stageEl(), slide(), commit({typing?, render?, panel?}), rerender(), storeImage(blob,name)->id,
  *         pictures()->[{id,name,thumb}], undo(), redo(), canUndo(), canRedo(), convertParts(list), canConvert(),
- *         tokens:[[token,label]], onSelect(sel) }
+ *         tokens:[[token,label]], onSelect(sel), addSlide(anchor) }
  */
 export function createSlideEditor(opts) {
   const { screen } = opts;
@@ -1131,7 +1131,9 @@ export function createSlideEditor(opts) {
         { label: 'Arrow', icon: 'arrow', onclick: () => setTool({ t: 'line', a2: 'arrow' }) },
         { label: 'Double arrow', icon: 'arrow', onclick: () => setTool({ t: 'line', a2: 'arrow', a1: 'arrow' }) },
       ]), { drop: true, on: tool && tool.t === 'line' }),
-      opts.tokens && opts.tokens.length ? tb('field', 'Insert a field that fills itself in (date, sunset, church name)', (b) => menu(b, opts.tokens.map(([tok, label]) => ({ label, hint: tok, onclick: () => insertToken(tok) }))), { drop: true }) : null);
+      opts.tokens && opts.tokens.length ? tb('field', 'Insert a field that fills itself in (date, sunset, church name)', (b) => menu(b, opts.tokens.map(([tok, label]) => ({ label, hint: tok, onclick: () => insertToken(tok) }))), { drop: true, text: 'Fields', cls: 'se-tb-txt.se-tb-fields' }) : null,
+      opts.addSlide ? sep() : null,
+      opts.addSlide ? tb('plus', 'New slide', (b) => opts.addSlide(b), { text: 'Slide', cls: 'se-tb-txt' }) : null);
     if (!list.length && !parts) {
       toolbar.append(sep(), h('span.se-hint.hide-sm', 'Click an item to edit it · double-click text to type · right-click for more'));
       return;
