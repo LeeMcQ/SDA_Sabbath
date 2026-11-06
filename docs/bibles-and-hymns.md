@@ -203,4 +203,17 @@ node tools/compress_soundfont.mjs data/music/hymnal.sf2 data/music/hymnal.sf3   
 python tools/build.py
 ```
 
+**Tunes for the other hymnbooks** (hymn number → the SDA Hymnal tune it is sung to, for Advent Lofliedere, the
+Church Hymnal 1941 and the downloadable hymnbooks): the matches are made outside the app, one CSV per hymnbook
+(columns `n`, `sdah`, `confidence`), and imported with
+
+```
+python tools/import_tune_map.py done.zip      # or a folder of CSVs; --dry-run first to see what it will do
+python tools/build.py
+```
+
+Only `high` and `medium` matches are imported. A hymnbook in the files replaces its earlier matches. The sister
+hymnbooks with the same numbers (SID isiXhosa, SID Setswana, Hymnals Data Swahili, in `tools/tune_map_twins.json`)
+get the matches too, for the numbers where both books have the same hymn.
+
 [← Back to the README](../README.md)
