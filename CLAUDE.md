@@ -70,3 +70,6 @@ docs/                         user docs; docs/features.md is the full feature li
 
 Update the docs that describe it: `docs/*.md` (usually `bibles-and-hymns.md`, `getting-started.md`, `features.md`) and the
 README table. The claude.ai project doc `claude/features.md` mirrors `docs/features.md`.
+
+Add a line for every change a church would notice to `js/core/changelog.js` (Settings → About → Versions), under
+today's date in South African time, newest date first, in plain words.

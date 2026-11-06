@@ -15,6 +15,10 @@ const hymnImport = () => import('./hymn-import.js');
 import { listScreens } from '../core/link.js';
 import { sanitizeImportedSettings } from '../core/settings.js';
 import { churchForm } from './church-form.js';
+import { CHANGELOG } from '../core/changelog.js';
+
+// The maker, shown in Settings → About. photo: a picture in the app, e.g. 'icons/maker.jpg' (empty: initials).
+const MAKER = { name: 'Lee McQuire', church: 'Seventh-day Adventist Church, Malmesbury', whatsapp: '27832125771', photo: '' };
 import { PROVIDERS, listModels, modelFor, friendlyAiError } from '../core/ai.js';
 
 export default function create(ctx) {
@@ -324,12 +328,31 @@ export default function create(ctx) {
   section('account', 'Account', (box) => accountSection(box, ctx));
 
   section('about', 'About', (box) => {
+    // Who made SDA Sabbath, and why. MAKER.photo: a picture file in the app (for example 'icons/maker.jpg');
+    // until there is one, the initials keep its place.
+    const photo = MAKER.photo
+      ? h('img.maker-photo', { src: MAKER.photo, alt: MAKER.name, width: 96, height: 96 })
+      : h('div.maker-photo.maker-initials', { title: 'Photo to come' }, 'LM');
+    box.append(h('div.maker',
+      photo,
+      h('div.maker-text',
+        h('h3', 'Made by ' + MAKER.name),
+        h('div.note', MAKER.church),
+        h('p', 'As media volunteers we often work so hard on good media for the service that we miss the sermon '
+          + 'ourselves. SDA Sabbath brings the whole media process together in one place, so preparing is quicker '
+          + 'and on Sabbath the media team can worship and hear the Word too.'),
+        h('div.row.wrap.maker-btns',
+          h('a.btn.primary', { href: 'https://wa.me/' + MAKER.whatsapp + '?text=' + encodeURIComponent('Hi Lee, about SDA Sabbath: '),
+            target: '_blank', rel: 'noopener', title: 'Opens WhatsApp to send Lee a message' }, icon('msg'), h('span', 'WhatsApp Lee')),
+          h('button.btn', { type: 'button', onclick: () => toast('Thank you! Contributing opens soon.', 'ok', 4000) },
+            icon('star'), h('span', 'Contribute towards this mission'))))));
+
     // Version, build and the offline copy in use: what to quote when reporting a problem.
     const offline = h('span.mono', '…');
     fetch('asset-manifest.json', { cache: 'no-store' }).then((r) => r.json()).catch(() => null)
       .then((m) => { offline.textContent = m && m.version ? m.version : (ctx.offlineHealth && ctx.offlineHealth.version) || '—'; });
     box.append(h('div.ver-box',
-      h('div', h('b', 'SDA Sabbath ' + ctx.VERSION)),
+      h('div', h('b', 'SDA Sabbath ' + ctx.VERSION), h('span.note', ' · free and offline, for Seventh-day Adventist media teams')),
       h('div.note', 'Build ', h('span.mono', ctx.BUILD || '—'), ' · Offline copy ', offline),
       h('button.btn.sm', { type: 'button', title: 'Copy the version details, e.g. for a problem report', onclick: () => {
         const t = 'SDA Sabbath ' + ctx.VERSION + ' · build ' + (ctx.BUILD || '—') + ' · offline ' + offline.textContent + ' · ' + location.host + location.pathname + ' · ' + navigator.userAgent;
@@ -338,10 +361,31 @@ export default function create(ctx) {
     box.append(h('div.row.wrap', { style: { margin: '10px 0' } },
       h('button.btn', { type: 'button', onclick: () => openFeedback(ctx) }, icon('msg'), h('span', 'Comments and suggestions')),
       h('button.btn', { type: 'button', onclick: () => ctx.openWelcome && ctx.openWelcome() }, icon('reload'), h('span', 'Run the setup again'))));
-    box.append(h('p', 'SDA Sabbath — a free, offline church presenter made for Seventh-day Adventist media teams.'),
-      h('p.note', { style: { marginTop: '8px' } }, 'Bibles: KJV (public domain) and World English Bible (public domain). Licensed Bibles (for example the Afrikaanse Bybel 1933/53, © Bybelgenootskap van Suid-Afrika) and licensed hymn words are added by each church under its own licence and stay on its own devices. Fonts: Atkinson Hyperlegible Next, Source Serif 4 and Advent Sans (SIL Open Font License). “Seventh-day Adventist®” and “Adventist®” are registered trademarks of the General Conference of Seventh-day Adventists®; SDA Sabbath is an independent tool, not an official product of the Church, and does not ship the Church symbol — a church may upload its own logo. PDF rendering: pdf.js (Apache 2.0). ZIP reading: fflate (MIT). QR codes: qrcode-generator (MIT). Stage link: Trystero and noble-secp256k1 (MIT). Hymn words shipped with the app are public domain; the SDA Hymnal 1985 and modern choruses are listed by number and title only. The Advent Lofliedere words are included with the permission of their owners.'),
-      h('p.note', { style: { marginTop: '8px' } }, h('a', { href: 'privacy.html', target: '_blank', rel: 'noopener' }, 'Privacy notice'), ' · ', h('a', { href: 'terms.html', target: '_blank', rel: 'noopener' }, 'Terms of use'), ' · ', h('a', { href: 'delete-account.html', target: '_blank', rel: 'noopener' }, 'Delete your account'), ' · ', h('a', { href: 'vendor/VERSIONS.md', target: '_blank', rel: 'noopener' }, 'Third-party code')),
-      h('p.note', { style: { marginTop: '8px' } }, 'Hymn music: the church\'s own MIDI recordings, played by SpessaSynth (Apache 2.0) with the GeneralUser GS 2.0.3 SoundFont by S. Christian Collins (free to use; schristiancollins.com), using the reverb and chorus levels the author recommends. High-quality sounds: Salamander Grand Piano V3 by Alexander Holm (CC BY 3.0) and the GrandOrgue demo pipe organ, recordings by Lars Palo (CC BY-SA 2.5) — data/music/HQ-SOUNDS-LICENSE.txt.'));
+
+    // The fine print, folded away.
+    const link = (href, text) => h('a', { href, target: '_blank', rel: 'noopener' }, text);
+    const fold = (title, ...body) => h('details.about-fold', h('summary', title), h('div.about-fold-body', ...body));
+    box.append(h('div.about-folds',
+      fold('Bibles and hymns',
+        h('p', 'Included: the KJV and the World English Bible (both public domain), and public-domain hymn words. The SDA Hymnal (1985) and modern choruses are listed by number and title only.'),
+        h('p', 'Advent Lofliedere words are included with the permission of their owners. Other licensed Bibles and hymn words are added by each church under its own licence and stay on its own devices.')),
+      fold('Hymn music',
+        h('p', 'Played by SpessaSynth (Apache 2.0) with the GeneralUser GS SoundFont by S. Christian Collins.'),
+        h('p', 'Studio sounds: Salamander Grand Piano by Alexander Holm (CC BY 3.0) and the GrandOrgue demo pipe organ by Lars Palo (CC BY-SA 2.5).')),
+      fold('Adventist name and logo',
+        h('p', '“Seventh-day Adventist®” and “Adventist®” are registered trademarks of the General Conference of Seventh-day Adventists®. SDA Sabbath is an independent tool, not an official product of the Church. Each church can add its own logo.')),
+      fold('Fonts and code',
+        h('p', 'Fonts: Atkinson Hyperlegible Next, Source Serif 4 and Advent Sans (SIL Open Font License).'),
+        h('p', 'Code: pdf.js (Apache 2.0), fflate, qrcode-generator, Trystero and noble-secp256k1 (MIT). ', link('vendor/VERSIONS.md', 'Full list'))),
+      fold('Privacy and terms',
+        h('p', link('privacy.html', 'Privacy notice'), ' · ', link('terms.html', 'Terms of use'), ' · ', link('delete-account.html', 'Delete your account')))));
+
+    // Versions by date, newest first (js/core/changelog.js); the newest is open.
+    const day = (d) => new Date(d + 'T12:00:00').toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' });
+    box.append(h('h3.versions-head', 'Versions'),
+      h('div.versions', CHANGELOG.map((v, k) => h('details', { open: k === 0 },
+        h('summary', h('b', day(v.date)), h('span.note', ' · ' + v.items.length + (v.items.length === 1 ? ' change' : ' changes'))),
+        h('ul', v.items.map((x) => h('li', x)))))));
   });
 
   /** Is there real internet? (sw.js is never stored offline, so only the server can answer.) */
