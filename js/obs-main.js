@@ -113,7 +113,9 @@ function lowerContent() {
   if (c.tab === 'hymns' && cfg.autoHymns) {
     const title = String(c.title || '');
     if (f.variant === 'title' || cfg.hymnMode === 'title') return { key: 'h' + c.id + (cfg.hymnMode === 'title' ? '' : ':' + S.index), kick: 'Hymn', title, text: '', kind: 'song' };
-    return { key: 'h' + c.id + ':' + S.index, kick: title, title: '', text: htmlLines(f.html), kind: 'lyrics' };
+    let vl = '';
+    if (cfg.verseLabel !== false && f.footR) vl = ' · ' + String(f.footR).slice(0, 24);
+    return { key: 'h' + c.id + ':' + S.index, kick: title + vl, title: '', text: htmlLines(f.html), kind: 'lyrics' };
   }
   if (cfg.autoOther && c.tab !== 'bible' && c.tab !== 'hymns') {
     return { key: 'o' + c.id + ':' + S.index, kick: c.title || '', title: '', text: htmlLines(f.html).replace(/\n+/g, ' '), kind: 'text' };
@@ -204,6 +206,15 @@ function paintCfg() {
   const accent = /^#[0-9a-f]{3,8}$/i.test(c.accent || '') ? c.accent : (S.style && S.style.accent) || '#c9a44c';
   root.style.setProperty('--lt-accent', accent);
   root.classList.toggle('clear-bg', c.fullBg === 'transparent');
+  const hex = (v) => (/^#[0-9a-f]{6}$/i.test(v || '') ? v : '');
+  const tc = hex(c.textColor), bc = hex(c.boxColor);
+  const op = Math.max(0.3, Math.min(1, c.boxOpacity == null ? 0.86 : +c.boxOpacity));
+  root.style.setProperty('--lt-bottom', Math.max(0, Math.min(400, c.bottom == null ? 76 : +c.bottom)) + 'px');
+  if (tc) root.style.setProperty('--lt-text', tc); else root.style.removeProperty('--lt-text');
+  if (bc) root.style.setProperty('--lt-box', 'rgba(' + [1, 3, 5].map((i) => parseInt(bc.substr(i, 2), 16)).join(',') + ',' + op + ')'); else root.style.removeProperty('--lt-box');
+  root.style.setProperty('--lt-op', String(op));
+  root.dataset.font = c.font === 'serif' ? 'serif' : 'sans';
+  root.dataset.verse = c.verseLabel === false ? 'off' : 'on';
   paintBug();
 }
 

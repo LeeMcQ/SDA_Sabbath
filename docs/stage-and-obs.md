@@ -91,13 +91,12 @@ how many stage screens follow, the running timer and a yellow dot while a messag
 
 | Source | What it shows |
 |---|---|
-| **SDA Sabbath · Lower third** (transparent, over the camera) | **Automatically:** the reference and verse when a Bible passage goes on screen; the hymn words (or only the title) when a hymn is on screen; optionally other text slides. **By hand:** a name and title ("Pastor … — Guest speaker", saved names one click away), an announcement, a **scrolling ticker**, the **church logo** in the corner. A name shown by hand goes over the automatic words while it is up. **Show overlays on the stream** off hides everything at once. |
+| **SDA Sabbath · Lower third** (transparent, over the camera) | **Automatically:** the reference and verse when a Bible passage goes on screen; the hymn words (or only the title) when a hymn is on screen: each verse appears along the bottom of the stream, labelled "Verse 2 of 4" (or Chorus), and changes as you move to the next verse; optionally other text slides. **Customise it** (Tools → Stream → *Customise the lower third*, with a live preview): dark box, light box or no box, left, centre or right, height from the bottom, text size, plain or serif letters, text colour, box colour and how see-through the box is, accent colour. **By hand:** a name and title ("Pastor … — Guest speaker", saved names one click away), an announcement, a **scrolling ticker**, the **church logo** in the corner. A name shown by hand goes over the automatic words while it is up. **Show overlays on the stream** off hides everything at once. |
 | **SDA Sabbath · Slides** (full screen) | The slides exactly as on the projector, for a "Presentation" scene. **Text over the camera** makes the background see-through, so Bible and hymn text sits over the camera picture. Black, videos, web pages and screen sharing show nothing here (add a Window Capture of the display window for videos). |
 
 **Setting up OBS — two clicks:** in OBS (28 or newer) open **Tools → WebSocket Server Settings**, tick **Enable WebSocket
-server**, and copy the password (**Show Connect Info**). In SDA Sabbath → Tools → Stream: **1. Connect to OBS** (nothing in OBS
-changes yet), **2.** check the camera scene (the scene with your webcam / capture card is picked automatically) and press
-**Set up OBS**. SDA Sabbath adds the lower third on top of your camera scene and creates a **SDA Sabbath · Presentation**
+server**, and copy the password (**Show Connect Info**). In SDA Sabbath → Tools → Stream, paste the password and press
+**Connect and set up OBS** (the scene with your webcam / capture card is picked automatically; you can change it afterwards and press **Set up OBS** again). SDA Sabbath adds the lower third on top of your camera scene and creates a **SDA Sabbath · Presentation**
 scene with the slides. Press it again any time to repair or update the sources (a size or CSS you set in OBS is kept;
 choosing another camera scene moves the lower third). OBS on another computer: open SDA Sabbath from the companion on
 that computer (an https page may only reach OBS on the same PC), or set it up by hand.

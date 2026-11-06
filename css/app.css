@@ -1672,3 +1672,8 @@ html:not(.lp) .listen-box.on .ls-dot { animation: ls-pulse 1.6s ease-in-out infi
   .banners.bn-on-make .bn-actions { order: -2; margin: 0 10px 10px; }
   .banners.bn-on-make .bn-save-row { order: -1; margin: 0 10px 10px; }
 }
+.stream-tab .st-more { margin: 8px 0; }
+.stream-tab .st-more > summary { cursor: pointer; padding: 10px 4px; }
+.stream-tab .st-more > .card { margin-top: 8px; }
+.stream-tab .btn.lg { font-size: 1.05em; padding: 10px 16px; }
+.stream-tab input[type=range] { width: 100%; max-width: 260px; }

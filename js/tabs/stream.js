@@ -33,14 +33,19 @@ export default function create(ctx) {
   let errToast = null;
   const dropErr = () => { if (errToast && errToast.isConnected) errToast.remove(); errToast = null; };
   const disBtn = h('button.btn.sm', { type: 'button', onclick: () => { dropErr(); obs.disconnect(); toast('Disconnected from OBS.', '', 2000); } }, icon('x'), h('span', 'Disconnect'));
-  const camRow = h('div.st-step', h('div', h('b', '2. '), 'Which scene has your camera? The lower third goes on top of it.'), h('div.row.wrap', camSel, setupBtn));
-  const autoCard = card('Connect OBS (automatic)',
-    h('p.note', 'Streaming song words or Bible text: copyrighted songs on a live stream or recording need your church’s CCLI Streaming Licence (a normal CCLI licence does not cover it), and the Bible translation’s own rules apply.'),
-    h('p.note', 'One click puts SDA Sabbath into OBS: a “', h('b', obsName('Lower third')), '” overlay on your camera scene, and a “', h('b', S().presScene), '” scene with the slides full screen. Needs OBS 28 or newer: in OBS open ', h('b', 'Tools → WebSocket Server Settings'), ', tick ', h('b', 'Enable WebSocket server'), ', and copy the password from ', h('b', 'Show Connect Info'), '.'),
-    h('div.st-step', h('div', h('b', '1. '), 'Connect'), h('div.row.wrap', urlIn, passIn, connBtn, disBtn)),
+  const camRow = h('div.st-step', h('div', h('b', '2. '), 'Which scene has your camera? The words go on top of it.'), h('div.row.wrap', camSel, setupBtn));
+  const quickBtn = h('button.btn.primary.lg', { type: 'button', onclick: () => setupNow() }, icon('check'), h('span', 'Connect and set up OBS'));
+  const autoCard = card('Set up OBS in 3 steps',
+    h('ol.st-steps', { style: { margin: '0', paddingLeft: '20px', display: 'grid', gap: '4px' } },
+      h('li', 'In OBS (version 28 or newer) open ', h('b', 'Tools → WebSocket Server Settings'), ' and tick ', h('b', 'Enable WebSocket server'), '. Press ', h('b', 'Show Connect Info'), ' and copy the password.'),
+      h('li', 'Paste the password below. If OBS is on this PC, leave the address as it is.'),
+      h('li', 'Press ', h('b', 'Connect and set up OBS'), '. Done: the words go over your camera, and the slides get their own scene.')),
+    h('div.row.wrap', urlIn, passIn, quickBtn, connBtn, disBtn),
     camRow,
     obsState,
-    h('p.note', 'OBS on another computer: open SDA Sabbath from the companion on that computer, or set OBS up by hand below. If the browser asks to allow access to devices on your network, allow it.'));
+    h('details', h('summary', 'Good to know'),
+      h('p.note', 'OBS on another computer: use “Other ways to connect” below. If the browser asks to allow access to devices on your network, allow it.'),
+      h('p.note', 'Song words or Bible text on a live stream: copyrighted songs need your church’s CCLI Streaming Licence (a normal CCLI licence does not cover it), and the Bible translation’s own rules apply.')));
 
   // Step 1 only connects (nothing in OBS changes); step 2 creates the sources once the camera scene is known.
   let camGuess = '';
@@ -361,24 +366,34 @@ export default function create(ctx) {
   }
 
   // ------------------------------------------------------------ automatic lower thirds
-  const autoLowerCard = card('Automatic lower thirds',
-    toggle('Bible verses: the reference and the verse appear on the stream when they go on the screen', S().autoBible, (v) => settings.set('stream.autoBible', v)),
-    toggle('Hymns: the words appear on the stream so viewers at home can sing along', S().autoHymns, (v) => settings.set('stream.autoHymns', v)),
+  const autoLowerCard = card('Hymn and Bible words at the bottom of the stream',
+    h('p.note', 'Whatever goes on the projector also goes along the bottom of the stream. When you move to the next verse, the words at the bottom change with it.'),
+    toggle('Hymns: show each verse at the bottom, changing as the verse changes', S().autoHymns, (v) => settings.set('stream.autoHymns', v)),
     h('div.row.wrap', h('span.note', 'Hymns show'), seg([['lines', 'The words'], ['title', 'Only the hymn title']], S().hymnMode, (v) => settings.set('stream.hymnMode', v))),
+    toggle('Show “Verse 2 of 4” (or Chorus) above the words', S().verseLabel !== false, (v) => settings.set('stream.verseLabel', v)),
+    toggle('Bible verses: the reference and the verse', S().autoBible, (v) => settings.set('stream.autoBible', v)),
     toggle('Other text slides too', S().autoOther, (v) => settings.set('stream.autoOther', v)),
     h('p.note', 'A name or announcement you show by hand goes over the automatic words while it is up.'));
 
   // ------------------------------------------------------------ look
-  const lookCard = card('Look',
+  const colorRow = (key, fallback) => h('div.row', h('input', { type: 'color', value: /^#[0-9a-f]{6}$/i.test(S()[key]) ? S()[key] : fallback, oninput: (e) => settings.set('stream.' + key, e.target.value) }),
+    h('button.btn.sm', { type: 'button', onclick: () => { settings.set('stream.' + key, ''); { const n = buildLook(); lookCard.replaceWith(n); lookCard = n; } } }, 'Reset'));
+  const buildLook = () => card('Customise the lower third',
     h('div.form.st-form',
-      h('label', 'Style'), seg([['classic', 'Classic'], ['light', 'Light'], ['minimal', 'Minimal']], S().theme, (v) => settings.set('stream.theme', v)),
-      h('label', 'Position'), seg([['left', 'Left'], ['center', 'Centre']], S().pos, (v) => settings.set('stream.pos', v)),
-      h('label', 'Size'), select([['0.85', 'Small'], ['1', 'Normal'], ['1.15', 'Large'], ['1.3', 'Extra large']], String(S().size || 1), (v) => settings.set('stream.size', +v)),
+      h('label', 'Style'), seg([['classic', 'Dark box'], ['light', 'Light box'], ['minimal', 'No box']], S().theme, (v) => settings.set('stream.theme', v)),
+      h('label', 'Position'), seg([['left', 'Left'], ['center', 'Centre'], ['right', 'Right']], S().pos, (v) => settings.set('stream.pos', v)),
+      h('label', 'Height from the bottom'), h('input', { type: 'range', min: '0', max: '300', step: '10', value: String(S().bottom == null ? 76 : S().bottom), 'aria-label': 'Height from the bottom', oninput: (e) => settings.set('stream.bottom', +e.target.value) }),
+      h('label', 'Text size'), select([['0.85', 'Small'], ['1', 'Normal'], ['1.15', 'Large'], ['1.3', 'Extra large']], String(S().size || 1), (v) => settings.set('stream.size', +v)),
+      h('label', 'Letters'), seg([['sans', 'Plain'], ['serif', 'Serif']], S().font || 'sans', (v) => settings.set('stream.font', v)),
+      h('label', 'Text colour'), colorRow('textColor', '#ffffff'),
+      h('label', 'Box colour'), colorRow('boxColor', '#0a0e18'),
+      h('label', 'Box see-through'), h('input', { type: 'range', min: '0.3', max: '1', step: '0.05', value: String(S().boxOpacity == null ? 0.86 : S().boxOpacity), 'aria-label': 'Box solidity', oninput: (e) => settings.set('stream.boxOpacity', +e.target.value) }),
       h('label', 'Accent colour'), h('div.row', h('input', { type: 'color', value: /^#[0-9a-f]{6}$/i.test(S().accent) ? S().accent : '#c9a44c', oninput: (e) => settings.set('stream.accent', e.target.value) }),
         h('button.btn.sm', { type: 'button', onclick: () => settings.set('stream.accent', '') }, 'Same as the projector')),
       h('label', 'Presentation'), seg([['stage', 'Same as projector'], ['transparent', 'Text over the camera']], S().fullBg, (v) => settings.set('stream.fullBg', v))),
-    h('p.note', 'Text over the camera: the slide background is left out and the camera scene is put underneath the slides in the presentation scene (when OBS is connected).'),
+    h('p.note', 'The preview on the left shows your changes straight away. Text over the camera: the slide background is left out and the camera scene is put underneath the slides in the presentation scene (when OBS is connected).'),
     toggle('Church logo in the corner of the stream (from Settings → Screen)', S().bug, (v) => settings.set('stream.bug', v)));
+  let lookCard = buildLook();
 
   // ------------------------------------------------------------ preview
   let pvMode = 'lower';
@@ -399,7 +414,7 @@ export default function create(ctx) {
     obsState.className = 'st-net ' + (st === 'on' ? 'on' : st === 'error' || st === 'auth' ? 'error' : '');
     obsState.textContent = st === 'on' ? 'Connected to OBS' + (obs.version ? ' (WebSocket ' + obs.version + ')' : '') + (obs.studio ? ' · Studio Mode' : '') + ' · ' + hub.obsOutputs().length + ' SDA Sabbath source(s) following'
       : st === 'connecting' ? (obs.error || 'Connecting to OBS…') : obs.error || obs.lastError || 'Not connected';
-    connBtn.hidden = st === 'on';
+    connBtn.hidden = true; quickBtn.hidden = st === 'on';
     setupBtn.querySelector('span').textContent = S().camScene && obs.scenes.includes(S().presScene) ? 'Set up OBS again (repair)' : 'Set up OBS';
     disBtn.hidden = st === 'off';
     controlCard.hidden = st !== 'on';
@@ -447,12 +462,14 @@ export default function create(ctx) {
   manualCard.append(linkNote);
   function paintAll() { paintObs(); paintUrls(); paintLower(); paintNames(); paintLan(); paintHdmi(); paintDeck(); }
 
+  const lookHost = h('div.st-look', lookCard);
   const el = h('section.stage-tab.stream-tab',
     h('div.toolbar', h('h2', 'Stream'), h('span.note.hide-sm', 'OBS Studio: lower thirds and the slides for the live stream'), h('div.grow'),
       h('button.btn.sm', { type: 'button', onclick: () => hub.hideLower() }, icon('x'), h('span', 'Hide lower third'))),
     h('div.scroll.st-grid',
-      h('div.st-col', lowerCard, autoLowerCard, pvCard),
-      h('div.st-col', lanCard, hdmiCard, deckCard, controlCard, autoCard, manualCard, lookCard)));
+      h('div.st-col', pvCard, autoLowerCard, lowerCard),
+      h('div.st-col', autoCard, controlCard, lookHost,
+        h('details.st-more', h('summary', h('b', 'Other ways to connect OBS, and Stream Deck buttons')), lanCard, manualCard, hdmiCard, deckCard))));
 
   obs.on('state', paintAll);
   hub.on('outlets', paintHdmi);

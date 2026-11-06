@@ -210,6 +210,7 @@ hub.overlaysOn = true;   // the "Hide all overlays" switch
 function streamCfg() {
   const s = settings.v.stream;
   return { autoBible: s.autoBible, autoHymns: s.autoHymns, hymnMode: s.hymnMode, autoOther: s.autoOther, theme: s.theme, pos: s.pos, size: s.size,
+    textColor: s.textColor || '', boxColor: s.boxColor || '', boxOpacity: s.boxOpacity, bottom: s.bottom, font: s.font || 'sans', verseLabel: s.verseLabel !== false,
     bug: s.bug, fullBg: s.fullBg, accent: s.accent || '', presScene: s.presScene || '', church: ((settings.v.church && settings.v.church.name) || '').trim() };
 }
 function obsMsg() { return { t: 'obs', cfg: streamCfg(), lower: hub.lower, ticker: hub.ticker, on: hub.overlaysOn, pres: hub.obsOnPres, now: Date.now() }; }

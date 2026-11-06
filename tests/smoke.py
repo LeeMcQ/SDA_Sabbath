@@ -285,6 +285,25 @@ def main():
                 assert pane <= scr[0] <= pane + 16 and scr[1] > scr[0] + 100, 'the banner preview is not pinned at the top: %r (pane top %d, was %d)' % (scr, pane, top0)
             t_banner_pin()
 
+            @check('Stream tab: customise the lower third (colours, position, height) shows in the preview; setup in 3 steps')
+            def t_stream_look():
+                c = b.new_context(viewport={'width': 1280, 'height': 900}, service_workers='block')
+                p4 = c.new_page()
+                p4.goto(base + 'index.html'); p4.wait_for_timeout(800)
+                p4.evaluate("import('./js/core/settings.js').then(m => (m.settings.set('app.setupDone', true), m.settings.set('backup', Object.assign({}, m.settings.v.backup, { remindAt: Date.now() }))))")
+                p4.reload(); p4.wait_for_selector('#presentBtn'); p4.wait_for_timeout(1000)
+                p4.evaluate("window.selah.showTab('stream')"); p4.wait_for_selector('.st-pv-f', state='attached'); p4.wait_for_timeout(1500)
+                txt = p4.inner_text('.stream-tab')
+                assert 'Set up OBS in 3 steps' in txt and 'Customise the lower third' in txt and 'Hymn and Bible words at the bottom of the stream' in txt, 'stream tab headings missing'
+                assert 'Connect and set up OBS' in txt, 'one-click button missing'
+                p4.evaluate("window.selah.settings.set('stream.boxColor', '#112233'); window.selah.settings.set('stream.textColor', '#ffee00'); window.selah.settings.set('stream.bottom', 200); window.selah.settings.set('stream.pos', 'right'); window.selah.settings.set('stream.font', 'serif')")
+                p4.wait_for_timeout(1500)
+                fr = [f for f in p4.frames if 'obs.html' in f.url][0]
+                got = fr.evaluate("() => { const r = document.querySelector('[data-pos]'); const s = r.style; return [s.getPropertyValue('--lt-bottom'), s.getPropertyValue('--lt-text'), s.getPropertyValue('--lt-box'), r.dataset.pos, (document.querySelector('[data-font]')||{dataset:{}}).dataset.font]; }")
+                c.close()
+                assert got[0] == '200px' and got[1] == '#ffee00' and got[2].startswith('rgba(17,34,51,') and got[3] == 'right' and got[4] == 'serif', 'preview did not follow the look settings: %r' % (got,)
+            t_stream_look()
+
             @check('statistics: recorded offline while signed in, delivered when back online')
             def t_stats_offline():
                 import json as _json

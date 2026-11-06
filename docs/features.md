@@ -129,7 +129,7 @@ Status marks: **✔** built and tested · **◐** built, but not yet proven in r
 
 ## 12. Live stream (OBS)
 
-- **Lower thirds** that show the Bible verse or hymn words automatically when they go on screen, plus names, titles, announcements, a ticker and the church logo.
+- **Lower thirds** that show the Bible verse or hymn words automatically when they go on screen (hymn verses change along the bottom of the stream as the verse changes), fully customisable (colours, position, height, size, letters), plus names, titles, announcements, a ticker and the church logo.
 - **Slides as a full-screen Presentation source**, with an option for text over the camera.
 - **One-click OBS set-up** over WebSocket (OBS 28+).
 - **Automatic scene switching**: slides, banners and pictures go to the Presentation scene; Bible, hymns and black go back to the camera scene.

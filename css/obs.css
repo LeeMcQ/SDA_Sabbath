@@ -21,8 +21,11 @@ body.obs { font-family: "Hyperlegible", system-ui, -apple-system, "Segoe UI", Ro
 .obs-full .f-placeholder { display: none; }
 
 /* ---------- lower third ---------- */
-.lt { position: absolute; left: 96px; right: 96px; bottom: 76px; display: flex; justify-content: flex-start; pointer-events: none; }
+.lt { position: absolute; left: 96px; right: 96px; bottom: var(--lt-bottom, 76px); display: flex; justify-content: flex-start; pointer-events: none; }
 [data-pos="center"] .lt { justify-content: center; text-align: center; }
+[data-pos="right"] .lt { justify-content: flex-end; text-align: right; }
+[data-font="serif"] .lt { font-family: Georgia, "Times New Roman", serif; }
+.lt-box { color: var(--lt-text, inherit); }
 .lt-box { position: relative; display: flex; max-width: calc(1240px * var(--lt-size)); min-width: 0; transform: translateY(40px); opacity: 0;
   transition: transform .45s cubic-bezier(.2,.8,.2,1), opacity .35s ease; }
 [data-pos="center"] .lt-box { max-width: calc(1500px * var(--lt-size)); }
@@ -45,8 +48,8 @@ body.obs { font-family: "Hyperlegible", system-ui, -apple-system, "Segoe UI", Ro
 .lt[data-kind="song"] .lt-title { font-size: calc(42px * var(--lt-size)); }
 
 /* Themes */
-[data-theme="classic"] .lt-body { background: rgba(10, 14, 24, .86); border-radius: 0 6px 6px 0; box-shadow: 0 8px 30px rgba(0,0,0,.35); }
-[data-theme="light"] .lt-body { background: rgba(255, 255, 255, .94); color: #121826; border-radius: 0 6px 6px 0; box-shadow: 0 8px 30px rgba(0,0,0,.25); }
+[data-theme="classic"] .lt-body { background: var(--lt-box, rgba(10, 14, 24, var(--lt-op, .86))); border-radius: 0 6px 6px 0; box-shadow: 0 8px 30px rgba(0,0,0,.35); }
+[data-theme="light"] .lt-body { background: var(--lt-box, rgba(255, 255, 255, .94)); color: var(--lt-text, #121826); border-radius: 0 6px 6px 0; box-shadow: 0 8px 30px rgba(0,0,0,.25); }
 [data-theme="light"] .lt-kick { color: #6b4e10; }
 [data-theme="minimal"] .lt-bar { display: none; }
 [data-theme="minimal"] .lt-body { background: none; text-shadow: 0 3px 14px rgba(0,0,0,.95), 0 0 3px rgba(0,0,0,.95); padding-left: 0; }
