@@ -345,9 +345,18 @@ export default function create(ctx) {
   });
 
   /** Is there real internet? (sw.js is never stored offline, so only the server can answer.) */
+  // navigator.onLine is often wrong on a PC (VPN or virtual network adapters make Chrome say "offline" while the
+  // internet works), so it is not trusted: only a failed request to the app's own address counts as "no internet".
+  // Any answer from the server (even an error page) proves the connection works.
   async function reallyOnline() {
-    if (!navigator.onLine) return false;
-    try { const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 6000); const r = await fetch('sw.js?ping=' + Date.now(), { cache: 'no-store', signal: ctl.signal }); clearTimeout(t); return r.ok; } catch (e) { return false; }
+    for (let i = 0; i < 2; i++) {
+      try {
+        const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 8000);
+        await fetch('sw.js?ping=' + Date.now(), { cache: 'no-store', signal: ctl.signal }); clearTimeout(t);
+        return true;
+      } catch (e) { /* try once more */ }
+    }
+    return false;
   }
   // Updating never throws the offline copy away first: the new version is downloaded completely while the
   // old one keeps working, and only then does it take over.

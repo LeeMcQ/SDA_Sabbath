@@ -304,6 +304,22 @@ def main():
                 assert got[0] == '200px' and got[1] == '#ffee00' and got[2].startswith('rgba(17,34,51,') and got[3] == 'right' and got[4] == 'serif', 'preview did not follow the look settings: %r' % (got,)
             t_stream_look()
 
+            @check('Update now: a wrong "offline" report from the browser does not block it')
+            def t_update_online():
+                c = b.new_context(viewport={'width': 1280, 'height': 900}, service_workers='block')
+                p5 = c.new_page()
+                p5.add_init_script("Object.defineProperty(navigator, 'onLine', { get: () => false })")
+                p5.goto(base + 'index.html'); p5.wait_for_timeout(800)
+                p5.evaluate("import('./js/core/settings.js').then(m => (m.settings.set('app.setupDone', true), m.settings.set('backup', Object.assign({}, m.settings.v.backup, { remindAt: Date.now() }))))")
+                p5.reload(); p5.wait_for_selector('#presentBtn'); p5.wait_for_timeout(1000)
+                p5.evaluate("window.selah.showTab('settings')"); p5.wait_for_timeout(800)
+                p5.get_by_role('button', name='App', exact=True).first.click(); p5.wait_for_timeout(800)
+                p5.get_by_role('button', name='Update now').first.click(); p5.wait_for_timeout(2500)
+                txt = p5.inner_text('body')
+                c.close()
+                assert 'No internet right now' not in txt, 'Update now claimed there was no internet while the server answered'
+            t_update_online()
+
             @check('statistics: recorded offline while signed in, delivered when back online')
             def t_stats_offline():
                 import json as _json
