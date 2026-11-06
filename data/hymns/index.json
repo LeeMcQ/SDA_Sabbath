@@ -18,12 +18,11 @@
   },
   {
     "id": "afrikaans-sda",
-    "name": "Advent Lofliedere",
+    "name": "Advent Lofliedere (Afrikaans, offline)",
     "short": "AL",
     "lang": "af",
     "file": "afrikaans.json",
-    "note": "All 481 numbers and titles. The words are copyrighted: add them under your church's licence (More → Import licensed words).",
-    "words": "licensed"
+    "note": "All 481 Afrikaans hymns with their words, offline (shared with the owners' permission). About 150 play the SDA Hymnal tune."
   },
   {
     "id": "choruses",

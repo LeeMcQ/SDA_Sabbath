@@ -96,9 +96,8 @@ export async function installHymnal(e, say = () => {}) {
   if (navigator.onLine === false) throw new Error('no internet connection');
   const book = await downloadHymnal(e, say);
   say('Saving…');
-  const own = e.id === 'web-own-lofliedere';
-  await db.put('hymnbooks', book.id, own ? Object.assign(book, { hidden: true }) : book);   // hidden: its words show in the built-in book
-  const filled = e.id === 'web-rejnac-english' ? await fillBuiltIn(book) : own ? await fillBuiltInWords('afrikaans-sda', book.hymns, { from: book.id }) : 0;
+  await db.put('hymnbooks', book.id, book);
+  const filled = e.id === 'web-rejnac-english' ? await fillBuiltIn(book) : 0;
   return { book, filled };
 }
 export const announceHymnbooks = announce;

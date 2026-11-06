@@ -12,7 +12,6 @@ const RAW = 'https://raw.githubusercontent.com/';
 export const SOURCES = {
   rejnac: { label: 'SDA hymnals (Rejnac)', site: 'github.com/rejnac/compiled-hymnal', licence: 'Rejnac Foundation (VideoPsalm songbook, MIT licence); the hymns keep their own copyright' },
   sid: { label: 'SID Hymnal', site: 'github.com/sidadventist/sid_hymnal', licence: 'SID Hymnal (Southern Africa-Indian Ocean Division app); the hymns keep their own copyright' },
-  own: { label: 'SDA Sabbath (with permission)', site: 'github.com/LeeMcQ/SDA_Sabbath', licence: 'Advent Lofliedere: the words are copyrighted by their owners and are shared here with their permission, for worship' },
   gs: { label: 'Hymnals Data', site: 'github.com/GospelSounders/hymnals-data', licence: 'Hymnals Data by Gospel Sounders; the hymns keep their own copyright' },
 };
 
@@ -49,14 +48,12 @@ export const HYMNALS = [
   ['sid', 'xh', 'U-Kristu Engomeni (SID Hymnal)', 'SID-XH', 'xh', 'isiXhosa', 352, 178, 'xh'],
   ['sid', 'tn', 'Keresete Mo Kopelong (SID Hymnal)', 'SID-TN', 'tn', 'Setswana', 300, 162, 'tn'],
   ['gs', 'hgpp1849', 'Hymns for God’s Peculiar People (1849)', 'HGPP', 'en', 'English', 53, 55, 'HGPP1849'],
-  ['own', 'lofliedere', 'Advent Lofliedere (Afrikaans, with words)', 'AL+', 'af', 'Afrikaans', 481, 460, 'downloads/lofliedere-words.json'],
   ['gs', 'nzk', 'Nyimbo za Kristo (Hymnals Data)', 'NZK-G', 'sw', 'Swahili (Kiswahili)', 219, 121, 'NZK'],
 ].map(([src, key, name, short, lang, langName, hymns, kb, path]) => ({ src, key, id: 'web-' + src + '-' + key, name, short, abbr: short, lang, langName, hymns, kb, path }));
 
 /** Notes shown in the list next to some hymnbooks. */
 export const NOTES = {
   'web-rejnac-english': 'Numbers 1–695 are the SDA Hymnal (1985). The words also fill in the built-in SDA Hymnal, so the hymns keep their offline music.',
-  'web-own-lofliedere': 'The words also fill in the built-in Advent Lofliedere, so the hymns keep their offline music (about 150 play the SDA Hymnal tune).',
   'web-sid-en': 'Same numbers as the SID Hymnal in isiXhosa and Setswana.',
   'web-gs-hgpp1849': 'The first Sabbath-keeping Adventist hymnal, compiled by James White (public domain).',
 };
@@ -64,7 +61,6 @@ export const NOTES = {
 const encPath = (p) => p.split('/').map(encodeURIComponent).join('/');
 export function urlOf(e) {
   if (e.src === 'rejnac') return RAW + 'rejnac/' + encPath(e.path);
-  if (e.src === 'own') return RAW + 'LeeMcQ/SDA_Sabbath/main/' + encPath(e.path);
   if (e.src === 'sid') return RAW + 'sidadventist/sid_hymnal/master/assets/hymns/' + encPath(e.path) + '/';
   return RAW + 'GospelSounders/hymnals-data/master/' + encPath(e.path) + '/index.json';
 }

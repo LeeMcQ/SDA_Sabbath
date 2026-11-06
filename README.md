@@ -96,7 +96,7 @@ a local web address. Everything is explained in the guides below.
 
 - Bible texts: KJV and WEB (public domain). The Afrikaanse Bybel 1933/53 is © Bybelgenootskap van Suid-Afrika and is
   not shipped: a church with permission adds its own copy (`licensed/README.md`).
-- Hymns: the SDA Hymnal 1985, Advent Lofliedere and Shared Hymns – English (choruses and Malmesbury Praise) are listed by number and title
+- Hymns: the SDA Hymnal 1985 and Shared Hymns – English (choruses and Malmesbury Praise) are listed by number and title
   only; words are included only where they are public domain (and the 1941 Church Hymnal). Each church adds other
   words under its own licence (Hymns → ⋯ → Import licensed words), like OpenLP and FreeShow.
 - Logo: a neutral open-Bible mark. The Seventh-day Adventist® Church symbol is not shipped; churches upload their own logo.

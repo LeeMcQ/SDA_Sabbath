@@ -267,6 +267,24 @@ def main():
                 assert r[2] <= 60, 'Present is not an icon at 320 px (width %d)' % r[2]
             t_present_320()
 
+            @check('phone Banners → Make: the tabs and toolbar scroll away, the banner preview stays pinned')
+            def t_banner_pin():
+                c = b.new_context(viewport={'width': 412, 'height': 880}, has_touch=True, is_mobile=True)
+                p3 = c.new_page()
+                p3.goto(base + 'index.html'); p3.wait_for_timeout(800)
+                p3.evaluate("import('./js/core/settings.js').then(m => (m.settings.set('app.setupDone', true), m.settings.set('backup', Object.assign({}, m.settings.v.backup, { remindAt: Date.now() }))))")
+                p3.reload(); p3.wait_for_selector('#presentBtn'); p3.wait_for_timeout(1000)
+                p3.evaluate("window.selah.showTab('ai')"); p3.wait_for_selector('.bn-screen', state='visible'); p3.wait_for_timeout(800)
+                R = "(s) => { const e = document.querySelector(s); const r = e.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; }"
+                top0 = p3.evaluate(R, '.bn-screen')[0]
+                p3.evaluate("document.querySelector('.banners').scrollTop = 450"); p3.wait_for_timeout(300)
+                tabs, tb, scr = p3.evaluate(R, '.bn-views'), p3.evaluate(R, '.bn-tb-row'), p3.evaluate(R, '.bn-screen')
+                pane = p3.evaluate("() => Math.round(document.querySelector('.banners').getBoundingClientRect().top)")
+                c.close()
+                assert tabs[1] <= pane and tb[1] <= pane, 'the tabs/toolbar did not scroll away: %r %r (pane top %d)' % (tabs, tb, pane)
+                assert pane <= scr[0] <= pane + 16 and scr[1] > scr[0] + 100, 'the banner preview is not pinned at the top: %r (pane top %d, was %d)' % (scr, pane, top0)
+            t_banner_pin()
+
             @check('statistics: recorded offline while signed in, delivered when back online')
             def t_stats_offline():
                 import json as _json
@@ -767,33 +785,18 @@ def main():
                     ctx.unroute('https://raw.githubusercontent.com/**', raw)
             t_add_hymnbook()
 
-            @check('Add a hymnbook: Advent Lofliedere words fill the built-in book, with the SDA Hymnal tunes')
+            @check('Advent Lofliedere is built in with its words, and plays the SDA Hymnal tune offline')
             def t_lofliedere_words():
-                body = json.dumps({'hymns': [{'n': 11, 't': 'Kom, O Almagtige Heer', 'v': [['Kom, o almagtige Heer', 'Toets-woorde van die toets']]}]})
-                def raw(route):
-                    if 'downloads/lofliedere-words.json' in route.request.url:
-                        return route.fulfill(status=200, body=body, headers={'Content-Type': 'text/plain; charset=utf-8', 'Access-Control-Allow-Origin': '*'})
-                    route.fulfill(status=404, body='', headers={'Access-Control-Allow-Origin': '*'})
-                ctx.route('https://raw.githubusercontent.com/**', raw)
-                try:
-                    pg.evaluate("window.selah.showTab('hymns').then((t) => t.whenReady && t.whenReady())"); pg.wait_for_timeout(400)
-                    pg.evaluate("import('./js/tabs/hymn-import.js').then(m => m.addHymnbookDialog())"); pg.wait_for_timeout(400)
-                    pg.locator('.modal input[type=search]').fill('lofliedere'); pg.wait_for_timeout(300)
-                    row = pg.locator('.modal .row', has_text='Advent Lofliedere (Afrikaans, with words)')
-                    assert row.count() == 1, 'Advent Lofliedere is not in the Add a hymnbook list'
-                    row.locator('button').click()
-                    wait_text(pg, 'filled in for 1 hymn')
-                    pg.wait_for_timeout(500)
-                    opts = pg.evaluate("[...document.querySelectorAll('select[aria-label=Hymnbook] option')].map(o => o.textContent)")
-                    assert sum('Lofliedere' in o for o in opts) == 1, 'the Lofliedere is listed twice: %r' % opts
-                    pg.evaluate("window.selah.tab('hymns').then(t => t.open({ n: 11, book: 'afrikaans-sda' }))"); pg.wait_for_timeout(900)
-                    wait_text(pg, 'Toets-woorde van die toets')
-                    wait_text(pg, 'Play music')
-                    pg.evaluate("import('./js/tabs/hymn-import.js').then(m => m.removeHymnbook('web-own-lofliedere'))"); pg.wait_for_timeout(600)
-                    pg.evaluate("window.selah.tab('hymns').then(t => t.open({ n: 11, book: 'afrikaans-sda' }))"); pg.wait_for_timeout(800)
-                    assert pg.locator('.licence-panel:visible').count() == 1, 'the words stayed after removing the download'
-                finally:
-                    ctx.unroute('https://raw.githubusercontent.com/**', raw)
+                pg.evaluate("window.selah.showTab('hymns').then((t) => t.whenReady && t.whenReady())"); pg.wait_for_timeout(400)
+                r = pg.evaluate("""async () => {
+                  const b = await (await fetch('data/hymns/afrikaans.json')).json();
+                  const h11 = b.hymns.find((x) => x.n === 11);
+                  return { n: b.hymns.length, withWords: b.hymns.filter((x) => x.v && x.v.length).length, t: h11 && h11.t };
+                }""")
+                assert r['n'] == 481 and r['withWords'] == 481, 'Lofliedere words are not all built in: %r' % r
+                pg.evaluate("window.selah.tab('hymns').then(t => t.open({ n: 11, book: 'afrikaans-sda' }))"); pg.wait_for_timeout(900)
+                wait_text(pg, 'Play music')
+                assert pg.locator('.licence-panel:visible').count() == 0, 'the Lofliedere asks for a licence file although the words are built in'
             t_lofliedere_words()
 
             @check('first-start setup: install first, church languages, their Bible and hymns downloaded')
@@ -864,9 +867,9 @@ def main():
                     assert books == ['web-rejnac-english', 'web-sid-tn', 'web-sid-xh'], 'hymnbooks: %r' % books
                     tsn = q.evaluate("import('./js/core/bibledata.js').then(m => m.listTranslations(true)).then(l => l.some(t => t.id === 'imp-tsn-eb'))")
                     assert tsn, 'the Setswana Bible (eBible corpus) was not added'
-                    # Afrikaans: a church's own licensed file fills the built-in Advent Lofliedere by number.
+                    # Afrikaans: the Lofliedere words are built in, so a church's file never replaces them.
                     n = q.evaluate("import('./js/tabs/hymn-import.js').then(m => m.fillBuiltInWords('afrikaans-sda', [{ n: 1, t: 'Buig', v: [['Reël een', 'Reël twee']] }, { n: 9999, t: 'x', v: [['y']] }]))")
-                    assert n == 1, 'Advent Lofliedere words filled: %r' % n
+                    assert n == 0, 'built-in Lofliedere words were replaced: %r' % n
                     assert not qerr, '; '.join(qerr[:3])
                 finally:
                     c.close()

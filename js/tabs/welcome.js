@@ -213,7 +213,7 @@ export function openWelcome({ onClose, only } = {}) {
     const builtin = (await bd.listTranslations(true)).filter((t) => t.src !== 'imported');
     const haveHymns = new Set((await hi.addedHymnbooks()).map((b) => String(b.id)));
     const counts = await hi.overlayCounts();
-    const filled = (counts['sda-online'] || 0) > 0, afWords = counts['afrikaans-sda'] || 0;
+    const filled = (counts['sda-online'] || 0) > 0;
     if (steps[i] !== 'languages') return;
     const langs = L3().filter(Boolean).filter((x, k, a) => a.indexOf(x) === k);
     const all = languageChoices();
@@ -236,7 +236,7 @@ export function openWelcome({ onClose, only } = {}) {
         ...dlH.map((e, n) => [haveHymns.has(e.id) || (e.id === 'web-rejnac-english' && filled) ? 'hhave:' + e.id : 'h:' + n,
           (e.id === 'web-rejnac-english' ? 'SDA Hymnal 1985 with words (keeps the hymn music)' : e.name) + ' · ' + e.hymns + ' hymns' + (haveHymns.has(e.id) ? ' ✓' : '')]),
         L.builtinHymns ? ['builtin', key === 'en' ? 'Only the built-in books (SDA Hymnal titles, Church Hymnal 1941 words)'
-          : 'Advent Lofliedere (built in' + (afWords ? ', words for ' + afWords + ' hymns added ✓)' : ', numbers and titles)')] : null,
+          : 'Advent Lofliedere (built in, with words and music)'] : null,
         pick[key] && pick[key].ownHymn ? ['own', pick[key].ownHymn.name + ' (your file) ✓'] : null,
         ['', 'No hymnbook for this language'],
         ['file', 'Our church’s own hymnbook file…'],
@@ -297,7 +297,6 @@ export function openWelcome({ onClose, only } = {}) {
     };
     const gapNote = (x, kind) => {
       if (kind === 'bible' && !x.dlB.length && !x.own.length && !x.p.ownBible) return h('span.note', 'No ' + x.L.name + ' Bible is openly available to download. If your church has one as a file (for example from the Bible Society), choose “Our church’s own Bible file”.');
-      if (kind === 'hymn' && x.key === 'af' && !afWords) return h('span.note', 'The words of Advent Lofliedere are copyrighted, so they cannot be downloaded. If your church has them as a file (VideoPsalm or another program), choose “Our church’s own hymnbook file”: the words fill the built-in book by number.');
       if (kind === 'hymn' && !x.dlH.length && !x.L.builtinHymns && !x.p.ownHymn) return h('span.note', 'No ' + x.L.name + ' hymnbook is in the download list yet. If your church has one as a file, choose “Our church’s own hymnbook file”.');
       return null;
     };

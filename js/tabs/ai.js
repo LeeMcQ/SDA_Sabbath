@@ -317,7 +317,7 @@ export default function create(ctx) {
   }
   const churchBtn = h('button.btn.sm', { type: 'button', title: 'Church name, town, location, service time and giving link', onclick: () => churchDialog() }, icon('pin'), h('span.hide-sm', 'Church details'));
   const views = { make: h('div.bn-view'), library: h('div.bn-view.scroll.pad'), loop: h('div.bn-view.scroll.pad'), music: h('div.bn-view.scroll.pad.mu-view'), topics: h('div.bn-view') };
-  const el = h('section.banners',
+  const el = h('section.banners.bn-on-make',
     h('div.toolbar', h('h2', 'Banners & Music'), viewSeg, h('div.grow'), churchBtn),
     views.make, views.library, views.loop, views.music, views.topics);
   const musicView = createMusicView(ctx, views.music);
@@ -326,6 +326,7 @@ export default function create(ctx) {
     view = v;
     renderViewSeg();
     Object.keys(views).forEach((k) => { views[k].hidden = k !== v; });
+    el.classList.toggle('bn-on-make', v === 'make');
     if (v === 'make') { refreshPreview(); } else if (editor) editor.deselect();
     if (v === 'library') renderLibrary();
     if (v === 'loop') renderLoop();

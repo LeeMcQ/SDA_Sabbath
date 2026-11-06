@@ -181,7 +181,7 @@ export default function create(ctx) {
     try {
       const saved = (await db.all('hymnbooks')) || [];
       saved.forEach((sb) => {
-        if (!sb || typeof sb !== 'object' || !sb.id || sb.hidden) return;
+        if (!sb || typeof sb !== 'object' || !sb.id) return;
         if (sb.overlayOf) {
           const base = books.find((b) => b.id === sb.overlayOf);
           if (base) cleanHymns(sb.hymns).forEach((hy) => { const i = base.hymns.findIndex((x) => x.n === hy.n); if (i >= 0) base.hymns[i] = hy; else base.hymns.push(hy); });
@@ -1124,8 +1124,6 @@ export default function create(ctx) {
       return out;
     },
     whenReady() { return ready; },
-    /** Opens a built-in book and asks for the church's licensed words file (from the Add a hymnbook list). */
-    async addLicensedWords(id) { await ready; if (books.some((b) => b.id === id)) setBook(id); return importLicensed(); },
     /** Number, title and first line of every hymn in the open book, plus its id (for hymns announced by name). */
     catalog() {
       if (!book) return { id: '', list: [] };

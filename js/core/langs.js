@@ -44,7 +44,7 @@ export function languageChoices() {
   [...getbibleItems(), ...ebibleItems(), ...corpusItems()].forEach((t) => { if (t.langName || t.lang) get(langKey(t.lang, t.langName), t.langName).bibles.push(t); });
   get('en').builtinBible = 'KJV and WEB are built in';
   get('en').builtinHymns = 'SDA Hymnal 1985 (numbers, titles and music) and Church Hymnal 1941 (words) are built in';
-  get('af').builtinHymns = 'Advent Lofliedere (numbers and titles) is built in';
+  get('af').builtinHymns = 'Advent Lofliedere (words and music) is built in';
   cache = [...by.values()].map((l) => Object.assign(l, { lang: l.key, langName: l.name }))
     .sort((a, b) => (a.key === 'en' ? -1 : b.key === 'en' ? 1 : 0) || (a.key === 'af' ? -1 : b.key === 'af' ? 1 : 0)
       || rank(a) - rank(b) || (b.hymns.length ? 1 : 0) - (a.hymns.length ? 1 : 0) || a.name.localeCompare(b.name));

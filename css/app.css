@@ -1657,3 +1657,18 @@ html:not(.lp) .listen-box.on .ls-dot { animation: ls-pulse 1.6s ease-in-out infi
   .se-tb { min-width: 32px; padding: 0 3px; }
   .se-tb .se-caret { margin-left: -2px; }
 }
+
+/* Banners → Make on a phone: the whole tab scrolls as one page. The view tabs and the toolbar scroll away, and the banner
+   preview stays pinned at the top (under the bar with Present) so it is always visible while you edit below it. */
+@media (max-width: 760px) {
+  .banners.bn-on-make { overflow-y: auto; overflow-x: hidden; }
+  .banners.bn-on-make > .toolbar { flex: none; }
+  .banners.bn-on-make .bn-make { flex: none; min-height: auto; }
+  .banners.bn-on-make .bn-make > .banner-split { flex: none; overflow: visible; }
+  .banners.bn-on-make .bn-tb-row { position: static; }
+  .banners.bn-on-make .banner-split .bn-preview-pane, .banners.bn-on-make .banner-split .bn-preview-in { display: contents; }
+  .banners.bn-on-make .bn-screen { position: sticky; top: 8px; z-index: 9; order: -4; margin: 8px 10px; width: auto; max-width: calc(100% - 20px); box-sizing: border-box; box-shadow: 0 0 0 8px var(--sunk), 0 10px 10px -4px rgba(0, 0, 0, .45); }
+  .banners.bn-on-make .bn-strip { order: -3; margin: 0 10px 10px; }
+  .banners.bn-on-make .bn-actions { order: -2; margin: 0 10px 10px; }
+  .banners.bn-on-make .bn-save-row { order: -1; margin: 0 10px 10px; }
+}
