@@ -618,7 +618,18 @@ export default function create(ctx) {
   const shownCue = new Map(); // item id -> cue id
   const watchers = new Set(); // called whenever the plan or what is on screen changes (see api.subscribe)
   const onScreen = (it) => !!(live.cue && shownCue.get(it.id) === live.cue.id);
+  // The music of the part that is leaving fades out (about 2.5 s) when the next part of the plan goes on screen, in
+  // Basic and Advanced. A hymn shown with its own music (Present & play) keeps playing.
+  const MUSIC_FADE_MS = 2500;
+  let lastLiveId = null, startingMusic = false;
+  function fadeOutMusic() {
+    try { if (music.isPlaying()) music.fade(MUSIC_FADE_MS); } catch (e) { /* no music engine */ }
+    try { if (ctx.bgAudio && ctx.bgAudio.active) ctx.bgAudio.fadeOut(MUSIC_FADE_MS); } catch (e) { /* nothing playing */ }
+  }
   live.on('live', () => {
+    const lc = live.cue;
+    if (lc && lc.id !== lastLiveId && !startingMusic && [...shownCue.values()].includes(lc.id)) fadeOutMusic();
+    lastLiveId = lc ? lc.id : null;
     if (!plan) return;
     // A part counts as shown once it is really on the screen (not when it was only put on Next).
     let changed = false;
@@ -665,16 +676,15 @@ export default function create(ctx) {
   async function presentItem(i, withMusic) {
     const it = plan.items[i];
     if (!it || it.heading) return;
-    // Leaving a hymn: stop its music unless this present is itself starting music.
-    if (!withMusic) { try { music.stop(); } catch (e) { /* */ } }
+    // The music of the part before fades out by itself when this part goes live (see fadeOutMusic).
     if (withMusic && it.tab === 'hymns') {
-      ctx.hold = 'plan';
+      ctx.hold = 'plan'; startingMusic = true;
       try {
         const t = await ctx.tab('hymns');
         const c = await t.presentAndPlay(it);
         if (c) { cur = i; shownCue.set(it.id, c.id); render(); }
       } catch (e) { toast('Could not present and play: ' + e.message, 'err'); }
-      finally { ctx.hold = null; }
+      finally { ctx.hold = null; startingMusic = false; }
       return;
     }
     const c = await select(i);
@@ -869,8 +879,6 @@ export default function create(ctx) {
   /** Previous / next part of the plan (parts without media are skipped). */
   async function step(d, auto) {
     if (!plan) return;
-    // Moving on by hand stops hymn music so the next part's media can take over.
-    if (!auto) { try { music.stop(); } catch (e) { /* no music playing */ } }
     let i = cur;
     do { i += d; } while (plan.items[i] && plan.items[i].heading);
     if (i < 0 || i >= plan.items.length) { toast(d > 0 ? 'End of the plan.' : 'Start of the plan.'); return; }
@@ -1194,6 +1202,8 @@ export default function create(ctx) {
       return i < plan.items.length ? i : -1;
     },
     /** Show a hymn part with its music (Present & play). */
+    /** Fade out the music of the part that is leaving (Basic uses it for a part with nothing to show). */
+    fadeMusic: () => fadeOutMusic(),
     presentAndPlay: async (i) => { await ready; if (plan) await presentItem(i, true); },
     /** Start a plan from the default template (today's order of service). */
     async createDefault() { await ready; const t = tplByKey(defTpl) || tplByKey('b:Divine Service'); await createFromTemplate(t.key); },

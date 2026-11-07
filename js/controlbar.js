@@ -9,7 +9,7 @@ import { link } from './core/link.js';
 const idle = (f) => (window.requestIdleCallback ? requestIdleCallback(f, { timeout: 2000 }) : setTimeout(f, 800));
 let music = { isPlaying: () => false, state: {}, on() {}, unlock() {}, toggle() {}, fade() {}, stop() {} };
 
-export function createControlBar(el, getTab) {
+export function createControlBar(el, getTab, planNav = () => {}) {
   const counter = h('span.cb-sub', '');
   const audioBox = h('div.audio-mini', { hidden: true });
   const musicBox = h('div.audio-mini.music-mini', { hidden: true });
@@ -43,8 +43,11 @@ export function createControlBar(el, getTab) {
       el.append(
         h('div.cb-live', h('span.tally-dot.live'), h('div', { style: { minWidth: 0 } }, h('div.cb-title', cue.title), counter)),
         h('div.sep'),
-        btn('prev', 'Previous', () => live.prev(), { key: '←' }),
-        btn('next', 'Next', () => live.next(), { key: '→' }),
+        // Advanced plan: Back / Next move to the previous / next part of the service (hidden elsewhere, see css).
+        btn('', 'The previous part of the service', () => planNav('back'), { cls: 'cb-part', label: 'Back' }),
+        btn('', 'The next part of the service', () => planNav('next'), { cls: 'cb-part primary', label: 'Next' }),
+        btn('prev', 'Previous slide or lyric', () => live.prev(), { key: '←' }),
+        btn('next', 'Next slide or lyric', () => live.next(), { key: '→' }),
         backBtn,
       );
       paintBack();

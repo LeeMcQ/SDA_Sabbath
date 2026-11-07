@@ -402,8 +402,9 @@ def main():
 
             @check('a copyrighted hymn shows its title and how to add licensed words')
             def t_hymn_licensed():
-                pg.evaluate("window.selah.tab('hymns').then(t => t.open({ n: 4, book: 'choruses' }))"); pg.wait_for_timeout(900)
-                assert pg.locator('.licence-panel').first.is_visible(), 'no licence panel for a hymn without words'
+                # A song listed by number and title only (a church's own file) is marked locked, so the "add the words" panel shows.
+                lk = pg.evaluate("import('./js/core/hymnparse.js').then(m => { const b = m.normaliseBook({ id: 'x', name: 'X', hymns: [{ n: 5, t: 'Only title', words: false }] }); return b.hymns.map((h) => [h.n, !!h.locked]); })")
+                assert lk == [[5, True]], 'title-only song not locked: %r' % (lk,)
                 frames = pg.evaluate("window.selah.tab('hymns').then(() => import('./js/tabs/hymns.js')).then(m => { const s = m.parseSongSelect('Amazing Grace\\n\\nVerse 1\\nAmazing grace how sweet the sound\\nThat saved a wretch like me\\n\\nChorus\\nMy chains are gone\\n\\nCCLI Song # 4768151\\n'); return [s.t, s.ccli, s.v.length, !!s.c]; })")
                 assert frames == ['Amazing Grace', '4768151', 1, True], 'SongSelect text not read: %r' % frames
                 usr = pg.evaluate("import('./js/tabs/hymns.js').then(m => { const s = m.parseSongSelect('[S A1234]\\nTitle=Test Song\\nAuthor=A|B\\nFields=Verse 1/tChorus\\nWords=Line one/nLine two/tChorus line\\n'); return [s.t, s.ccli, s.v.length, s.c && s.c[0]]; })")
@@ -452,6 +453,27 @@ def main():
                 c.close()
             t_own_look()
 
+            @check('Shared Hymns – English (choruses, Malmesbury Praise) have all their words')
+            def t_shared_words():
+                r = pg.evaluate("fetch('data/hymns/choruses.json').then(r => r.json()).then(d => [d.hymns.length, d.hymns.filter(h => h.v && h.v.length && h.v[0].length).length, d.hymns.filter(h => h.words === false).length])")
+                assert r[0] == 92 and r[1] == 92 and r[2] == 0, 'Shared Hymns words: %r' % (r,)
+            t_shared_words()
+
+            @check('Video tab: a video or music can be added to the service plan')
+            def t_video_plan():
+                c = b.new_context(viewport={'width': 1280, 'height': 900}, service_workers='block')
+                p7 = c.new_page()
+                p7.goto(base + 'index.html'); p7.wait_for_timeout(800)
+                p7.evaluate("import('./js/core/settings.js').then(m => (m.settings.set('app.setupDone', true), m.settings.set('backup', Object.assign({}, m.settings.v.backup, { remindAt: Date.now() }))))")
+                p7.evaluate("import('./js/core/db.js').then(m => m.db.put('files', 'vid-test', { id: 'vid-test', kind: 'media', name: 'Test song.mp3', type: 'audio/mpeg', size: 3, added: 1, blob: new Blob(['abc'], { type: 'audio/mpeg' }) }))")
+                p7.reload(); p7.wait_for_selector('#presentBtn'); p7.wait_for_timeout(1000)
+                p7.evaluate("window.selah.showTab('video')"); p7.wait_for_timeout(1000)
+                p7.locator('.li button[aria-label="Add to the service plan"]').first.click(); p7.wait_for_timeout(1200)
+                titles = p7.evaluate("window.selah.tab('plan').then(t => t.snapshot().items.map(i => i.title))")
+                c.close()
+                assert any('Test song' in x for x in titles), 'the video was not added to the plan: %r' % (titles,)
+            t_video_plan()
+
             @check('next / previous step through a hymn')
             def t_steps():
                 # A hymn with words (the 1941 Church Hymnal is included with its words).
@@ -496,23 +518,33 @@ def main():
                 row.locator('.bp-show').click(); pg.wait_for_timeout(1500)
                 i0 = pg.evaluate("import('./js/core/live.js').then(m => m.live.cue ? m.live.index : -1)")
                 assert i0 >= 0, 'Show put nothing on screen'
-                # The slim row steps the slides of what is on screen (a hymn without licensed words has only its title slide).
+                # The two small arrows (where Blank was) skip to the next / previous slide or lyric of what is on screen.
+                assert pg.locator('.bb-blank').count() == 0, 'the Blank button is still in the Basic bar'
+                assert pg.locator('.bb-skip').count() == 2, 'the two skip arrows are missing'
                 if pg.evaluate("import('./js/core/live.js').then(m => m.live.cue.deck.frames.length)") > 1:
-                    pg.click('.bb-slides .bs-b[aria-label="Next slide"]'); pg.wait_for_timeout(600)
+                    pg.click('.bb-skip[aria-label="Next slide or lyric"]'); pg.wait_for_timeout(600)
                     i1 = pg.evaluate("import('./js/core/live.js').then(m => m.live.index)")
-                    assert i1 == i0 + 1, 'slide row: slide %s -> %s' % (i0, i1)
+                    assert i1 == i0 + 1, 'skip arrow: slide %s -> %s' % (i0, i1)
+                    pg.click('.bb-skip[aria-label="Previous slide or lyric"]'); pg.wait_for_timeout(600)
+                    assert pg.evaluate("import('./js/core/live.js').then(m => m.live.index)") == i0, 'previous arrow did not go back'
+                # The control bar stays under the big buttons in Basic (black screen, logo, music).
+                assert pg.locator('.ctrlbar:not([hidden]) .cb-end').count() == 1 and pg.locator('.ctrlbar').first.is_visible(), 'no control bar in Basic'
                 # The big Next goes to the next part of the service, even with more stanzas left.
                 cur = "window.selah.showTab('plan').then((t) => t.snapshot().cur)"
                 part0 = pg.evaluate(cur)
+                # Music that is playing fades out by itself when the next part of the plan is given.
+                pg.evaluate("import('./js/core/audio.js').then(m => { window.__fade = 0; const a = m.bgAudio; a.__fo = a.fadeOut; a.fadeOut = () => { window.__fade++; }; a.active = true; })"); pg.wait_for_timeout(200)
                 pg.click('.bb-next'); pg.wait_for_timeout(1200)
+                faded = pg.evaluate("import('./js/core/audio.js').then(m => { const a = m.bgAudio; a.fadeOut = a.__fo; a.active = false; return window.__fade; })")
+                assert faded >= 1, 'the music did not fade out when the next part was given (%s)' % faded
                 part1 = pg.evaluate(cur)
                 assert part1 == part0 + 1, 'Next did not move to the next part (%s -> %s)' % (part0, part1)
                 pg.click('.bb-back'); pg.wait_for_timeout(1200)
                 assert pg.evaluate(cur) == part0, 'Back did not return to the part before'
-                pg.click('.bb-blank'); pg.wait_for_timeout(300)
-                assert pg.evaluate("import('./js/core/live.js').then(m => m.live.blank)") == 'black', 'Blank did not black out'
-                pg.click('.bb-blank'); pg.wait_for_timeout(300)
-                assert not pg.evaluate("import('./js/core/live.js').then(m => m.live.blank)"), 'Blank did not show the screen again'
+                pg.click('.ctrlbar .cb-end .btn[aria-label="Black screen"]'); pg.wait_for_timeout(300)
+                assert pg.evaluate("import('./js/core/live.js').then(m => m.live.blank)") == 'black', 'the control bar did not black out'
+                pg.click('.ctrlbar .cb-end .btn[aria-label="Black screen"]'); pg.wait_for_timeout(300)
+                assert not pg.evaluate("import('./js/core/live.js').then(m => m.live.blank)"), 'the control bar did not show the screen again'
                 assert not errs, '; '.join(errs[:3])
             t_basic()
 
@@ -521,6 +553,9 @@ def main():
                 pg.click('.plan-view [data-view="advanced"]'); pg.wait_for_timeout(800)
                 assert not pg.locator('.basic-panel').is_visible(), 'the Basic panel still shows'
                 assert pg.locator('.plan-addbar').is_visible(), 'the plan editor does not show in Advanced'
+                # The control bar has Back / Next for the parts of the service next to the slide arrows (something is live).
+                assert pg.locator('.ctrlbar .cb-part').count() == 2 and pg.locator('.ctrlbar .cb-part').first.is_visible(), 'no Back / Next in the Advanced control bar'
+                assert pg.locator('.ctrlbar .btn[aria-label="Next slide or lyric"]').count() == 1, 'no slide arrows in the control bar'
                 assert pg.locator('.plan-item .pi-slide').count() > 0, 'no slide pictures in the plan'
                 pg.evaluate("window.selah.showTab('listen')"); pg.wait_for_timeout(800)
                 assert pg.locator('.tools-part-listen .ls-toggle').is_visible(), 'Tools → Listen does not open'
@@ -1300,7 +1335,7 @@ def main():
                     p2.evaluate("window.selah.showTab('plan')"); p2.wait_for_timeout(300)
                     p2.evaluate("import('./js/core/settings.js').then(m => m.settings.set('app.planView', 'basic'))"); p2.wait_for_timeout(500)
                     over = p2.evaluate('document.documentElement.scrollWidth - document.documentElement.clientWidth')
-                    fits = p2.evaluate("""(() => ['#presentBtn', '.bb-next', '.bb-blank', '.plan-view'].every((q) => { const r = document.querySelector(q).getBoundingClientRect();
+                    fits = p2.evaluate("""(() => ['#presentBtn', '.bb-next', '.bb-skip', '.plan-view'].every((q) => { const r = document.querySelector(q).getBoundingClientRect();
                       return r.width > 0 && r.left >= -1 && r.right <= innerWidth + 1 && r.bottom <= innerHeight + 1; }))()""")
                     if over > 1 or not fits: bad_tabs.append('%dx%d Plan Basic (%dpx wider%s)' % (w, hh, over, '' if fits else ', a button off screen'))
                     assert not e2, '%dx%d: %s' % (w, hh, e2[0])

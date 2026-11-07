@@ -1381,13 +1381,15 @@ a.btn { text-decoration: none; }
 .plan-pane.is-basic > .plan-tabs, .plan-pane.is-basic > .plan-addbar, .plan-pane.is-basic > .plan-scroll,
 .plan-pane.is-basic .plan-top .plan-edit-only { display: none !important; }
 .plan-pane:not(.is-basic) > .basic-panel, .plan-pane:not(.is-basic) > .basic-bar { display: none; }
-/* The big buttons replace the control bar while the Plan tab is open in Basic. */
-html.plan-basic .app.tab-plan .ctrlbar { display: none !important; }
+/* The control bar (black screen, logo, music with fade and stop) stays under the big buttons in Basic. Its part buttons
+   (Back / Next part of the service) are for Advanced only: Basic has big ones. */
+.ctrlbar .cb-part { display: none; }
+html:not(.plan-basic) .app.tab-plan .ctrlbar .cb-part { display: inline-flex; }
 /* Things that float above the tabs (the small corner screen, suggestions) float above the big buttons too. */
 html.plan-basic:has(.app.tab-plan) .self-display.mini.c-br,
-html.plan-basic:has(.app.tab-plan) .self-display.mini.c-bl { bottom: calc(var(--tab-h) + var(--pb-h, 0px) + 10px); }
+html.plan-basic:has(.app.tab-plan) .self-display.mini.c-bl { bottom: calc(var(--tab-h) + var(--pb-h, 0px) + var(--bar-real, 0px) + 10px); }
 @media (max-width: 760px) {
-  html.plan-basic:has(.app.tab-plan) .monitors .listen-box.on { bottom: calc(var(--tab-h) + var(--pb-h, 0px) + 8px); }
+  html.plan-basic:has(.app.tab-plan) .monitors .listen-box.on { bottom: calc(var(--tab-h) + var(--pb-h, 0px) + var(--bar-real, 0px) + 8px); }
 }
 
 .basic-panel { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
@@ -1418,7 +1420,6 @@ html.plan-basic:has(.app.tab-plan) .self-display.mini.c-bl { bottom: calc(var(--
 .bp-empty .row { justify-content: center; }
 
 .basic-bar { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 12px; padding: 12px; background: var(--sunk); border-top: 1px solid var(--line); flex: none; }
-.basic-bar:has(.bb-music:not([hidden])) { grid-template-columns: 1fr 2fr 1fr auto; }
 .bb { display: flex; align-items: center; justify-content: center; gap: 10px; min-width: 0; min-height: 64px; padding: 6px 14px; border-radius: 14px;
   border: 2px solid var(--line); background: var(--panel); color: var(--text); font-weight: 700; font-size: var(--fs-xl); }
 .bb svg.i { width: 26px; height: 26px; stroke-width: 2.2; }
@@ -1429,19 +1430,17 @@ html.plan-basic:has(.app.tab-plan) .self-display.mini.c-bl { bottom: calc(var(--
 .bb-main { display: flex; align-items: center; gap: 6px; font-size: 1.625rem; line-height: 1.1; }
 .bb-sub { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); font-weight: 600; opacity: .92; }
 .bb-sub:empty { display: none; }
-.bb-blank { background: #000; color: #fff; }
-.bb-blank.on { border-color: var(--live); box-shadow: inset 0 0 0 2px var(--live); }
-.bb-music { font-size: var(--fs-md); }
+.bb-skips { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; min-width: 0; }
+.bb-skip { padding: 6px; }
 html:not(.lp) .bb:active:not(:disabled) { transform: translateY(1px); }
 
 @media (max-width: 760px) {
   .plan-view button { padding: 0 9px; font-size: var(--fs-xs); }
-  .basic-bar, .basic-bar:has(.bb-music:not([hidden])) { grid-template-columns: 1fr 1.5fr 1fr; gap: 8px; padding: 8px; }
-  .bb-music:not([hidden]) { grid-column: 1 / -1; min-height: 40px; }
+  .basic-bar { grid-template-columns: 1fr 1.5fr 1.2fr; gap: 8px; padding: 8px; }
+  .bb-skips { gap: 6px; }
   .bb { min-height: 58px; padding: 4px 6px; gap: 2px; flex-direction: column; font-size: var(--fs-md); border-radius: 12px; }
   .bb svg.i { width: 22px; height: 22px; }
   .bb-main { font-size: 1.375rem; }
-  .bb-music { flex-direction: row; gap: 8px; }
   .bp-head { padding: 8px 12px; }
   .bp-scroll { padding: 8px 8px 14px; }
   .bp-row { grid-template-columns: 26px minmax(0, 1fr) auto; gap: 8px; min-height: 58px; padding: 6px 8px; }
@@ -1630,9 +1629,8 @@ html:not(.lp) .listen-box.on .ls-dot { animation: ls-pulse 1.6s ease-in-out infi
 .tip .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 /* Plan → Basic: the slim row that steps through the slides of what is on screen (above Back / Next / Blank). */
-.bb-slides { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; min-width: 0; margin-bottom: -2px; }
+.bb-slides { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; min-width: 0; margin-bottom: -2px; }
 .bb-slides[hidden] { display: none; }
-.bb-slides .bs-b { flex: none; min-width: 52px; min-height: 40px; justify-content: center; }
 .bs-l { flex: 1; min-width: 0; text-align: center; font-weight: 600; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Go to results: a width of their own (the search box itself shrinks on busy top bars and with larger text), so

@@ -16,7 +16,7 @@ screen, OBS, live translation). A PWA on GitHub Pages: https://ssdesk.online/. M
 - **Old browsers:** no regex lookbehind (older iPad Safari fails to load the whole module). Keep code that runs on
   1–2 GB phones light.
 - **Copyright:** never ship copyrighted Bible or hymn words. They come from downloads the church chooses (with a licence
-  note) or from the church's own file. Exception: Leo has the owners' permission for the SDA Hymnal 1985 words (`data/hymns/sda-online.json`, all 698 hymns, 695 with MIDI) and the Advent Lofliedere words, so `data/hymns/afrikaans.json` has all 481 hymns with words; about 150 play the SDA Hymnal tune (`afrikaans-sda` in `data/music/index.json`).
+  note) or from the church's own file. Exception: Leo has access to the hymn words, so the built-in hymnbooks keep their words: SDA Hymnal 1985 (`data/hymns/sda-online.json`, 698 hymns, 695 with MIDI), Shared Hymns – English (`choruses.json`, 92) and the Advent Lofliedere words, so `data/hymns/afrikaans.json` has all 481 hymns with words; about 150 play the SDA Hymnal tune (`afrikaans-sda` in `data/music/index.json`).
 - **Independent apps:** SDA_Sabbath and Church_Service (LeeMcQ/Church_Service) are separate. Change only this repo unless
   Leo asks to port something.
 - **Words in the app:** short plain English for volunteers ("Download now", "On this device ✓"), no jargon.

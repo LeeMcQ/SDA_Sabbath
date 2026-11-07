@@ -368,7 +368,7 @@ export default function create(ctx) {
     box.append(h('div.about-folds',
       fold('Bibles and hymns',
         h('p', 'Included: the KJV and the World English Bible (both public domain), and public-domain hymn words. The SDA Hymnal (1985) and modern choruses are listed by number and title only.'),
-        h('p', 'Advent Lofliedere words are included with the permission of their owners. Other licensed Bibles and hymn words are added by each church under its own licence and stay on its own devices.')),
+        h('p', 'Other licensed Bibles and hymn words are added by each church under its own licence and stay on its own devices.')),
       fold('Hymn music',
         h('p', 'Played by SpessaSynth (Apache 2.0) with the GeneralUser GS SoundFont by S. Christian Collins.'),
         h('p', 'Studio sounds: Salamander Grand Piano by Alexander Holm (CC BY 3.0) and the GrandOrgue demo pipe organ by Lars Palo (CC BY-SA 2.5).')),

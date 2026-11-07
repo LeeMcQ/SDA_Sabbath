@@ -35,7 +35,7 @@ Status marks: **✔** built and tested · **◐** built, but not yet proven in r
 ## 3. Hymns and choruses
 
 - **Own screen look for Bible and hymns**: Bible → ⋯ (Bible on screen) and Hymns → options each have *Use an own look*: font, weight, text and number colours, background colour, shadow, alignment, margin, smallest and largest text (and hymn word size), with a live preview. Everything else keeps the Settings → Screen look.
-- **Built-in books**: 1941 Church Hymnal (703, with words); Advent Lofliedere in Afrikaans (481, with words and, for about 150, the SDA Hymnal tune); SDA Hymnal 1985 (698, with words and 695 tunes, included with the owners' permission); **Import licensed words** adds a church's own licensed words for the songs that have none (Shared Hymns).
+- **Built-in books**: 1941 Church Hymnal (703, with words); Advent Lofliedere in Afrikaans (481, with words and, for about 150, the SDA Hymnal tune); SDA Hymnal 1985 (698, with words and 695 tunes); **Import licensed words** adds a church's own licensed words for the songs that have none (Shared Hymns).
 - **Shared Hymns in every language**: one book per language (English, Afrikaans, isiXhosa …), added for the church's service languages in the setup. English holds the praise choruses and Malmesbury Praise (101–148). **New song** asks the language first and gives the next number; **Share with all churches** sends it for approval, and every church with that language gets it (501 and up). The monthly report highlights new shared hymns.
 - **Find by number or words**.
 - **Title slide, one stanza per slide**, chorus repeated automatically.
@@ -99,7 +99,7 @@ Status marks: **✔** built and tested · **◐** built, but not yet proven in r
 
 ## 9. Service plan
 
-- **Basic mode** (default, for the volunteer at the desk): the order of service with a **Show** button per part, and three big buttons: **Back, Next, Blank**. Next steps through the slides, then on to the next part.
+- **Basic mode** (default, for the volunteer at the desk): the order of service with a **Show** button per part, and big buttons: **Back**, **Next** and two arrows that skip to the previous / next slide or lyric. The control bar (black screen, logo, music with fade and stop) stays below them. In **Advanced** the control bar also has Back / Next for the parts of the service. When the next part goes on screen, the music of the part before fades out by itself. Videos and music can be added to the plan from the **Video** tab (the plan button on each item).
 - **Advanced mode**: full plan editor with first-slide thumbnails.
 - **Ready-made templates**: Divine Service, Sabbath School, Vespers / AY, Communion, Prayer Meeting, Thirteenth Sabbath, Baptism, Child Dedication, Pathfinder / Adventurer Investiture, Week of Prayer, with suggested roles.
 - **Your own templates**: save a plan (with or without its hymns and readings), and set it as the default.

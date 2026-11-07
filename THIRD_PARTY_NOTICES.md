@@ -14,7 +14,7 @@ SDA Sabbath's own code is MIT-licensed (`LICENSE`). Everything below keeps its o
 | Data | Status |
 |---|---|
 | Church Hymnal 1941 (`data/hymns/church-1941.json`) | Older hymn texts, included with words |
-| SDA Hymnal 1985 (`data/hymns/sda-online.json`) | Words and tunes included. The hymnal (compilation, edited texts) is © Review and Herald Publishing / General Conference; many texts are owned by other publishers. Included with the owners' permission, as confirmed by Lee McQuire (keep the written permission on file). |
+| SDA Hymnal 1985 (`data/hymns/sda-online.json`) | Words and tunes included. The hymnal (compilation, edited texts) is © Review and Herald Publishing / General Conference; many texts are owned by other publishers. |
 | Advent Lofliedere (`data/hymns/afrikaans.json`) | Words © their owners; included with their permission (held by the maintainer). |
 | Praise Choruses (`data/hymns/choruses.json`) | Titles and authors; words only for traditional (public-domain) choruses. Others © their publishers (mostly administered by CCLI). |
 | Malmesbury Praise (`data/hymns/malmesbury.json`) | Titles; words only for public-domain hymns (written before 1928, author died over 70 years ago). |

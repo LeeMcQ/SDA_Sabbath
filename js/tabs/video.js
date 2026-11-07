@@ -36,6 +36,8 @@ export default function create(ctx) {
   const startNote = h('span.note', '');
   const useStart = h('input', { type: 'checkbox' });
   const bgToggleWrap = h('div');
+  const planBtn = btn('plan', 'Add this video or music to the service plan', () => addToPlan(sel), { cls: 'sm', label: 'Add to plan' });
+  planBtn.hidden = true;
   const panel = h('div.vlc-grid');
   const fsa = 'showOpenFilePicker' in window;
   const addBtn = btn('plus', 'Add videos or music', () => addFiles(), { cls: 'sm', label: 'Add' });
@@ -51,7 +53,7 @@ export default function create(ctx) {
     h('div.split.media-split',
       h('div.pane', h('div.pane-h', 'Playlist'), h('div.scroll', { style: { flex: '1' } }, listEl, h('div.pad', zone))),
       h('div.pane', h('div.scroll.pad', { style: { flex: '1' } },
-        h('div.row', { style: { marginBottom: '8px' } }, selTitle),
+        h('div.row', { style: { marginBottom: '8px' } }, selTitle, planBtn),
         prevBox,
         h('div.row.wrap', { style: { margin: '8px 0 14px' } },
           h('label.switch', useStart, h('span', 'Start from the preview position')), startNote, bgToggleWrap),
@@ -78,10 +80,17 @@ export default function create(ctx) {
       icon(isAudio(it) ? 'music' : 'video'),
       h('span.grow', h('div.trunc', it.name), h('div.note', [it.remote ? 'Church PC' : it.handle ? 'On this PC' : it.blob ? 'Saved offline' : 'This session only', it.size ? fmtBytes(it.size) : '', it.dur ? fmtTime(it.dur) : ''].filter(Boolean).join(' · '))),
       live.cue && live.cue.itemId === it.id ? h('span.tally-dot.live') : null,
+      btn('plan', 'Add to the service plan', (e) => { e.stopPropagation(); addToPlan(it); }, { cls: 'sm' }),
       btn('up', 'Move up', (e) => { e.stopPropagation(); move(i, -1); }, { cls: 'sm' }),
       btn('trash', 'Remove', (e) => { e.stopPropagation(); removeItem(it); }, { cls: 'sm' }));
       listEl.appendChild(row);
     });
+  }
+
+  /** Put this video or music into the service plan (below the last item added). */
+  async function addToPlan(it) {
+    if (!it) return;
+    try { await (await ctx.tab('plan')).addItem({ tab: 'video', item: it.id, label: it.name }); } catch (e) { toast('Could not add it to the plan: ' + e.message, 'err'); }
   }
 
   function move(i, d) {
@@ -226,6 +235,7 @@ export default function create(ctx) {
 
   function renderSelected() {
     selTitle.textContent = sel ? sel.name : 'Nothing selected';
+    planBtn.hidden = !sel;
     clear(bgToggleWrap);
     if (sel && isAudio(sel)) bgToggleWrap.appendChild(toggle('Background audio (keep the screen as it is)', bgMode, (v) => { bgMode = v; restage(); }));
   }

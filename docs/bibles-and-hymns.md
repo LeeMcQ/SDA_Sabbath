@@ -57,7 +57,7 @@ The list (`js/core/hymnsources.js`) is built in, so it shows even when GitHub is
 Hymn words belong to their owners. The compilers share these hymnbooks for worship use, but a church still checks that it
 may use the words (many SDA Hymnal texts are under copyright), and a live stream also needs a CCLI Streaming Licence.
 
-**Advent Lofliedere** (Afrikaans) is built in with all its words (included with the owners' permission), so it is not in
+**Advent Lofliedere** (Afrikaans) is built in with all its words, so it is not in
 any download list. The setup offers *Our church's own hymnbook file* for any language without a download.
 
 **From a file** (in the same dialog): VideoPsalm songbooks (`.vpc`, which is a zip, or the `.json` inside it), SDA Sabbath
@@ -72,15 +72,14 @@ Shipped and added hymnbooks are separate: shipping one with the app is still don
 ### Built-in hymnbooks
 
 Built in (listed in `data/hymns/index.json`): the 1941 Church Hymnal (703, with words), the **SDA Hymnal 1985** (698, with
-words and 695 tunes, included with the owners' permission), the Advent Lofliedere (481, with words), and the songs of
-**Shared Hymns – English** — those words are copyrighted, so only the public-domain songs in them include words. A church
-that is licensed (CCLI, or the publisher's permission) adds the missing words on its own devices:
+words and 695 tunes), the Advent Lofliedere (481, with words), and **Shared Hymns – English** (92 songs, with words).
+A church adds the words of any other song on its own devices (CCLI, or the publisher's permission):
 
 - **Hymns → ⋯ → Import licensed words…**: a SongSelect file (`.usr` or `.txt`, matched to the hymn by title), or a
   hymnbook file (`.json` or `# 73 Title` text) whose numbers fill in the built-in book.
 - Or pick a hymn and press **Add the words**. For SDA Hymnal hymns that are also in the 1941 Church Hymnal, a button
   opens the older public-domain words.
-- **Advent Lofliedere:** built in with all 481 hymns and their words (included with the owners' permission), so it works offline from the first start.
+- **Advent Lofliedere:** built in with all 481 hymns and their words, so it works offline from the first start.
 - **Afrikaans Lofliedere music:** hymns that are the same hymn as one in the SDA Hymnal (about 150, matched by number) play the SDA Hymnal's tune. Other Lofliedere hymns can take a MIDI file of your own (Add MIDI file…).
 - A hymn without words still has its title slide (number and title), so the congregation can follow in the hymnal.
 - Showing words on a live stream also needs the church's **CCLI Streaming Licence**.

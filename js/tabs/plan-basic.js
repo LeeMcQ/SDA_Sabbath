@@ -1,7 +1,8 @@
 // The Plan tab's Basic view: for the volunteer at the media desk during the service.
 // The order of service as a simple list (tap = Next, Show = on the screen now, ▶ = a hymn with its music) and
-// three big buttons underneath: Back and Next (the previous / next part of the service, whatever it is: a reading, a
-// hymn, a banner, a video …) and Blank. A slim row above them steps through the slides of what is on screen.
+// big buttons underneath: Back and Next (the previous / next part of the service, whatever it is: a reading, a
+// hymn, a banner, a video …) and two small arrows that skip to the previous / next slide or lyric. A slim line above
+// them names the slide on screen. The control bar (black screen, logo, music with fade and stop) stays below them.
 // Advanced is the plan editor. The switch sits in the Plan tab's own toolbar; the choice is kept on this device.
 import { h, clear } from '../core/util.js';
 import { icon } from '../core/icons.js';
@@ -15,7 +16,7 @@ export function createPlanBasic({ el, toolbar, ctx, api }) {
   // ------------------------------------------------------------ the switch (in the Plan toolbar)
   const mk = (view, label, tip) => h('button', { type: 'button', role: 'radio', 'data-view': view, title: tip, onclick: () => settings.set('app.planView', view) }, label);
   const sw = h('div.plan-view', { role: 'radiogroup', 'aria-label': 'Plan view' },
-    mk('basic', 'Basic', 'Basic: the order of service with Show buttons and big Back / Next / Blank buttons'),
+    mk('basic', 'Basic', 'Basic: the order of service with Show buttons and big Back / Next buttons'),
     mk('advanced', 'Advanced', 'Advanced: edit the plan (add hymns, readings, slides, change the order, templates, sharing)'));
   const h2 = toolbar.querySelector('h2');
   if (h2) h2.after(sw); else toolbar.prepend(sw);
@@ -33,21 +34,16 @@ export function createPlanBasic({ el, toolbar, ctx, api }) {
   const backBtn = h('button.bb.bb-back', { type: 'button', title: 'The previous part of the service', onclick: () => basicBack() }, icon('prev'), h('span.bb-l', 'Back'));
   const nextBtn = h('button.bb.bb-next', { type: 'button', title: 'The next part of the service (the next reading, hymn, banner …)', onclick: () => basicNext() },
     h('span.bb-main', h('span.bb-l', 'Next'), icon('next')), nextSub);
-  const blankLbl = h('span.bb-l', 'Blank');
-  const blankBtn = h('button.bb.bb-blank', { type: 'button', title: 'Black screen; press again to show it again (B)', onclick: () => live.setBlank('black') }, icon('black'), blankLbl);
-  const musicBtn = h('button.bb.bb-music', { type: 'button', hidden: true, title: 'Stop the hymn music', onclick: () => music && music.stop() }, icon('stop'), h('span.bb-l', 'Music'));
   // The slides of what is on screen (verses, stanzas, slides): the arrow keys and a clicker do the same.
-  const slideLbl = h('span.bs-l', '');
-  const slidePrev = h('button.btn.bs-b', { type: 'button', title: 'Previous slide (←)', 'aria-label': 'Previous slide', onclick: () => live.prev() }, icon('prev'));
-  const slideNext = h('button.btn.bs-b', { type: 'button', title: 'Next slide (→)', 'aria-label': 'Next slide', onclick: () => live.next() }, icon('next'));
-  const slideRow = h('div.bb-slides', { hidden: true, role: 'group', 'aria-label': 'Slides of what is on screen' }, slidePrev, slideLbl, slideNext);
-  const bar = h('div.basic-bar', { 'aria-label': 'Order of service controls' }, slideRow, backBtn, nextBtn, blankBtn, musicBtn);
+  const slideLbl = h('div.bs-l', { 'aria-live': 'polite' }, '');
+  const slidePrev = h('button.bb.bb-skip', { type: 'button', title: 'Previous slide or lyric (←)', 'aria-label': 'Previous slide or lyric', onclick: () => live.prev() }, icon('prev'));
+  const slideNext = h('button.bb.bb-skip', { type: 'button', title: 'Next slide or lyric (→)', 'aria-label': 'Next slide or lyric', onclick: () => live.next() }, icon('next'));
+  const skipPair = h('div.bb-skips', { role: 'group', 'aria-label': 'Slides and lyrics of what is on screen' }, slidePrev, slideNext);
+  const slideRow = h('div.bb-slides', { hidden: true }, slideLbl);
+  const bar = h('div.basic-bar', { 'aria-label': 'Order of service controls' }, slideRow, backBtn, nextBtn, skipPair);
   el.append(panel, bar);
   // Its height, so the small corner screen on phones sits above the big buttons instead of on them.
   if (window.ResizeObserver) new ResizeObserver(() => document.documentElement.style.setProperty('--pb-h', bar.offsetHeight + 'px')).observe(bar);
-
-  let music = null;
-  import('../core/hymnmusic.js').then((m) => { music = m.music; music.on('state', paintBar); }).catch(() => {});
 
   /** The part that follows the current one (also a part without media), or -1. */
   const followIndex = (s) => (s && s.cur + 1 < s.items.length ? s.cur + 1 : -1);
@@ -62,6 +58,7 @@ export function createPlanBasic({ el, toolbar, ctx, api }) {
   async function showPart(s, i) {
     const c = await api.select(i);
     if (c) { await present(); return; }
+    api.fadeMusic();
     if (live.blank !== 'logo') live.setBlank('logo');
     ui.toast(s.items[i].title + ': nothing to show, so the logo is on screen.', '', 3200);
   }
@@ -92,16 +89,11 @@ export function createPlanBasic({ el, toolbar, ctx, api }) {
     backBtn.disabled = !s || !(s.cur > 0);
     nextSub.textContent = nextLabel();
     const c = live.cue, n = c ? live.count() : 0;
+    const steps = !!c && c.deck.kind !== 'video' && (n > 1 || !!c.extend);
     slideRow.hidden = !c || n <= 1 || c.deck.kind === 'video';
-    if (!slideRow.hidden) {
-      slideLbl.textContent = (slideName(c, live.index) || 'Slide ' + (live.index + 1)) + '  ·  ' + (live.index + 1) + ' of ' + n;
-      slidePrev.disabled = live.index <= 0;
-      slideNext.disabled = live.index >= n - 1 && !c.extend;
-    }
-    const black = live.blank === 'black';
-    blankBtn.classList.toggle('on', black);
-    blankLbl.textContent = black ? 'Show again' : 'Blank';
-    musicBtn.hidden = !(music && music.isPlaying());
+    if (!slideRow.hidden) slideLbl.textContent = (slideName(c, live.index) || 'Slide ' + (live.index + 1)) + '  ·  ' + (live.index + 1) + ' of ' + n;
+    slidePrev.disabled = !steps || live.index <= 0;
+    slideNext.disabled = !steps || (live.index >= n - 1 && !c.extend);
   }
 
   function row(it) {
@@ -167,5 +159,7 @@ export function createPlanBasic({ el, toolbar, ctx, api }) {
   ['staged', 'live', 'go', 'blank'].forEach((ev) => live.on(ev, paintBar));
   settings.on('change:app', (p) => { if (p === 'app.planView') apply(); });
   apply();
+  // The control bar (Advanced) has the same Back / Next for the parts of the service.
+  ctx.planNav = { next: basicNext, back: basicBack };
   return { isBasic, next: basicNext };
 }

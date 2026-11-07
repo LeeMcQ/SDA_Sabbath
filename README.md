@@ -24,10 +24,11 @@ Nothing reaches the projector until **Present** (F5 or Ctrl+Enter). Each tab kee
 The Plan tab has its own switch (the choice is kept on each device); the rest of the app is the same either way.
 
 - **Basic** (the default) is for the volunteer at the media desk: the order of service with a **Show** button
-  on each part (▶ shows a hymn and starts its music), and three big buttons underneath — **Back**, **Next**
-  and **Blank**. Tap a part to put it on Next. **Next** and **Back** move to the next or previous part of the
-  service, whatever is on screen (a part with nothing to show puts the logo up). The slim row above them (‹ ›)
-  steps through the verses, stanzas or slides of what is on screen, like the arrow keys and a clicker.
+  on each part (▶ shows a hymn and starts its music), and big buttons underneath — **Back**, **Next** and two
+  small arrows (‹ ›) that skip to the previous or next slide or lyric. Tap a part to put it on Next. **Next** and
+  **Back** move to the next or previous part of the service, whatever is on screen (a part with nothing to show
+  puts the logo up). The control bar stays under the big buttons: black screen, logo, clear, and the music with
+  fade and stop. When a part goes on screen, the music of the part before fades out by itself (Basic and Advanced).
 - **Advanced** is the plan editor: add and attach media, change the order, templates, sharing. Each part shows
   a small picture of its first slide.
 
@@ -96,7 +97,7 @@ a local web address. Everything is explained in the guides below.
 
 - Bible texts: KJV and WEB (public domain). The Afrikaanse Bybel 1933/53 is © Bybelgenootskap van Suid-Afrika and is
   not shipped: a church with permission adds its own copy (`licensed/README.md`).
-- Hymns: the SDA Hymnal 1985 and the Advent Lofliedere are built in with their words (included with the owners' permission). Shared Hymns – English (choruses and Malmesbury Praise) are listed by number and title
+- Hymns: the SDA Hymnal 1985 and the Advent Lofliedere are built in with their words. Shared Hymns – English (choruses and Malmesbury Praise) are listed by number and title
   only; words are included only where they are public domain (and the 1941 Church Hymnal). Each church adds other
   words under its own licence (Hymns → ⋯ → Import licensed words), like OpenLP and FreeShow.
 - Logo: a neutral open-Bible mark. The Seventh-day Adventist® Church symbol is not shipped; churches upload their own logo.

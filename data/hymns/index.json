@@ -5,7 +5,7 @@
     "short": "SDAH",
     "lang": "en",
     "file": "sda-online.json",
-    "note": "All 698 hymns with their words, offline (included with the owners' permission). 695 play music offline."
+    "note": "All 698 hymns with their words, offline. 695 play music offline."
   },
   {
     "id": "church-1941",
@@ -21,7 +21,7 @@
     "short": "AL",
     "lang": "af",
     "file": "afrikaans.json",
-    "note": "All 481 Afrikaans hymns with their words, offline (shared with the owners' permission). About 150 play the SDA Hymnal tune."
+    "note": "All 481 Afrikaans hymns with their words, offline. About 150 play the SDA Hymnal tune."
   },
   {
     "id": "choruses",
@@ -29,8 +29,7 @@
     "short": "SH",
     "lang": "en",
     "file": "choruses.json",
-    "note": "Shared Hymns in English: praise choruses (1–45), Malmesbury Praise (101–148, with their own titles) and hymns shared by SDA Sabbath churches (501 and up). Words are included for public-domain songs; add the others under your church's licence.",
-    "words": "licensed",
+    "note": "Shared Hymns in English: praise choruses (1–45), Malmesbury Praise (101–148, with their own titles) and hymns shared by SDA Sabbath churches (501 and up).",
     "shared": true
   }
 ]

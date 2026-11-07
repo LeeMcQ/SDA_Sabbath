@@ -31,7 +31,7 @@ const lazyWelcome = () => import('./tabs/welcome.js');
 const openFeedback = (c, o) => import('./tabs/account.js').then((m) => m.openFeedback(c, o));
 
 export const VERSION = '1.6.1';
-export const BUILD = '17946d4';
+export const BUILD = '7f7009c';
 
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', file: 'bible.js', load: () => import('./tabs/bible.js') },
@@ -888,7 +888,7 @@ live.on('remote-key', (m) => handleKey({ key: m.key, code: m.code, sig: m.sig, c
 
 // ------------------------------------------------------------ monitors & control bar
 createMonitors($('#monitors'));
-createControlBar($('#ctrlbar'), getTab);
+createControlBar($('#ctrlbar'), getTab, (w) => { const n = ctx.planNav; if (n && n[w]) n[w](); });
 
 // ------------------------------------------------------------ verse and hymn suggestions
 // Switched on in Tools → Listen. The cards show under Black / Logo / Clear on a PC; on phones above the tabs.
