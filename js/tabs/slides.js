@@ -166,7 +166,7 @@ export default function create(ctx) {
     for (const f of files) {
       try {
         if (/\.pdf$/i.test(f.name) || f.type === 'application/pdf') await importPdf(f);
-        else if (/\.pptx$/i.test(f.name)) await importPptx(f);
+        else if (/\.pptx$/i.test(f.name)) { await importPptx(f); await offerMedia(f); }
         else if (/\.(ppt|key|odp)$/i.test(f.name)) toast(f.name + ': save it as .pptx or PDF first.', 'err', 6000);
       } catch (e) { console.error(e); toast('Could not import ' + f.name + ': ' + e.message, 'err', 7000); }
     }
@@ -196,6 +196,31 @@ export default function create(ctx) {
     await db.put('files', id, Object.assign({}, old || {}, { id, kind: 'deck', type: 'pdf', name: (name || file.name).replace(/\.(pdf|pptx)$/i, ''), count, size: file.size, added: old ? old.added : Date.now(), updated: Date.now() }, opts.extra || {}));
     toast((name || file.name) + ': ' + count + ' slides ready offline.', 'ok');
     deck = { id };
+  }
+
+  const MEDIA = /^ppt\/media\/[^/]+\.(mp4|m4v|mov|webm|mp3|wav|m4a|aac|ogg|oga|opus|wma|wmv|avi|mkv)$/i;
+  const MEDIA_TYPE = { mp4: 'video/mp4', m4v: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm', mp3: 'audio/mpeg', wav: 'audio/wav', m4a: 'audio/mp4', aac: 'audio/aac', ogg: 'audio/ogg', oga: 'audio/ogg', opus: 'audio/ogg', wma: 'audio/x-ms-wma', wmv: 'video/x-ms-wmv', avi: 'video/x-msvideo', mkv: 'video/x-matroska' };
+  /** A PowerPoint can carry videos and music inside it: offer to add them to the Video tab. */
+  async function offerMedia(file) {
+    let found = [];
+    try {
+      const { unzipSync } = await import('../../vendor/fflate-unzip.min.js');
+      const got = unzipSync(new Uint8Array(await file.arrayBuffer()), { filter: (e) => MEDIA.test(e.name) && e.originalSize > 20000 });
+      found = Object.keys(got).sort().map((n) => ({ n, data: got[n] }));
+    } catch (e) { console.warn('media scan', e); return; }
+    if (!found.length) return;
+    const nV = found.filter((x) => /\.(mp4|m4v|mov|webm|wmv|avi|mkv)$/i.test(x.n)).length, nA = found.length - nV;
+    const what = [nV && nV + (nV === 1 ? ' video' : ' videos'), nA && nA + (nA === 1 ? ' music file' : ' music files')].filter(Boolean).join(' and ');
+    const total = found.reduce((a, x) => a + x.data.length, 0);
+    const base = file.name.replace(/\.pptx$/i, '');
+    if (!(await confirmBox('Add to the Video tab?', base + ' has ' + what + ' inside it (' + fmtBytes(total) + '). Add ' + (found.length === 1 ? 'it' : 'them') + ' to the Video tab so ' + (found.length === 1 ? 'it' : 'they') + ' can be played and put in a plan?', 'Add to Video'))) return;
+    const out = found.map((x, i) => {
+      const ext = x.n.split('.').pop().toLowerCase();
+      return new File([x.data], base + (found.length > 1 ? ' – ' + (i + 1) : '') + '.' + ext, { type: MEDIA_TYPE[ext] || '' });
+    });
+    const vt = await ctx.tab('video');
+    await vt.importFiles(out);
+    toast(what + ' added to the Video tab.', 'ok');
   }
 
   async function importPptx(file) {

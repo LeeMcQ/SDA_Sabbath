@@ -58,7 +58,7 @@ Status marks: **✔** built and tested · **◐** built, but not yet proven in r
 
 ## 5. Slides
 
-- **Import PDF, PowerPoint (.pptx) and pictures**, converted once and kept offline.
+- **Import PDF, PowerPoint (.pptx) and pictures**, converted once and kept offline. A PowerPoint with videos or music inside asks whether to add them to the Video tab.
 - **Speaker notes** are shown to the operator and on the stage screen.
 - **Auto-advance loop** for announcements.
 - **Google Slides links** download as offline slides, and *Update from Google Slides* refreshes them (needs the cloud setup).

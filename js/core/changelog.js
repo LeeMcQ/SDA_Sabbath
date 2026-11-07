@@ -2,6 +2,7 @@
 // Add a line for every change a church would notice, under today's date (South African time); plain words, no code.
 export const CHANGELOG = [
   { date: '2026-11-07', items: [
+    'Slides: when a PowerPoint has videos or music inside it, the app now asks if you want to add them to the Video tab.',
     'Settings → About: “WiFi vs The Word Ministries” is now the big heading, with “Made by Lee McQuire” smaller and the church below.',
     'New devices now start with three ready-made plans (Devine Service, Lesson Study, Demo), a sample slide deck, a sample video and the banner pictures. Devices you already set up are not changed.',
     'The app is now called Sabbath Service Desk. Your plans, settings and OBS scenes keep working as before.',

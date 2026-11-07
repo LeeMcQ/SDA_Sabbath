@@ -1285,6 +1285,7 @@ def main():
                 c.route('https://leemcq.github.io/SDA_Sabbath/**', serve_as('/SDA_Sabbath/'))
                 c.route('https://ssdesk.online/**', serve_as('/'))
                 c.route('https://**.supabase.co/**', lambda r: r.abort())
+                c.add_init_script("try { if (!localStorage.getItem('selah.settings.v1')) localStorage.setItem('selah.settings.v1', JSON.stringify({ app: { setupDone: true } })); } catch (e) {}")
                 try:
                     old = c.new_page()
                     old.goto('https://leemcq.github.io/SDA_Sabbath/index.html'); old.wait_for_timeout(1500)
@@ -1348,6 +1349,25 @@ def main():
                 pg.evaluate("window.selah.remoteCommand('black')"); pg.wait_for_timeout(300)
                 assert not L()['blank'], 'black did not switch off'
             t_remote()
+
+            @check('a PowerPoint with music or video inside offers to add it to the Video tab')
+            def t_pptx_media():
+                c = b.new_context(viewport={'width': 1280, 'height': 900}, service_workers='block')
+                q = c.new_page(); q.goto(base + 'index.html'); q.wait_for_timeout(800)
+                q.evaluate("import('./js/core/settings.js').then(m => { m.settings.set('app.setupDone', true); m.settings.set('video.keepCopies', 'yes'); })")
+                q.reload(); q.wait_for_selector('#presentBtn')
+                q.evaluate("window.selah.showTab('slides')"); q.wait_for_timeout(600)
+                q.locator('.tabpanel:not([hidden]) input[type=file]').first.set_input_files(os.path.join(HERE, 'fixtures', 'media.pptx'))
+                q.wait_for_selector('text=Add to the Video tab?', timeout=20000)
+                q.click('.modal button:has-text("Add to Video")')
+                n = 0
+                for _ in range(40):
+                    q.wait_for_timeout(250)
+                    n = q.evaluate("import('./js/core/db.js').then(m => m.db.all('files').then(a => a.filter(f => f && f.kind !== 'deck' && /audio|video/.test(f.type || '')).length))")
+                    if n: break
+                c.close()
+                assert n >= 1, 'the music inside the PowerPoint was not added to the Video tab'
+            t_pptx_media()
 
             @check('a PDF opens on Next and taps never present')
             def t_pdf():
