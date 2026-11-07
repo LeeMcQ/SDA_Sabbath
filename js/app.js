@@ -3,7 +3,7 @@ import { $, h, isTyping, keepScreenOn } from './core/util.js';
 import { startInstallPrompt, installed } from './core/installer.js';
 import { icon } from './core/icons.js';
 import { answerAlive } from './core/alive.js';
-import { applyDefaultSetup } from './core/defaultsetup.js';
+import { applyDefaultSetup, whenStarter } from './core/defaultsetup.js';
 import { settings, serviceLang } from './core/settings.js';
 import { db, persistStorage } from './core/db.js';
 import { readinessBadge, autoUpdateAllowed, inServiceHold } from './core/readiness.js';
@@ -33,7 +33,7 @@ const lazyWelcome = () => import('./tabs/welcome.js');
 const openFeedback = (c, o) => import('./tabs/account.js').then((m) => m.openFeedback(c, o));
 
 export const VERSION = '1.6.1';
-export const BUILD = 'c743f08';
+export const BUILD = '3fad53d';
 
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', file: 'bible.js', load: () => import('./tabs/bible.js') },
@@ -87,6 +87,7 @@ window.selah = ctx; // handy for debugging from the console (name kept for exist
 const ALIAS = { screen: 'web', stage: 'tools', stream: 'tools', listen: 'tools', translate: 'tools' };
 async function getTab(id) {
   await defaultsReady;
+  if (id === 'plan' || id === 'ai' || id === 'slides' || id === 'video') await whenStarter(); // the starter plans and media are still arriving
   if (ALIAS[id]) { const api = await getTab(ALIAS[id]); if (api.show) { const sub = api.show(id); if (sub && sub.el) return sub; } return api; }
   if (tabs.has(id)) return tabs.get(id);
   if (loading.has(id)) return loading.get(id);

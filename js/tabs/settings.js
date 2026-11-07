@@ -336,9 +336,9 @@ export default function create(ctx) {
     box.append(h('div.maker',
       photo,
       h('div.maker-text',
-        h('div.note.maker-ministry', { style: { fontWeight: '700', letterSpacing: '.02em' } }, 'WiFi vs The Word Ministries'),
-        h('h3', 'Made by ' + MAKER.name),
-        h('div.note', MAKER.church),
+        h('h2.maker-ministry', 'WiFi vs The Word Ministries'),
+        h('div.maker-by', 'Made by ' + MAKER.name),
+        h('div.note', 'SDA Church, Malmesbury, South Africa'),
         h('p', 'As media volunteers we often work so hard on good media for the service that we miss the sermon '
           + 'ourselves. Sabbath Service Desk brings the whole media process together in one place, so preparing is quicker '
           + 'and on Sabbath the media team can worship and hear the Word too.'),

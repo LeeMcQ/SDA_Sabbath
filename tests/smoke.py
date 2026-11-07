@@ -327,6 +327,8 @@ def main():
                 p6.goto(base + 'index.html'); p6.wait_for_timeout(800)
                 p6.evaluate("""async () => { const m = await import('./js/core/settings.js'); m.settings.set('app.setupDone', true); m.settings.set('video.keepCopies', 'no');
                   const d = await import('./js/core/db.js'); const mk = (id, t) => ({ id, name: t, tpl: 'welcome', f: { title: t }, s: {}, x: {} });
+                  for (let i = 0; i < 90 && !Object.keys(localStorage).some((k) => k.endsWith('starter.v1')); i++) await new Promise((r) => setTimeout(r, 500));
+                  for (const k of await d.db.keys('plans')) await d.db.del('plans', k); await d.db.del('kv', 'plan-current').catch(() => {}); await d.db.del('kv', 'plan-tabs').catch(() => {});
                   await d.db.put('kv', 'banners', [mk('b1', 'One'), mk('b2', 'Two')]); }""")
                 p6.reload(); p6.wait_for_selector('#presentBtn'); p6.wait_for_timeout(1200)
                 assert 'Sabbath Service Desk' in p6.title(), p6.title()
@@ -571,6 +573,35 @@ def main():
                 c2.close()
                 assert r2 == ['basic', 'web'], 'a customised device was changed by the defaults: %r' % (r2,)
             t_defaults()
+
+            @check('a new device starts with the starter plans, slide deck, video and banner pictures; a customised one is left alone')
+            def t_starter():
+                c = b.new_context(viewport={'width': 1280, 'height': 900}, service_workers='block')
+                q = c.new_page()
+                q.goto(base + 'index.html')
+                r = None
+                for _ in range(40):
+                    q.wait_for_timeout(1000)
+                    r = q.evaluate("""(async () => {
+                      const { db } = await import('./js/core/db.js');
+                      const pl = await db.all('plans').catch(() => []), fl = await db.all('files').catch(() => []);
+                      const bn = (await db.get('kv', 'banners')) || [];
+                      return { nfiles: fl.length, plans: pl.map((p) => (p && (p.name || p.title)) || '').sort(), vid: fl.filter((f) => /video/.test((f && f.type) || '')).length,
+                               big: fl.filter((f) => f && f.blob && f.blob.size > 1000000).length, pics: JSON.stringify(bn).includes('blob') ? 1 : 0, ls: localStorage.getItem(Object.keys(localStorage).find((k) => k.endsWith('starter.v1')) || 'x') };
+                    })()""")
+                    if r['ls']: break
+                assert r['ls'], 'the starter pack was not installed: %r' % (r,)
+                names = ' | '.join(r['plans'])
+                assert 'Devine Service' in names and 'Lesson Study' in names and 'Demo' in names, 'starter plans missing: %r' % (r,)
+                assert r['big'] >= 1 and r['vid'] >= 1 and r['nfiles'] >= 2, 'starter deck/video files missing: %r' % (r,)
+                c.close()
+                c2 = b.new_context(viewport={'width': 1280, 'height': 900}, service_workers='block')
+                c2.add_init_script("try { if (!localStorage.getItem('selah.settings.v1')) localStorage.setItem('selah.settings.v1', JSON.stringify({ bible: { primary: 'kjv', parallel: 'web' } })); } catch (e) {}")
+                q2 = c2.new_page(); q2.goto(base + 'index.html'); q2.wait_for_timeout(5000)
+                n = q2.evaluate("import('./js/core/db.js').then((m) => m.db.all('plans').then((a) => a.length))")
+                c2.close()
+                assert n == 0, 'a customised device was given the starter plans'
+            t_starter()
 
             @check('windows opened by the app close when the app is closed for good (not on a reload)')
             def t_alive():

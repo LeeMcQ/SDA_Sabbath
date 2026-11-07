@@ -37,6 +37,8 @@ Sabbath Service Desk is built to run a whole service with no internet:
 
 ### First start
 
+A brand-new device already comes with three ready-made plans (Devine Service, Lesson Study, Demo), a sample slide deck, a sample video and the banner pictures, so there is something to try at once. They arrive once, in the background, when the device is online.
+
 A short setup runs once (Settings → About → Run the setup again). Its first page asks to **install Sabbath Service Desk on this
 device** (one *Install Sabbath Service Desk* button: it opens the browser's install window, or shows the steps for browsers
 without one). Then the sign-in (when the cloud is on), then **your church**: the languages of your services — English by

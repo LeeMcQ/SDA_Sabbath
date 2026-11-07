@@ -1138,7 +1138,8 @@ button.se-sw[aria-pressed="true"] { outline: 2px solid var(--focus, #2f6fe0); ou
 .maker-photo { flex: none; width: 96px; height: 96px; border-radius: 50%; object-fit: cover; }
 .maker-initials { display: grid; place-items: center; font-size: 30px; font-weight: 700; letter-spacing: .04em; color: var(--muted); border: 2px dashed var(--line); }
 .maker-text { min-width: 0; }
-.maker-text h3 { margin: 0 0 2px; }
+.maker-text h2.maker-ministry { margin: 0 0 4px; font-size: 22px; line-height: 1.2; }
+.maker-by { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
 .maker-text p { margin: 10px 0 0; max-width: 62ch; }
 .maker-btns { gap: 8px; margin-top: 12px; }
 @media (max-width: 520px) { .maker { flex-direction: column; align-items: center; text-align: center; } .maker-btns { justify-content: center; } }

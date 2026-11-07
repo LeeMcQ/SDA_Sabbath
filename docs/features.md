@@ -72,6 +72,7 @@ Status marks: **✔** built and tested · **◐** built, but not yet proven in r
 - **Subtitles** (.srt, .vtt) and **snapshots**.
 - **Background music** keeps playing while lyrics stay on screen.
 - **First-start defaults**: a new device (setup not done, nothing changed) gets a ready-made setup once: the screen look, hymn options, banners, service plan templates, and the Afrikaans and Xhosa Bibles downloaded when online. No pictures, PINs or room codes are included, and a device that is already set up keeps its own settings.
+- **Starter pack**: a new device also gets three ready-made plans (Devine Service, Lesson Study, Demo), a sample slide deck, a sample video and the banner pictures, fetched once in the background (about 26 MB, not part of the offline copy; tried again next start if offline). Nothing already on the device is replaced; a device that is already set up is not given them. The Plan, Slides, Video and Banners tabs wait a moment for it on a brand-new device.
 - **Music only**: when a music file is loaded, choose what the screen shows while it plays: keep the screen, a **song title** (the file name, editable) or one of your **banners**. The plan remembers the choice.
 - **Videos from the PC**: the companion serves the *Videos\SDA Sabbath* folder to every device, with seeking.
 
