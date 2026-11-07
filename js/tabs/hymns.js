@@ -5,6 +5,7 @@ import { icon } from '../core/icons.js';
 import { btn, modal, seg, toggle, menu, toast, confirmBox, closeModal, enter, emptyState, keepInView } from '../core/ui.js';
 import { db } from '../core/db.js';
 import { fitsText } from '../core/render.js';
+import { lookPanel } from './look-panel.js';
 import { music, INSTRUMENTS, packFor, PACKS, hqStored, hqRemove, hqPrefetch, EQ_BANDS, EQ_PRESETS, SOUND_PRESETS } from '../core/hymnmusic.js';
 import { fmtTime } from '../core/util.js';
 import * as ai from '../core/ai.js';
@@ -304,7 +305,7 @@ export default function create(ctx) {
 
   function buildCue(hy) {
     const s = S();
-    const style = live.style || settings.displayStyle();
+    const style = settings.kindStyle(live.style || settings.displayStyle(), 'hymn');
     const aspect = ctx.link.aspect();
     const roomy = Object.assign({}, style, { minFont: Math.max(style.minFont || 58, Math.round((style.maxFont || 150) * 0.5)) });
     const nVerses = hy.v.length;
@@ -529,6 +530,7 @@ export default function create(ctx) {
         h('label', 'Capitals'), toggle('Show words in capitals', s.caps, set('caps')),
         h('label', 'Lines per slide'), seg([['0', 'Auto'], ['2', '2'], ['3', '3'], ['4', '4'], ['6', '6']], String(s.maxLines || 0), (v) => set('maxLines')(+v)),
         h('label', 'Hymn title line'), seg([['bottom', 'Bottom'], ['top', 'Top'], ['none', 'Hidden']], s.refPos, set('refPos')),
+        lookPanel('hymn', ctx, () => { if (hymn) { restage(); syncLive(); } }),
         h('h3', { style: { gridColumn: '1 / -1', marginTop: '10px' } }, 'Music'),
         ...soundControls(() => { closeModal(); setTimeout(optionsDialog, 60); }),
         h('label', 'Volume'), slider(0, 2, 0.05, s.musicVolume == null ? 1.3 : s.musicVolume, (v) => Math.round(v / 1.3 * 100) + '%', (v) => music.setVolume(v)),

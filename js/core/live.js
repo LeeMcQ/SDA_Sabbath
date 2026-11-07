@@ -16,7 +16,8 @@ const restyleSoon = debounce(restyleNow, 180);
 const restyle = () => { pendingStyle = true; restyleSoon(); };
 settings.on('change:display', restyle);
 settings.on('change:church', (p) => { if (/^church(\.(name|conference|union|lat|lon))?$|^\*$/.test(p)) restyle(); });
-settings.on('change:bible', (p) => { if (p === 'bible.primary') restyle(); }); // the Sabbath greeting's language // the default logo slide shows the church name
+settings.on('change:bible', (p) => { if (p === 'bible.primary' || /^bible\.look/.test(p)) restyle(); });
+settings.on('change:hymns', (p) => { if (/^hymns\.look/.test(p)) restyle(); }); // the Sabbath greeting's language // the default logo slide shows the church name
 settings.on('change:app', (p) => { if (p === 'app.lowPower') restyle(); });
 
 link.on('state', () => {

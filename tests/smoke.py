@@ -402,14 +402,55 @@ def main():
 
             @check('a copyrighted hymn shows its title and how to add licensed words')
             def t_hymn_licensed():
-                pg.evaluate("window.selah.tab('hymns').then(t => t.open({ n: 73, book: 'sda-online' }))"); pg.wait_for_timeout(900)
+                pg.evaluate("window.selah.tab('hymns').then(t => t.open({ n: 4, book: 'choruses' }))"); pg.wait_for_timeout(900)
                 assert pg.locator('.licence-panel').first.is_visible(), 'no licence panel for a hymn without words'
-                assert pg.locator('.licence-panel', has_text='Church Hymnal 1941 #73').count() == 1, 'no link to the public-domain 1941 words'
                 frames = pg.evaluate("window.selah.tab('hymns').then(() => import('./js/tabs/hymns.js')).then(m => { const s = m.parseSongSelect('Amazing Grace\\n\\nVerse 1\\nAmazing grace how sweet the sound\\nThat saved a wretch like me\\n\\nChorus\\nMy chains are gone\\n\\nCCLI Song # 4768151\\n'); return [s.t, s.ccli, s.v.length, !!s.c]; })")
                 assert frames == ['Amazing Grace', '4768151', 1, True], 'SongSelect text not read: %r' % frames
                 usr = pg.evaluate("import('./js/tabs/hymns.js').then(m => { const s = m.parseSongSelect('[S A1234]\\nTitle=Test Song\\nAuthor=A|B\\nFields=Verse 1/tChorus\\nWords=Line one/nLine two/tChorus line\\n'); return [s.t, s.ccli, s.v.length, s.c && s.c[0]]; })")
                 assert usr == ['Test Song', '1234', 1, 'Chorus line'], 'SongSelect .usr not read: %r' % usr
             t_hymn_licensed()
+
+            @check('SDA Hymnal 1985: all 698 hymns have their words, and 695 have music')
+            def t_sdah_words():
+                r = pg.evaluate("""Promise.all([fetch('data/hymns/sda-online.json').then(r => r.json()), fetch('data/music/index.json').then(r => r.json())]).then(([d, m]) => [d.hymns.length, d.hymns.filter(h => h.v && h.v.length && h.v[0].length).length, d.hymns.filter(h => h.words === false).length, Object.keys(m.books['sda-online'].hymns).length])""")
+                assert r[0] == 698 and r[1] == 698 and r[2] == 0 and r[3] >= 695, 'SDA Hymnal words/music: %r' % (r,)
+                pg.evaluate("window.selah.tab('hymns').then(t => t.open({ n: 73, book: 'sda-online' }))"); pg.wait_for_timeout(900)
+                assert pg.locator('.licence-panel').count() == 0, 'SDA Hymnal 73 still asks for licensed words'
+            t_sdah_words()
+
+            @check('Bible and hymn words can have their own screen look, apart from Settings → Screen')
+            def t_own_look():
+                c = b.new_context(viewport={'width': 1280, 'height': 900}, service_workers='block')
+                p6 = c.new_page()
+                p6.goto(base + 'index.html'); p6.wait_for_timeout(800)
+                p6.evaluate("import('./js/core/settings.js').then(m => (m.settings.set('app.setupDone', true), m.settings.set('backup', Object.assign({}, m.settings.v.backup, { remindAt: Date.now() }))))")
+                p6.reload(); p6.wait_for_selector('#presentBtn'); p6.wait_for_timeout(1000)
+                r = p6.evaluate("""(async () => {
+                  const { settings } = await import('./js/core/settings.js');
+                  const { createStage } = await import('./js/core/render.js');
+                  const base = settings.displayStyle();
+                  settings.set('bible.look.on', true); settings.set('bible.look.fg', '#ff0000'); settings.set('bible.look.font', 'serif'); settings.set('bible.look.maxFont', 100);
+                  settings.set('hymns.look.on', true); settings.set('hymns.look.fg', '#00ff00'); settings.set('hymns.look.hymnSize', 'normal');
+                  const st = settings.displayStyle();
+                  const host = document.createElement('div'); host.style.cssText = 'position:fixed;left:0;top:0;width:640px;height:360px'; document.body.appendChild(host);
+                  const stage = createStage(host, { placeholderOnly: true, observe: false });
+                  stage.applyStyle(st);
+                  const col = async (f, sel) => { await stage.show(f); await new Promise((r) => setTimeout(r, 120)); const e = host.querySelector(sel); return e ? [getComputedStyle(e).color, getComputedStyle(e).fontFamily] : null; };
+                  const bible = await col({ kind: 'text', variant: 'bible', html: 'For God so loved', foot: 'John 3:16' }, '.f-bible');
+                  const hymn = await col({ kind: 'text', variant: 'hymn', lines: true, html: '<span class="ln">Holy</span>', foot: '73' }, '.f-hymn');
+                  const plain = await col({ kind: 'text', variant: 'plain', html: 'Welcome' }, '.f-plain');
+                  settings.set('bible.look.on', false); settings.set('hymns.look.on', false);
+                  return { over: [st.over.bible && st.over.bible.fg, st.over.hymn && st.over.hymn.fg, st.over.hymn && st.over.hymn.hymnCap], off: settings.displayStyle().over, bible, hymn, plain, baseFg: base.fg };
+                })()""")
+                assert r['over'][0] == '#ff0000' and r['over'][1] == '#00ff00' and abs(r['over'][2] - 110 / 150) < 0.01, 'own look not in the style: %r' % (r['over'],)
+                assert r['off']['bible'] is None and r['off']['hymn'] is None, 'own look still on after switching off'
+                assert r['bible'][0] == 'rgb(255, 0, 0)' and 'Selah Serif' in r['bible'][1], 'Bible slide did not use its own look: %r' % (r['bible'],)
+                assert r['hymn'][0] == 'rgb(0, 255, 0)', 'hymn slide did not use its own look: %r' % (r['hymn'],)
+                assert r['plain'][0] == 'rgb(255, 255, 255)', 'another slide changed too: %r' % (r['plain'],)
+                p6.evaluate("window.selah.showTab('bible')"); p6.wait_for_timeout(800)
+                p6.get_by_role('button', name='Bible on screen').first.click(timeout=4000) if p6.get_by_role('button', name='Bible on screen').count() else None
+                c.close()
+            t_own_look()
 
             @check('next / previous step through a hymn')
             def t_steps():
@@ -794,22 +835,22 @@ def main():
                     assert pg.evaluate("document.querySelector('select[aria-label=Hymnbook]').value") == 'web-rejnac-xhosa', 'the new hymnbook was not opened'
                     pg.evaluate("window.selah.tab('hymns').then(t => t.open({ n: 3, book: 'web-rejnac-xhosa' }))"); pg.wait_for_timeout(700)
                     wait_text(pg, 'Umgca wokuqala 3,')
-                    # English SDA Hymnal: also fills the built-in SDA Hymnal (numbers and titles), where the music is.
+                    # English SDA Hymnal download: the built-in SDA Hymnal already has all its words, so nothing is filled in and they stay.
                     pg.evaluate("import('./js/tabs/hymn-import.js').then(m => m.addHymnbookDialog())"); pg.wait_for_timeout(400)
                     pg.locator('.modal input[type=search]').fill('English'); pg.wait_for_timeout(200)
                     pg.locator('.modal .row', has_text='SDA Hymnal with words').locator('button').click()
-                    wait_text(pg, 'filled in for 1 hymn of the SDA Hymnal')
+                    pg.wait_for_timeout(2500)
                     pg.evaluate("window.selah.tab('hymns').then(t => t.open({ n: 73, book: 'sda-online' }))"); pg.wait_for_timeout(800)
-                    assert pg.locator('.licence-panel:visible').count() == 0, 'SDA Hymnal 73 still has no words'
+                    assert pg.locator('.licence-panel:visible').count() == 0, 'SDA Hymnal 73 has no words'
                     wait_text(pg, 'Lord God Almighty!')
                     # Settings lists both, with Remove; removing the English book takes its words out of the SDA Hymnal again.
                     pg.evaluate("window.selah.showTab('settings')"); pg.wait_for_timeout(400)
                     pg.locator('.set-nav button', has_text='Bibles & hymns').click(); pg.wait_for_timeout(800)
                     wait_text(pg, 'UE — UKristu Engomeni')
-                    wait_text(pg, 'words for 1 hymn added on this device')
                     pg.evaluate("import('./js/tabs/hymn-import.js').then(m => m.removeHymnbook('web-rejnac-english'))"); pg.wait_for_timeout(600)
                     pg.evaluate("window.selah.tab('hymns').then(t => t.open({ n: 73, book: 'sda-online' }))"); pg.wait_for_timeout(800)
-                    assert pg.locator('.licence-panel:visible').count() == 1, 'the words stayed after the hymnbook was removed'
+                    assert pg.locator('.licence-panel:visible').count() == 0, 'the built-in words went when the hymnbook was removed'
+                    wait_text(pg, 'Lord God Almighty!')
                     pg.evaluate("window.selah.showTab('settings')"); pg.wait_for_timeout(500)
                     pg.locator('button[aria-label="Remove UKristu Engomeni"]').evaluate('b => b.click()'); pg.wait_for_timeout(300)
                     pg.locator('.modal .modal-f button', has_text='Remove').click(); pg.wait_for_timeout(800)

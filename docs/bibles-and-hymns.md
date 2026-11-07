@@ -44,7 +44,7 @@ The list (`js/core/hymnsources.js`) is built in, so it shows even when GitHub is
   Adventista), Swahili, Tonga, Setswana, Tumbuka, Twi, Tshivenda, isiXhosa and Xitsonga. These files keep each stanza on
   one line, so SDA Sabbath breaks it into lines where a new line of the hymn starts (punctuation, then a capital) and
   halves lines that are still too long.
-  **The English SDA Hymnal** also fills in the words of the built-in *SDA Hymnal 1985* (numbers and titles only) for
+  **The English SDA Hymnal** also fills in the words of the built-in *SDA Hymnal 1985* for
   every hymn whose title matches and that has no words yet, so those hymns play with their offline music, and plans and
   “hymn 73” keep working. Removing the downloaded book removes those words again; words the church added itself are
   never replaced.
@@ -71,10 +71,10 @@ Shipped and added hymnbooks are separate: shipping one with the app is still don
 
 ### Built-in hymnbooks
 
-Built in (listed in `data/hymns/index.json`): the 1941 Church Hymnal (703, with words), and by **number and title
-only** the SDA Hymnal 1985 (698) and the songs of **Shared Hymns – English** — their
-words are copyrighted, so only the public-domain songs in them include words. A church that is licensed (CCLI, or
-the publisher's permission) adds the words on its own devices:
+Built in (listed in `data/hymns/index.json`): the 1941 Church Hymnal (703, with words), the **SDA Hymnal 1985** (698, with
+words and 695 tunes, included with the owners' permission), the Advent Lofliedere (481, with words), and the songs of
+**Shared Hymns – English** — those words are copyrighted, so only the public-domain songs in them include words. A church
+that is licensed (CCLI, or the publisher's permission) adds the missing words on its own devices:
 
 - **Hymns → ⋯ → Import licensed words…**: a SongSelect file (`.usr` or `.txt`, matched to the hymn by title), or a
   hymnbook file (`.json` or `# 73 Title` text) whose numbers fill in the built-in book.
@@ -217,3 +217,12 @@ hymnbooks with the same numbers (SID isiXhosa, SID Setswana, Hymnals Data Swahil
 get the matches too, for the numbers where both books have the same hymn.
 
 [← Back to the README](../README.md)
+
+### Own screen look for Bible text and hymn words
+
+Settings → Screen sets one look for the whole projector. Bible text and hymn words can have their own: open **Bible → ⋯**
+(*Bible on screen*) or **Hymns → options**, tick **Use an own look…** and choose the font, weight, text colour, verse-number
+(or title) colour, an own background colour, text shadow, alignment, margin, smallest and largest text, and (hymns) the size
+of the words. The preview shows it at once. The choices start as a copy of Settings → Screen; **Start again from Settings →
+Screen** copies them again, and un-ticking the box returns to the Settings → Screen look. Slides, banners and everything else
+keep the Settings → Screen look.

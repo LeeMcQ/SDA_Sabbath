@@ -235,7 +235,7 @@ export function openWelcome({ onClose, only } = {}) {
       const hOpts = [
         ...dlH.map((e, n) => [haveHymns.has(e.id) || (e.id === 'web-rejnac-english' && filled) ? 'hhave:' + e.id : 'h:' + n,
           (e.id === 'web-rejnac-english' ? 'SDA Hymnal 1985 with words (keeps the hymn music)' : e.name) + ' · ' + e.hymns + ' hymns' + (haveHymns.has(e.id) ? ' ✓' : '')]),
-        L.builtinHymns ? ['builtin', key === 'en' ? 'Only the built-in books (SDA Hymnal titles, Church Hymnal 1941 words)'
+        L.builtinHymns ? ['builtin', key === 'en' ? 'Only the built-in books (SDA Hymnal 1985 and Church Hymnal 1941, with words)'
           : 'Advent Lofliedere (built in, with words and music)'] : null,
         pick[key] && pick[key].ownHymn ? ['own', pick[key].ownHymn.name + ' (your file) ✓'] : null,
         ['', 'No hymnbook for this language'],

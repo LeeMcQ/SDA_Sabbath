@@ -22,10 +22,12 @@ export const DEFAULTS = {
   bible: {
     primary: 'kjv', parallel: '', parallelLayout: 'cols', perSlide: 'auto', numbers: true, redLetter: false,
     italics: false, refPos: 'bottom', continue: true, history: [],
+    look: { on: false }, // an own screen look for Bible text (Bible → ⋯): font, colours, size … ; off = same as Settings → Screen
   },
   hymns: {
     book: 'sda-sample', shared: [], // shared: the languages whose Shared Hymns book this church has ([] = its service languages)
     chorusRepeat: true, titleSlide: true, showNumber: true, maxLines: 0, caps: false, refPos: 'bottom',
+    look: { on: false }, // an own screen look for hymn words (Hymns → options); off = same as Settings → Screen
     // Hymn music (MIDI accompaniment through GeneralUser GS)
     musicIntro: true, musicFollow: true, musicInstrument: 'arranged', musicTempo: 100, musicKey: 0, musicVolume: 1.3,
     musicReverb: 59, musicChorus: 43, musicOutput: 'auto',
@@ -282,6 +284,27 @@ settings.lowPower = () => {
 };
 
 /** Style object sent to the display (and used by the monitors). */
+// Bible text and hymn words can have their own look (Bible → ⋯ and Hymns → options), apart from Settings → Screen.
+export const LOOK_KEYS = ['font', 'weight', 'fg', 'accent', 'shadow', 'align', 'pad', 'minFont', 'maxFont', 'hymnSize', 'bg'];
+const HYMN_CAPS = { normal: 110 / 150, large: 130 / 150, largest: 1 };
+settings.lookOf = (kind) => {
+  const sec = settings.v[kind === 'bible' ? 'bible' : 'hymns'], l = sec && sec.look;
+  if (!l || !l.on) return null;
+  const o = {};
+  LOOK_KEYS.forEach((k) => { if (l[k] != null && l[k] !== '') o[k] = l[k]; });
+  if (!l.bgOwn) delete o.bg;
+  if (kind === 'bible') delete o.hymnSize;
+  if (o.hymnSize) o.hymnCap = HYMN_CAPS[o.hymnSize] || HYMN_CAPS.large;
+  return o;
+};
+/** The display style with the own look of 'bible' or 'hymn' put in (what decides how many verses or lines fit a slide). */
+settings.kindStyle = (style, kind) => {
+  const o = settings.lookOf(kind); // read from the settings, so a change just made counts at once
+  if (!o) return style;
+  const r = Object.assign({}, style);
+  ['font', 'pad', 'align', 'weight', 'shadow', 'minFont', 'maxFont', 'hymnCap'].forEach((k) => { if (o[k] != null) r[k] = o[k]; });
+  return r;
+};
 settings.displayStyle = () => {
   const d = settings.v.display;
   return {
@@ -294,5 +317,6 @@ settings.displayStyle = () => {
     logoConf: [settings.v.church && settings.v.church.conference, settings.v.church && settings.v.church.union].map((x) => (x || '').trim()).filter(Boolean).join(' · '),
     logoLat: settings.v.church ? settings.v.church.lat : null, logoLon: settings.v.church ? settings.v.church.lon : null,
     logoLang: serviceLang() === 'af' ? 'af' : 'en',
+    over: { bible: settings.lookOf('bible'), hymn: settings.lookOf('hymn') },
   };
 };

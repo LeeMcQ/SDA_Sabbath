@@ -6,6 +6,7 @@ import { btn, modal, seg, toggle, menu, select, activatable, enter, motionOK, em
 import { EN, SHORT, parseRef, refText } from '../core/books.js';
 import { listTranslations, getInfo, versesFor, englishSegs, getTitles, verseHtml, verseText, search as bibleSearch } from '../core/bibledata.js';
 import { fitsText } from '../core/render.js';
+import { lookPanel } from './look-panel.js';
 const importBibleDialog = (cb) => import('./bible-import.js').then((m) => m.importBibleDialog(cb));
 
 export default function create(ctx) {
@@ -330,7 +331,7 @@ export default function create(ctx) {
       try { pinfo = await getInfo(parId); const pv = await versesFor(parId, book, segs); pmap = new Map(pv.map((v) => [v.c + ':' + v.v, v.text])); }
       catch (e) { pinfo = null; }
     }
-    const style = live.style || settings.displayStyle();
+    const style = settings.kindStyle(live.style || settings.displayStyle(), 'bible');
     const aspect = ctx.link.aspect();
     const ro = { redLetter: S().redLetter, italics: S().italics };
     const num = S().numbers;
@@ -498,6 +499,7 @@ export default function create(ctx) {
         h('label', 'Words of Jesus'), toggle('Show in colour (KJV)', s.redLetter, set('redLetter')),
         h('label', 'Supplied words'), toggle('Show in italics (KJV)', s.italics, set('italics')),
         h('label', 'Keep reading'), toggle('Next after the last slide shows the following verses', s.continue, set('continue')),
+        lookPanel('bible', ctx, () => restage()),
         h('label', 'Text size'), h('p.note', 'Text grows to fill the screen. Change the smallest allowed size, font and colours in Settings → Screen.'),
       ),
       actions: [{ label: 'Done', primary: true }],

@@ -34,7 +34,8 @@ Status marks: **✔** built and tested · **◐** built, but not yet proven in r
 
 ## 3. Hymns and choruses
 
-- **Built-in books**: 1941 Church Hymnal (703, with words); Advent Lofliedere in Afrikaans (481, with words and, for about 150, the SDA Hymnal tune); SDA Hymnal 1985 (698) by number and title, with **Import licensed words** for the church's own licensed words.
+- **Own screen look for Bible and hymns**: Bible → ⋯ (Bible on screen) and Hymns → options each have *Use an own look*: font, weight, text and number colours, background colour, shadow, alignment, margin, smallest and largest text (and hymn word size), with a live preview. Everything else keeps the Settings → Screen look.
+- **Built-in books**: 1941 Church Hymnal (703, with words); Advent Lofliedere in Afrikaans (481, with words and, for about 150, the SDA Hymnal tune); SDA Hymnal 1985 (698, with words and 695 tunes, included with the owners' permission); **Import licensed words** adds a church's own licensed words for the songs that have none (Shared Hymns).
 - **Shared Hymns in every language**: one book per language (English, Afrikaans, isiXhosa …), added for the church's service languages in the setup. English holds the praise choruses and Malmesbury Praise (101–148). **New song** asks the language first and gives the next number; **Share with all churches** sends it for approval, and every church with that language gets it (501 and up). The monthly report highlights new shared hymns.
 - **Find by number or words**.
 - **Title slide, one stanza per slide**, chorus repeated automatically.
