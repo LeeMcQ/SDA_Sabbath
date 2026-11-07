@@ -90,9 +90,9 @@ export function createPlanBasic({ el, toolbar, ctx, api }) {
     nextSub.textContent = nextLabel();
     const c = live.cue, n = c ? live.count() : 0;
     const steps = !!c && c.deck.kind !== 'video' && (n > 1 || !!c.extend);
-    slideRow.hidden = !c || n <= 1 || c.deck.kind === 'video';
+    slideRow.hidden = !c || (n <= 1 && !c.extend) || c.deck.kind === 'video';
     if (!slideRow.hidden) slideLbl.textContent = (slideName(c, live.index) || 'Slide ' + (live.index + 1)) + '  ·  ' + (live.index + 1) + ' of ' + n;
-    slidePrev.disabled = !steps || live.index <= 0;
+    slidePrev.disabled = !steps || (live.index <= 0 && !c.extend); // a Bible passage can go back to the verse before it
     slideNext.disabled = !steps || (live.index >= n - 1 && !c.extend);
   }
 

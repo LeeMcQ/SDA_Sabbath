@@ -537,6 +537,7 @@ def main():
                   const inp = f.querySelector('input[placeholder^="e.g. Malmesbury SDA"]');
                   inp.value = 'Malmesbury SDA Church'; inp.dispatchEvent(new Event('change'));
                   await new Promise((r) => setTimeout(r, 800));
+                  f.remove();
                   return [settings.v.church.lat, settings.v.church.lon];
                 })()""")
                 assert r == [-33.4608, 18.7292], 'location not estimated from the church name: %r' % (r,)
@@ -661,6 +662,9 @@ def main():
                     assert i1 == i0 + 1, 'skip arrow: slide %s -> %s' % (i0, i1)
                     pg.click('.bb-skip[aria-label="Previous slide or lyric"]'); pg.wait_for_timeout(600)
                     assert pg.evaluate("import('./js/core/live.js').then(m => m.live.index)") == i0, 'previous arrow did not go back'
+                # A passage that can keep reading (Bible) goes back to the verse before it, even from its first slide.
+                pg.evaluate("import('./js/core/live.js').then(m => { m.live.go(0); m.live.cue.extend = async () => null; m.live.emit('go', 0); })"); pg.wait_for_timeout(400)
+                assert pg.evaluate("document.querySelector('.bb-skip[aria-label=\"Previous slide or lyric\"]').disabled") is False, 'back is greyed out on a passage that can go back'
                 # The control bar stays under the big buttons in Basic (black screen, logo, music).
                 assert pg.locator('.ctrlbar:not([hidden]) .cb-end').count() == 1 and pg.locator('.ctrlbar').first.is_visible(), 'no control bar in Basic'
                 # The big Next goes to the next part of the service, even with more stanzas left.

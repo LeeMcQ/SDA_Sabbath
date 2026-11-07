@@ -16,6 +16,7 @@ export const CHANGELOG = [
     'Stream: the verse in the lower third changes a little faster, in step with the screen.',
     'Listen: understands English and Afrikaans, and finds hymns by name or number in both languages.',
     'Closing the app also closes the projector, stage and OBS windows it opened.',
+    'Plan → Basic: the back arrow now works for Bible verses (it was greyed out).',
   ] },
   { date: '2026-11-06', items: [
     'Settings → About: who made Sabbath Service Desk and why, a WhatsApp button, “Contribute towards this mission”, and this list of versions.',
