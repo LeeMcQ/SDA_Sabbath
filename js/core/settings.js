@@ -285,7 +285,7 @@ settings.lowPower = () => {
 
 /** Style object sent to the display (and used by the monitors). */
 // Bible text and hymn words can have their own look (Bible → ⋯ and Hymns → options), apart from Settings → Screen.
-export const LOOK_KEYS = ['font', 'weight', 'fg', 'accent', 'shadow', 'align', 'pad', 'minFont', 'maxFont', 'hymnSize', 'bg'];
+export const LOOK_KEYS = ['font', 'weight', 'fg', 'accent', 'shadow', 'align', 'pad', 'minFont', 'maxFont', 'hymnSize', 'bg', 'bgDim'];
 const HYMN_CAPS = { normal: 110 / 150, large: 130 / 150, largest: 1 };
 settings.lookOf = (kind) => {
   const sec = settings.v[kind === 'bible' ? 'bible' : 'hymns'], l = sec && sec.look;
@@ -293,6 +293,8 @@ settings.lookOf = (kind) => {
   const o = {};
   LOOK_KEYS.forEach((k) => { if (l[k] != null && l[k] !== '') o[k] = l[k]; });
   if (!l.bgOwn) delete o.bg;
+  // An own background picture (kept as a file id; the display style resolves it to the picture itself).
+  if (l.bgPic && l.bgImg) { o.img = l.bgImg; o.imgFit = l.imgFit || 'cover'; } else delete o.bgDim;
   if (kind === 'bible') delete o.hymnSize;
   if (o.hymnSize) o.hymnCap = HYMN_CAPS[o.hymnSize] || HYMN_CAPS.large;
   return o;

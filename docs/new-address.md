@@ -1,6 +1,6 @@
 # The address: ssdesk.online
 
-SDA Sabbath lives at **https://ssdesk.online/** ("Sabbath Service Desk", registered at domains.co.za), **live since
+Sabbath Service Desk lives at **https://ssdesk.online/** ("Sabbath Service Desk", registered at domains.co.za), **live since
 5 November 2026**. It is published by GitHub Pages from this repository with a custom domain; the previous GitHub
 address redirects to it. The steps below are kept for reference.
 
@@ -37,7 +37,7 @@ Actions, so no `CNAME` file is needed in the repository.)
 ## 3. What the app does by itself
 
 - Copies already opened or installed at the old address keep working offline. Once ssdesk.online answers, they show
-  **"SDA Sabbath has a new address"** with **Move my data**: it copies plans, hymnbooks, Bibles, banners, slides and
+  **"Sabbath Service Desk has a new address"** with **Move my data**: it copies plans, hymnbooks, Bibles, banners, slides and
   settings to the new address in one step (the new address only accepts data from the old one, and asks first). Videos
   are not copied. "Not now" asks again the next day. (`js/move.js`)
 - A browser keeps each address's data apart, so this step is needed once per device. A backup file (Settings → Backup)

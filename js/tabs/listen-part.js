@@ -31,7 +31,7 @@ export default function create(ctx) {
     (v) => { S.set('app.listenSource', v); if (L && L.on) { L.stop(); L.start(); } });
   const main = card(h('span.tip-h', 'Listen for verses & hymns', tip('Listens through the microphone. When a Bible verse or a hymn is mentioned, it is offered as a card with Put on Next and Present. While a hymn is on the screen it follows the singing and offers the stanza being sung. Nothing goes on the screen by itself.')),
 
-    h('div.ls-src', h('span.ls-src-l', 'Hear with'), hearWith, tip('Offline translator: the SDA Sabbath translator on this PC (Tools → Listen & Translate) listens to the sound desk without internet, for Afrikaans sermons. ' + quoteWords(false) + ' Live translation does not need to be switched on. ' +
+    h('div.ls-src', h('span.ls-src-l', 'Hear with'), hearWith, tip('Offline translator: the Sabbath Service Desk translator on this PC (Tools → Listen & Translate) listens to the sound desk without internet, for Afrikaans sermons. ' + quoteWords(false) + ' Live translation does not need to be switched on. ' +
       'Browser: Chrome or Edge with the internet and the microphone, in English (or Afrikaans when your main Bible is Afrikaans). Automatic uses the translator when it is running on this PC, otherwise the browser.')),
 
     status,

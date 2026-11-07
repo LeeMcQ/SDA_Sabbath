@@ -1,6 +1,6 @@
 // Shared Hymns: songs that churches shared from the Hymns tab, in any language, and the maintainer approved.
 // They live in the repository (data/hymns/community/shared.json, MIDI files in …/midi/) and every copy of
-// SDA Sabbath fetches the list when it is online, so everyone gets new hymns without an app update.
+// Sabbath Service Desk fetches the list when it is online, so everyone gets new hymns without an app update.
 // The copy in the app's own files is used until the first successful check (and offline).
 // Each language is its own book under "Shared Hymns" in the Hymns tab: 'choruses' for English (the book that
 // also holds the praise choruses and Malmesbury Praise), 'shared-<code>' for the others.

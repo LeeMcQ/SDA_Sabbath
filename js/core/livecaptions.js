@@ -1,4 +1,4 @@
-// Live translation: English captions from the SDA Sabbath translator on this PC (translator/livetranslate.py).
+// Live translation: English captions from the Sabbath Service Desk translator on this PC (translator/livetranslate.py).
 // The translator listens to the sound desk, recognises the Afrikaans sermon and sends finished English sentences
 // here; a sentence that quotes the Bible arrives as the English verse itself. Captions go to the caption line on
 // the screen (and stage screens). Verses and hymns the preacher names or quotes are offered to the operator as
@@ -62,8 +62,8 @@ async function lnaState() {
   }
   return null;
 }
-export const LNA_BLOCKED = 'Chrome is blocking SDA Sabbath from reaching the translator on this computer. Click the site icon left of the address bar → Site settings → “Local network access” (in newer Chrome “Apps on device”) → Allow. Then reload this page.';
-export const LNA_PROMPT = 'Chrome asks whether SDA Sabbath may reach programs on this computer: press Allow in the box under the address bar. (Missed it? Click the site icon left of the address bar → Site settings → “Local network access” / “Apps on device” → Allow, then reload.)';
+export const LNA_BLOCKED = 'Chrome is blocking Sabbath Service Desk from reaching the translator on this computer. Click the site icon left of the address bar → Site settings → “Local network access” (in newer Chrome “Apps on device”) → Allow. Then reload this page.';
+export const LNA_PROMPT = 'Chrome asks whether Sabbath Service Desk may reach programs on this computer: press Allow in the box under the address bar. (Missed it? Click the site icon left of the address bar → Site settings → “Local network access” / “Apps on device” → Allow, then reload.)';
 async function checkBlocked() {
   if (captions.state.connected) return;
   const st = await captions.lnaState();

@@ -1,4 +1,4 @@
-// Tools → Listen & Translate → Live translation: the Afrikaans sermon as English captions, through the SDA Sabbath
+// Tools → Listen & Translate → Live translation: the Afrikaans sermon as English captions, through the Sabbath Service Desk
 // translator on this PC (translator/livetranslate.py, js/core/livecaptions.js).
 // Kept simple: one bar (on/off, status, start/stop, sound level), sound input and speech model, then the sentences.
 // Everything else is under Settings; explanations sit behind (i) and show when pointed at. "Check each part" runs

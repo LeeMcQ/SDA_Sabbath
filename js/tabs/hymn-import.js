@@ -1,6 +1,6 @@
 // "Add a hymnbook" dialog — the hymn counterpart of Add a Bible (bible-import.js). Pick a hymnbook from the list
 // (SDA hymnals in 26 languages, the SID Hymnal, early Adventist hymnals): it downloads once from GitHub and is
-// kept offline on this device. Or choose a hymnbook file (VideoPsalm .vpc / .json, SDA Sabbath .json, text).
+// kept offline on this device. Or choose a hymnbook file (VideoPsalm .vpc / .json, Sabbath Service Desk .json, text).
 // Opened from Hymns → More and from Settings → Bibles & hymns; both refresh through the 'selah-hymnbooks' event.
 import { h, clear } from '../core/util.js';
 import { modal, toast, closeModal } from '../core/ui.js';
@@ -178,7 +178,7 @@ export function addHymnbookDialog(onDone) {
   const short = h('input.field', { placeholder: 'UE', maxlength: 8 });
   const name = h('input.field', { placeholder: 'UKristu Engomeni' });
   const lang = h('select.field', LANGS.map(([k, l]) => h('option', { value: k }, l)));
-  const status = h('p.note', 'Supported: VideoPsalm songbooks (.vpc, or their .json), SDA Sabbath hymnbooks (.json), the Liedboek JSON format, and text with “# 73 Title” before each hymn.');
+  const status = h('p.note', 'Supported: VideoPsalm songbooks (.vpc, or their .json), Sabbath Service Desk hymnbooks (.json), the Liedboek JSON format, and text with “# 73 Title” before each hymn.');
   let parsed = null;
   file.addEventListener('change', async () => {
     const f = file.files[0];
@@ -208,7 +208,7 @@ export function addHymnbookDialog(onDone) {
       h('div.col', { style: { gap: '6px' } },
         h('b', 'Find a hymnbook'), searchInp, chips, box,
         h('p.note', 'Tap Add: it downloads once and then works offline. Hymn words belong to their owners: the compilers share these hymnbooks for worship, but check that your church may use the words (many SDA Hymnal texts are under copyright; a licence such as CCLI covers many of them). A live stream also needs a CCLI Streaming Licence.')),
-      h('p.note', { style: { marginTop: '10px' } }, 'Have a hymnbook file your church uses (from VideoPsalm, another presentation program, or SDA Sabbath on another device)? Choose it here:'),
+      h('p.note', { style: { marginTop: '10px' } }, 'Have a hymnbook file your church uses (from VideoPsalm, another presentation program, or Sabbath Service Desk on another device)? Choose it here:'),
       file, h('div.form', h('label', 'Short name'), short, h('label', 'Full name'), name, h('label', 'Language'), lang), status),
     actions: [{ label: 'Cancel' }, {
       label: 'Add hymnbook', primary: true, onclick: async () => {

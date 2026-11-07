@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-SDA Sabbath smoke tests. They run on GitHub before every deploy: if one fails, the deploy stops and the
+Sabbath Service Desk smoke tests. They run on GitHub before every deploy: if one fails, the deploy stops and the
 website keeps the last working version.
 
     pip install playwright && python -m playwright install chromium
@@ -320,6 +320,40 @@ def main():
                 assert 'No internet right now' not in txt, 'Update now claimed there was no internet while the server answered'
             t_update_online()
 
+            @check('Plan: Next follows the plan, banners play no music; music can show a title; new name')
+            def t_plan_follow():
+                c = b.new_context(viewport={'width': 1280, 'height': 900}, service_workers='block')
+                p6 = c.new_page()
+                p6.goto(base + 'index.html'); p6.wait_for_timeout(800)
+                p6.evaluate("""async () => { const m = await import('./js/core/settings.js'); m.settings.set('app.setupDone', true); m.settings.set('video.keepCopies', 'no');
+                  const d = await import('./js/core/db.js'); const mk = (id, t) => ({ id, name: t, tpl: 'welcome', f: { title: t }, s: {}, x: {} });
+                  await d.db.put('kv', 'banners', [mk('b1', 'One'), mk('b2', 'Two')]); }""")
+                p6.reload(); p6.wait_for_selector('#presentBtn'); p6.wait_for_timeout(1200)
+                assert 'Sabbath Service Desk' in p6.title(), p6.title()
+                assert 'Sabbath Service Desk' in p6.text_content('.brand'), 'brand name'
+                assert p6.evaluate("!!document.querySelector('#topIcons .ready-mark')"), 'readiness chip belongs in the top-right icons'
+                p6.evaluate("""async () => {
+                  const pl = await window.selah.showTab('plan'); await pl.whenReady();
+                  await pl.addItem({ tab: 'ai', banner: 'b1', label: 'One' }); await pl.addItem({ tab: 'ai', banner: 'b2', label: 'Two' });
+                  await pl.select(0);
+                }""")
+                p6.click('#presentBtn'); p6.wait_for_timeout(2500)
+                r = p6.evaluate("""() => { const L = window.selah.live;
+                  return { music: !!(L.cue && L.cue.withMusic), live: L.cue && L.cue.id, next: L.staged && L.staged.id }; }""")
+                assert r['music'] is False, 'a banner from the plan must not start music'
+                assert r['live'] == 'banner:b1' and r['next'] == 'banner:b2', 'Next should follow the plan: %r' % r
+                v = p6.evaluate("""async () => {
+                  const vt = await window.selah.tab('video');
+                  const f = new File([new Uint8Array(2000)], 'Amazing Grace.mp3', { type: 'audio/mpeg' });
+                  const [it] = await vt.importFiles([f]);
+                  const cue = await vt.open({ item: it.id, show: 'title', text: 'My <Song>' });
+                  return { kind: cue.deck.kind, html: cue.deck.frames && cue.deck.frames[0].html, show: cue.plan && cue.plan.show, run: typeof cue.onTake };
+                }""")
+                c.close()
+                assert v['kind'] == 'banner' and 'My &lt;Song&gt;' in v['html'], 'music with a title: %r' % v
+                assert v['show'] == 'title' and v['run'] == 'function', 'plan keeps the choice and the music starts when shown: %r' % v
+            t_plan_follow()
+
             @check('statistics: recorded offline while signed in, delivered when back online')
             def t_stats_offline():
                 import json as _json
@@ -452,6 +486,106 @@ def main():
                 p6.get_by_role('button', name='Bible on screen').first.click(timeout=4000) if p6.get_by_role('button', name='Bible on screen').count() else None
                 c.close()
             t_own_look()
+
+            @check('Bible and hymn looks can have their own background picture (with darken)')
+            def t_own_pic():
+                c = b.new_context(viewport={'width': 1280, 'height': 900}, service_workers='block')
+                p7 = c.new_page()
+                p7.goto(base + 'index.html'); p7.wait_for_timeout(800)
+                p7.evaluate("import('./js/core/settings.js').then(m => m.settings.set('app.setupDone', true))")
+                p7.reload(); p7.wait_for_selector('#presentBtn'); p7.wait_for_timeout(1000)
+                r = p7.evaluate("""(async () => {
+                  const { settings } = await import('./js/core/settings.js');
+                  const { db } = await import('./js/core/db.js');
+                  const { live } = await import('./js/core/live.js');
+                  const { createStage } = await import('./js/core/render.js');
+                  const cv = document.createElement('canvas'); cv.width = 8; cv.height = 8; cv.getContext('2d').fillRect(0, 0, 8, 8);
+                  const blob = await new Promise((r) => cv.toBlob(r, 'image/png'));
+                  await db.put('files', 'img-own', { id: 'img-own', kind: 'image', blob });
+                  settings.set('bible.look.on', true); settings.set('bible.look.bgPic', true); settings.set('bible.look.bgImg', 'img-own'); settings.set('bible.look.bgDim', 0.6);
+                  const st = await live.buildStyle();
+                  const host = document.createElement('div'); host.style.cssText = 'position:fixed;left:0;top:0;width:640px;height:360px'; document.body.appendChild(host);
+                  const stage = createStage(host, { placeholderOnly: true, observe: false });
+                  stage.applyStyle(st);
+                  await stage.show({ kind: 'text', variant: 'bible', html: 'For God so loved', foot: 'John 3:16' });
+                  await new Promise((r) => setTimeout(r, 150));
+                  const bi = getComputedStyle(host.querySelector('.f-bible')).backgroundImage;
+                  await stage.show({ kind: 'text', variant: 'plain', html: 'Welcome' });
+                  await new Promise((r) => setTimeout(r, 150));
+                  const pl = getComputedStyle(host.querySelector('.f-plain')).backgroundImage;
+                  return { blob: !!(st.over.bible && st.over.bible.imgBlob), dim: st.over.bible && st.over.bible.bgDim, bi, pl };
+                })()""")
+                c.close()
+                assert r['blob'] and abs(r['dim'] - 0.6) < 0.01, 'own picture not in the style: %r' % (r,)
+                assert 'url(' in r['bi'] and 'rgba(0, 0, 0, 0.6)' in r['bi'], 'Bible slide has no own picture: %r' % r['bi']
+                assert 'url(' not in r['pl'], 'another slide got the picture: %r' % r['pl']
+            t_own_pic()
+
+            @check('Church name or town given: the location is estimated online (and Settings → About names the ministry)')
+            def t_locate():
+                c = b.new_context(viewport={'width': 1280, 'height': 900}, service_workers='block')
+                c.route('https://geocoding-api.open-meteo.com/**', lambda r: r.fulfill(status=200, content_type='application/json',
+                    body='{"results":[{"name":"Malmesbury","latitude":-33.4608,"longitude":18.7292,"admin1":"Western Cape","country":"South Africa"}]}'))
+                p8 = c.new_page()
+                p8.goto(base + 'index.html'); p8.wait_for_timeout(800)
+                p8.evaluate("import('./js/core/settings.js').then(m => m.settings.set('app.setupDone', true))")
+                p8.reload(); p8.wait_for_selector('#presentBtn'); p8.wait_for_timeout(1000)
+                r = p8.evaluate("""(async () => {
+                  const { settings } = await import('./js/core/settings.js');
+                  const { churchForm } = await import('./js/tabs/church-form.js');
+                  const f = churchForm(settings); document.body.appendChild(f);
+                  const inp = f.querySelector('input[placeholder^="e.g. Malmesbury SDA"]');
+                  inp.value = 'Malmesbury SDA Church'; inp.dispatchEvent(new Event('change'));
+                  await new Promise((r) => setTimeout(r, 800));
+                  return [settings.v.church.lat, settings.v.church.lon];
+                })()""")
+                assert r == [-33.4608, 18.7292], 'location not estimated from the church name: %r' % (r,)
+                p8.evaluate("window.selah.showTab('settings')"); p8.wait_for_timeout(800)
+                p8.locator('button.chip', has_text='About').first.click(); p8.wait_for_timeout(600)
+                txt = p8.inner_text('body')
+                c.close()
+                assert 'WiFi vs The Word Ministries' in txt and txt.index('WiFi vs The Word Ministries') < txt.index('Made by Lee McQuire'), 'ministry name missing above the maker'
+            t_locate()
+
+            @check('new device gets the default setup once; a customised device keeps its own settings')
+            def t_defaults():
+                c = b.new_context(viewport={'width': 1280, 'height': 900}, service_workers='block')
+                q = c.new_page()
+                q.goto(base + 'index.html'); q.wait_for_timeout(2500)
+                r = q.evaluate("""(async () => {
+                  const { settings } = await import('./js/core/settings.js'); const { db } = await import('./js/core/db.js');
+                  const bn = await db.get('kv', 'banners'), tp = await db.get('kv', 'plan-templates');
+                  return { view: settings.v.app.planView, par: settings.v.bible.parallel, banners: bn && bn.length, tpls: tp && tp.list.length, pin: settings.v.stage.pin };
+                })()""")
+                assert r['view'] == 'advanced' and r['par'] == 'afr53' and r['banners'] == 8 and r['tpls'] == 2, 'default setup not applied: %r' % (r,)
+                assert r['pin'] != '3041', 'the maintainer’s stage PIN must never be in the defaults'
+                q.evaluate("import('./js/core/settings.js').then(m => m.settings.set('app.planView', 'basic'))"); q.reload(); q.wait_for_timeout(2000)
+                assert q.evaluate("import('./js/core/settings.js').then(m => m.settings.v.app.planView)") == 'basic', 'defaults were applied a second time'
+                c.close()
+                c2 = b.new_context(viewport={'width': 1280, 'height': 900}, service_workers='block')
+                c2.add_init_script("try { if (!localStorage.getItem('selah.settings.v1')) localStorage.setItem('selah.settings.v1', JSON.stringify({ bible: { primary: 'kjv', parallel: 'web' } })); } catch (e) {}")
+                q2 = c2.new_page()
+                q2.goto(base + 'index.html'); q2.wait_for_timeout(2500)
+                r2 = q2.evaluate("import('./js/core/settings.js').then(m => [m.settings.v.app.planView, m.settings.v.bible.parallel])")
+                c2.close()
+                assert r2 == ['basic', 'web'], 'a customised device was changed by the defaults: %r' % (r2,)
+            t_defaults()
+
+            @check('windows opened by the app close when the app is closed for good (not on a reload)')
+            def t_alive():
+                c = b.new_context(viewport={'width': 1000, 'height': 700}, service_workers='block')
+                a1 = c.new_page(); a1.goto(base + 'index.html'); a1.wait_for_timeout(1200)
+                w = c.new_page(); w.goto(base + 'terms.html'); w.wait_for_timeout(600)
+                w.evaluate("import('./js/core/alive.js').then(m => { window.__gone = false; m.watchApp(() => { window.__gone = true; }, 3); })")
+                w.wait_for_timeout(5000)
+                assert w.evaluate("window.__gone") is False, 'the window thought the app was gone while it was open'
+                a1.reload(); a1.wait_for_timeout(1500); w.wait_for_timeout(2500)
+                assert w.evaluate("window.__gone") is False, 'a reload of the app must not close its windows'
+                a1.close(); w.wait_for_timeout(9000)
+                gone = w.evaluate("window.__gone")
+                c.close()
+                assert gone is True, 'the window did not notice the app was closed'
+            t_alive()
 
             @check('Shared Hymns – English (choruses, Malmesbury Praise) have all their words')
             def t_shared_words():
@@ -597,6 +731,20 @@ def main():
                 assert not errs, '; '.join(errs[:3])
                 pg.evaluate("window.selah.tab('hymns').then(t => t.open({ n: 73, book: 'sda-online' }))"); pg.wait_for_timeout(600)   # back to the main hymnal
             t_hymn_listen()
+
+            @check('listening: Afrikaans hymns (by name and by number) and Afrikaans verses')
+            def t_listen_af():
+                pg.evaluate("window.selah.listener.ready()"); pg.wait_for_timeout(500)
+                pg.evaluate("window.selah.listener.hear('laat ons sing laat elk die heer se goedheid lowe')"); pg.wait_for_timeout(1200)
+                top = pg.locator('.ls-card:not(.ls-follow)').first.inner_text()
+                assert 'Laat Elk Die Heer' in top, 'Afrikaans hymn by name offered %r' % top
+                pg.evaluate("window.selah.listener.hear('gesang nommer drie')"); pg.wait_for_timeout(1200)
+                top = pg.locator('.ls-card:not(.ls-follow)').first.inner_text()
+                assert 'O Nader Die Heer' in top, 'Afrikaans hymn by number offered %r' % top
+                pg.evaluate("window.selah.listener.hear('slaan oop by Johannes drie vers sestien')"); pg.wait_for_timeout(1500)
+                top = pg.locator('.ls-card:not(.ls-follow)').first.inner_text()
+                assert 'John 3:16' in top or 'Joh' in top, 'Afrikaans verse offered %r' % top
+            t_listen_af()
 
             @check('listening through the offline translator (quoted verse, reference, hymn)')
             def t_offline_listen():
@@ -906,7 +1054,8 @@ def main():
                 }""")
                 assert r['n'] == 481 and r['withWords'] == 481, 'Lofliedere words are not all built in: %r' % r
                 pg.evaluate("window.selah.tab('hymns').then(t => t.open({ n: 11, book: 'afrikaans-sda' }))"); pg.wait_for_timeout(900)
-                wait_text(pg, 'Play music')
+                wait_text(pg, 'Present & play')
+                assert pg.locator('.music-bar button:has-text("Play music")').count() == 0, 'the hymn bar still has a Play music button'
                 assert pg.locator('.licence-panel:visible').count() == 0, 'the Lofliedere asks for a licence file although the words are built in'
             t_lofliedere_words()
 
@@ -939,7 +1088,7 @@ def main():
                     title = lambda: q.inner_text('#welcome-title')
                     assert 'Install' in title(), 'install is not the first page: %r' % title()   # before signing in
                     # The first page has one Install button; without the browser's install window it shows the steps.
-                    ib = q.locator('.welcome-card button', has_text='Install SDA Sabbath')
+                    ib = q.locator('.welcome-card button', has_text='Install Sabbath Service Desk')
                     assert ib.count() == 1, 'no Install button on the first page'
                     ib.click(); q.wait_for_timeout(200)
                     assert 'install' in q.inner_text('.welcome-card').lower() and 'address bar' in q.inner_text('.welcome-card'), 'Install button showed no steps'
@@ -1376,7 +1525,7 @@ def main():
                 assert r['staged'] == 'John 3:16' and r['rows'] > 100 and r['midi'] > 100000, 'offline: %r' % r
                 for pgname in ('display.html', 'stage.html', 'privacy.html'):
                     q = c3.new_page(); q.goto(base + pgname, timeout=15000); q.wait_for_timeout(600)
-                    assert 'SDA Sabbath' in q.title(), pgname + ' offline: ' + q.title()
+                    assert 'Sabbath Service Desk' in q.title(), pgname + ' offline: ' + q.title()
                     q.close()
                 assert not e3, '; '.join(e3[:3])
                 c3.close()

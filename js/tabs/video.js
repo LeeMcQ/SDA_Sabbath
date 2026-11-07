@@ -25,6 +25,11 @@ export default function create(ctx) {
   const session = new Map(); // id -> File (not saved)
   const opts = { volume: settings.v.video.volume || 1, rate: 1, loop: false, ab: null, fit: settings.v.video.fit || 'contain', zoom: 1, rotate: 0, flipH: false, flipV: false, filters: { brightness: 1, contrast: 1, saturate: 1, hue: 0 }, eq: null, subs: null };
   let bgMode = true;       // audio files play in the background by default
+  // What the screen shows while a music file plays: nothing new, a title banner with the song name, or a saved banner.
+  const showBy = new Map(); // item id -> { mode: 'keep' | 'title' | 'banner', text, banner }
+  const showOf = (it) => showBy.get(it.id) || { mode: 'keep', text: it.name.replace(/\.[^.]+$/, ''), banner: '' };
+  const escHtml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  let restageTok = 0, restaged = Promise.resolve();
   let endedFor = null;
 
   // ------------------------------------------------------------ layout
@@ -137,7 +142,7 @@ export default function create(ctx) {
         const answer = (v) => { done = true; if (rem.checked) settings.set('video.keepCopies', v ? 'yes' : 'no'); resolve(v); };
         modal({ title: 'Keep offline copies?',
           body: h('div.col', { style: { gap: '10px' } },
-            h('p', 'Save ' + fmtBytes(total) + ' inside SDA Sabbath so these play next time without choosing them again? Choose “This time only” to use them for this session only.'),
+            h('p', 'Save ' + fmtBytes(total) + ' inside Sabbath Service Desk so these play next time without choosing them again? Choose “This time only” to use them for this session only.'),
             h('label.row', { style: { gap: '8px', alignItems: 'center' } }, rem, h('span', 'Remember my choice'))),
           onclose: () => { if (!done) resolve(false); },
           actions: [{ label: 'This time only', onclick: () => answer(false) }, { label: 'Keep copies', primary: true, onclick: () => answer(true) }] });
@@ -188,7 +193,7 @@ export default function create(ctx) {
     if (it.handle) {
       let p = await it.handle.queryPermission({ mode: 'read' });
       if (p !== 'granted' && interactive) p = await it.handle.requestPermission({ mode: 'read' });
-      if (p !== 'granted') throw new Error('SDA Sabbath needs permission to open “' + it.name + '”. Click it again and allow access.');
+      if (p !== 'granted') throw new Error('Sabbath Service Desk needs permission to open “' + it.name + '”. Click it again and allow access.');
       return it.handle.getFile();
     }
     throw new Error('This file is no longer available. Add it again.');
@@ -211,16 +216,35 @@ export default function create(ctx) {
     restage();
   }
 
+  /** The picture shown while music plays: a title banner with the song name, or a saved banner. */
+  async function screenFrames(sh) {
+    if (sh.mode === 'title') {
+      return [{ kind: 'text', variant: 'title', refPos: 'none', html: escHtml((sh.text || '').trim() || 'Music') }];
+    }
+    if (sh.mode === 'banner' && sh.banner) {
+      try { return await (await ctx.tab('ai')).framesOf(sh.banner); } catch (e) { toast('Could not open that banner.', 'err'); }
+    }
+    return null;
+  }
+
   function restage() {
     if (!sel || !sel._src) { ctx.setStaged('video', null); return; }
     const it = sel;
     const start = useStart.checked ? prevVideo.currentTime || 0 : 0;
     if (isAudio(it) && bgMode) {
-      ctx.setStaged('video', {
+      const sh = showOf(it);
+      const base = {
         id: 'audio:' + it.id, tab: 'video', title: it.name, sub: 'Background audio', itemId: it.id,
         deck: { kind: 'audio', frame: { kind: 'audio', title: it.name, sub: 'Plays on this device — the screen stays as it is' } },
         run: () => { bgAudio.play(it._src, it.name, { loop: opts.loop, volume: Math.min(1, opts.volume) }); if (start) bgAudio.seek(start); },
-        plan: { tab: 'video', item: it.id, label: it.name },
+        plan: { tab: 'video', item: it.id, label: it.name, show: sh.mode, text: sh.text, banner: sh.banner },
+      };
+      if (sh.mode === 'keep') { ctx.setStaged('video', base); return; }
+      const tok = ++restageTok;
+      restaged = screenFrames(sh).then((frames) => {
+        if (tok !== restageTok || sel !== it) return;
+        if (frames) { base.deck = { kind: 'banner', frames }; base.sub = 'Music with ' + (sh.mode === 'title' ? 'a title' : 'a banner'); base.id = 'audio:' + it.id + ':' + sh.mode; base.onTake = base.run; }
+        ctx.setStaged('video', base);
       });
       return;
     }
@@ -237,7 +261,32 @@ export default function create(ctx) {
     selTitle.textContent = sel ? sel.name : 'Nothing selected';
     planBtn.hidden = !sel;
     clear(bgToggleWrap);
-    if (sel && isAudio(sel)) bgToggleWrap.appendChild(toggle('Background audio (keep the screen as it is)', bgMode, (v) => { bgMode = v; restage(); }));
+    if (sel && isAudio(sel)) {
+      bgToggleWrap.appendChild(toggle('Background audio (the music plays, the screen can show a title or banner)', bgMode, (v) => { bgMode = v; renderSelected(); restage(); }));
+      if (bgMode) bgToggleWrap.appendChild(screenPicker(sel));
+    }
+  }
+
+  /** "On the screen while it plays": keep the screen / title with the song name (editable) / a saved banner. */
+  function screenPicker(it) {
+    const sh = Object.assign({}, showOf(it));
+    const set = (patch) => { Object.assign(sh, patch); showBy.set(it.id, Object.assign({}, sh)); restage(); };
+    const text = h('input.field', { type: 'text', value: sh.text, 'aria-label': 'Song name shown on the screen', placeholder: 'Song name',
+      oninput: () => set({ text: text.value }) });
+    const bsel = h('select.field', { 'aria-label': 'Banner shown while the music plays', onchange: () => set({ banner: bsel.value }) }, h('option', { value: '' }, 'Pick a banner…'));
+    const fill = async () => {
+      try { (await (await ctx.tab('ai')).banners()).forEach((b) => bsel.append(h('option', { value: b.id, selected: b.id === sh.banner }, b.name))); } catch (e) { /* none yet */ }
+    };
+    const wrap = h('div.row.vid-show', { style: { gap: '8px', flexWrap: 'wrap', alignItems: 'center' } });
+    const paint = () => {
+      clear(wrap);
+      wrap.append(h('span.note', 'On the screen while it plays:'),
+        seg([['keep', 'Keep the screen'], ['title', 'Song title'], ['banner', 'A banner']], sh.mode, (v) => { set({ mode: v }); paint(); }));
+      if (sh.mode === 'title') wrap.append(text);
+      if (sh.mode === 'banner') { wrap.append(bsel); fill(); }
+    };
+    paint();
+    return wrap;
   }
 
   // ------------------------------------------------------------ VLC-style panel
@@ -361,12 +410,14 @@ export default function create(ctx) {
     /** Read the playlist again (after a shared plan brought videos in). */
     async reload() { await ready; await loadItems(); },
     async importFiles(files) { await ready; const before = new Set(items.map((x) => x.id)); await addFiles(files); return items.filter((x) => !before.has(x.id)); },
-    async open({ item }) {
+    async open({ item, show, text, banner }) {
       await ready;
       await ctx.showTab('video');
       const it = items.find((x) => x.id === item);
       if (!it) { toast('That video is not in the playlist on this device.', 'err'); return null; }
+      if (show) showBy.set(it.id, { mode: show, text: text || '', banner: banner || '' });
       await select(it);
+      await restaged;
       return ctx.stagedOf('video');
     },
     onShow() { if (ctx.companion) loadCompanion(false); },

@@ -1,6 +1,6 @@
 // Plan packages (.sdaplan): a service plan or plan template in one file, with the slides, pictures,
 // banners and (if wanted) videos it uses, so it can be backed up or shared with another media team.
-// Bible passages and hymns travel as references: every copy of SDA Sabbath has them.
+// Bible passages and hymns travel as references: every copy of Sabbath Service Desk has them.
 //
 //   const pack = await collectPlan(items, opts)      -> { manifest, blobs, stats }
 //   const blob = await packageBlob(pack, onProgress) -> a .sdaplan file (a stored ZIP: plan.json + media/…)
@@ -122,12 +122,12 @@ export async function openPackage(file) {
     const pj = entries.get('plan.json');
     if (!pj) throw new Error('This file has no plan in it.');
     const manifest = JSON.parse(await pj.text());
-    if (!isObj(manifest) || manifest.format !== FORMAT || !Array.isArray(manifest.items)) throw new Error('This is not an SDA Sabbath plan file.');
+    if (!isObj(manifest) || manifest.format !== FORMAT || !Array.isArray(manifest.items)) throw new Error('This is not a Sabbath Service Desk plan file.');
     return { manifest, entries };
   }
   const p = JSON.parse(await file.text());
   if (isObj(p) && p.format === FORMAT && Array.isArray(p.items)) return { manifest: p, entries: new Map() };
-  if (!isObj(p) || !Array.isArray(p.items)) throw new Error('Not an SDA Sabbath plan file.');
+  if (!isObj(p) || !Array.isArray(p.items)) throw new Error('Not a Sabbath Service Desk plan file.');
   return { manifest: { format: FORMAT, version: 1, kind: 'plan', name: p.name || 'Imported plan', items: p.items, files: [], renders: [], banners: [], missing: [], links: true }, entries: new Map() };
 }
 

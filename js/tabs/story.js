@@ -1,4 +1,4 @@
-// "How did you hear about SDA Sabbath, and how has it changed your services?" Asked once, after a church has used
+// "How did you hear about Sabbath Service Desk, and how has it changed your services?" Asked once, after a church has used
 // it for three services (never during a service), and any time from Settings → Account. Sent with the statistics
 // account (js/core/cloud.js cloud.story); without internet it waits on this device.
 import { h } from '../core/util.js';
@@ -8,7 +8,7 @@ import { cloud } from '../core/cloud.js';
 import { lsKey } from '../core/storens.js';
 import { inServiceHold } from '../core/readiness.js';
 
-const APP_NAME = cloud.APP === 'church-service' ? 'Church Service' : 'SDA Sabbath';
+const APP_NAME = cloud.APP === 'church-service' ? 'Church Service' : 'Sabbath Service Desk';
 export const REFERRALS = [
   ['', 'Choose…'], ['church', 'Another church'], ['conference', 'Our conference or union'], ['pastor', 'A pastor or elder'],
   ['whatsapp', 'WhatsApp'], ['facebook', 'Facebook or other social media'], ['search', 'An internet search'],

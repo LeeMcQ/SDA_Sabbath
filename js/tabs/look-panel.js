@@ -1,6 +1,8 @@
 // "Own look" for Bible text or hymn words: the same choices as Settings → Screen, kept apart for this part.
 // Off = the Settings → Screen look. On = the choices below (they start as a copy of Settings → Screen).
-import { h } from '../core/util.js';
+import { h, uid } from '../core/util.js';
+import { db } from '../core/db.js';
+import { icon } from '../core/icons.js';
 import { seg, toggle } from '../core/ui.js';
 import { settings, LOOK_KEYS } from '../core/settings.js';
 import { createStage } from '../core/render.js';
@@ -43,6 +45,25 @@ export function lookPanel(kind, ctx, onChange) {
     return h('div.row', r, out);
   };
 
+  // An own background picture, chosen here (kept on this device like the Settings → Screen picture).
+  const imgPick = () => {
+    const inp = h('input', { type: 'file', accept: 'image/*', style: { display: 'none' }, onchange: async () => {
+      const f = inp.files[0]; if (!f) return;
+      const { prepareImage } = await import('../lib/pdf.js');
+      const r = await prepareImage(f, { boxW: 1920, boxH: 1080, quality: 0.88 });
+      const id = 'img-' + uid();
+      await db.put('files', id, { id, kind: 'image', name: f.name, type: r.full.type, size: r.full.size, blob: r.full, added: Date.now() });
+      const old = L().bgImg;
+      settings.set(sec + '.look.bgImg', id); settings.set(sec + '.look.bgPic', true);
+      if (old) db.del('files', old);
+      paintControls(); redraw(); if (onChange) onChange();
+    } });
+    const has = !!L().bgImg;
+    return h('div.row', h('button.btn.sm', { type: 'button', onclick: () => inp.click() }, icon('upload'), has ? 'Change' : 'Choose…'),
+      has ? h('button.btn.sm', { type: 'button', onclick: () => { const old = L().bgImg; settings.set(sec + '.look.bgImg', null); settings.set(sec + '.look.bgPic', false); if (old) db.del('files', old); paintControls(); redraw(); if (onChange) onChange(); } }, 'Remove') : null,
+      h('span.note', 'Shown behind this text only'), inp);
+  };
+
   const controls = h('div.form', { style: { marginTop: '4px' } });
   const paintControls = () => {
     controls.textContent = '';
@@ -56,6 +77,10 @@ export function lookPanel(kind, ctx, onChange) {
       h('label', 'Background'), toggle('Own background colour (instead of the Screen background)', !!L().bgOwn, (v) => { set('bgOwn', v); paintControls(); }),
     ];
     if (L().bgOwn) kids.push(h('label', 'Background colour'), color('bg', 'Background colour'));
+    kids.push(h('label', 'Background picture'), imgPick());
+    if (L().bgImg) kids.push(
+      h('label', 'Darken picture'), range('bgDim', 0, 0.85, 0.05, (v) => Math.round(v * 100) + '%', 'Darken picture'),
+      h('label', 'Picture shape'), seg([['cover', 'Fill'], ['contain', 'Fit']], L().imgFit || 'cover', (v) => set('imgFit', v)));
     kids.push(
       h('label', 'Text shadow'), toggle('Outline text so it reads on pictures', !!val('shadow'), (v) => set('shadow', v)),
       h('label', 'Alignment'), seg([['center', 'Centre'], ['left', 'Left']], val('align'), (v) => set('align', v)),
@@ -64,7 +89,7 @@ export function lookPanel(kind, ctx, onChange) {
       h('label', 'Largest text'), range('maxFont', 90, 240, 5, (v) => v + ' px', 'Largest text'));
     if (kind === 'hymn') kids.push(h('label', 'Hymn words'), seg([['normal', 'Normal'], ['large', 'Large'], ['largest', 'Largest']], val('hymnSize'), (v) => set('hymnSize', v)));
     kids.push(h('label', ''), h('button.btn.sm', { type: 'button', onclick: () => {
-      LOOK_KEYS.concat(['bgOwn']).forEach((k) => settings.set(sec + '.look.' + k, null));
+      LOOK_KEYS.concat(['bgOwn', 'bgPic', 'imgFit']).forEach((k) => settings.set(sec + '.look.' + k, null));
       settings.set(sec + '.look.on', true); paintControls(); redraw(); if (onChange) onChange();
     } }, 'Start again from Settings → Screen'));
     controls.append(...kids);

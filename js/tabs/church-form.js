@@ -8,7 +8,7 @@ export function churchForm(settings, onChange) {
   const C = () => settings.v.church || {};
   const set = (k, v) => { settings.set('church.' + k, v); if (onChange) onChange(k, v); showSun(); };
   const text = (k, ph, attrs) => h('input.field', Object.assign({ value: C()[k] || '', placeholder: ph, style: { width: '100%' },
-    onchange: (e) => set(k, e.target.value.trim()) }, attrs || {}));
+    onchange: (e) => { set(k, e.target.value.trim()); if (k === 'name' || k === 'town') autoLocate(); } }, attrs || {}));
 
   const lat = h('input.field', { inputmode: 'decimal', placeholder: 'Latitude, e.g. -33.46', 'aria-label': 'Latitude', style: { width: '150px' },
     value: C().lat == null ? '' : String(C().lat), onchange: () => setNum('lat', lat, 90) });
@@ -32,6 +32,32 @@ export function churchForm(settings, onChange) {
     }, (e) => { here.disabled = false; toast('Location not available (' + (e.message || 'permission refused') + '). Type the numbers instead.', 'err', 6000); },
     { enableHighAccuracy: false, timeout: 15000, maximumAge: 600000 });
   } }, icon('pin'), h('span', 'Use this device’s location'));
+  // Name or town typed and no location yet: look the place up online (Open-Meteo place search, no account needed);
+  // if nothing is found, ask this device for its location. Only runs when online and only fills an empty location.
+  let locating = false;
+  async function autoLocate() {
+    const c = C();
+    if (locating || typeof c.lat === 'number' || typeof c.lon === 'number') return;
+    const q = (c.town || '').trim() || (c.name || '').replace(/\b(seventh[- ]day adventist|sda|church|congregation|assembly|company)\b/gi, ' ').replace(/\s+/g, ' ').trim();
+    if (q.length < 3) return;
+    locating = true;
+    try {
+      let hit = null;
+      try {
+        const r = await fetch('https://geocoding-api.open-meteo.com/v1/search?count=3&language=en&format=json&name=' + encodeURIComponent(q));
+        const j = r.ok ? await r.json() : null;
+        hit = j && j.results && j.results[0];
+      } catch (e) { /* offline: fall back to the device */ }
+      if (hit && typeof C().lat !== 'number') {
+        lat.value = String(Math.round(hit.latitude * 10000) / 10000); setNum('lat', lat, 90);
+        lon.value = String(Math.round(hit.longitude * 10000) / 10000); setNum('lon', lon, 180);
+        toast('Location estimated: ' + [hit.name, hit.admin1, hit.country].filter(Boolean).join(', ') + '. Check it, or use this device’s location.', 'ok', 7000);
+      } else if (!hit && navigator.geolocation && typeof C().lat !== 'number') {
+        toast('Could not find “' + q + '” online. Allow this device to share its location to fill it in.', '', 5000);
+        here.click();
+      }
+    } finally { locating = false; }
+  }
   const sunNote = h('p.note');
   function showSun() {
     const c = C();

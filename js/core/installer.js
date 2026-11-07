@@ -1,4 +1,4 @@
-// "Install SDA Sabbath": asks once (after the first-start setup) to install the app on this device, and shows
+// "Install Sabbath Service Desk": asks once (after the first-start setup) to install the app on this device, and shows
 // whether everything has been saved for use without internet. Installing gives an icon of its own, a window
 // without the browser bars, and a start that never needs the internet.
 //
@@ -24,8 +24,8 @@ export function installSteps() {
   if (isIOS) return h('span', 'Tap ', h('b', 'Share'), ' ', icon('upload'), ' in Safari (or the ', h('b', '⋯'), ' menu in Chrome), then ', h('b', 'Add to Home Screen'), '.');
   if (isSafariMac) return h('span', 'In Safari: ', h('b', 'File → Add to Dock'), '.');
   if (isAndroid) return h('span', 'Open the browser menu ', h('b', '⋮'), ' and choose ', h('b', 'Install app'), ' or ', h('b', 'Add to Home screen'), '.');
-  if (isFirefox) return h('span', 'Firefox on a computer cannot install apps, but SDA Sabbath keeps working offline in Firefox. Bookmark it, or use Chrome or Edge to install it.');
-  return h('span', 'Use the install icon at the right of the address bar, or the browser menu → ', h('b', 'Install SDA Sabbath'), '.');
+  if (isFirefox) return h('span', 'Firefox on a computer cannot install apps, but Sabbath Service Desk keeps working offline in Firefox. Bookmark it, or use Chrome or Edge to install it.');
+  return h('span', 'Use the install icon at the right of the address bar, or the browser menu → ', h('b', 'Install Sabbath Service Desk'), '.');
 }
 
 /**
@@ -46,12 +46,12 @@ export function startInstallPrompt(ctx) {
     const pct = off.total ? Math.min(100, Math.round(off.done / off.total * 100)) : 0;
     const status = off.ready
       ? h('p.inst-ok', icon('check'), h('span', 'Saved on this device: everything works without internet, except the things that need it (online Bibles and lyrics, AI, YouTube, sharing to phones over the internet).'))
-      : off.total ? h('p.note', 'Saving SDA Sabbath for use without internet… ' + pct + '%. Keep the internet on until this finishes.')
+      : off.total ? h('p.note', 'Saving Sabbath Service Desk for use without internet… ' + pct + '%. Keep the internet on until this finishes.')
         : h('p.note', 'Checking that everything is saved on this device…');
     const can = ctx.installAvailable();
     card.append(
       h('div.inst-h', h('img', { src: 'icons/favicon.svg', alt: '', width: 40, height: 40 }),
-        h('div', h('b', 'Install SDA Sabbath'), h('div.note', 'Its own icon and window, and it opens without internet.'))),
+        h('div', h('b', 'Install Sabbath Service Desk'), h('div.note', 'Its own icon and window, and it opens without internet.'))),
       status,
       can ? null : h('p.note.inst-steps', installSteps()),
       h('div.row.wrap.inst-act',
@@ -60,7 +60,7 @@ export function startInstallPrompt(ctx) {
   }
   function show() {
     if (card || installed() || snoozed()) return;
-    card = h('div.inst-card', { role: 'dialog', 'aria-label': 'Install SDA Sabbath' });
+    card = h('div.inst-card', { role: 'dialog', 'aria-label': 'Install Sabbath Service Desk' });
     document.body.appendChild(card);
     paint();
   }

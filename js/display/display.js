@@ -395,7 +395,7 @@ export function createDisplay(root, { post, self = false, mirror = false } = {})
     if (show && !hintEl) {
       hintEl = document.createElement('div');
       hintEl.className = 'disp-hint';
-      hintEl.innerHTML = '<b>SDA Sabbath display</b><span>Click here once to fill this screen and allow sound.<br>It stays full screen; press F if it ever is not.</span>';
+      hintEl.innerHTML = '<b>Sabbath Service Desk display</b><span>Click here once to fill this screen and allow sound.<br>It stays full screen; press F if it ever is not.</span>';
       root.appendChild(hintEl);
     } else if (!show && hintEl) { hintEl.remove(); hintEl = null; }
   }

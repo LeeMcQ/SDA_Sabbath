@@ -31,7 +31,7 @@ body.obs { font-family: "Hyperlegible", system-ui, -apple-system, "Segoe UI", Ro
 [data-pos="center"] .lt-box { max-width: calc(1500px * var(--lt-size)); }
 .lt.in .lt-box { transform: none; opacity: 1; }
 .lt.swap .lt-body > * { opacity: 0; }
-.lt-body > * { transition: opacity .18s ease; }
+.lt-body > * { transition: opacity .1s ease; }
 .lt-bar { flex: none; width: 10px; background: var(--lt-accent); border-radius: 3px 0 0 3px; }
 .lt-body { min-width: 0; padding: calc(18px * var(--lt-size)) calc(30px * var(--lt-size)) calc(20px * var(--lt-size)); display: flex; flex-direction: column; gap: 4px; }
 .lt-kick { font-size: calc(22px * var(--lt-size)); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--lt-accent); }

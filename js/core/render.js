@@ -20,7 +20,7 @@ export function frameOf(cue, i) {
   return d.frame || null;
 }
 
-/** The default logo slide: the neutral SDA Sabbath mark (js/core/symbol.js) in one solid colour. A church's own logo replaces it. */
+/** The default logo slide: the neutral Sabbath Service Desk mark (js/core/symbol.js) in one solid colour. A church's own logo replaces it. */
 const DEFAULT_MARK = SYMBOL_ROUND.replace('<svg ', '<svg class="logo-mark" ');
 
 export const STAGE_W = 1920;
@@ -115,7 +115,7 @@ function textFrameEl(f) {
 
 const OWN_FONTS = { sans: '"Hyperlegible", system-ui, sans-serif', serif: '"Selah Serif", Georgia, serif', system: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif' };
 /** The own look of Bible text or hymn words (Bible → ⋯, Hymns → options): put on the slide itself, so the others keep the Settings → Screen look. */
-function applyOwnLook(el, variant, over) {
+function applyOwnLook(el, variant, over, bag) {
   const o = over && over[variant];
   if (!o) return null;
   const st = el.style;
@@ -124,6 +124,15 @@ function applyOwnLook(el, variant, over) {
   if (o.fg) { st.setProperty('--d-fg', o.fg); st.color = o.fg; }
   if (o.accent) st.setProperty('--d-accent', o.accent);
   if (o.bg) st.background = o.bg;
+  if (o.imgBlob && bag) {
+    const u = urlFor(o.imgBlob, bag), dim = o.bgDim == null ? 0.45 : o.bgDim;
+    if (u) {
+      st.backgroundImage = 'linear-gradient(rgba(0,0,0,' + dim + '),rgba(0,0,0,' + dim + ')), url("' + u + '")';
+      st.backgroundSize = o.imgFit === 'contain' ? 'auto, contain' : 'auto, cover';
+      st.backgroundPosition = 'center'; st.backgroundRepeat = 'no-repeat';
+      if (!o.bg) st.backgroundColor = '#000';
+    }
+  }
   if (o.align) st.setProperty('--d-align', o.align);
   if (o.pad) { st.setProperty('--d-pad', o.pad + 'px'); st.setProperty('--d-pad-y', Math.round(o.pad * 0.75) + 'px'); }
   if (o.shadow != null) st.textShadow = o.shadow ? '0 3px 10px rgba(0,0,0,.9), 0 0 2px rgba(0,0,0,.9)' : 'none';
@@ -148,7 +157,7 @@ export async function renderFrame(layer, frame, opts = {}) {
   if (k === 'text') {
     const el = textFrameEl(frame);
     layer.appendChild(el);
-    const own = applyOwnLook(el, frame.variant, opts.over);
+    const own = applyOwnLook(el, frame.variant, opts.over, urls);
     const body = el.querySelector('.f-body');
     const maxF = (own && own.maxFont) || opts.maxFont || 150;
     // Sung text is capped a little lower than the largest size (Settings → Screen → Hymn words: 110, 130 or 150 px

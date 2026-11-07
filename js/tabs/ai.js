@@ -59,11 +59,11 @@ const FIELD = {
   done: { label: 'At zero show', ph: 'Welcome' },
 };
 const EXTRAS = [
-  ['logo', 'Logo', 'Your church logo from Settings → Screen (or the neutral SDA Sabbath mark)'],
+  ['logo', 'Logo', 'Your church logo from Settings → Screen (or the neutral Sabbath Service Desk mark)'],
   ['date', 'Date', 'The coming Sabbath’s date'],
   ['sunset', 'Sunset time', 'When Sabbath begins or ends, worked out offline'],
   ['qr', 'Giving QR code', 'The giving link from Church details'],
-  ['mark', '“SDA Sabbath” mark', 'A small app name in the corner'],
+  ['mark', '“Sabbath Service Desk” mark', 'A small app name in the corner'],
 ];
 const POS = [['center', 'Centre'], ['left', 'Left'], ['right', 'Right'], ['top', 'Top'], ['low', 'Bottom']];
 
@@ -1833,6 +1833,8 @@ export default function create(ctx) {
     },
     /** Saved banners, for the Plan tab's Link dialog. */
     banners() { return lib.map((b) => ({ id: b.id, name: nameOf(b) })); },
+    /** Display frames of a saved banner (for music that shows a banner). */
+    async framesOf(id) { await ready; const b = lib.find((x) => x.id === id); return b ? framesOf(b) : null; },
     async bannerThumb(id) {
       const b = lib.find((x) => x.id === id);
       if (!b || !b.s || !b.s.img) return null;

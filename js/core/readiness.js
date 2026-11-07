@@ -1,4 +1,4 @@
-// Offline readiness: one badge in the top bar that always says whether SDA Sabbath can run with no internet,
+// Offline readiness: one badge in the top bar that always says whether Sabbath Service Desk can run with no internet,
 // and a panel (tap the badge) with the self-check, storage protection, the waiting update and the USB fallback.
 //
 //   ✔ Ready offline      every app file is stored (green)
@@ -88,8 +88,8 @@ export function readinessBadge(ctx, deps) {
           hh ? (hh.have + ' of ' + hh.total + ' files' + (hh.version ? ' · version ' + hh.version : '') + (hh.missingCount ? ' — ' + hh.missingCount + ' missing' + (navigator.onLine ? ', fetching them now' : '. Connect to the internet once to finish') : ''))
             : 'Checking…',
           h('button.btn.sm', { type: 'button', onclick: () => { deps.checkOffline(true); lastCheck = Date.now(); setTimeout(fill, 1500); } }, icon('check'), 'Check & repair')),
-        row(prot, 'Protected from automatic clean-up', prot ? 'The browser will not delete SDA Sabbath’s files when the disk gets full.' : 'The browser may delete stored files when the disk is nearly full. Installing SDA Sabbath usually allows protection.',
-          prot ? null : h('button.btn.sm', { type: 'button', onclick: async () => { const ok = await deps.persistStorage(); ui.toast(ok ? 'Protected.' : 'The browser has not allowed it yet. Install SDA Sabbath first.', ok ? 'ok' : ''); fill(); } }, 'Protect')),
+        row(prot, 'Protected from automatic clean-up', prot ? 'The browser will not delete Sabbath Service Desk’s files when the disk gets full.' : 'The browser may delete stored files when the disk is nearly full. Installing Sabbath Service Desk usually allows protection.',
+          prot ? null : h('button.btn.sm', { type: 'button', onclick: async () => { const ok = await deps.persistStorage(); ui.toast(ok ? 'Protected.' : 'The browser has not allowed it yet. Install Sabbath Service Desk first.', ok ? 'ok' : ''); fill(); } }, 'Protect')),
         row(true, navigator.onLine ? 'Internet: connected' : 'Internet: offline', navigator.onLine ? 'Not needed for the service. Only online Bibles and lyrics, AI, YouTube and sharing over the internet use it.' : 'Everything stored on this device keeps working.'),
         row(waiting ? null : true, waiting ? 'An update is ready' : 'No update waiting',
           waiting ? (hold && mode !== 'auto' ? 'It is held until after the Sabbath so nothing changes during a service. Apply it now only if nothing is on screen.' : 'It is fully downloaded. Applying it restarts the app (a second or two).')

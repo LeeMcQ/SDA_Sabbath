@@ -396,7 +396,7 @@ export default function create(ctx) {
   }
   // ------------------------------------------------------------ save / share a plan or template with its media
   // One .sdaplan file: the parts, who leads them, and the slides, pictures, banners and videos they show.
-  // Bible passages and hymns go as references (every copy of SDA Sabbath has them).
+  // Bible passages and hymns go as references (every copy of Sabbath Service Desk has them).
   const safeName = (n) => (String(n || 'Service plan').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_') || 'Service_plan');
   async function sharePlan(items, name, kind) {
     if (!items || !items.length) { toast('There is nothing in this ' + (kind === 'template' ? 'template' : 'plan') + ' yet.', 'err'); return; }
@@ -420,9 +420,9 @@ export default function create(ctx) {
         'Off: a small file with links only: part names, who leads, Bible passages and hymns'),
       vidToggle,
       h('p.note', (refs ? refs + (refs === 1 ? ' Bible passage or hymn goes as a reference; ' : ' Bible passages and hymns go as references; ') : 'Bible passages and hymns go as references; ') +
-        'every copy of SDA Sabbath has them. Bibles or hymnbooks you imported yourself must also be on the other device.'),
+        'every copy of Sabbath Service Desk has them. Bibles or hymnbooks you imported yourself must also be on the other device.'),
       est.manifest.missing.length ? h('p.note', { style: { color: 'var(--warn, #b45309)' } }, 'Not on this device, so not included: ' + est.manifest.missing.slice(0, 6).join(', ') + (est.manifest.missing.length > 6 ? '…' : '') + '.') : null,
-      st.handles ? h('p.note', 'Some videos are linked to files on this PC; you may be asked to allow SDA Sabbath to read them.') : null,
+      st.handles ? h('p.note', 'Some videos are linked to files on this PC; you may be asked to allow Sabbath Service Desk to read them.') : null,
       sizeNote,
       h('p.note', 'To use it: on the other device open Plan → ⋯ → Open a shared plan or template, and choose the file.'));
     paintSize();
@@ -443,7 +443,7 @@ export default function create(ctx) {
     const actions = [{ label: 'Cancel' }];
     if (canShare) actions.push({ label: 'Share…', onclick: async () => {
       const r = await make(); if (!r) return false;
-      try { await navigator.share({ files: [new File([r.blob], r.fname, { type: 'application/octet-stream' })], title: name, text: 'Service plan from SDA Sabbath' }); }
+      try { await navigator.share({ files: [new File([r.blob], r.fname, { type: 'application/octet-stream' })], title: name, text: 'Service plan from Sabbath Service Desk' }); }
       catch (e) { if (e.name !== 'AbortError') { download(r.blob, r.fname); toast('Sharing is not available here; the file was saved instead.', '', 4000); } }
       return true;
     } });
@@ -462,7 +462,7 @@ export default function create(ctx) {
       const f = inp.files && inp.files[0];
       if (!f) return;
       let pkg;
-      try { pkg = await openPackage(f); } catch (e) { toast(e.message || 'This is not an SDA Sabbath plan file.', 'err', 5000); return; }
+      try { pkg = await openPackage(f); } catch (e) { toast(e.message || 'This is not a Sabbath Service Desk plan file.', 'err', 5000); return; }
       const m = pkg.manifest;
       const n = { decks: 0, videos: 0, pictures: 0 };
       (m.files || []).forEach((x) => { if (x && x.kind === 'deck') n.decks++; else if (x && x.kind === 'media') n.videos++; else if (x) n.pictures++; });
@@ -616,6 +616,7 @@ export default function create(ctx) {
 
   // Which plan item is on the screen now (so the row can say "On screen"), and which was put on Next.
   const shownCue = new Map(); // item id -> cue id
+  let stagedItemId = null;    // the part last put on Next (a repeated hymn has the same cue in two parts)
   const watchers = new Set(); // called whenever the plan or what is on screen changes (see api.subscribe)
   const onScreen = (it) => !!(live.cue && shownCue.get(it.id) === live.cue.id);
   // The music of the part that is leaving fades out (about 2.5 s) when the next part of the plan goes on screen, in
@@ -642,7 +643,27 @@ export default function create(ctx) {
     });
     if (changed) save();
     if (!el.hidden) render(); else publishStage();
+    queueNextPart(lc);
   });
+
+  // While the Plan tab is open, the Next monitor follows the plan: when a part goes live, the part after it is put on
+  // Next. Anything the person put on Next themselves (a different tab, a different item) is left alone.
+  let queueing = false;
+  async function queueNextPart(lc) {
+    if (!plan || queueing || !lc || ![...shownCue.values()].includes(lc.id)) return;
+    const st = live.staged;
+    const planOwned = !st || st.id === lc.id || [...shownCue.values()].includes(st.id);
+    if (!planOwned) return;
+    let i = plan.items.findIndex((it) => it.id === stagedItemId && shownCue.get(it.id) === lc.id);
+    if (i < 0) i = plan.items.findIndex((it) => !it.heading && shownCue.get(it.id) === lc.id);
+    if (i < 0) return;
+    // Basic shows every part in turn (a prayer shows the logo), so Next is only queued when the very next part has media.
+    if (ctx.settings.v.app.planView === 'basic') i++; else do { i++; } while (plan.items[i] && plan.items[i].heading);
+    if (i >= plan.items.length || plan.items[i].heading) return;
+    queueing = true;
+    const keep = cur; // the plan's place stays on the part on screen; only the Next screen moves ahead
+    try { await select(i); } finally { cur = keep; queueing = false; render(); }
+  }
   live.on('staged', () => { if (plan && !el.hidden) render(); else publishStage(); });
 
   /** The order of service as the stage screens show it (names, who leads, planned time, where we are). */
@@ -654,7 +675,7 @@ export default function create(ctx) {
       name: plan.name,
       items: plan.items.map((it, i) => {
         const now = onScreen(it);
-        const next = !now && !it.heading && live.staged && shownCue.get(it.id) === live.staged.id;
+        const next = !now && !it.heading && !!live.staged && stagedItemId === it.id && shownCue.get(it.id) === live.staged.id;
         return { t: titleOf(it), m: mediaLabel(it) || '', role: it.role || '', mins: it.mins > 0 ? it.mins : 0,
           st: now ? 'now' : next || (i === cur && !it.done) ? 'next' : it.done ? 'done' : '' };
       }),
@@ -785,7 +806,7 @@ export default function create(ctx) {
     listEl.appendChild(summaryBar());
     plan.items.forEach((it, i) => {
       const now = onScreen(it);
-      const isNext = !now && !it.heading && live.staged && shownCue.get(it.id) === live.staged.id;
+      const isNext = !now && !it.heading && !!live.staged && stagedItemId === it.id && shownCue.get(it.id) === live.staged.id;
       const more = btn('more', 'More for this part', (e) => { e.stopPropagation(); itemMenu(more, it, i); }, { cls: 'sm' });
       const media = mediaLabel(it);
       const row = h('div.plan-item.kind-' + (it.heading ? 'note' : it.tab) + (i === cur ? '.cur' : '') + (it.done ? '.done' : '') + (now ? '.now' : '') + (it.heading ? '.is-head' : ''), {
@@ -868,7 +889,9 @@ export default function create(ctx) {
     try {
       const t = await ctx.tab(it.tab);
       c = await t.open(it);
-      if (c) shownCue.set(it.id, c.id);
+      // A banner shown from the plan plays no banner music (music comes from the plan's own video / music parts).
+      if (c && c.withMusic && c.tab === 'ai') c.withMusic = false;
+      if (c) { shownCue.set(it.id, c.id); stagedItemId = it.id; }
     } catch (e) { toast('Could not open this part: ' + e.message, 'err'); }
     finally { ctx.hold = null; }
     ctx.setStaged('plan', c);
@@ -1187,7 +1210,7 @@ export default function create(ctx) {
       const items = plan.items.map((it, i) => {
         const now = onScreen(it);
         return { i, title: titleOf(it), media: it.heading ? '' : (mediaLabel(it) || kindText(it)), kind: it.heading ? '' : it.tab,
-          empty: !!it.heading, done: !!it.done, now, next: !now && !it.heading && !!live.staged && shownCue.get(it.id) === live.staged.id };
+          empty: !!it.heading, done: !!it.done, now, next: !now && !it.heading && !!live.staged && stagedItemId === it.id && shownCue.get(it.id) === live.staged.id };
       });
       const real = items.filter((x) => !x.empty);
       return { name: plan.name, cur, items, shown: real.filter((x) => x.done).length, total: real.length };

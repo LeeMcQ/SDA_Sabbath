@@ -1,4 +1,4 @@
-// A whole-device backup of SDA Sabbath in one file (.sdabackup, a stored ZIP): settings, plans, templates,
+// A whole-device backup of Sabbath Service Desk in one file (.sdabackup, a stored ZIP): settings, plans, templates,
 // hymnbooks, imported Bibles, banners and their pictures, and (if chosen) slides and videos.
 // Used by "Back up to Google Drive" and "Save a backup file", and restored on another device.
 import { db } from './db.js';
@@ -128,9 +128,9 @@ export async function buildBackup(opts = {}, onProgress) {
 export async function readBackup(file) {
   const entries = await readZip(file);
   const j = entries.get('backup.json');
-  if (!j) throw new Error('This is not an SDA Sabbath backup.');
+  if (!j) throw new Error('This is not a Sabbath Service Desk backup.');
   const m = JSON.parse(await j.text());
-  if (!m || m.format !== FORMAT) throw new Error('This is not an SDA Sabbath backup.');
+  if (!m || m.format !== FORMAT) throw new Error('This is not a Sabbath Service Desk backup.');
   return { manifest: m, entries };
 }
 
@@ -191,6 +191,6 @@ export async function restoreBackup(pkg, onProgress) {
 export const backupName = (device) => {
   const d = new Date();
   const p = (n) => String(n).padStart(2, '0');
-  return 'SDA Sabbath backup ' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + 'h' + p(d.getMinutes())
+  return 'Sabbath Service Desk backup ' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + 'h' + p(d.getMinutes())
     + (device ? ' (' + String(device).replace(/[\\/:*?"<>|]/g, '').slice(0, 40) + ')' : '') + EXT;
 };

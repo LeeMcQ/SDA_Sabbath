@@ -1,7 +1,9 @@
-// SDA Sabbath control app boot: tabs, Present button, display menu, shortcuts, service worker.
+// Sabbath Service Desk control app boot: tabs, Present button, display menu, shortcuts, service worker.
 import { $, h, isTyping, keepScreenOn } from './core/util.js';
 import { startInstallPrompt, installed } from './core/installer.js';
 import { icon } from './core/icons.js';
+import { answerAlive } from './core/alive.js';
+import { applyDefaultSetup } from './core/defaultsetup.js';
 import { settings, serviceLang } from './core/settings.js';
 import { db, persistStorage } from './core/db.js';
 import { readinessBadge, autoUpdateAllowed, inServiceHold } from './core/readiness.js';
@@ -31,7 +33,7 @@ const lazyWelcome = () => import('./tabs/welcome.js');
 const openFeedback = (c, o) => import('./tabs/account.js').then((m) => m.openFeedback(c, o));
 
 export const VERSION = '1.6.1';
-export const BUILD = '7f7009c';
+export const BUILD = 'e313a92';
 
 const TABS = [
   { id: 'bible', label: 'Bible', icon: 'bible', file: 'bible.js', load: () => import('./tabs/bible.js') },
@@ -76,12 +78,15 @@ const ctx = {
   stage: stageHub,
   obs: null, // set once OBS control is loaded (see the end of this file)
 };
+const defaultsReady = applyDefaultSetup(); // a brand-new device starts with the maintainer's setup (see defaultsetup.js)
+answerAlive(); // windows opened by the app (projector, stage, OBS) ask if it is still open, and close when it is not
 window.selah = ctx; // handy for debugging from the console (name kept for existing scripts)
 
 // Old names still work (saved plans, links, the last tab used): PC view is now part of Web & PC.
 // Parts that live inside another tab: Web & PC (screen), Tools (stage, stream).
 const ALIAS = { screen: 'web', stage: 'tools', stream: 'tools', listen: 'tools', translate: 'tools' };
 async function getTab(id) {
+  await defaultsReady;
   if (ALIAS[id]) { const api = await getTab(ALIAS[id]); if (api.show) { const sub = api.show(id); if (sub && sub.el) return sub; } return api; }
   if (tabs.has(id)) return tabs.get(id);
   if (loading.has(id)) return loading.get(id);
@@ -110,7 +115,7 @@ function tabErrorPanel(id, err) {
     h('div.card',
       h('h2', (def ? def.label : 'This part') + ' could not open'),
       h('p', offline
-        ? 'This device is offline and this part of SDA Sabbath is not stored on it yet. The rest of the app still works. Connect to the internet once and open it again; after that it works offline.'
+        ? 'This device is offline and this part of Sabbath Service Desk is not stored on it yet. The rest of the app still works. Connect to the internet once and open it again; after that it works offline.'
         : 'Something went wrong while opening it. The rest of the app still works.'),
       h('p.note', String((err && err.message) || err || '').slice(0, 200)),
       h('div.row.wrap',
@@ -276,7 +281,7 @@ link.on('state', updateDispStop);
 link.on('hello', updateDispBtn);
 live.on('live', updateDispBtn);
 link.on('blocked', () => ui.toast('The browser blocked the display window. Allow pop-ups for this site, then press Present again.', 'err', 7000));
-link.on('pin-wrong', () => ui.toast('Wrong PIN for the SDA Sabbath companion.', 'err'));
+link.on('pin-wrong', () => ui.toast('Wrong PIN for the Sabbath Service Desk companion.', 'err'));
 // After a reload the open projector window is taken over by itself (link.js); only if that did not happen (for
 // example a new tab) does the operator need to press Present.
 link.on('found', () => { setTimeout(() => { if (!link.kind) ui.toast('A display window is already open. Press Present to reconnect to it.'); }, 1500); });
@@ -301,9 +306,9 @@ function companionDialog() {
     const url = h('input.field', { value: settings.v.companion.url || (ctx.companion ? location.origin : 'http://192.168.1.10:7777'), style: { width: '100%' } });
     const pin = h('input.field', { value: settings.v.companion.pin || '', inputmode: 'numeric', style: { width: '120px' } });
     ui.modal({
-      title: 'Present through the SDA Sabbath companion',
+      title: 'Present through the Sabbath Service Desk companion',
       body: h('div.col',
-        h('p.note', 'Run the SDA Sabbath companion on the church PC. Open the address it shows on the TV or projector PC with “/display” at the end, then connect here.'),
+        h('p.note', 'Run the Sabbath Service Desk companion on the church PC. Open the address it shows on the TV or projector PC with “/display” at the end, then connect here.'),
         h('label.muted', 'Companion address'), url, h('label.muted', 'PIN shown by the companion'), pin),
       onclose: () => resolve(false),
       actions: [{ label: 'Cancel' }, { label: 'Connect', primary: true, onclick: () => {
@@ -339,8 +344,8 @@ function castHelp(e) {
   const opt = (ic, title, desc, fn) => h('button', { type: 'button', onclick: () => { ui.closeModal(); fn(); } },
     icon(ic), h('div.grow', h('div', { style: { fontWeight: 700 } }, title), h('div.note', desc)));
   const list = h('div.list');
-  if (onWindows()) list.appendChild(opt('pc', 'Connect to a wireless display (Windows)', 'Windows connects to Miracast TVs and projectors itself. The TV then becomes a second screen for SDA Sabbath. Recommended.', wirelessDialog));
-  list.appendChild(opt('link', 'SDA Sabbath companion', 'Best for a smart TV with a web browser: the TV opens the companion address and this device controls it over Wi-Fi.', companionDialog));
+  if (onWindows()) list.appendChild(opt('pc', 'Connect to a wireless display (Windows)', 'Windows connects to Miracast TVs and projectors itself. The TV then becomes a second screen for Sabbath Service Desk. Recommended.', wirelessDialog));
+  list.appendChild(opt('link', 'Sabbath Service Desk companion', 'Best for a smart TV with a web browser: the TV opens the companion address and this device controls it over Wi-Fi.', companionDialog));
   if (onAndroid()) list.appendChild(opt('phone', 'Use this phone as the screen, then mirror it', 'Open your phone’s Smart View / Screen Cast / Screen mirroring from the quick settings and pick the TV. The TV shows the phone screen.', () => link.openSelf(createDisplay)));
   else list.appendChild(opt('phone', 'Use this device as the screen', 'Full screen here, for an HDMI cable or the device’s own screen mirroring.', () => link.openSelf(createDisplay)));
   list.appendChild(opt('cast', 'Try casting again', 'Make sure the TV and this device are on the same Wi-Fi and the TV is on.', () => startCast()));
@@ -350,7 +355,7 @@ function castHelp(e) {
 
 /**
  * Windows' own "Connect to a wireless display" (Miracast): Windows connects to the TV or projector and treats it
- * as a second screen; SDA Sabbath then opens its display window there like on any extended screen.
+ * as a second screen; Sabbath Service Desk then opens its display window there like on any extended screen.
  */
 function wirelessDialog() {
   const status = h('p.note.wd-status', 'Waiting for the wireless display…');
@@ -388,7 +393,7 @@ function wirelessDialog() {
           h('div.row.wrap', { style: { marginTop: '6px' } }, castLink, dispLink),
           h('div.note', 'Not listed? Turn on “Screen mirroring” (or open the Screen Mirroring app) on the TV, keep it close, and make sure Wi-Fi is on. In Display settings this is “Connect to a wireless display”.')),
         h('li', h('b', 'Choose Extend'), ', not Duplicate: in the Connect panel press “Change projection mode” → Extend, or press ', h('kbd', 'Windows'), ' + ', h('kbd', 'P'), ' → Extend. Then the TV shows only the slides, and this screen keeps the controls.'),
-        h('li', h('b', 'Present on it'), '. SDA Sabbath opens its display on the TV. To stop, press the × next to the display button, then Disconnect in the Windows panel.',
+        h('li', h('b', 'Present on it'), '. Sabbath Service Desk opens its display on the TV. To stop, press the × next to the display button, then Disconnect in the Windows panel.',
           h('div.row.wrap', { style: { marginTop: '6px' } }, goBtn))),
       status),
     actions: [{ label: 'Close' }],
@@ -412,7 +417,7 @@ function displayMenu(anchor) {
   items.push({ label: 'Use this device as the screen', icon: 'phone', onclick: () => link.openSelf(createDisplay) });
   if (link.canCast() && link.kind !== 'cast') items.push({ label: 'Cast (Chromecast, Google TV, Android TV)', icon: 'cast', onclick: () => startCast() });
   if (onWindows()) items.push({ label: 'Connect to a wireless display (Windows)…', icon: 'pc', onclick: wirelessDialog });
-  items.push({ label: 'SDA Sabbath companion on the network…', icon: 'link', onclick: companionDialog });
+  items.push({ label: 'Sabbath Service Desk companion on the network…', icon: 'link', onclick: companionDialog });
   // TV help and clicker setup live in Settings → Displays (ctx.castHelp, ctx.clickerSetup).
   if (pipSupported()) items.push('-', { label: 'Mini controller (stays on top)', icon: 'pip', onclick: () => openPip().catch((e) => ui.toast('The mini controller could not open: ' + e.message, 'err')) });
   ui.menu(anchor, items);
@@ -598,9 +603,9 @@ live.ensureDisplay = () => new Promise((resolve) => {
     opt('phone', 'This device', 'Full screen here. Use with an HDMI adapter or screen mirroring.', () => link.openSelf(createDisplay)),
     link.canCast() ? opt('cast', 'Cast', 'Chromecast, Google TV or Android TV on the same Wi-Fi.', () => startCast()) : null,
     onAndroid() ? opt('info', 'My TV is not found', 'Smart View, Miracast and other ways to reach the TV.', () => { castHelp(null); return false; }) : null,
-    opt('link', 'SDA Sabbath companion', 'Control a PC or TV on the church network from this phone.', companionDialog),
+    opt('link', 'Sabbath Service Desk companion', 'Control a PC or TV on the church network from this phone.', companionDialog),
     innerWidth > 700 ? opt('present', 'Display window', 'A separate window you can move to a projector.', () => link.openWindow()) : null);
-  ui.modal({ title: 'Where should SDA Sabbath present?', body: list, onclose: () => { if (!done) resolve(false); } });
+  ui.modal({ title: 'Where should Sabbath Service Desk present?', body: list, onclose: () => { if (!done) resolve(false); } });
 });
 
 // ------------------------------------------------------------ top icons
@@ -617,7 +622,7 @@ async function promptInstall() {
   return ok;
 }
 ctx.promptInstall = promptInstall;
-const installBtn = ui.btn('download', 'Install SDA Sabbath on this device', promptInstall, { cls: 'sm' });
+const installBtn = ui.btn('download', 'Install Sabbath Service Desk on this device', promptInstall, { cls: 'sm' });
 installBtn.hidden = true;
 const helpBtn = ui.btn('kbd', 'Keyboard shortcuts (?)', () => showHelp(), { cls: 'sm' });
 const feedbackBtn = ui.btn('msg', 'Comments and suggestions', () => openFeedback(ctx), { cls: 'sm fb-btn' });
@@ -645,7 +650,7 @@ refreshChurchLogo();
 settings.on('change:display', (path) => { if (path === 'display.logo' || path === '*') refreshChurchLogo(); });
 settings.on('change', (path) => { if (path === '*') refreshChurchLogo(); });
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); ctx.installPrompt = e; installBtn.hidden = false; ui.enter(installBtn, 'pop'); instNotify(); });
-window.addEventListener('appinstalled', () => { autoPersist(); ctx.installPrompt = null; installBtn.hidden = true; ui.toast('SDA Sabbath is installed. Open it from its own icon; it works without internet.', 'ok', 6000); instNotify(); });
+window.addEventListener('appinstalled', () => { autoPersist(); ctx.installPrompt = null; installBtn.hidden = true; ui.toast('Sabbath Service Desk is installed. Open it from its own icon; it works without internet.', 'ok', 6000); instNotify(); });
 
 // ------------------------------------------------------------ install + offline readiness card
 const instFns = new Set();
@@ -842,7 +847,7 @@ function handleKey(e, remote) {
   }
   if (!hinted && k && k.length > 1 && !PLAIN.test(k) && !isTyping(e)) {
     hinted = true;
-    ui.toast(h('span', 'A button sent “' + k + '”, which SDA Sabbath does not use yet. ', h('button.btn.sm', { type: 'button', onclick: () => clickerSetup() }, 'Clicker setup')), '', 9000);
+    ui.toast(h('span', 'A button sent “' + k + '”, which Sabbath Service Desk does not use yet. ', h('button.btn.sm', { type: 'button', onclick: () => clickerSetup() }, 'Clicker setup')), '', 9000);
   }
   return false;
 }
@@ -924,8 +929,8 @@ live.on('live', keepAwake);
 // Saving not possible at all (private window, storage blocked): say so once; the app still works.
 // A save that failed for another reason than a full device: said once, so a change is never lost quietly.
 let saveFailSaid = false;
-window.addEventListener('selah-save-failed', (e) => { if (saveFailSaid) return; saveFailSaid = true; ui.toast('A change could not be saved on this device (' + String((e && e.detail) || 'unknown error').slice(0, 80) + '). Reload SDA Sabbath; if it happens again, back up and use Settings → Backup.', 'err', 10000); });
-window.addEventListener('selah-storage', () => ui.toast('This browser is not letting SDA Sabbath save (private window or storage turned off). Everything works, but changes are lost when it closes.', 'err', 10000));
+window.addEventListener('selah-save-failed', (e) => { if (saveFailSaid) return; saveFailSaid = true; ui.toast('A change could not be saved on this device (' + String((e && e.detail) || 'unknown error').slice(0, 80) + '). Reload Sabbath Service Desk; if it happens again, back up and use Settings → Backup.', 'err', 10000); });
+window.addEventListener('selah-storage', () => ui.toast('This browser is not letting Sabbath Service Desk save (private window or storage turned off). Everything works, but changes are lost when it closes.', 'err', 10000));
 // A full disk: tell the operator plainly instead of failing silently. db.js reports every save that failed
 // for lack of space (also the ones nobody waits for); other code that runs out of space ends up here unhandled.
 let fullShown = 0;
@@ -966,7 +971,8 @@ const ready = readinessBadge(ctx, {
   applyUpdate: () => { const w = ctx.swReg && ctx.swReg.waiting; if (w) w.postMessage({ t: 'skip' }); },
 });
 ctx.readiness = ready;
-document.querySelector('.brand') && document.querySelector('.brand').after(ready.el);
+// Top right, to the left of Install, Comments and suggestions (next to the display and sound buttons).
+topIcons.insertBefore(ready.el, installBtn);
 window.addEventListener('online', () => checkOffline(true));
 let healthWarned = false;
 function checkOffline(repair) {
@@ -985,7 +991,7 @@ function onHealth(hh) {
   window.dispatchEvent(new CustomEvent('selah-health', { detail: hh }));
   if (hh.missingCount > 0 && !navigator.onLine && !healthWarned) {
     healthWarned = true;
-    ui.toast('Some parts of SDA Sabbath are not stored on this device yet (' + hh.missingCount + ' files). Connect to the internet once with the app open to finish; everything else works.', 'err', 9000);
+    ui.toast('Some parts of Sabbath Service Desk are not stored on this device yet (' + hh.missingCount + ' files). Connect to the internet once with the app open to finish; everything else works.', 'err', 9000);
   }
 }
 setTimeout(() => checkOffline(true), 3000); // fills the badge soon after start
@@ -1003,7 +1009,7 @@ async function detectCompanion() {
   const remoteAsked = new URLSearchParams(location.search).get('remote') === '1';
   const noRemote = () => {
     if (!remoteAsked) return;
-    ui.toast(h('span', 'Phone remote needs the SDA Sabbath companion running on the church PC. Open the address the companion shows (for example http://192.168.1.20:7777/?remote=1) on the church Wi-Fi. ',
+    ui.toast(h('span', 'Phone remote needs the Sabbath Service Desk companion running on the church PC. Open the address the companion shows (for example http://192.168.1.20:7777/?remote=1) on the church Wi-Fi. ',
       h('a', { href: 'companion.html', target: '_blank', rel: 'noopener' }, 'About the companion')), '', 15000);
   };
   // The companion only serves plain http on the church network, so an https site (GitHub Pages)
@@ -1029,7 +1035,7 @@ async function detectCompanion() {
     const params = new URLSearchParams(location.search);
     if (!local || params.get('remote') === '1') {
       // Opened from a phone on the church network: become a remote for the display there.
-      const pin = params.get('pin') || settings.v.companion.pin || (await ui.promptBox('Connect to the church display', 'PIN shown by the SDA Sabbath companion'));
+      const pin = params.get('pin') || settings.v.companion.pin || (await ui.promptBox('Connect to the church display', 'PIN shown by the Sabbath Service Desk companion'));
       if (pin != null) { settings.set('companion.pin', pin); link.connectSocket(location.origin, pin); }
     }
   } catch (e) { noRemote(); /* not served by the companion */ }
@@ -1050,7 +1056,7 @@ function registerSW() {
       // During the Sabbath hold there is no pop-up (it could be tapped by mistake mid-service): the badge says
       // "Update ready" and the operator applies it from there after the service.
       if (mode() !== 'auto' && inServiceHold()) return null;
-      const t = ui.toast(h('span', 'An SDA Sabbath update is ready. ', h('button.btn.sm', { type: 'button', onclick: () => { w.postMessage({ t: 'skip' }); } }, 'Update now')), 'ok', 15000);
+      const t = ui.toast(h('span', 'An Sabbath Service Desk update is ready. ', h('button.btn.sm', { type: 'button', onclick: () => { w.postMessage({ t: 'skip' }); } }, 'Update now')), 'ok', 15000);
       return t;
     };
     // An update that finished downloading earlier is put in place straight away when the app opens with
@@ -1100,7 +1106,7 @@ showTab(firstTab).finally(() => { window.__selahBooted = true; const bg = docume
 // UI motion starts only after the first load has settled, so nothing animates during start-up.
 const markBooted = () => setTimeout(() => document.documentElement.classList.add('booted'), 300);
 if (document.readyState === 'complete') markBooted(); else window.addEventListener('load', markBooted, { once: true });
-// Opening a PDF / PowerPoint file with SDA Sabbath (installed app on Chrome / Edge).
+// Opening a PDF / PowerPoint file with Sabbath Service Desk (installed app on Chrome / Edge).
 if ('launchQueue' in window) {
   window.launchQueue.setConsumer(async (params) => {
     if (!params.files || !params.files.length) return;

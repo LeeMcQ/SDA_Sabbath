@@ -99,7 +99,7 @@ export default function create(ctx) {
       h('div.row.wrap', h('button.btn.sm', { type: 'button', onclick: () => copy('lower') }, icon('copy'), h('span', 'Copy address')), lowerDrag)),
     h('div.st-src', h('div', h('b', 'Presentation'), h('span.note', ' — the slides full screen, exactly as on the projector (for a “Presentation” scene).')), fullUrlEl,
       h('div.row.wrap', h('button.btn.sm', { type: 'button', onclick: () => copy('full') }, icon('copy'), h('span', 'Copy address')), fullDrag)),
-    h('p.note', 'Videos and screen sharing are not sent to OBS: add a Window Capture of the SDA Sabbath display window to the Presentation scene for those.'));
+    h('p.note', 'Videos and screen sharing are not sent to OBS: add a Window Capture of the Sabbath Service Desk display window to the Presentation scene for those.'));
   [['lower', lowerDrag], ['full', fullDrag]].forEach(([k, a]) => a.addEventListener('dragstart', (e) => {
     const u = urls()[k];
     // OBS turns a dropped link into a Browser Source (it reads the URL from the drag data).
@@ -107,7 +107,7 @@ export default function create(ctx) {
   }));
 
   // ------------------------------------------------------------ OBS on another computer (no WebSocket, any OBS version)
-  // The companion on the SDA Sabbath PC serves the overlays on the church network; OBS on any other PC (or the same one)
+  // The companion on the Sabbath Service Desk PC serves the overlays on the church network; OBS on any other PC (or the same one)
   // just loads them as Browser Sources. No password, no OBS settings, no internet.
   const lanBody = h('div.col', { style: { gap: '8px' } });
   const lanCard = card('OBS on another computer (easiest)', lanBody);
@@ -123,7 +123,7 @@ export default function create(ctx) {
     if (!comp) {
       lanBody.append(
         h('p', { style: { color: 'var(--warn, #f0b429)', fontWeight: '700' } }, 'OBS says “waiting for the media desk” when this page is not the one feeding it.'),
-        h('p', 'To link OBS on another PC over your Wi-Fi or cable, without internet: run the ', h('b', 'SDA Sabbath companion'), ' on the PC that runs the service and open SDA Sabbath from it (at http://localhost:7777, on that PC). This box then shows the two addresses for OBS.'),
+        h('p', 'To link OBS on another PC over your Wi-Fi or cable, without internet: run the ', h('b', 'Sabbath Service Desk companion'), ' on the PC that runs the service and open Sabbath Service Desk from it (at http://localhost:7777, on that PC). This box then shows the two addresses for OBS.'),
         h('a.btn.primary', { href: 'companion.html', target: '_blank', rel: 'noopener', style: { alignSelf: 'flex-start' } }, icon('download'), h('span', 'Download the companion (Windows, Linux, Raspberry Pi)')),
         h('p.note', 'Without the companion, the “Set up OBS by hand” addresses below also work on another PC, as long as both PCs have internet.'));
       return;
@@ -131,15 +131,15 @@ export default function create(ctx) {
     const base = lanBase();
     const isLocal = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
     if (!isLocal) lanBody.append(h('p', { style: { color: 'var(--warn, #f0b429)', fontWeight: '700' } },
-      'OBS will say “waiting for the media desk” until you open SDA Sabbath on the companion PC itself at http://localhost:' + (location.port || '7777') + ' (not this network address, not the website). Only that page feeds OBS.'));
+      'OBS will say “waiting for the media desk” until you open Sabbath Service Desk on the companion PC itself at http://localhost:' + (location.port || '7777') + ' (not this network address, not the website). Only that page feeds OBS.'));
     if (!base) { lanBody.append(h('p.note', 'The companion has not found this PC’s network address. Check that Wi-Fi or the cable is connected, then reload.')); return; }
     const lower = base + '/obs.html?via=lan&mode=lower', full = base + '/obs.html?via=lan&mode=full';
     const row = (title, note, u, which) => h('div.st-src', h('div', h('b', title), h('span.note', ' — ' + note)), h('code.st-url', u),
       h('div.row.wrap', h('button.btn.sm.primary', { type: 'button', onclick: () => copyText(u, 'Copied. In OBS: Sources → + → Browser → paste into URL, Width 1920, Height 1080 → OK.') }, icon('copy'), h('span', 'Copy ' + which))));
     lanBody.append(
       h('ol.st-steps', { style: { margin: '0', paddingLeft: '20px', display: 'grid', gap: '4px' } },
-        h('li', 'On the OBS computer, connect to the same Wi-Fi or network as this PC. Keep SDA Sabbath open here (at localhost) while you stream.'),
-        h('li', 'In OBS press ', h('b', 'Sources → + → Browser'), ', name it “SDA Sabbath lower third”, and paste the first address below as the URL.'),
+        h('li', 'On the OBS computer, connect to the same Wi-Fi or network as this PC. Keep Sabbath Service Desk open here (at localhost) while you stream.'),
+        h('li', 'In OBS press ', h('b', 'Sources → + → Browser'), ', name it “Sabbath Service Desk lower third”, and paste the first address below as the URL.'),
         h('li', 'Set ', h('b', 'Width 1920'), ' and ', h('b', 'Height 1080'), ', press OK. Put it above your camera in the scene.'),
         h('li', 'Optional: do the same with the Presentation address for a full-screen slides scene.'),
         h('li', 'Test: show a Bible verse here. The words appear over the camera in OBS.')),
@@ -165,16 +165,16 @@ export default function create(ctx) {
     clear(deckBody);
     const comp = ctx.companion;
     const isLocal = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
-    deckBody.append(h('p', 'Run SDA Sabbath from buttons, like OBS: an ', h('b', 'Elgato Stream Deck'), ', ', h('b', 'Bitfocus Companion'),
+    deckBody.append(h('p', 'Run Sabbath Service Desk from buttons, like OBS: an ', h('b', 'Elgato Stream Deck'), ', ', h('b', 'Bitfocus Companion'),
       ' (with a Stream Deck, X-keys or a phone), or anything that can open a web address. Each button opens one address.'));
     if (!comp || !comp.control) {
       deckBody.append(
-        h('p', 'This needs the ', h('b', 'SDA Sabbath companion'), comp ? ' version 1.1 or newer (download it again).' : ' running on this PC, with SDA Sabbath opened from it at http://localhost:7777.'),
+        h('p', 'This needs the ', h('b', 'Sabbath Service Desk companion'), comp ? ' version 1.1 or newer (download it again).' : ' running on this PC, with Sabbath Service Desk opened from it at http://localhost:7777.'),
         h('a.btn.primary', { href: 'companion.html', target: '_blank', rel: 'noopener', style: { alignSelf: 'flex-start' } }, icon('download'), h('span', 'Download the companion')));
       return;
     }
     if (!isLocal) {
-      deckBody.append(h('p', { style: { color: 'var(--warn, #f0b429)', fontWeight: '700' } }, 'Buttons control the SDA Sabbath page open at http://localhost:' + (location.port || '7777') + ' on the companion PC. Open it there (this page is a remote).'));
+      deckBody.append(h('p', { style: { color: 'var(--warn, #f0b429)', fontWeight: '700' } }, 'Buttons control the Sabbath Service Desk page open at http://localhost:' + (location.port || '7777') + ' on the companion PC. Open it there (this page is a remote).'));
       return;
     }
     const st = remote.state === 'on';
@@ -261,7 +261,7 @@ export default function create(ctx) {
         h('li', 'On the OBS PC: ', h('b', 'Sources → + → Video Capture Device'), ' → choose the capture card. Set the card to 1920 × 1080 if it asks.'),
         h('li', 'For the lower third: right-click that source → ', h('b', 'Filters → + → Chroma Key'), ' (Key Color Type: Green). Put it above the camera. For the slides use the source as it is, in its own scene.'),
         h('li', 'Show a Bible verse here: the words appear in OBS.')),
-      h('p.note', 'Only one picture fits through one cable: use one HDMI output (and capture card) for the lower third and another for the slides if you need both. Keep SDA Sabbath open here while you stream.'));
+      h('p.note', 'Only one picture fits through one cable: use one HDMI output (and capture card) for the lower third and another for the slides if you need both. Keep Sabbath Service Desk open here while you stream.'));
   }
   settings.on('change:stream', (p) => { if (p === 'stream.hdmiBg') paintHdmi(); });
 
@@ -274,9 +274,9 @@ export default function create(ctx) {
     settings.set('stream.autoScene', v); if (v) obs.resumeAuto(); paintObs();
     if (v && !obs.isSetUp()) toast('Following the slides starts once OBS is set up: press “Set up OBS”.', '', 6000);
   });
-  // Following needs SDA Sabbath's scenes in OBS: say so (and offer the button) instead of silently doing nothing.
+  // Following needs Sabbath Service Desk's scenes in OBS: say so (and offer the button) instead of silently doing nothing.
   const needSetup = h('div.st-showing', { hidden: true }, h('span.st-pill', 'Not following yet'),
-    h('span.grow', 'OBS is not set up for SDA Sabbath on this computer yet, so scenes cannot switch.'),
+    h('span.grow', 'OBS is not set up for Sabbath Service Desk on this computer yet, so scenes cannot switch.'),
     h('button.btn.sm.primary', { type: 'button', onclick: () => setupNow() }, icon('check'), h('span', 'Set up OBS')));
   const mediaSel = select([['camera', 'the camera scene'], ['presentation', 'the presentation scene (with a Window Capture of the display)'], ['stay', 'no change']], S().mediaScene || 'camera', (v) => settings.set('stream.mediaScene', v));
   const studioT = toggle('In Studio Mode, put scenes in Preview (you press Transition)', S().studioPreview !== false, (v) => settings.set('stream.studioPreview', v));
@@ -412,7 +412,7 @@ export default function create(ctx) {
   function paintObs() {
     const st = obs.state;
     obsState.className = 'st-net ' + (st === 'on' ? 'on' : st === 'error' || st === 'auth' ? 'error' : '');
-    obsState.textContent = st === 'on' ? 'Connected to OBS' + (obs.version ? ' (WebSocket ' + obs.version + ')' : '') + (obs.studio ? ' · Studio Mode' : '') + ' · ' + hub.obsOutputs().length + ' SDA Sabbath source(s) following'
+    obsState.textContent = st === 'on' ? 'Connected to OBS' + (obs.version ? ' (WebSocket ' + obs.version + ')' : '') + (obs.studio ? ' · Studio Mode' : '') + ' · ' + hub.obsOutputs().length + ' Sabbath Service Desk source(s) following'
       : st === 'connecting' ? (obs.error || 'Connecting to OBS…') : obs.error || obs.lastError || 'Not connected';
     connBtn.hidden = true; quickBtn.hidden = st === 'on';
     setupBtn.querySelector('span').textContent = S().camScene && obs.scenes.includes(S().presScene) ? 'Set up OBS again (repair)' : 'Set up OBS';
@@ -455,8 +455,8 @@ export default function create(ctx) {
     lowerUrlEl.textContent = u.lower; fullUrlEl.textContent = u.full;
     lowerDrag.href = u.lower; fullDrag.href = u.full;
     linkNote.textContent = lan
-      ? 'OBS follows through the SDA Sabbath companion on this PC — no internet needed.'
-      : 'OBS follows over the internet with the room code ' + fmtCode(settings.v.stage.code) + ' (the same link phones use; turned on automatically). On a PC without internet, run the SDA Sabbath companion instead.';
+      ? 'OBS follows through the Sabbath Service Desk companion on this PC — no internet needed.'
+      : 'OBS follows over the internet with the room code ' + fmtCode(settings.v.stage.code) + ' (the same link phones use; turned on automatically). On a PC without internet, run the Sabbath Service Desk companion instead.';
   }
   const linkNote = h('p.note');
   manualCard.append(linkNote);

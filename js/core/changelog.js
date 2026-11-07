@@ -1,8 +1,24 @@
 // What changed, by date (newest first), shown in Settings → About → Versions.
 // Add a line for every change a church would notice, under today's date (South African time); plain words, no code.
 export const CHANGELOG = [
+  { date: '2026-11-07', items: [
+    'The app is now called Sabbath Service Desk. Your plans, settings and OBS scenes keep working as before.',
+    'Plan: the Next screen shows the next part of the plan, and Live shows what is live from the plan (unless you put something else on Next yourself).',
+    'Plan: a banner shown from the plan no longer starts banner music. In Basic, double-tap a part to put it on the screen at once.',
+    'Video: when only a music file is loaded, choose what the screen shows while it plays: a title with the song name (you can edit it) or one of your banners. The plan remembers the choice.',
+    'Top bar: “Update ready” and the offline mark moved to the right, next to Comments and Install.',
+    'The Afrikaans Bible 1933/53 is built in again.',
+    'Hymns: the green button now says Present and shows the words with no music. Present & play still starts the music too.',
+    'Bible and Hymn screen look: choose an own background picture, how dark it is and how it fits, just like Settings → Screen.',
+    'A new device starts with a ready-made setup (screen look, banners, service plan templates, Afrikaans and Xhosa Bibles downloaded when online). A device you have already set up keeps its own settings.',
+    'Settings → About names WiFi vs The Word Ministries above the maker.',
+    'Setup: type the church name or town and the location (for sunset times) is found online, or this device is asked for it.',
+    'Stream: the verse in the lower third changes a little faster, in step with the screen.',
+    'Listen: understands English and Afrikaans, and finds hymns by name or number in both languages.',
+    'Closing the app also closes the projector, stage and OBS windows it opened.',
+  ] },
   { date: '2026-11-06', items: [
-    'Settings → About: who made SDA Sabbath and why, a WhatsApp button, “Contribute towards this mission”, and this list of versions.',
+    'Settings → About: who made Sabbath Service Desk and why, a WhatsApp button, “Contribute towards this mission”, and this list of versions.',
     'Advent Lofliedere built in with its words and music: about 150 hymns play the SDA Hymnal tune of the same hymn.',
     'Listen & Translate (browser): answers every time a verse or hymn is mentioned, not only the first time, and no longer offers half-heard references.',
     'Stream: the hymn verses run along the bottom with a verse label; the lower third can be customised; OBS setup in three steps.',
@@ -59,7 +75,7 @@ export const CHANGELOG = [
     'Stage, OBS and stream tools; editable banners from slides; Plan export to Word; safer data handling.',
   ] },
   { date: '2026-10-22', items: [
-    'Offline: SDA Sabbath keeps working without internet, whatever happens.',
+    'Offline: Sabbath Service Desk keeps working without internet, whatever happens.',
   ] },
   { date: '2026-10-21', items: [
     'Saved banners and groups work with banners of several slides; the projector stays full screen.',

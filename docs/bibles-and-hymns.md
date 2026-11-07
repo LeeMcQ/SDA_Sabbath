@@ -2,9 +2,8 @@
 
 ## Bibles
 
-Built in (public domain): **KJV** and **WEB**.
-The **Afrikaanse Bybel 1933/53** (© Bybelgenootskap van Suid-Afrika 1933, 1953), **NIV** (© Biblica) and the
-**1975 Xhosa Bible** (© Bible Society of South Africa) cannot be shipped publicly; for the Afrikaans Bible a
+Built in: **KJV**, **WEB** and the **Afrikaanse Bybel 1933/53**.
+**NIV** (© Biblica) and the **1975 Xhosa Bible** (© Bible Society of South Africa) cannot be shipped publicly; a
 complete text in an app needs the Bible Society's written permission (copyright@biblesociety.co.za). Each church adds its own licensed copy:
 
 - **On one device:** Settings → Bibles & hymns → **Add a Bible**. Search the list and press **Add**, or choose a
@@ -42,7 +41,7 @@ The list (`js/core/hymnsources.js`) is built in, so it shows even when GitHub is
   hymns plus 257 more songs), French (Hymnes et Louanges), Icibemba, isiZulu/Ndebele, Kalenjin, Kamba, Kikuyu,
   Kinyarwanda, Maasai, Portuguese (Novo Hinário Adventista), Russian, Sepedi, Shona, Sesotho, Spanish (Himnario
   Adventista), Swahili, Tonga, Setswana, Tumbuka, Twi, Tshivenda, isiXhosa and Xitsonga. These files keep each stanza on
-  one line, so SDA Sabbath breaks it into lines where a new line of the hymn starts (punctuation, then a capital) and
+  one line, so Sabbath Service Desk breaks it into lines where a new line of the hymn starts (punctuation, then a capital) and
   halves lines that are still too long.
   **The English SDA Hymnal** also fills in the words of the built-in *SDA Hymnal 1985* for
   every hymn whose title matches and that has no words yet, so those hymns play with their offline music, and plans and
@@ -60,7 +59,7 @@ may use the words (many SDA Hymnal texts are under copyright), and a live stream
 **Advent Lofliedere** (Afrikaans) is built in with all its words, so it is not in
 any download list. The setup offers *Our church's own hymnbook file* for any language without a download.
 
-**From a file** (in the same dialog): VideoPsalm songbooks (`.vpc`, which is a zip, or the `.json` inside it), SDA Sabbath
+**From a file** (in the same dialog): VideoPsalm songbooks (`.vpc`, which is a zip, or the `.json` inside it), Sabbath Service Desk
 hymnbooks (`.json`), the Liedboek JSON format, and text with `# 73 Title` before each hymn. **Import licensed words**
 reads VideoPsalm songbooks too, so a church with the English SDA Hymnal in VideoPsalm can fill in the built-in book by
 number.
@@ -87,7 +86,7 @@ A church adds the words of any other song on its own devices (CCLI, or the publi
 Your own hymnbook files go in with
 **Hymns → ⋯ → Add a hymnbook** (the form under the list):
 
-- JSON (SDA Sabbath format, formerly "Selah"):
+- JSON (Sabbath Service Desk format, formerly "Selah"):
   ```json
   { "id": "sda-en", "name": "SDA Hymnal", "short": "SDAH", "lang": "en",
     "hymns": [ { "n": 73, "t": "Holy, Holy, Holy", "a": "Reginald Heber",
@@ -123,7 +122,7 @@ and **Shared Hymns**, with one book per language: *English*, *Afrikaans*, *isiXh
   ("2 new shared hymns: Afrikaans 1, English 1"). They are marked *Shared* and work offline afterwards.
 
 **The robot** (`.github/workflows/chorus.yml`, `tools/chorus_bot.py`) answers on the issue within minutes: it reads the
-language, tidies the words (capitals, spaces, quotes), refuses songs already in SDA Sabbath in that language or not cleared
+language, tidies the words (capitals, spaces, quotes), refuses songs already in Sabbath Service Desk in that language or not cleared
 for sharing, flags typos and near-duplicates, compares the words with a public lyrics database (LRCLIB), and looks for a MIDI
 file (a .zip dropped into the issue, or a close title match on BitMidi). **The maintainer adds the label `chorus-approved`** and
 the robot adds the song to `data/hymns/community/shared.json` with its language and the next shared number in that language,
@@ -153,8 +152,8 @@ MIDI files are played by a SoundFont synthesizer inside the browser (SpessaSynth
 SoundFont and the author's recommended GS reverb (59) and chorus (43, Chorus 3) — the same sound you get from
 Falcosoft MIDI Player with that SoundFont. Nothing is streamed: it works with no internet.
 
-- **Play music** plays the accompaniment for exactly the stanzas you chose to sing: introduction, then one verse of
-  music per stanza, with the real ending on the last one. **Present & play** puts the hymn on the screen and starts
+- **Present** puts the hymn on the screen with no music. **Present & play** plays the accompaniment for exactly the stanzas you chose to sing: introduction, then one verse of
+  music per stanza, with the real ending on the last one, and puts the hymn on the screen and starts
   the music together; press **M** to play/pause.
 - **Words follow music:** while the hymn is live, the slides change with the music (title during the introduction,
   each stanza and chorus as it is reached). Press → / ← at any time to take over.

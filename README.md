@@ -1,11 +1,11 @@
-# SDA Sabbath — offline church presenter for SDA media teams
+# Sabbath Service Desk — offline church presenter for SDA media teams
 
-SDA Sabbath shows Bible passages, hymns, slides, videos, web pages and your PC screen on the projector
+Sabbath Service Desk shows Bible passages, hymns, slides, videos, web pages and your PC screen on the projector
 (the extended screen) while the operator prepares what comes next on the main screen. It is a
 Progressive Web App: install it once and it runs with **no internet**, on old PCs and 1–2 GB phones.
 
 ```
-┌ SDA Sabbath ─ ● Display: Projector ─ [ Go to… John 3:16 / hymn 73 ] ────── [▶ Present  F5 ] ┐
+┌ Sabbath Service Desk ─ ● Display: Projector ─ [ Go to… John 3:16 / hymn 73 ] ────── [▶ Present  F5 ] ┐
 │ Bible  │                                                         │ ○ Next  (green)          │
 │ Hymns  │   the selected tab's options for what goes on next      │ ● Live  (red)            │
 │ Banners│                                                         │ Black · Logo · Clear     │
@@ -39,7 +39,7 @@ Everything that listens to the service, in one place.
 - **Listen for verses & hymns** offers the Bible verses and hymns that are mentioned — by number (“hymn 100”,
   “number 73 in our hymnal”) or by name (“let us sing Great Is Thy Faithfulness”) — as cards under
   Black / Logo / Clear (on phones above the tabs). While a hymn is on screen it follows the singing and offers the
-  stanza being sung. Nothing goes on screen by itself. **Hear with:** *Offline translator* (the SDA Sabbath
+  stanza being sung. Nothing goes on screen by itself. **Hear with:** *Offline translator* (the Sabbath Service Desk
   translator on this PC: no internet, and it also recognises Bible verses quoted without a reference),
   *Browser* (Chrome or Edge, online), or *Automatic* (the translator when it runs, otherwise the browser).
 - **Live translation** turns the Afrikaans sermon into English captions on the screen, offline on the church PC
@@ -53,11 +53,11 @@ Everything that listens to the service, in one place.
 
 | Tab | What you can do |
 |---|---|
-| **Bible** | Type `John 3:16-18`, `Ps 23`, `Joh 3:16` (Afrikaans) or tap book → chapter → verses. KJV and WEB are built in (licensed Bibles such as the Afrikaans 1933/53 are added by the church); add NIV, ESV, NKJV, Xhosa or any licensed Bible. Two translations side by side (e.g. English + isiXhosa). Text grows to fill the screen; long passages split into readable slides automatically. “Keep reading” shows the next verses when the preacher carries on. Full-text search. A row of verse numbers above the verses puts any verse one tap away, and the list keeps the live verse in view. |
+| **Bible** | Type `John 3:16-18`, `Ps 23`, `Joh 3:16` (Afrikaans) or tap book → chapter → verses. KJV, WEB and the Afrikaans 1933/53 are built in; add NIV, ESV, NKJV, Xhosa or any licensed Bible. Two translations side by side (e.g. English + isiXhosa). Text grows to fill the screen; long passages split into readable slides automatically. “Keep reading” shows the next verses when the preacher carries on. Full-text search. A row of verse numbers above the verses puts any verse one tap away, and the list keeps the live verse in view. |
 | **Hymns** | Type the number or words. Title slide, one stanza per slide, chorus repeated automatically, choose which stanzas to sing (1, 2, 4). Tap a stanza to make it Next (also while the hymn is on screen); double-tap, Enter or Present shows it. Jump to any stanza from the control bar. Edit or add hymns; export hymnbooks. **Add a hymnbook** works like Add a Bible: SDA hymnals in 26 languages (isiXhosa, isiZulu, Sesotho, Setswana, Shona, Swahili, French, Portuguese, Spanish …), the SID Hymnal and early Adventist hymnals download once and then work offline; VideoPsalm songbooks open too. |
 | **Slides** | PDF, PowerPoint (.pptx) and pictures. Converted once on import and kept offline. Speaker notes shown to the operator. Auto-advance loop for announcements. |
 | **Video** | VLC-style player: playlist with auto-next and repeat, speed 0.25×–4×, A-B repeat, loop, frame step, fade in/out, volume boost to 200 %, 10-band equaliser with presets, fit/fill/stretch, zoom, rotate, mirror, brightness/contrast/colour/hue, .srt/.vtt subtitles, snapshots. Music can play **in the background** while lyrics stay on screen. |
-| **Web & PC** | Two parts in one tab. **Web page:** *Mirror a tab* — the projector shows exactly that browser tab, without the mouse pointer (scroll/zoom it from SDA Sabbath in Chrome); *Embed* — YouTube and embeddable sites load directly on the display. **PC screen:** share the whole screen, one window (e.g. PowerPoint or a Bible app) or a tab; see it live inside SDA Sabbath. **Freeze** keeps the last picture up while you work privately. The **mini controller** floats on top of other programs. |
+| **Web & PC** | Two parts in one tab. **Web page:** *Mirror a tab* — the projector shows exactly that browser tab, without the mouse pointer (scroll/zoom it from Sabbath Service Desk in Chrome); *Embed* — YouTube and embeddable sites load directly on the display. **PC screen:** share the whole screen, one window (e.g. PowerPoint or a Bible app) or a tab; see it live inside Sabbath Service Desk. **Freeze** keeps the last picture up while you work privately. The **mini controller** floats on top of other programs. |
 | **Plan** | Prepare the order of service at home (one-tap Divine Service, Sabbath School, Vespers/AY, Communion, Prayer Meeting, Thirteenth Sabbath, Baptism, Child Dedication, Pathfinder/Adventurer Investiture and Week of Prayer templates, with suggested roles such as Elder of the day, or **your own templates**: build a plan once, then ⋯ → Save as template, with or without its hymns and readings, and make it the default for new plans). Type in the Add box — “hymn 73”, “Amazing grace”, “John 3:16-18”, a slide deck, video or banner name — and pick a suggestion, or use **Add media…** (Bible verse ranges and whole chapters, hymns and choruses by number or words, slides, video, banners, web pages; new files can be added right there). Attach or change the media of each part while it keeps its name (“Opening Hymn — Hymn 73”), rename parts, add who leads them, drag parts into order, see progress and what is **On screen**, undo a removal, copy the order as text, export it to Word, **save or share it with its media** (⋯ → Save or share this plan: one `.sdaplan` file with the slides, pictures, banners and videos it uses; Bible passages and hymns go as references; templates can be shared the same way from ⋯ → Templates → Share, and opened on another device with ⋯ → Open a shared plan or template, as a plan or as the default template), and step through it in church with **Next part** (it becomes Next; Present shows it). |
 | **Banners & Music** | Welcome, verse, announcement, offering (with giving QR code), countdown and Sabbath-sunset banners drawn live on the display; a self-running pre-service loop; **background music** that starts with the banners and fades out when something else goes on screen; key verses for the 28 Fundamental Beliefs and sermon topics. See [Banners](docs/banners-and-ai.md#banners) and [Banner music](docs/banners-and-ai.md#banner-music). |
 | **Tools → Stage** | The **second screen for the people on the platform** (confidence monitor): the slide on screen and what comes next, the words in large type, speaker notes, the time, speaker timers, your messages and the order of service — never shown to the congregation. Open it on another monitor, cast it, or let pastors and singers **follow on their own phones and laptops** with a QR code or a short room code. See [Stage screen](docs/stage-and-obs.md#stage-screen)). |
@@ -95,13 +95,12 @@ a local web address. Everything is explained in the guides below.
 
 ## Credits and licences
 
-- Bible texts: KJV and WEB (public domain). The Afrikaanse Bybel 1933/53 is © Bybelgenootskap van Suid-Afrika and is
-  not shipped: a church with permission adds its own copy (`licensed/README.md`).
+- Bible texts: KJV and WEB (public domain) and the Afrikaanse Bybel 1933/53 (see THIRD_PARTY_NOTICES.md).
 - Hymns: the SDA Hymnal 1985 and the Advent Lofliedere are built in with their words. Shared Hymns – English (choruses and Malmesbury Praise) are listed by number and title
   only; words are included only where they are public domain (and the 1941 Church Hymnal). Each church adds other
   words under its own licence (Hymns → ⋯ → Import licensed words), like OpenLP and FreeShow.
 - Logo: a neutral open-Bible mark. The Seventh-day Adventist® Church symbol is not shipped; churches upload their own logo.
-  SDA Sabbath is an independent tool, not an official product of the Seventh-day Adventist Church.
+  Sabbath Service Desk is an independent tool, not an official product of the Seventh-day Adventist Church.
 - See `THIRD_PARTY_NOTICES.md` for every data set, font, sound and library and its licence.
 - Fonts: Atkinson Hyperlegible Next and Source Serif 4 (SIL Open Font License).
 - pdf.js (Apache 2.0), fflate (MIT), qrcode-generator (MIT), SpessaSynth (Apache 2.0), Trystero and noble-secp256k1 (MIT).
@@ -110,4 +109,4 @@ a local web address. Everything is explained in the guides below.
 - High-quality and Studio hymn sounds (`data/music/hq.sf3`, `data/music/studio.sf3`, optional downloads): Salamander Grand Piano V3 by Alexander Holm
   (CC BY 3.0) and the GrandOrgue demo pipe organ, recordings by Lars Palo (CC BY-SA 2.5) — `data/music/HQ-SOUNDS-LICENSE.txt`.
 - Hymn MIDI files: supplied by the church for its own services.
-- SDA Sabbath code: MIT (`LICENSE`, code only — not the Bible, hymn or other third-party content).
+- Sabbath Service Desk code: MIT (`LICENSE`, code only — not the Bible, hymn or other third-party content).

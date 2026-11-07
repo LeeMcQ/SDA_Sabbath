@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-SDA Sabbath offline tests: proves the app keeps working with no internet. Runs on GitHub before every
+Sabbath Service Desk offline tests: proves the app keeps working with no internet. Runs on GitHub before every
 deploy (after tests/smoke.py); a failure stops the deploy and the website keeps the last version that passed.
 
     pip install playwright && python -m playwright install chromium
@@ -255,7 +255,7 @@ def main():
                         w.goto(base + name, timeout=15000, wait_until='load')
                         if name == 'index.html': w.wait_for_function('() => !!window.__selahBooted', timeout=15000)
                         w.wait_for_timeout(700)
-                        if 'SDA Sabbath' not in w.title(): bad.append(name + ' (' + w.title() + ')')
+                        if 'Sabbath Service Desk' not in w.title(): bad.append(name + ' (' + w.title() + ')')
                     except Exception as e:
                         bad.append(name + ' (' + str(e)[:60] + ')')
                     w.close()

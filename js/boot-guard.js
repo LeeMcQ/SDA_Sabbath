@@ -1,5 +1,5 @@
 // Start-up safety net (a plain script, so it runs even if the app's modules cannot load).
-// If SDA Sabbath has not started after a while, explain what to do instead of showing a blank page.
+// If Sabbath Service Desk has not started after a while, explain what to do instead of showing a blank page.
 (function () {
   // The browser's "can be installed" signal often comes before the app's modules have loaded, and it is not sent
   // again: keep it here so the Install button can use it (js/app.js picks it up from window.__installPrompt).
@@ -16,7 +16,7 @@
     d.id = 'bootGuard';
     d.setAttribute('role', 'alert');
     d.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#161c28;color:#e9e4d8;font:16px/1.5 system-ui,sans-serif;padding:24px';
-    d.innerHTML = '<div style="max-width:520px"><h2 style="margin:0 0 10px">SDA Sabbath is taking long to start</h2>' +
+    d.innerHTML = '<div style="max-width:520px"><h2 style="margin:0 0 10px">Sabbath Service Desk is taking long to start</h2>' +
       '<p style="margin:0 0 14px">' + (navigator.onLine ? 'Part of the app did not load.' : 'This device is offline and part of the app did not load from its offline copy.') +
       ' Try these in order:</p><div style="display:flex;flex-wrap:wrap;gap:8px">' +
       '<button id="bgReload" style="padding:8px 14px">Reload</button>' +

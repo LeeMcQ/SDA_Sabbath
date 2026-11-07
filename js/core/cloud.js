@@ -1,4 +1,4 @@
-// SDA Sabbath cloud (Supabase, see cloud-config.js and supabase/): the person's account, install and usage
+// Sabbath Service Desk cloud (Supabase, see cloud-config.js and supabase/): the person's account, install and usage
 // statistics, and feedback. Everything here is optional and best-effort: without internet (or without a cloud
 // set up) the app works as before; counts and messages wait on this device and are sent later.
 //
@@ -35,7 +35,7 @@ cloud.installId = () => {
 
 // ------------------------------------------------------------ requests
 async function call(path, { method = 'GET', body, auth = true, keepalive = false, raw = false, timeout = 15000 } = {}) {
-  if (!cloud.enabled()) throw new Error('The SDA Sabbath cloud is not set up.');
+  if (!cloud.enabled()) throw new Error('The Sabbath Service Desk cloud is not set up.');
   if (auth) await freshSession();
   const token = auth && cloud.session ? cloud.session.access_token : CLOUD.anonKey;
   const ctl = new AbortController();

@@ -4,10 +4,11 @@
 //   #mode=lower   a transparent overlay with lower thirds: the Bible verse or hymn words on screen
 //                 (automatically), names and announcements sent from Tools → Stream, a scrolling
 //                 ticker and the church logo in the corner.
-// It follows the operator's SDA Sabbath like a stage screen does: by room code over the internet
+// It follows the operator's Sabbath Service Desk like a stage screen does: by room code over the internet
 // (#c=CODE), on the church network through the companion (?via=lan), or as the preview in the app.
 // Nothing about the connection is ever drawn on the stream once it is connected.
 import { h, clear, uid, APP_SCOPE } from './core/util.js';
+import { watchApp } from './core/alive.js';
 import { createStage, fitBody, sanitizeSlideHtml, frameOf } from './core/render.js';
 import { createEncoder, createDecoder } from './core/wire.js';
 import { normCode, joinStageRoom, relaysFrom, createFollower, canVerify } from './core/stagenet.js';
@@ -33,7 +34,7 @@ if (BG) {
   document.documentElement.style.setProperty('background', BG, 'important');
   document.body.style.setProperty('background', BG, 'important');
   document.body.style.cursor = 'none';
-  document.title = 'SDA Sabbath · ' + (MODE === 'full' ? 'slides' : 'lower third') + ' (HDMI)';
+  document.title = 'Sabbath Service Desk · ' + (MODE === 'full' ? 'slides' : 'lower third') + ' (HDMI)';
   const goFull = () => { const el = document.documentElement; if (!document.fullscreenElement && el.requestFullscreen) el.requestFullscreen().catch(() => {}); };
   addEventListener('dblclick', () => { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); else goFull(); });
   addEventListener('keydown', (e) => { if (e.key === 'f' || e.key === 'F' || e.key === 'F11') { e.preventDefault(); goFull(); } });
@@ -156,7 +157,7 @@ function paintLower() {
   };
   // Same kind of lower third already up (the next verse): change the words in place; otherwise slide in.
   const go = (f) => (document.fonts && document.fonts.status !== 'loaded' ? document.fonts.ready.then(f) : f()); // fit with the real font
-  if (wasShown && lt.classList.contains('in') && lt.dataset.kind === want.kind) { lt.classList.add('swap'); swapT = setTimeout(() => go(() => { fill(); lt.classList.remove('swap'); }), 180); }
+  if (wasShown && lt.classList.contains('in') && lt.dataset.kind === want.kind) { lt.classList.add('swap'); swapT = setTimeout(() => go(() => { fill(); lt.classList.remove('swap'); }), 100); }
   else if (wasShown && lt.classList.contains('in')) { lt.classList.remove('in'); swapT = setTimeout(() => go(fill), 380); }
   else go(fill);
 }
@@ -229,7 +230,7 @@ function paintFull() {
 
 setInterval(() => { paintLower(); }, 500);
 
-// ------------------------------------------------------------ messages from SDA Sabbath
+// ------------------------------------------------------------ messages from Sabbath Service Desk
 function onMsg(m) {
   if (!m || typeof m !== 'object' || !m.t) return;
   if (m.to && m.to !== SID) return;
@@ -266,11 +267,11 @@ function setConn(state, text) {
   // Only shown while setting up (the first minute), never while OBS is streaming or recording.
   if (PREVIEW || Date.now() - started > 60000 || obsLive) { pill.hidden = true; return; }
   pill.hidden = false;
-  pill.textContent = S.timedOut ? timeoutWords() : text || 'SDA Sabbath: connecting…';
+  pill.textContent = S.timedOut ? timeoutWords() : text || 'Sabbath Service Desk: connecting…';
 }
 setInterval(() => { if (S.conn !== 'on' && !pill.hidden && Date.now() - started > 60000) pill.hidden = true; }, 2000);
 
-// Not connected after a while (no internet, wrong room code, SDA Sabbath closed): say so instead of "connecting…"
+// Not connected after a while (no internet, wrong room code, Sabbath Service Desk closed): say so instead of "connecting…"
 // for ever, with the address that works on the church network without internet (the companion on this PC, or the
 // one given as &lan=… in the address). Same rule as above: only while setting up, never on air.
 const CONNECT_TIMEOUT = 15000;
@@ -278,9 +279,9 @@ const lanBase = () => { const l = get('lan'); return /^https?:\/\/[^\s"<>]+$/i.t
 function timeoutWords() {
   const offline = navigator.onLine === false;
   const lan = lanBase() + '/obs.html?via=lan&mode=' + MODE;
-  if (VIA === 'lan') return 'SDA Sabbath: not connected after ' + CONNECT_TIMEOUT / 1000 + ' s. Is the SDA Sabbath companion running on ' + location.host + ', and SDA Sabbath open on that PC at http://localhost:' + (location.port || '7777') + '?';
-  return 'SDA Sabbath: not connected after ' + CONNECT_TIMEOUT / 1000 + ' s. ' + (offline ? 'This PC has no internet. ' : 'Check the internet and that SDA Sabbath is open on the media desk with the same room code. ') +
-    'Without internet, run the SDA Sabbath companion and use this address instead: ' + lan;
+  if (VIA === 'lan') return 'Sabbath Service Desk: not connected after ' + CONNECT_TIMEOUT / 1000 + ' s. Is the Sabbath Service Desk companion running on ' + location.host + ', and Sabbath Service Desk open on that PC at http://localhost:' + (location.port || '7777') + '?';
+  return 'Sabbath Service Desk: not connected after ' + CONNECT_TIMEOUT / 1000 + ' s. ' + (offline ? 'This PC has no internet. ' : 'Check the internet and that Sabbath Service Desk is open on the media desk with the same room code. ') +
+    'Without internet, run the Sabbath Service Desk companion and use this address instead: ' + lan;
 }
 setTimeout(() => { if (S.conn !== 'on') { S.timedOut = true; setConn(S.conn, timeoutWords()); } }, CONNECT_TIMEOUT);
 
@@ -307,6 +308,8 @@ function viaWindow() {
   try { host = window.opener && !window.opener.closed ? window.opener : null; } catch (e) { host = null; }
   if (!host && window.parent !== window) host = window.parent;
   if (!host) return false;
+  // An HDMI window the app opened closes with the app (an OBS browser source has no opener and stays).
+  if (window.opener) watchApp(() => { try { window.close(); } catch (e) { /* */ } });
   tx = { send: (m) => host.postMessage(Object.assign({ stage: 1 }, m), location.origin) };
   window.addEventListener('message', (e) => {
     if (e.origin !== location.origin || e.source !== host || !e.data || !e.data.t || e.data.stage === 1) return;
@@ -321,7 +324,7 @@ function viaWindow() {
 }
 function viaLan() {
   let wait = 1000;
-  setConn('connecting', 'SDA Sabbath: connecting on the church network…');
+  setConn('connecting', 'Sabbath Service Desk: connecting on the church network…');
   const connect = () => {
     const ws = new WebSocket((location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + location.host + '/ws?role=display&room=stage');
     ws.binaryType = 'arraybuffer';
@@ -334,14 +337,14 @@ function viaLan() {
   connect();
 }
 async function viaCode(code) {
-  setConn('connecting', 'SDA Sabbath: connecting to the media desk…');
-  if (!canVerify()) { setConn('idle', 'SDA Sabbath: this address must start with https://'); return; }
+  setConn('connecting', 'Sabbath Service Desk: connecting to the media desk…');
+  if (!canVerify()) { setConn('idle', 'Sabbath Service Desk: this address must start with https://'); return; }
   // Only the media desk whose key matches the address (#h=…) is followed; anyone else with the room code is ignored.
   follower = createFollower({
     code, fp: get('h'),
     hello: (peerId, nonce) => { if (room) room.send(peerId, helloMsg(nonce)); },
     onMsg,
-    onLost: () => setConn('waiting', 'SDA Sabbath: waiting for the media desk…'),
+    onLost: () => setConn('waiting', 'Sabbath Service Desk: waiting for the media desk…'),
   });
   const go = async () => {
     try {
@@ -353,9 +356,9 @@ async function viaCode(code) {
         onLeave: (peerId) => follower.leave(peerId),
       });
       tx = { send: (m) => { const id = follower.hostId(); if (id) room.send(id, m); } };
-      setConn('waiting', 'SDA Sabbath: waiting for the media desk…');
+      setConn('waiting', 'Sabbath Service Desk: waiting for the media desk…');
     } catch (e) {
-      setConn('idle', 'SDA Sabbath: could not connect (' + ((e && e.message) || e) + '). Retrying…');
+      setConn('idle', 'Sabbath Service Desk: could not connect (' + ((e && e.message) || e) + '). Retrying…');
       setTimeout(go, 5000);
     }
   };
@@ -367,5 +370,5 @@ async function viaCode(code) {
   if (VIA === 'lan') { viaLan(); return; }
   const code = normCode(get('c'));
   if (code) { viaCode(code); return; }
-  setConn('idle', 'SDA Sabbath for OBS: this address needs a room code. Copy it from SDA Sabbath → Tools → Stream.');
+  setConn('idle', 'Sabbath Service Desk for OBS: this address needs a room code. Copy it from Sabbath Service Desk → Tools → Stream.');
 })();

@@ -1,6 +1,6 @@
 // OBS Studio remote control through obs-websocket 5 (built into OBS 28 and newer: Tools → WebSocket Server
 // Settings). Used to connect, set up the stream outputs in one click, switch scenes with what is on screen,
-// and show / start the stream and the recording from SDA Sabbath. None of this is needed for the outputs
+// and show / start the stream and the recording from Sabbath Service Desk. None of this is needed for the outputs
 // themselves: they also work when OBS is set up by hand (copy the address into a Browser Source).
 // Protocol: https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md
 import { emitter, debounce } from './util.js';
@@ -9,7 +9,7 @@ import { live } from './live.js';
 import { hub } from './stagehub.js';
 import { frameOf } from './render.js';
 
-// The names this app gives its scene and sources in OBS: "SDA Sabbath · Lower third", "… · Slides",
+// The names this app gives its scene and sources in OBS: "Sabbath Service Desk · Lower third", "… · Slides",
 // "… · Presentation" (Church_Service uses its own, so the two apps never take over each other's sources).
 export const obsName = (what) => (settings.v.stream.obsPrefix || 'SDA Sabbath') + ' · ' + what;
 const lowerName = () => obsName('Lower third');
@@ -51,8 +51,8 @@ async function lnaState() {
   }
   return null;
 }
-const LNA_BLOCKED = 'Chrome is blocking SDA Sabbath from reaching OBS on this computer. Click the site icon left of the address bar → Site settings → “Local network access” (in newer Chrome “Apps on device”) → Allow. Then press Connect again.';
-const LNA_PROMPT = 'Chrome asks whether SDA Sabbath may reach programs on this computer: press Allow in the box under the address bar, then press Connect again. (Missed it? Click the site icon left of the address bar → Site settings → “Local network access” / “Apps on device” → Allow.)';
+const LNA_BLOCKED = 'Chrome is blocking Sabbath Service Desk from reaching OBS on this computer. Click the site icon left of the address bar → Site settings → “Local network access” (in newer Chrome “Apps on device”) → Allow. Then press Connect again.';
+const LNA_PROMPT = 'Chrome asks whether Sabbath Service Desk may reach programs on this computer: press Allow in the box under the address bar, then press Connect again. (Missed it? Click the site icon left of the address bar → Site settings → “Local network access” / “Apps on device” → Allow.)';
 
 /** Send one request; resolves with responseData, rejects with OBS's own explanation. */
 obs.call = (requestType, requestData) => new Promise((resolve, reject) => {
@@ -73,7 +73,7 @@ obs.connect = (opts = {}) => new Promise(async (resolve) => {
   catch (e) { setState('error', 'That address is not valid (example: ws://127.0.0.1:4455).'); resolve(false); return; }
   // A secure page (the published site) may only open an unencrypted ws:// connection to this computer.
   if (location.protocol === 'https:' && /^ws:/i.test(url) && !isLoopback(host)) {
-    setState('error', 'This page (https) cannot reach OBS on another computer directly. Either run OBS on this PC, or open SDA Sabbath from the companion on the OBS computer (http://localhost:7777) — or set OBS up by hand with the addresses below.');
+    setState('error', 'This page (https) cannot reach OBS on another computer directly. Either run OBS on this PC, or open Sabbath Service Desk from the companion on the OBS computer (http://localhost:7777) — or set OBS up by hand with the addresses below.');
     resolve(false); return;
   }
   want = true; quiet = !!opts.quiet;
@@ -108,7 +108,7 @@ obs.connect = (opts = {}) => new Promise(async (resolve) => {
         const ident = { rpcVersion: 1, eventSubscriptions: (1 << 0) | (1 << 2) | (1 << 6) | (1 << 10) };
         if (d.authentication) {
           if (!pass) { want = false; setState('auth', 'OBS asks for a password: OBS → Tools → WebSocket Server Settings → Show Connect Info.'); sock.close(); finish(false); return; }
-          if (!(self.crypto && crypto.subtle)) { want = false; setState('error', 'This page cannot check the OBS password here (it needs https or http://localhost). Open SDA Sabbath at http://localhost on the OBS computer, or turn off authentication in OBS.'); sock.close(); finish(false); return; }
+          if (!(self.crypto && crypto.subtle)) { want = false; setState('error', 'This page cannot check the OBS password here (it needs https or http://localhost). Open Sabbath Service Desk at http://localhost on the OBS computer, or turn off authentication in OBS.'); sock.close(); finish(false); return; }
           const secret = await sha256b64(pass + d.authentication.salt);
           ident.authentication = await sha256b64(secret + d.authentication.challenge);
         }
@@ -142,7 +142,7 @@ obs.connect = (opts = {}) => new Promise(async (resolve) => {
     // the spec says not to reconnect by ourselves after these.
     if (e.code === 4009) { want = false; setState('auth', 'The OBS WebSocket password is not right.'); finish(false); return; }
     if (e.code === 4010) { want = false; setState('error', 'This OBS WebSocket version is not supported (needs OBS 28 or newer).'); finish(false); return; }
-    if (e.code === 4011) { want = false; setState('error', 'OBS disconnected SDA Sabbath (kicked in OBS → WebSocket Server Settings). Connect again when ready.'); finish(false); return; }
+    if (e.code === 4011) { want = false; setState('error', 'OBS disconnected Sabbath Service Desk (kicked in OBS → WebSocket Server Settings). Connect again when ready.'); finish(false); return; }
     if (!want) { setState(obs.state === 'error' || obs.state === 'auth' ? obs.state : 'off', obs.error); finish(false); return; }
     let why = opened ? 'Connection to OBS lost.' : 'OBS did not answer at ' + url + '. Is OBS open, and is “Enable WebSocket server” ticked (OBS → Tools → WebSocket Server Settings)?';
     if (!opened && lnaBefore && lnaBefore !== 'granted') why = lnaBefore === 'denied' ? LNA_BLOCKED : LNA_PROMPT;
@@ -207,7 +207,7 @@ function onEvent(type, d) {
 }
 
 /** Put a scene on air. In Studio Mode it goes to Preview instead (the operator presses Transition), unless asked otherwise. */
-/** Is OBS set up for SDA Sabbath (presentation scene and camera scene known)? Needed to follow the slides. */
+/** Is OBS set up for Sabbath Service Desk (presentation scene and camera scene known)? Needed to follow the slides. */
 obs.isSetUp = () => {
   const s = settings.v.stream;
   return obs.state === 'on' && !!s.camScene && !!s.presScene && obs.scenes.includes(s.camScene) && obs.scenes.includes(s.presScene);

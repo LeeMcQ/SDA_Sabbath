@@ -104,7 +104,7 @@ export function planWord(model) {
   }
 
   const blob = buildDocx({ body: out.join(''), landscape, title: (model.church ? model.church + ' – ' : '') + (model.title || 'Order of service'), author: model.church || 'SDA Sabbath',
-    footerLeft: (model.church ? model.church + '  ·  ' : '') + (model.title || 'Order of service') + '  ·  made with SDA Sabbath' + (model.generated ? ', ' + model.generated : '') });
+    footerLeft: (model.church ? model.church + '  ·  ' : '') + (model.title || 'Order of service') + '  ·  made with Sabbath Service Desk' + (model.generated ? ', ' + model.generated : '') });
   return blob.slice(0, blob.size, DOCX_TYPE);
 }
 function toMin(hhmm) { const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm || ''); return m ? +m[1] * 60 + +m[2] : 9 * 60 + 30; }

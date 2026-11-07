@@ -1,7 +1,7 @@
 // Tools → Listen & Translate: everything that listens to the service in one place.
 //   Listen for verses & hymns   (listen-part.js; the cards appear beside Next / Live)
 //   Translation on phones       the "translation on your phone" slide with its QR code (trjoin.js)
-//   Live translation            the SDA Sabbath translator settings (translate-part.js)
+//   Live translation            the Sabbath Service Desk translator settings (translate-part.js)
 import { h, clear } from '../core/util.js';
 import { icon } from '../core/icons.js';
 import { fmtCode } from '../core/stagenet.js';

@@ -1,6 +1,6 @@
-// Live translation on a phone (stage.html#c=CODE&v=tr): the English sentences of the sermon as the SDA Sabbath
+// Live translation on a phone (stage.html#c=CODE&v=tr): the English sentences of the sermon as the Sabbath Service Desk
 // translator writes them, newest at the bottom in large type. Light, quiet and readable in a church: the
-// neutral SDA Sabbath mark, the church's name, Advent Sans headings and Atkinson Hyperlegible text.
+// neutral Sabbath Service Desk mark, the church's name, Advent Sans headings and Atkinson Hyperlegible text.
 // It follows the media desk over the same room code as the stage screen (js/stage-main.js does the connecting).
 import { h, clear } from './core/util.js';
 import { SYMBOL_ROUND } from './core/symbol.js';

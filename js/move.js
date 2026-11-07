@@ -25,8 +25,8 @@ export async function checkMove() {
 }
 
 export function offerMove() {
-  modal({ title: 'SDA Sabbath has a new address', body: h('div.col', { style: { gap: '10px' } },
-    h('p', h('b', NEW_HOST), ' — Sabbath Service Desk. From now on, open SDA Sabbath there (and install it there).'),
+  modal({ title: 'Sabbath Service Desk has a new address', body: h('div.col', { style: { gap: '10px' } },
+    h('p', h('b', NEW_HOST), ' — Sabbath Service Desk. From now on, open Sabbath Service Desk there (and install it there).'),
     h('p', 'Your plans, hymnbooks, Bibles, banners, slides and settings are saved at this old address. ', h('b', 'Move my data'), ' copies them to the new address in one step. Videos are not copied: add them again there.'),
     h('p.note', 'Keep this window open until the new address says it is done.')),
   actions: [

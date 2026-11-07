@@ -129,7 +129,7 @@ export default function create(ctx) {
       }).catch(() => {});
       rc.append(h('div.row.wrap', qrBox, h('div.col', h('code', url), h('p.note', 'TV or second PC as the screen: open ' + (comp.urls && comp.urls[0] || location.origin) + '/display.html?via=ws&pin=' + (comp.pin || 'PIN')))));
     } else {
-      rc.append(h('p.note', 'The companion on the church PC adds a phone remote, a smart-TV screen, videos from the PC and exact PowerPoint. Open SDA Sabbath from the address it shows. Anyone on the same Wi-Fi can open a file in its videos folder if they know the name, so keep private files out of it.'));
+      rc.append(h('p.note', 'The companion on the church PC adds a phone remote, a smart-TV screen, videos from the PC and exact PowerPoint. Open Sabbath Service Desk from the address it shows. Anyone on the same Wi-Fi can open a file in its videos folder if they know the name, so keep private files out of it.'));
       rc.append(h('a.btn.primary', { href: 'companion.html', target: '_blank', rel: 'noopener' }, icon('download'), h('span', 'Download the companion')));
     }
     box.append(rc);
@@ -151,7 +151,7 @@ export default function create(ctx) {
     h('p.note', { style: { marginTop: '10px' } }, 'Built in: KJV and WEB (public domain) and the Afrikaans 1933/53 Bible. NIV and the 1975 Xhosa Bible are copyrighted, so each church adds its own licensed copy here; it is converted once and stays offline on this device.'),
     h('h3', { style: { marginTop: '18px' } }, 'Hymnbooks'),
     hymnList,
-    h('p.note', { style: { marginTop: '10px' } }, 'Add a hymnbook downloads SDA hymnals in 26 languages (isiXhosa, isiZulu, Sesotho, Setswana, Sepedi, Shona, Tshivenda, Xitsonga, Swahili, French, Portuguese, Spanish …), the SID Hymnal and early Adventist hymnals, or reads a VideoPsalm or SDA Sabbath hymnbook file. Each is kept offline on this device and in your backups. ',
+    h('p.note', { style: { marginTop: '10px' } }, 'Add a hymnbook downloads SDA hymnals in 26 languages (isiXhosa, isiZulu, Sesotho, Setswana, Sepedi, Shona, Tshivenda, Xitsonga, Swahili, French, Portuguese, Spanish …), the SID Hymnal and early Adventist hymnals, or reads a VideoPsalm or Sabbath Service Desk hymnbook file. Each is kept offline on this device and in your backups. ',
       h('button.btn.sm', { type: 'button', onclick: async () => { await ctx.tab('hymns'); await ctx.showTab('hymns'); } }, icon('hymn'), 'Open Hymns')));
     const ts = await listTranslations(true);
     ts.forEach((t) => list.appendChild(h('div.li', icon('bible'), h('span.grow', h('div', t.abbr + ' — ' + t.name), h('div.note', { builtin: 'Built in', private: 'Included with this installation', imported: 'Added on this device' }[t.src] + (t.license ? ' · ' + t.license : ''))),
@@ -205,12 +205,12 @@ export default function create(ctx) {
       h('label', 'Low-power mode'), seg([['auto', 'Automatic' + (A.lowPower == null ? (lpNow ? ' (on)' : ' (off)') : '')], ['on', 'On'], ['off', 'Off']], A.lowPower == null ? 'auto' : A.lowPower ? 'on' : 'off', (v) => settings.set('app.lowPower', v === 'auto' ? null : v === 'on')),
       h('label', ''), h('p.note', 'Low-power mode turns off fades and the live video thumbnail, renders slides at 1280 px and shares screens at 15 frames per second — for old PCs and 1–2 GB phones.'),
       h('label', 'Install'), installedApp() ? h('span.note', 'Installed on this device.')
-        : ctx.installPrompt ? h('button.btn', { type: 'button', onclick: async () => { await ctx.promptInstall(); rebuild(); } }, icon('download'), 'Install SDA Sabbath')
+        : ctx.installPrompt ? h('button.btn', { type: 'button', onclick: async () => { await ctx.promptInstall(); rebuild(); } }, icon('download'), 'Install Sabbath Service Desk')
           : h('span.note', installSteps()),
       h('label', 'Offline'), h('div.col', { style: { gap: '6px' } }, cache,
         h('div.row.wrap', h('button.btn.sm', { type: 'button', onclick: () => { cache.textContent = 'Checking…'; if (!ctx.checkOffline || !ctx.checkOffline(true)) offlineStatus().then((t) => { cache.textContent = t; }); } }, icon('check'), 'Check & repair offline files'))),
       h('label', 'Videos you add'), seg([['ask', 'Ask each time'], ['yes', 'Keep a copy'], ['no', 'This session only']], settings.v.video.keepCopies || 'ask', (v) => settings.set('video.keepCopies', v)),
-      h('label', 'Storage'), h('div.row.wrap', storage, h('button.btn.sm', { type: 'button', onclick: async () => { const ok = await persistStorage(); toast(ok ? 'SDA Sabbath’s data is protected from automatic clean-up.' : 'The browser has not allowed it yet. Install SDA Sabbath first.', ok ? 'ok' : ''); } }, 'Protect data')),
+      h('label', 'Storage'), h('div.row.wrap', storage, h('button.btn.sm', { type: 'button', onclick: async () => { const ok = await persistStorage(); toast(ok ? 'Sabbath Service Desk’s data is protected from automatic clean-up.' : 'The browser has not allowed it yet. Install Sabbath Service Desk first.', ok ? 'ok' : ''); } }, 'Protect data')),
       h('label', 'Backup'), h('div.row.wrap',
         h('button.btn.sm.primary', { type: 'button', onclick: () => { active = 'backup'; rebuild(); } }, icon('upload'), 'Back up or move to another device'),
         h('button.btn.sm', { type: 'button', onclick: importBackup, title: 'For the .json backups made by older versions' }, 'Import an old .json backup')),
@@ -222,7 +222,7 @@ export default function create(ctx) {
         h('span.note', 'Update downloads the new version completely before switching, so the app keeps working offline. A fresh copy is only for when something misbehaves.')),
       h('label', 'Reset'), h('button.btn.sm.danger', { type: 'button', onclick: async () => { if (await confirmBox('Reset settings?', 'Return all settings to their defaults? Bibles, slides, hymns and plans stay.', 'Reset', true)) { settings.reset(); rebuild(); } } }, 'Reset settings'),
       h('label', 'Version'), h('div.col',
-        h('span.note', 'SDA Sabbath ' + ctx.VERSION),
+        h('span.note', 'Sabbath Service Desk ' + ctx.VERSION),
         h('span.note', { style: { fontFamily: 'monospace', fontSize: '12px' } }, 'main ' + (ctx.BUILD || '—')))));
     if (navigator.storage && navigator.storage.estimate) {
       const e = await navigator.storage.estimate();
@@ -328,7 +328,7 @@ export default function create(ctx) {
   section('account', 'Account', (box) => accountSection(box, ctx));
 
   section('about', 'About', (box) => {
-    // Who made SDA Sabbath, and why. MAKER.photo: a picture file in the app (for example 'icons/maker.jpg');
+    // Who made Sabbath Service Desk, and why. MAKER.photo: a picture file in the app (for example 'icons/maker.jpg');
     // until there is one, the initials keep its place.
     const photo = MAKER.photo
       ? h('img.maker-photo', { src: MAKER.photo, alt: MAKER.name, width: 96, height: 96 })
@@ -336,13 +336,14 @@ export default function create(ctx) {
     box.append(h('div.maker',
       photo,
       h('div.maker-text',
+        h('div.note.maker-ministry', { style: { fontWeight: '700', letterSpacing: '.02em' } }, 'WiFi vs The Word Ministries'),
         h('h3', 'Made by ' + MAKER.name),
         h('div.note', MAKER.church),
         h('p', 'As media volunteers we often work so hard on good media for the service that we miss the sermon '
-          + 'ourselves. SDA Sabbath brings the whole media process together in one place, so preparing is quicker '
+          + 'ourselves. Sabbath Service Desk brings the whole media process together in one place, so preparing is quicker '
           + 'and on Sabbath the media team can worship and hear the Word too.'),
         h('div.row.wrap.maker-btns',
-          h('a.btn.primary', { href: 'https://wa.me/' + MAKER.whatsapp + '?text=' + encodeURIComponent('Hi Lee, about SDA Sabbath: '),
+          h('a.btn.primary', { href: 'https://wa.me/' + MAKER.whatsapp + '?text=' + encodeURIComponent('Hi Lee, about Sabbath Service Desk: '),
             target: '_blank', rel: 'noopener', title: 'Opens WhatsApp to send Lee a message' }, icon('msg'), h('span', 'WhatsApp Lee')),
           h('button.btn', { type: 'button', onclick: () => toast('Thank you! Contributing opens soon.', 'ok', 4000) },
             icon('star'), h('span', 'Contribute towards this mission'))))));
@@ -352,10 +353,10 @@ export default function create(ctx) {
     fetch('asset-manifest.json', { cache: 'no-store' }).then((r) => r.json()).catch(() => null)
       .then((m) => { offline.textContent = m && m.version ? m.version : (ctx.offlineHealth && ctx.offlineHealth.version) || '—'; });
     box.append(h('div.ver-box',
-      h('div', h('b', 'SDA Sabbath ' + ctx.VERSION), h('span.note', ' · free and offline, for Seventh-day Adventist media teams')),
+      h('div', h('b', 'Sabbath Service Desk ' + ctx.VERSION), h('span.note', ' · free and offline, for Seventh-day Adventist media teams')),
       h('div.note', 'Build ', h('span.mono', ctx.BUILD || '—'), ' · Offline copy ', offline),
       h('button.btn.sm', { type: 'button', title: 'Copy the version details, e.g. for a problem report', onclick: () => {
-        const t = 'SDA Sabbath ' + ctx.VERSION + ' · build ' + (ctx.BUILD || '—') + ' · offline ' + offline.textContent + ' · ' + location.host + location.pathname + ' · ' + navigator.userAgent;
+        const t = 'Sabbath Service Desk ' + ctx.VERSION + ' · build ' + (ctx.BUILD || '—') + ' · offline ' + offline.textContent + ' · ' + location.host + location.pathname + ' · ' + navigator.userAgent;
         if (navigator.clipboard) navigator.clipboard.writeText(t).then(() => toast('Version details copied.', 'ok'), () => {});
       } }, icon('copy'), h('span', 'Copy version details'))));
     box.append(h('div.row.wrap', { style: { margin: '10px 0' } },
@@ -373,7 +374,7 @@ export default function create(ctx) {
         h('p', 'Played by SpessaSynth (Apache 2.0) with the GeneralUser GS SoundFont by S. Christian Collins.'),
         h('p', 'Studio sounds: Salamander Grand Piano by Alexander Holm (CC BY 3.0) and the GrandOrgue demo pipe organ by Lars Palo (CC BY-SA 2.5).')),
       fold('Adventist name and logo',
-        h('p', '“Seventh-day Adventist®” and “Adventist®” are registered trademarks of the General Conference of Seventh-day Adventists®. SDA Sabbath is an independent tool, not an official product of the Church. Each church can add its own logo.')),
+        h('p', '“Seventh-day Adventist®” and “Adventist®” are registered trademarks of the General Conference of Seventh-day Adventists®. Sabbath Service Desk is an independent tool, not an official product of the Church. Each church can add its own logo.')),
       fold('Fonts and code',
         h('p', 'Fonts: Atkinson Hyperlegible Next, Source Serif 4 and Advent Sans (SIL Open Font License).'),
         h('p', 'Code: pdf.js (Apache 2.0), fflate, qrcode-generator, Trystero and noble-secp256k1 (MIT). ', link('vendor/VERSIONS.md', 'Full list'))),
@@ -405,7 +406,7 @@ export default function create(ctx) {
   // Updating never throws the offline copy away first: the new version is downloaded completely while the
   // old one keeps working, and only then does it take over.
   async function hardUpdate() {
-    if (!(await reallyOnline())) { toast('No internet right now. SDA Sabbath keeps working offline; update when connected.', 'err', 6000); return; }
+    if (!(await reallyOnline())) { toast('No internet right now. Sabbath Service Desk keeps working offline; update when connected.', 'err', 6000); return; }
     toast('Looking for an update…', '', 3000);
     try {
       const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null;
@@ -437,8 +438,8 @@ export default function create(ctx) {
 
   async function offlineStatus() {
     try {
-      if (!('serviceWorker' in navigator) || !window.isSecureContext) return 'Offline use needs https:// or the SDA Sabbath companion.';
-      if (!navigator.serviceWorker.controller || !window.caches) return 'Not stored yet — keep this page open for a minute, or install SDA Sabbath.';
+      if (!('serviceWorker' in navigator) || !window.isSecureContext) return 'Offline use needs https:// or the Sabbath Service Desk companion.';
+      if (!navigator.serviceWorker.controller || !window.caches) return 'Not stored yet — keep this page open for a minute, or install Sabbath Service Desk.';
       const hh = ctx.offlineHealth;
       if (hh && hh.total) return hh.missingCount ? 'Stored for offline use: ' + hh.have + ' of ' + hh.total + ' files. ' + (navigator.onLine ? 'Fetching the rest…' : 'Connect to the internet once to finish.') : 'Everything is stored for offline use (' + hh.total + ' files).';
       const man = await (await fetch('asset-manifest.json', { cache: 'no-store' })).json();
@@ -454,7 +455,7 @@ export default function create(ctx) {
     inp.onchange = async () => {
       try {
         const d = JSON.parse(await readText(inp.files[0]));
-        if (!d || typeof d !== 'object' || d.app !== 'selah') throw new Error('Not an SDA Sabbath backup.');
+        if (!d || typeof d !== 'object' || d.app !== 'selah') throw new Error('Not a Sabbath Service Desk backup.');
         if (d.settings && typeof d.settings === 'object') {
           // keep this device's AI key; never take one from a file
           const clean = sanitizeImportedSettings(d.settings);

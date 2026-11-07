@@ -1,4 +1,4 @@
-// The default logo mark: a neutral open Bible with a cross, drawn for SDA Sabbath (no third-party trademark).
+// The default logo mark: a neutral open Bible with a cross, drawn for Sabbath Service Desk (no third-party trademark).
 // The Seventh-day Adventist® Church symbol is a registered trademark of the General Conference and is not shipped:
 // a church that may use it (or any church with its own logo) uploads its logo in Settings → Screen → Logo picture.
 // SYMBOL_ROUND is the version used when the mark stands on its own (logo slide, banners, translator view).

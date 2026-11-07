@@ -1,17 +1,18 @@
 // Boot for display.html. Works with three kinds of controller:
 //   1. the control window that opened us (postMessage + direct calls for screen-share streams)
 //   2. a phone/PC using the Presentation API (Chromecast / wireless displays)
-//   3. the SDA Sabbath companion on the LAN (WebSocket), e.g. a smart-TV browser or second PC
+//   3. the Sabbath Service Desk companion on the LAN (WebSocket), e.g. a smart-TV browser or second PC
 import { createDisplay } from './display/display.js';
 import { createDecoder, createEncoder } from './core/wire.js';
 import { sanitizeSlideHtml } from './core/render.js';
 import { APP_SCOPE, keepScreenOn } from './core/util.js';
+import { watchApp } from './core/alive.js';
 // Never shown inside another website's frame (clickjacking). The app's own pages may frame each other.
 try { if (window.top !== window.self) { var sameTop = false; try { sameTop = window.top.location.origin === location.origin; } catch (e) { /* cross-origin */ } if (!sameTop) { document.documentElement.style.display = 'none'; try { window.top.location.replace(location.href); } catch (e) { /* */ } } } } catch (e) { /* */ }
 
 // Slides that arrive over a network link (the companion on the church network, or Cast) are cleaned before
 // they are drawn: only plain formatting survives, never scripts, frames, event handlers or odd links. The
-// window opened by SDA Sabbath on this PC is the app itself and needs no cleaning.
+// window opened by Sabbath Service Desk on this PC is the app itself and needs no cleaning.
 function cleanFrame(f) {
   if (!f || typeof f !== 'object') return;
   if (typeof f.html === 'string') f.html = sanitizeSlideHtml(f.html);
@@ -31,7 +32,7 @@ const outs = new Set();
 const post = (m) => outs.forEach((f) => { try { f(m); } catch (e) { /* closed */ } });
 // ?mirror=1: the second projector (same picture as the main one, videos silent).
 const MIRROR = params.get('mirror') === '1';
-if (MIRROR) document.title = 'SDA Sabbath · projector 2';
+if (MIRROR) document.title = 'Sabbath Service Desk · projector 2';
 const disp = createDisplay(root, { post, mirror: MIRROR });
 window.SelahDisplay = disp; // direct API used by the opener window (streams, snapshots)
 
@@ -71,6 +72,7 @@ try {
 // The app that opened this window was closed for good (not just reloaded): close this window too after a
 // few seconds, so no old slide is left on the projector with no one able to change it.
 if (!params.get('via') && window.opener) {
+  watchApp(() => { try { window.close(); } catch (e) { /* */ } });
   let gone = 0;
   setInterval(() => {
     let closed = true;

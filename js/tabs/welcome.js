@@ -38,7 +38,7 @@ export function openWelcome({ onClose, only } = {}) {
   let i = 0;
   const returnTo = document.activeElement;
   const live = h('div.sr', { 'aria-live': 'polite' });
-  const wrap = h('div.welcome', { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'welcome-title', 'aria-label': 'Set up SDA Sabbath' });
+  const wrap = h('div.welcome', { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'welcome-title', 'aria-label': 'Set up Sabbath Service Desk' });
   const card = h('div.welcome-card');
   wrap.append(card, live);
   // A real modal for keyboard and screen-reader users: the page behind is inert, Tab stays inside,
@@ -89,7 +89,7 @@ export function openWelcome({ onClose, only } = {}) {
     stopTest();
     const step = steps[i];
     const dots = h('div.welcome-dots', ...steps.map((s, j) => h('span' + (j === i ? '.on' : j < i ? '.done' : ''))));
-    head = (title, sub) => h('div', h('div.welcome-brand', h('img', { src: 'icons/favicon.svg', alt: '', width: 34, height: 34 }), h('span', 'SDA Sabbath')), dots, h('h2#welcome-title', { tabindex: '-1' }, title), sub ? h('p.note', sub) : null);
+    head = (title, sub) => h('div', h('div.welcome-brand', h('img', { src: 'icons/favicon.svg', alt: '', width: 34, height: 34 }), h('span', 'Sabbath Service Desk')), dots, h('h2#welcome-title', { tabindex: '-1' }, title), sub ? h('p.note', sub) : null);
     const nav = (label = 'Next', { skip = true, onNext = null } = {}) => h('div.welcome-nav',
       i > 0 ? h('button.btn', { type: 'button', onclick: back }, 'Back') : h('span'),
       h('div.grow'),
@@ -99,7 +99,7 @@ export function openWelcome({ onClose, only } = {}) {
     let body;
     if (step === 'account') {
       body = h('div.col', { style: { gap: '12px' } },
-        h('p', 'Sign in once on this device. It lets you send suggestions and see the answers, and it helps us see how many churches use SDA Sabbath. SDA Sabbath keeps working without internet.'),
+        h('p', 'Sign in once on this device. It lets you send suggestions and see the answers, and it helps us see how many churches use Sabbath Service Desk. Sabbath Service Desk keeps working without internet.'),
         signInBox({ onDone: () => next(), compact: true }));
       card.append(head('Welcome!', 'Free presentation software for Seventh-day Adventist churches.'), body,
         h('div.welcome-nav', h('div.grow'), mustSignIn() ? null : h('button.btn.ghost', { type: 'button', onclick: next }, 'Not now')));
@@ -124,7 +124,7 @@ export function openWelcome({ onClose, only } = {}) {
     if (step === 'sound') { paintSound(); return; }
     if (step === 'ready') { paintReady(); return; }
     if (step === 'stats') {
-      card.append(head('Help make SDA Sabbath better'),
+      card.append(head('Help make Sabbath Service Desk better'),
         h('div.col', { style: { gap: '12px' } },
           statsToggle(),
           h('p.note', 'Ideas or problems? Press the speech bubble at the top.')),
@@ -138,7 +138,7 @@ export function openWelcome({ onClose, only } = {}) {
       h('div.welcome-keys', ...tips.map(([k, t]) => h('div.row', h('kbd', k), h('span', t)))),
       h('p.note', 'Ideas or problems? The speech-bubble button at the top (or Settings → Account) sends a comment at any time.'),
       h('div.welcome-nav', i > 0 ? h('button.btn', { type: 'button', onclick: back }, 'Back') : h('span'), h('div.grow'),
-        h('button.btn.primary', { type: 'button', onclick: close }, icon('check'), h('span', 'Start using SDA Sabbath'))));
+        h('button.btn.primary', { type: 'button', onclick: close }, icon('check'), h('span', 'Start using Sabbath Service Desk'))));
   }
   // ------------------------------------------------------------ install first
   function paintInstall() {
@@ -146,20 +146,20 @@ export function openWelcome({ onClose, only } = {}) {
     const row = h('div.col', { style: { gap: '10px' } });
     const paintRow = () => {
       clear(row);
-      if (installed()) { row.append(h('p.inst-ok', icon('check'), h('span', 'Installed. SDA Sabbath now has its own icon and opens without the browser or internet. Carry on with the setup here, or in the app window.'))); return; }
+      if (installed()) { row.append(h('p.inst-ok', icon('check'), h('span', 'Installed. Sabbath Service Desk now has its own icon and opens without the browser or internet. Carry on with the setup here, or in the app window.'))); return; }
       // One clear button on the first page. When the browser offers its own install window, the button opens it;
       // when it does not (Safari, Firefox, or the browser is not ready yet), the button shows the steps instead.
       const steps = h('p', { hidden: true }, installSteps());
       const btn = h('button.btn.primary', { type: 'button', style: { alignSelf: 'flex-start' }, onclick: async () => {
         if (ctx.installPrompt) { await ctx.promptInstall(); paintRow(); return; }
         steps.hidden = false;
-      } }, icon('download'), h('span', 'Install SDA Sabbath'));
+      } }, icon('download'), h('span', 'Install Sabbath Service Desk'));
       row.append(btn, steps,
         h('p.note', 'It then opens from its own icon and works without internet on Sabbath.'));
     };
     paintRow();
     if (ctx.onInstallChange) ctx.onInstallChange(() => { if (row.isConnected) paintRow(); });
-    card.append(head('Install SDA Sabbath', 'First, put SDA Sabbath on this device as an app.'), row, navFor());
+    card.append(head('Install Sabbath Service Desk', 'First, put Sabbath Service Desk on this device as an app.'), row, navFor());
   }
 
   // ------------------------------------------------------------ the church's languages
@@ -262,7 +262,7 @@ export function openWelcome({ onClose, only } = {}) {
     const fileBox = (x, kind) => {
       const inp = h('input', { type: 'file', accept: kind === 'bible' ? '.json,.xml,.csv,.tsv,.txt' : '.vpc,.json,.txt', 'aria-label': x.L.name + (kind === 'bible' ? ' Bible file' : ' hymnbook file') });
       const msg = h('span.note', kind === 'bible' ? 'Zefania or OSIS XML, JSON or CSV, from the Bible Society or your church. It stays on this device.'
-        : 'VideoPsalm (.vpc or .json), SDA Sabbath (.json) or text with “# 73 Title”. Only words your church may use; they stay on this device.');
+        : 'VideoPsalm (.vpc or .json), Sabbath Service Desk (.json) or text with “# 73 Title”. Only words your church may use; they stay on this device.');
       inp.addEventListener('change', async () => {
         const f = inp.files[0]; if (!f) return;
         msg.textContent = 'Reading ' + f.name + '…';
@@ -448,9 +448,9 @@ export function openWelcome({ onClose, only } = {}) {
     };
     const paintInst = () => {
       clear(instRow);
-      if (installed()) { instRow.append(h('p.inst-ok', icon('check'), h('span', 'Installed: SDA Sabbath has its own icon and opens without the browser.'))); return; }
+      if (installed()) { instRow.append(h('p.inst-ok', icon('check'), h('span', 'Installed: Sabbath Service Desk has its own icon and opens without the browser.'))); return; }
       instRow.append(ctx.installPrompt
-        ? h('button.btn.primary', { type: 'button', onclick: async () => { await ctx.promptInstall(); paintInst(); } }, icon('download'), h('span', 'Install SDA Sabbath'))
+        ? h('button.btn.primary', { type: 'button', onclick: async () => { await ctx.promptInstall(); paintInst(); } }, icon('download'), h('span', 'Install Sabbath Service Desk'))
         : h('p.note', h('b', 'Install it: '), installSteps()));
     };
     persistStorage().then((ok) => {

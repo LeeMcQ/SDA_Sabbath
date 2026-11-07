@@ -4,6 +4,8 @@ Offline church presenter for Seventh-day Adventist media teams (Bible, hymns, sl
 screen, OBS, live translation). A PWA on GitHub Pages: https://ssdesk.online/. Maintainer: Leo
 (LeeMcQ). Users are church volunteers on old PCs and phones, often with no internet on Sabbath.
 
+The app's name on screen is **Sabbath Service Desk** (renamed from "SDA Sabbath"). Keep these old names inside the code: OBS scene prefix defaults (`obsPrefix`, `presScene`), plan/backup file `app:` field, the companion's folder names (`Videos\SDA Sabbath`, `%APPDATA%\SDA Sabbath`), the repo and workflow names.
+
 ## Working rules
 
 - **Look before reading.** Big files: `js/tabs/ai.js` (1800 lines), `slide-editor.js`, `plan.js`, `hymns.js` (1200 each).

@@ -1,4 +1,4 @@
-# SDA Sabbath: full feature list
+# Sabbath Service Desk: full feature list
 
 An offline church presenter for Seventh-day Adventist media teams. It is a Progressive Web App (installs from the browser, runs with no internet) with an optional free companion program and an optional offline live translator. Free, MIT-licensed, and independent of the sister app Church Service.
 
@@ -21,7 +21,7 @@ Status marks: **✔** built and tested · **◐** built, but not yet proven in r
 
 ## 2. Bible
 
-- **Built-in Bibles**: King James and World English Bible (public domain). Licensed Bibles, such as the Afrikaans 1933/53, are added by each church.
+- **Built-in Bibles**: King James, World English Bible and the Afrikaans 1933/53. Other licensed Bibles are added by each church.
 - **Add more**: any licensed Bible (NIV, ESV, NKJV, 1975 Xhosa…) from a file (Zefania, OSIS, CES, JSON, CSV), or from three online sources (bible.helloao.org, getBible and a ~100-language Bible corpus). Licensed Bibles can also be built into one installation without ever becoming public.
 - **Smart reference entry**: `John 3:16-18`, `Ps 23`, English or Afrikaans book names.
 - **Two translations side by side**, for example English and isiXhosa.
@@ -41,7 +41,7 @@ Status marks: **✔** built and tested · **◐** built, but not yet proven in r
 - **Title slide, one stanza per slide**, chorus repeated automatically.
 - **Choose which stanzas to sing** (for example 1, 2, 4).
 - **Jump to any stanza** while the hymn is on screen.
-- **Add a hymnbook**, the same way as Add a Bible: search the list and press **Add**, and it downloads once and works offline. SDA hymnals in 26 languages from the [rejnac collection](https://github.com/rejnac/compiled-hymnal) (isiXhosa, isiZulu/Ndebele, Sesotho, Setswana, Sepedi, Shona, Tshivenda, Xitsonga, Chichewa, Tonga, Icibemba, Tumbuka, Swahili, Kinyarwanda, Kikuyu, Kamba, Kalenjin, Dholuo, Ekegusii, Maasai, Twi, French, Portuguese, Spanish, Russian and English), the **SID Hymnal** (English, isiXhosa and Setswana with the same numbers) and early Adventist hymnals (Hymns for God's Peculiar People, 1849). The English SDA Hymnal words also fill in the built-in SDA Hymnal, so those hymns keep their offline music. Also from a file: VideoPsalm songbooks (`.vpc` or `.json`), SDA Sabbath hymnbooks and text. In Hymns → More and in Settings → Bibles & hymns (which lists every hymnbook, with Remove).
+- **Add a hymnbook**, the same way as Add a Bible: search the list and press **Add**, and it downloads once and works offline. SDA hymnals in 26 languages from the [rejnac collection](https://github.com/rejnac/compiled-hymnal) (isiXhosa, isiZulu/Ndebele, Sesotho, Setswana, Sepedi, Shona, Tshivenda, Xitsonga, Chichewa, Tonga, Icibemba, Tumbuka, Swahili, Kinyarwanda, Kikuyu, Kamba, Kalenjin, Dholuo, Ekegusii, Maasai, Twi, French, Portuguese, Spanish, Russian and English), the **SID Hymnal** (English, isiXhosa and Setswana with the same numbers) and early Adventist hymnals (Hymns for God's Peculiar People, 1849). The English SDA Hymnal words also fill in the built-in SDA Hymnal, so those hymns keep their offline music. Also from a file: VideoPsalm songbooks (`.vpc` or `.json`), Sabbath Service Desk hymnbooks and text. In Hymns → More and in Settings → Bibles & hymns (which lists every hymnbook, with Remove).
 - **Edit or add hymns**; export hymnbooks.
 - **Lyrics search online** (when connected).
 
@@ -71,6 +71,8 @@ Status marks: **✔** built and tested · **◐** built, but not yet proven in r
 - **Picture controls**: fit / fill / stretch, zoom, rotate, mirror, brightness, contrast, colour and hue.
 - **Subtitles** (.srt, .vtt) and **snapshots**.
 - **Background music** keeps playing while lyrics stay on screen.
+- **First-start defaults**: a new device (setup not done, nothing changed) gets a ready-made setup once: the screen look, hymn options, banners, service plan templates, and the Afrikaans and Xhosa Bibles downloaded when online. No pictures, PINs or room codes are included, and a device that is already set up keeps its own settings.
+- **Music only**: when a music file is loaded, choose what the screen shows while it plays: keep the screen, a **song title** (the file name, editable) or one of your **banners**. The plan remembers the choice.
 - **Videos from the PC**: the companion serves the *Videos\SDA Sabbath* folder to every device, with seeking.
 
 ## 7. Web page and PC screen
@@ -99,7 +101,7 @@ Status marks: **✔** built and tested · **◐** built, but not yet proven in r
 
 ## 9. Service plan
 
-- **Basic mode** (default, for the volunteer at the desk): the order of service with a **Show** button per part, and big buttons: **Back**, **Next** and two arrows that skip to the previous / next slide or lyric. The control bar (black screen, logo, music with fade and stop) stays below them. In **Advanced** the control bar also has Back / Next for the parts of the service. When the next part goes on screen, the music of the part before fades out by itself. Videos and music can be added to the plan from the **Video** tab (the plan button on each item).
+- **Basic mode** (default, for the volunteer at the desk): the order of service with a **Show** button per part, and big buttons: **Back**, **Next** and two arrows that skip to the previous / next slide or lyric. The control bar (black screen, logo, music with fade and stop) stays below them. In **Advanced** the control bar also has Back / Next for the parts of the service. When the next part goes on screen, the music of the part before fades out by itself. Videos and music can be added to the plan from the **Video** tab (the plan button on each item). On the Plan tab the **Next** screen follows the plan (the part after the one on screen) and **Live** shows what is live from the plan, unless you put something else on Next yourself. A banner shown from the plan plays no banner music. In Basic, double-tap a part to put it on the screen at once.
 - **Advanced mode**: full plan editor with first-slide thumbnails.
 - **Ready-made templates**: Divine Service, Sabbath School, Vespers / AY, Communion, Prayer Meeting, Thirteenth Sabbath, Baptism, Child Dedication, Pathfinder / Adventurer Investiture, Week of Prayer, with suggested roles.
 - **Your own templates**: save a plan (with or without its hymns and readings), and set it as the default.
@@ -142,6 +144,7 @@ Status marks: **✔** built and tested · **◐** built, but not yet proven in r
 
 ### Listen for verses and hymns
 - Offers Bible verses and hymns mentioned in the service as cards ("John three sixteen", "hymn 100", "let us sing Great Is Thy Faithfulness").
+- Works in English and Afrikaans: verses ("Johannes drie vers sestien"), hymns by number ("hymn 100", "gesang nommer 3") and by name in the English and Afrikaans hymnbooks. The browser switches language by itself when it understands nothing in the one it is using.
 - Follows the singing and offers the stanza being sung.
 - **Nothing goes on screen by itself.**
 - **Hear with**: the offline translator, the browser (Chrome or Edge, online), or Automatic.
@@ -163,7 +166,7 @@ Status marks: **✔** built and tested · **◐** built, but not yet proven in r
 - **Captions** on the display, with how long they stay and whether to show them.
 - **English on phones**: a QR slide lets people read the translation on their own phones, with bigger text and optional Afrikaans underneath. Phones receive the translation only, never controls.
 - **Optional improvement** (free, on Colab): fine-tune the translation on Bible verse pairs, and recognition on your pastor's voice.
-- **Private**: nothing is sent anywhere; only SDA Sabbath's own addresses may talk to it.
+- **Private**: nothing is sent anywhere; only Sabbath Service Desk's own addresses may talk to it.
 
 ## 14. Seventh-day Adventist identity
 
@@ -199,7 +202,7 @@ Status marks: **✔** built and tested · **◐** built, but not yet proven in r
 ## 17. Backup and moving devices
 
 - **Back up** settings, plans and templates, hymnbooks, added Bibles, banners and their pictures, and banner music; optionally slides and videos.
-- **Two ways**: Google Drive (folder *SDA Sabbath backup*, only files the app created) or a `.sdabackup` file (USB, OneDrive, WhatsApp).
+- **Two ways**: Google Drive (folder *Sabbath Service Desk backup*, only files the app created) or a `.sdabackup` file (USB, OneDrive, WhatsApp).
 - **Restore on another device**; the first-start setup also offers it.
 - **Backup reminders**.
 - An AI key is never included.

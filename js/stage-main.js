@@ -2,14 +2,15 @@
 // comes next, the words in large type, speaker notes, the time, timers, messages from the media desk
 // and the order of service. Nothing here is ever shown to the congregation.
 //
-// It connects to the operator's SDA Sabbath in one of four ways:
+// It connects to the operator's Sabbath Service Desk in one of four ways:
 //   ?via=win     a window opened by the app on another screen (or the preview inside Tools → Stage)
 //   ?via=cast    a Chromecast / Google TV started from the app (Presentation API)
-//   ?via=lan     the SDA Sabbath companion on the church network (works without internet)
+//   ?via=lan     the Sabbath Service Desk companion on the church network (works without internet)
 //   #c=CODE      phones, tablets and laptops anywhere: the room code (or QR code) from the media desk
 //   …&v=tr       the congregation's phones: only the live English translation of the sermon (js/trview.js)
 import { h, clear, pad2, uid, APP_SCOPE, keepScreenOn } from './core/util.js';
 import { lsKey } from './core/storens.js';
+import { watchApp } from './core/alive.js';
 import { icon } from './core/icons.js';
 import { createStage, fitBody, sanitizeSlideHtml, frameOf } from './core/render.js';
 import { createEncoder, createDecoder } from './core/wire.js';
@@ -485,7 +486,7 @@ function onMsg(m) {
     case 'talked': toast(m.slow ? 'Please wait a moment before sending another message.' : 'Sent to the media desk ✓'); break;
     case 'kick': leave('The media desk disconnected this screen.'); break;
     case 'note': if (m.text) toast(String(m.text).slice(0, 200), 5000); break;
-    case 'bye': setConn('waiting', 'The media desk closed SDA Sabbath · waiting…'); break;
+    case 'bye': setConn('waiting', 'The media desk closed Sabbath Service Desk · waiting…'); break;
     default: break;
   }
 }
@@ -670,7 +671,7 @@ function showJoin(err, lanAvailable) {
       errEl,
       h('button.ss-btn.primary.wide', { type: 'button', onclick: go }, icon('link'), h('span', 'Join')),
       lanAvailable || VIA === 'lan' ? h('button.ss-btn.wide', { type: 'button', onclick: () => { hideJoin(); left = false; viaLan(); } }, icon('pc'), h('span', 'Connect on the church network')) : null,
-      h('p.ss-note', 'The code and a QR code are in SDA Sabbath at the media desk: Tools → Stage → Phones & laptops.')));
+      h('p.ss-note', 'The code and a QR code are in Sabbath Service Desk at the media desk: Tools → Stage → Phones & laptops.')));
   root.append(joinEl);
   if (!matchMedia('(pointer: coarse)').matches) setTimeout(() => code.focus(), 50);
 }
@@ -688,7 +689,7 @@ function leave(why) {
 }
 
 // ------------------------------------------------------------ transports
-// 1) A window (or the preview frame) opened by SDA Sabbath on this computer.
+// 1) A window (or the preview frame) opened by Sabbath Service Desk on this computer.
 function viaWindow() {
   let host = null;
   try { host = window.opener && !window.opener.closed ? window.opener : null; } catch (e) { host = null; }
@@ -702,8 +703,9 @@ function viaWindow() {
   });
   // The control page was reloaded: say hello again.
   try { const bc = new BroadcastChannel('selah-stage:' + APP_SCOPE); bc.onmessage = (e) => { if (e.data && e.data.t === 'who') hello(); }; } catch (e) { /* */ }
-  // SDA Sabbath itself was closed (not just reloaded): close this window too after a few seconds.
+  // Sabbath Service Desk itself was closed (not just reloaded): close this window too after a few seconds.
   if (!PREVIEW && host === window.opener) {
+    watchApp(() => { try { window.close(); } catch (e) { /* */ } });
     let gone = 0;
     setInterval(() => { let c = true; try { c = host.closed; } catch (e) { c = true; } gone = c ? gone + 1 : 0; if (gone >= 5) { try { window.close(); } catch (e) { /* */ } } }, 2000);
   }
@@ -738,7 +740,7 @@ function viaCast() {
   return true;
 }
 
-// 3) The SDA Sabbath companion on the church network.
+// 3) The Sabbath Service Desk companion on the church network.
 let lanWs = null, lanStop = false;
 function viaLan() {
   let wait = 1000;

@@ -1,6 +1,6 @@
 {
-  "name": "SDA Sabbath — church presenter",
-  "short_name": "SDA Sabbath",
+  "name": "Sabbath Service Desk — church presenter",
+  "short_name": "Sabbath Service Desk",
   "description": "Offline Bible, hymn, slide, video, web and screen presenter for SDA church media teams.",
   "id": "./",
   "start_url": "./index.html",

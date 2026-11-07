@@ -278,7 +278,7 @@ async function load() {
   if (!(await cloud.checkAdmin())) { app.innerHTML = '<p>This account is not a maintainer. Add it in Supabase → SQL Editor: <code>insert into public.admins (email) values (\'' + esc(cloud.user.email) + '\');</code></p>'; return; }
   app.innerHTML = '<div class="filters"><label class="muted" for="per">Period</label><select id="per">' +
     [['30', 'Last 30 days'], ['month', 'This month'], ['lastmonth', 'Last month'], ['90', 'Last 3 months'], ['365', 'Last 12 months']].map(([k, l]) => '<option value="' + k + '"' + (k === periodKey ? ' selected' : '') + '>' + l + '</option>').join('') + '</select>' +
-    '<label class="muted" for="appf">App</label><select id="appf"><option value="">Both apps</option><option value="sda-sabbath">SDA Sabbath</option><option value="church-service">Church Service</option></select>' +
+    '<label class="muted" for="appf">App</label><select id="appf"><option value="">Both apps</option><option value="sda-sabbath">Sabbath Service Desk</option><option value="church-service">Church Service</option></select>' +
     '<span class="muted" id="when"></span></div>' +
     '<nav class="tabs" aria-label="Sections">' + VIEWS.map(([k, l]) => '<button type="button" data-v="' + k + '" aria-pressed="' + (k === view) + '">' + l + '</button>').join('') + '</nav><div id="view"></div>';
   $('#appf').value = appKey;

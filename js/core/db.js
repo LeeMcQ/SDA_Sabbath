@@ -15,12 +15,12 @@ const VERSION = 1; // the version a new database starts at; open() adds missing 
 const STORES = ['kv', 'files', 'renders', 'bibles', 'hymnbooks', 'plans'];
 let dbp = null;
 // When the browser will not open its database (some private windows, storage turned off, a damaged
-// profile), SDA Sabbath keeps working with an in-memory store for this session instead of failing.
+// profile), Sabbath Service Desk keeps working with an in-memory store for this session instead of failing.
 let mem = null;
 function useMemory(why) {
   if (!mem) {
     mem = new Map(STORES.map((s) => [s, new Map()]));
-    console.warn('SDA Sabbath: saving is not available here (' + why + '); working in memory for this session.');
+    console.warn('Sabbath Service Desk: saving is not available here (' + why + '); working in memory for this session.');
     try { window.dispatchEvent(new CustomEvent('selah-storage', { detail: { off: true, why: String(why) } })); } catch (e) { /* */ }
   }
   return null;
@@ -40,7 +40,7 @@ function open() {
     req.onsuccess = () => {
       clearTimeout(timer);
       const d = req.result;
-      // A newer SDA Sabbath in another tab needs to upgrade the database: let it (this tab reopens it on its next
+      // A newer Sabbath Service Desk in another tab needs to upgrade the database: let it (this tab reopens it on its next
       // use instead of blocking the other tab for ever).
       d.onversionchange = () => { try { d.close(); } catch (e) { /* */ } dbp = null; };
       // A database without all the stores (made by another version or a damaged profile): add them with one
@@ -54,10 +54,10 @@ function open() {
       up.onupgradeneeded = () => { const u = up.result; STORES.forEach((s) => { if (!u.objectStoreNames.contains(s)) u.createObjectStore(s); }); };
       up.onsuccess = () => { const u = up.result; u.onversionchange = () => { try { u.close(); } catch (e) { /* */ } dbp = null; }; resolve(u); };
       up.onerror = () => resolve(useMemory(up.error && up.error.message));
-      up.onblocked = () => console.warn('Database upgrade waiting for another SDA Sabbath tab to close.');
+      up.onblocked = () => console.warn('Database upgrade waiting for another Sabbath Service Desk tab to close.');
     };
     req.onerror = () => { clearTimeout(timer); resolve(useMemory(req.error && req.error.message)); };
-    req.onblocked = () => console.warn('Database upgrade waiting for another SDA Sabbath tab to close.');
+    req.onblocked = () => console.warn('Database upgrade waiting for another Sabbath Service Desk tab to close.');
   });
   return dbp;
 }

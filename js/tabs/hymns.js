@@ -113,7 +113,7 @@ export default function create(ctx) {
   let musicEntry = null;   // music index entry of the selected hymn
   const editBtn = btn('edit', 'Edit this hymn', () => hymn && editHymn(hymn), { cls: 'sm' });
   // A song this church added itself to a Shared Hymns book can be shared with every church (in that language).
-  const shareBtn = h('button.btn.sm', { type: 'button', hidden: true, title: 'Share this hymn with all churches that use SDA Sabbath', onclick: () => hymn && shareChorus(hymn) }, icon('send'), h('span', 'Share with all churches'));
+  const shareBtn = h('button.btn.sm', { type: 'button', hidden: true, title: 'Share this hymn with all churches that use Sabbath Service Desk', onclick: () => hymn && shareChorus(hymn) }, icon('send'), h('span', 'Share with all churches'));
   const isOwnChorus = (hy) => !!(hy && book && book.shared && !hy.shared && !(book.builtinNs && book.builtinNs.has(hy.n)));
   const moreBtn = btn('more', 'More', () => menu(moreBtn, [
     { label: 'Find lyrics online', icon: 'search', onclick: () => findLyrics() },
@@ -275,7 +275,7 @@ export default function create(ctx) {
     list.slice(0, 400).forEach((x) => {
       frag.appendChild(h('button', { type: 'button', tabindex: '-1', 'aria-pressed': String(hymn === x), onclick: () => selectHymn(x), ondblclick: () => { selectHymn(x); live.take(); } },
         h('span.num', String(x.n)), h('span.grow', h('div.trunc', x.t), h('div.note.trunc', firstLine(x))),
-        x.shared ? h('span.hy-shared', { title: 'Shared by a church that uses SDA Sabbath' }, 'Shared') : null,
+        x.shared ? h('span.hy-shared', { title: 'Shared by a church that uses Sabbath Service Desk' }, 'Shared') : null,
         musicSet && musicSet.has(x.n) ? h('span.has-music', { title: 'Music available offline' }, icon('music')) : null));
     });
     listEl.appendChild(frag);
@@ -631,7 +631,7 @@ export default function create(ctx) {
     const ss = 'https://songselect.ccli.com/search/results?search=' + encodeURIComponent(hy.ccli || hy.t);
     return h('div.licence-panel', { role: 'note' },
       h('b', 'Words not included'),
-      h('p.note', 'This song is under copyright, so SDA Sabbath shows only its number and title (the title slide works). ' +
+      h('p.note', 'This song is under copyright, so Sabbath Service Desk shows only its number and title (the title slide works). ' +
         'If your church is licensed (for example CCLI, or the publisher’s permission), add the words: they stay on your own devices and are never shared.'),
       h('div.row.wrap',
         h('button.btn.sm.primary', { type: 'button', onclick: () => editHymn(hy) }, icon('edit'), h('span', 'Add the words')),
@@ -646,7 +646,7 @@ export default function create(ctx) {
   async function importLicensed() {
     if (!book) return;
     const ok = await confirmBox('Import licensed words',
-      'Only import words your church is licensed to use (CCLI, or the publisher’s permission). They are saved on this device for “' + book.name + '” and are never shared. Accepted: a SongSelect file (.usr or .txt), or a hymnbook file (VideoPsalm .vpc or .json, SDA Sabbath .json, or .txt with “# 73 Title” before each hymn) whose numbers match this book.',
+      'Only import words your church is licensed to use (CCLI, or the publisher’s permission). They are saved on this device for “' + book.name + '” and are never shared. Accepted: a SongSelect file (.usr or .txt), or a hymnbook file (VideoPsalm .vpc or .json, Sabbath Service Desk .json, or .txt with “# 73 Title” before each hymn) whose numbers match this book.',
       'Choose file…');
     if (!ok) return;
     const inp = h('input', { type: 'file', accept: '.json,.txt,.usr,.vpc', multiple: true });
@@ -765,7 +765,7 @@ export default function create(ctx) {
         download(z, (hy.t.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_') || 'chorus') + '_midi.zip');
       } }, icon('download'), h('span', 'Save MIDI as .zip'))) : h('p.note', 'No MIDI? The robot looks for one and attaches it if it finds a good match.');
     const body = h('div.col', { style: { gap: '10px' } },
-      h('p', 'Every church that has Shared Hymns – ' + lgName + ' gets this song there (with the music, if there is a MIDI), with the next shared number (501 and up). The SDA Sabbath maintainer checks each song first.'),
+      h('p', 'Every church that has Shared Hymns – ' + lgName + ' gets this song there (with the music, if there is a MIDI), with the next shared number (501 and up). The Sabbath Service Desk maintainer checks each song first.'),
       h('b', hy.t + (hy.a ? ' — ' + hy.a : '')), preview,
       h('label.muted', 'May these words be shared with every church?'), rightsList,
       h('p.note', 'Songs from CCLI or other song publishers (most modern worship songs) may not be shared, even if your church has a licence to sing them.'),
@@ -787,8 +787,8 @@ export default function create(ctx) {
     modal({ title: 'Share “' + hy.t + '” with all churches', body, wide: true, actions: [
       { label: 'Cancel' },
       { label: 'No GitHub account? Copy the song', onclick: () => {
-        const txt = 'Song for SDA Sabbath (Shared Hymns – ' + lgName + ')\nTitle: ' + hy.t + '\nWriter: ' + (hy.a || '') + '\nShared by: ' + name.value.trim() + '\nMay be shared: ' + (RIGHTS.find((r) => r[0] === rights) || ['', 'not said'])[1] + '\n\n' + sharedText(hy);
-        if (navigator.clipboard) navigator.clipboard.writeText(txt).then(() => toast('Copied. Send it to the person who looks after SDA Sabbath, or to the maintainer on GitHub.', 'ok', 7000), () => toast('Could not copy.', 'err'));
+        const txt = 'Song for Sabbath Service Desk (Shared Hymns – ' + lgName + ')\nTitle: ' + hy.t + '\nWriter: ' + (hy.a || '') + '\nShared by: ' + name.value.trim() + '\nMay be shared: ' + (RIGHTS.find((r) => r[0] === rights) || ['', 'not said'])[1] + '\n\n' + sharedText(hy);
+        if (navigator.clipboard) navigator.clipboard.writeText(txt).then(() => toast('Copied. Send it to the person who looks after Sabbath Service Desk, or to the maintainer on GitHub.', 'ok', 7000), () => toast('Could not copy.', 'err'));
         return false;
       } },
       { label: 'Share on GitHub', primary: true, onclick: go }] });
@@ -1056,7 +1056,7 @@ export default function create(ctx) {
     const mine = playingThis();
     const playBtn = mine
       ? h('button.btn.sm.primary', { type: 'button', title: 'Pause / continue the music (M)', onclick: () => { music.unlock(); music.toggle(); } }, icon(st.paused ? 'play' : 'pause'), h('span', st.paused ? 'Continue' : 'Pause'))
-      : h('button.btn.sm.primary', { type: 'button', title: 'Play the music for the stanzas being sung (M)', onclick: () => startMusic(false) }, icon('play'), h('span', 'Play music'));
+      : h('button.btn.sm.primary', { type: 'button', title: 'Show the words on the screen, without music', onclick: () => ctx.present() }, icon('present'), h('span', 'Present'));
     const row1 = h('div.row.wrap', playBtn);
     if (mine) {
       row1.append(btn('fade', 'Fade out', () => music.fade(3000), { cls: 'sm fade-btn', label: 'Fade' }), btn('stop', 'Stop the music', () => music.stop(), { cls: 'sm' }));
@@ -1131,6 +1131,13 @@ export default function create(ctx) {
       if (!book) return { id: '', list: [] };
       if (!book._cat || book._cat.length !== book.hymns.length) book._cat = book.hymns.map((x) => ({ n: x.n, t: x.t, first: (x.v && x.v[0] && x.v[0][0]) || '' }));
       return { id: book.id, name: book.short || book.name, list: book._cat };
+    },
+    /** Every hymnbook with its hymns' numbers, titles and first lines and its language (Listen: hymns named in English or Afrikaans). */
+    catalogs() {
+      return books.filter((b) => b.hymns && b.hymns.length).map((b) => {
+        if (!b._cat || b._cat.length !== b.hymns.length) b._cat = b.hymns.map((x) => ({ n: x.n, t: x.t, first: (x.v && x.v[0] && x.v[0][0]) || '' }));
+        return { id: b.id, name: b.short || b.name, lang: /afrik/i.test(b.id) ? 'af' : b.lang || 'en', list: b._cat };
+      });
     },
     search(qq, k = 5) {
       const out = [];

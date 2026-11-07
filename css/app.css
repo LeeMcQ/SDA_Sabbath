@@ -1,4 +1,4 @@
-/* SDA Sabbath — control app styles.
+/* Sabbath Service Desk — control app styles.
    Colour language: green = Next (staged), red = Live. Brass is reserved for Present.
    No blur, no large shadows: flat layers by lightness so low-end GPUs stay idle. */
 
@@ -1344,7 +1344,7 @@ a.btn { text-decoration: none; }
 /* Touch screens: sliders get a taller hit area (the track looks the same). */
 @media (pointer: coarse) { input[type=range] { min-height: 28px; } }
 
-/* Install SDA Sabbath card (js/core/installer.js) */
+/* Install Sabbath Service Desk card (js/core/installer.js) */
 .inst-card { position: fixed; z-index: 75; /* under dialogs (80), so it never covers their buttons */ right: 16px; bottom: calc(var(--bar-h) * var(--bar-on, 0) + 16px); width: min(420px, calc(100vw - 32px)); background: var(--raised); color: var(--text);
   border: 1px solid var(--line); border-left: 4px solid var(--brass); border-radius: var(--r-lg); padding: 14px 16px; box-shadow: 0 12px 40px rgb(0 0 0 / .45); display: flex; flex-direction: column; gap: 8px; }
 .inst-card .inst-h { display: flex; gap: 12px; align-items: center; }
@@ -1691,3 +1691,5 @@ html:not(.lp) .listen-box.on .ls-dot { animation: ls-pulse 1.6s ease-in-out infi
 .stream-tab .st-more > .card { margin-top: 8px; }
 .stream-tab .btn.lg { font-size: 1.05em; padding: 10px 16px; }
 .stream-tab input[type=range] { width: 100%; max-width: 260px; }
+.top-icons { align-items: center; }
+.top-icons .ready-mark { margin-right: 4px; }

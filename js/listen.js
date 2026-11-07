@@ -4,7 +4,7 @@
 // Present"). While a hymn is on screen it also follows the singing and offers the stanza being sung.
 // Nothing ever goes on screen by itself.
 // Two ways to hear (Tools → Listen → Hear with):
-//   Offline translator – the SDA Sabbath translator on this PC (Tools → Listen & Translate) already turns the Afrikaans
+//   Offline translator – the Sabbath Service Desk translator on this PC (Tools → Listen & Translate) already turns the Afrikaans
 //                        sermon into sentences offline; its sentences, the Bible quotes it recognises (the verse
 //                        itself, even when no reference is said) and the references and hymn numbers it finds
 //                        become cards here.
@@ -45,8 +45,34 @@ export function createListener({ ctx, getTab, present, ui }) {
   const list = h('div.ls-list', { 'aria-live': 'polite' });
   const box = h('div.listen-box', { 'aria-label': 'Verse and hymn suggestions' }, head, list);
 
-  const lang = () => (serviceLang() === 'af' ? 'af-ZA' : 'en-ZA');
+  // The browser hears one language at a time. A church that uses English and Afrikaans gets both: the listener
+  // switches to the other language whenever a round of listening understood nothing.
+  const both = () => true;
+  let recLang = null, gotFinal = false;
+  const lang = () => recLang || (serviceLang() === 'af' ? 'af-ZA' : 'en-ZA');
   const afr = () => lang() === 'af-ZA';
+  const AFR_WORDS = /\b(lied|gesang|gesange|liedboek|gesangeboek|nommer|bladsy|laat ons sing|sing saam|vers)\b/i;
+  /** The hymnbook a number or name belongs to, by the language it was said in. */
+  function bookFor(text, n) {
+    if (!hyApi || !hyApi.catalogs) return undefined;
+    const want = AFR_WORDS.test(String(text || '')) ? 'af' : 'en';
+    const cats = hyApi.catalogs();
+    const has = (c) => n == null || c.list.some((x) => x.n === n);
+    const hit = cats.find((c) => c.lang === want && has(c)) || cats.find(has);
+    return hit ? hit.id : undefined;
+  }
+  /** A hymn announced by name in any hymnbook (English or Afrikaans): the longest match wins. */
+  function hymnByName(text) {
+    if (!hyApi) return null;
+    const cats = hyApi.catalogs ? hyApi.catalogs() : [{ id: hyApi.catalog().id, list: hyApi.catalog().list, lang: 'en' }];
+    const pref = AFR_WORDS.test(String(text || '')) ? 'af' : 'en';
+    let best = null;
+    for (const c of cats) {
+      const m = findHymnTitle(text, c.list);
+      if (m && (!best || m.words > best.words || (m.words === best.words && c.lang === pref && best.lang !== pref))) best = { n: m.n, words: m.words, book: c.id, lang: c.lang };
+    }
+    return best;
+  }
 
   const watchers = new Set(); // Tools → Listen repaints when listening starts or stops
   function paintHead() {
@@ -80,7 +106,7 @@ export function createListener({ ctx, getTab, present, ui }) {
       try { await (await translator()).status(); up = true; } catch (e) { up = false; }
       if (up) return 'offline';
       if (pref() === 'offline') {
-        ui.toast('The offline translator is not running on this PC. Start it with the “SDA Sabbath translator” shortcut on the desktop (set it up once in Tools → Listen & Translate).', 'err', 8000);
+        ui.toast('The offline translator is not running on this PC. Start it with the “Sabbath Service Desk translator” shortcut on the desktop (set it up once in Tools → Listen & Translate).', 'err', 8000);
         return null;
       }
     }
@@ -108,15 +134,18 @@ export function createListener({ ctx, getTab, present, ui }) {
     ui.modal({
       title: 'Listen for verses and hymns',
       body: h('div.col', { style: { gap: '10px' } },
-        h('p', 'SDA Sabbath listens through the microphone. When a Bible verse or a hymn is mentioned (by number, “hymn 100”, or by name, “let us sing Great Is Thy Faithfulness”), it is offered here. While a hymn is on the screen it also follows the singing and offers the stanza being sung.'),
+        h('p', 'Sabbath Service Desk listens through the microphone. When a Bible verse or a hymn is mentioned (by number, “hymn 100”, or by name, “let us sing Great Is Thy Faithfulness”), it is offered here. While a hymn is on the screen it also follows the singing and offers the stanza being sung.'),
         h('p', 'You choose whether to put it on Next or show it. Nothing goes on the screen by itself.'),
         h('p.note', 'The offline translator is not running on this PC, so the browser listens instead: it turns speech into text with its own online speech service (Google for Chrome, Microsoft for Edge), so it needs the internet while it listens. It only listens while “Listening” shows, and you can stop it at any time.'),
-        h('p.note', 'Language: ' + (afr() ? 'Afrikaans' : 'English') + ' (follows your main Bible in Settings).')),
+        h('p.note', 'Language: English and Afrikaans. It listens in the language it understands and switches by itself.')),
       actions: [{ label: 'Cancel' }, { label: 'Start listening', primary: true, onclick: () => { settings.set('app.listenOk', true); start(); } }],
     });
   }
   function begin() {
     try {
+      // Both languages: after a round that understood nothing, listen in the other language.
+      if (both() && recLang) { if (!gotFinal) recLang = recLang === 'af-ZA' ? 'en-ZA' : 'af-ZA'; } else if (!recLang) recLang = serviceLang() === 'af' ? 'af-ZA' : 'en-ZA';
+      gotFinal = false;
       rec = new SR();
       rec.lang = lang();
       rec.continuous = true;
@@ -125,6 +154,7 @@ export function createListener({ ctx, getTab, present, ui }) {
       rec.onresult = (e) => {
         for (let i = e.resultIndex; i < e.results.length; i++) {
           const r = e.results[i];
+          if (r.isFinal && r[0].transcript.trim()) gotFinal = true;
           heard(r[0].transcript, r.isFinal);
         }
         if (problem) { problem = ''; paintHead(); }
@@ -132,7 +162,7 @@ export function createListener({ ctx, getTab, present, ui }) {
       rec.onerror = (e) => {
         if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
           stop();
-          ui.toast('The microphone is blocked for SDA Sabbath. Allow it with the lock icon in the address bar, then try again.', 'err', 8000);
+          ui.toast('The microphone is blocked for Sabbath Service Desk. Allow it with the lock icon in the address bar, then try again.', 'err', 8000);
         } else if (e.error === 'network') { problem = 'No internet: listening paused'; paintHead(); }
         else if (e.error === 'audio-capture') { problem = 'No microphone found'; paintHead(); }
       };
@@ -174,16 +204,15 @@ export function createListener({ ctx, getTab, present, ui }) {
       if (d.af) heard(d.af, true);   // Afrikaans: "Johannes drie vers sestien", "gesang nommer 100", hymns by name, singing
       if (d.en) {
         const found = findRefs(d.en);
-        found.forEach((r) => offer(r, d.en, true));
-        // The English sentence may name a hymn of the (English) hymnal: "let us sing Great Is Thy Faithfulness".
+        found.forEach((r) => offer(r.kind === 'hymn' && !r.book ? Object.assign({}, r, { book: bookFor(d.en, r.n) }) : r, d.en, true));
+        // The English sentence may name a hymn: "let us sing Great Is Thy Faithfulness" (English or Afrikaans hymnbook).
         if (hyApi && !found.some((r) => r.kind === 'hymn')) {
-          const c = hyApi.catalog();
-          const m = findHymnTitle(d.en, c.list);
-          if (m) offer({ kind: 'hymn', n: m.n, book: c.id }, d.en, true);
+          const m = hymnByName(d.en);
+          if (m) offer({ kind: 'hymn', n: m.n, book: m.book }, d.en, true);
         }
       }
     } else if (type === 'ref' && d.q) offerRef(d.q, d.af || d.q);
-    else if (type === 'hymn' && d.n) offer({ kind: 'hymn', n: +d.n }, d.af || '', true);
+    else if (type === 'hymn' && d.n) offer({ kind: 'hymn', n: +d.n, book: bookFor(d.af || '', +d.n) }, d.af || '', true);
   }
   /** A reference as text ("John 3:16", "Johannes 3:16-18") offered like one that was heard. */
   function offerRef(q, text) {
@@ -194,7 +223,7 @@ export function createListener({ ctx, getTab, present, ui }) {
   }
 
   function stop() {
-    on = false; problem = '';
+    on = false; problem = ''; recLang = null;
     sung = ''; clearFollow();
     clearTimeout(restartT);
     if (rec) { try { rec.onend = null; rec.abort(); } catch (e) { /* already stopped */ } rec = null; }
@@ -216,12 +245,11 @@ export function createListener({ ctx, getTab, present, ui }) {
     // uses the words as they come.
     if (!final) { followSinging(text, final); return; }
     const found = findRefs(text);
-    found.forEach((r) => offer(r, text, final));
+    found.forEach((r) => offer(r.kind === 'hymn' && !r.book ? Object.assign({}, r, { book: bookFor(text, r.n) }) : r, text, final));
     // A hymn announced by name ("our closing hymn is Blessed Assurance"): only on the finished sentence.
     if (final && hyApi && !found.some((r) => r.kind === 'hymn')) {
-      const c = hyApi.catalog();
-      const m = findHymnTitle(text, c.list);
-      if (m) offer({ kind: 'hymn', n: m.n, book: c.id }, text, final);
+      const m = hymnByName(text);
+      if (m) offer({ kind: 'hymn', n: m.n, book: m.book }, text, final);
     }
     followSinging(text, final);
   }

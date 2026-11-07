@@ -7,7 +7,7 @@ SDA Sabbath's own code is MIT-licensed (`LICENSE`). Everything below keeps its o
 |---|---|
 | King James Version (`data/bibles/kjv`) | Public domain (outside the UK, where Crown rights apply to printing) |
 | World English Bible (`data/bibles/web`) | Public domain |
-| Afrikaanse Bybel 1933/53 | **Not included.** © Bybelgenootskap van Suid-Afrika 1933, 1953 (digital edition © 2012). A church with the Bible Society's permission adds its own copy (`licensed/README.md`). |
+| Afrikaanse Bybel 1933/53 | **Built in again at the maintainer's decision (7 Nov 2026).** Listed in the project as public domain (50-year term expired); the 1933/1953 text and its digital edition are also credited to Bybelgenootskap van Suid-Afrika (© 2012 digital). The maintainer must keep the right to ship it, or remove `data/bibles/afr53` again. |
 | Bibles a church adds (NIV, Xhosa 1975, …) | Each keeps its own copyright; they stay on the church's own devices or its own build (`licensed/`, `data/bibles-private/`, git-ignored). |
 
 ## Hymns and songs

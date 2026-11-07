@@ -1,10 +1,10 @@
-// Hymnbook formats: SDA Sabbath's own JSON, the Afrikaans Liedboek site, plain text ("# 73 Title"),
+// Hymnbook formats: Sabbath Service Desk's own JSON, the Afrikaans Liedboek site, plain text ("# 73 Title"),
 // VideoPsalm songbooks (.vpc or their .json, as in the rejnac SDA hymnals), SID Hymnal markdown (one file per
 // hymn) and GospelSounders Hymnals Data. Every format becomes { name, short, lang, hymns: [{ n, t, a, v, c }] }:
 // v is the list of stanzas (each a list of lines), c the chorus (sung after each stanza) or null.
 // No other app modules are imported, so the parsers also run in tests and tools.
 
-/** A line that only names the chorus, in the languages of the hymnals SDA Sabbath can add. */
+/** A line that only names the chorus, in the languages of the hymnals Sabbath Service Desk can add. */
 export const CHORUS_RE = /^(chorus|refrain|ref|koor|refrein|ikhorasi|khorasi|korasi|koras|chorasi|kiitikio|coro|estribillo|refr[aã]o|ch[oœ]eur|припев|c)\s*[:.]?\s*$/i;
 const CHORUS_HEAD = /^(chorus|refrain|koor|refrein|ikhorasi|khorasi|korasi|koras|chorasi|kiitikio|coro|estribillo|refr[aã]o|ch[oœ]eur|припев)\s*[:.]\s*(.*)$/i;
 

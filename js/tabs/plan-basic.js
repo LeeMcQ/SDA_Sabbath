@@ -106,7 +106,8 @@ export function createPlanBasic({ el, toolbar, ctx, api }) {
     const state = it.now ? h('span.pi-badge.live', 'On screen') : it.next ? h('span.pi-badge.next', 'Next') : it.done ? h('span.bp-done', { title: 'Shown' }, icon('check')) : null;
     return h('div.bp-row' + (it.now ? '.now' : '') + (it.next ? '.next' : '') + (it.done && !it.now ? '.done' : '') + (it.empty ? '.empty' : ''), {
       role: 'button', tabindex: '0', 'data-i': String(it.i),
-      title: it.empty ? 'Nothing to show for this part yet' : 'Tap: put on Next · Show: put it on the screen now',
+      title: it.empty ? 'Nothing to show for this part yet' : 'Tap: put on Next · Double-tap or Show: put it on the screen now',
+      ondblclick: (e) => { if (it.empty || (e.target.closest && e.target.closest('button'))) return; const s = api.snapshot(); if (s) showPart(s, it.i); },
       onclick: () => {
         if (it.empty) { ui.toast('Nothing to show for “' + it.title + '” yet. Add it in Advanced.', '', 3200); return; }
         api.select(it.i);

@@ -15,7 +15,7 @@ export function signInBox({ onDone, compact = false } = {}) {
   let email = (cloud.user && cloud.user.email) || '';
   const paint = (step) => {
     clear(box);
-    if (!cloud.enabled()) { box.append(h('p.note', 'Accounts are not switched on for this copy of SDA Sabbath.')); return; }
+    if (!cloud.enabled()) { box.append(h('p.note', 'Accounts are not switched on for this copy of Sabbath Service Desk.')); return; }
     if (navigator.onLine === false) { box.append(h('p.note', 'No internet connection now. You can sign in later in Settings → Account; everything else works without it.')); return; }
     if (step === 'code') {
       const code = h('input.field', { inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: 10, placeholder: '6-digit code', 'aria-label': 'Code from the email', style: { fontSize: '22px', letterSpacing: '.2em', maxWidth: '220px' } });
@@ -53,10 +53,10 @@ export function signInBox({ onDone, compact = false } = {}) {
   return box;
 }
 
-/** The "Help improve SDA Sabbath" switch with what it means. */
+/** The "Help improve Sabbath Service Desk" switch with what it means. */
 export function statsToggle() {
   return h('div.col', { style: { gap: '6px' } },
-    toggle('Help improve SDA Sabbath: send usage statistics', settings.v.app.stats === true, (v) => { settings.set('app.stats', v); if (v) cloud.ping(); }),
+    toggle('Help improve Sabbath Service Desk: send usage statistics', settings.v.app.stats === true, (v) => { settings.set('app.stats', v); if (v) cloud.ping(); }),
     // Short on purpose: the full list of what is counted is in the privacy notice.
     h('p.note', 'Counts how the app is used (time, features, which hymns and verses go on screen) and your church’s name and town. Never your slides, videos or anything you type. Switch it off any time. ',
       h('a', { href: 'privacy.html', target: '_blank', rel: 'noopener' }, 'What is counted')));
@@ -65,7 +65,7 @@ export function statsToggle() {
 /** Comments and suggestions. */
 export function openFeedback(ctx, { kind = 'idea', page = '' } = {}) {
   let k = kind;
-  const msg = h('textarea.field', { rows: 7, maxlength: 4000, placeholder: 'What would make SDA Sabbath better for your church? Or what went wrong, and what were you doing?', style: { width: '100%' } });
+  const msg = h('textarea.field', { rows: 7, maxlength: 4000, placeholder: 'What would make Sabbath Service Desk better for your church? Or what went wrong, and what were you doing?', style: { width: '100%' } });
   // An email address only goes to the cloud (kept private); without it the message becomes a public GitHub issue.
   const email = cloud.enabled() ? h('input.field', { type: 'email', value: (cloud.user && cloud.user.email) || '', placeholder: 'Your email (optional, for an answer)', style: { width: '100%' } }) : null;
   let withInfo = true;
@@ -83,7 +83,7 @@ export function openFeedback(ctx, { kind = 'idea', page = '' } = {}) {
     } catch (e) { toast('Could not send: ' + e.message, 'err', 6000); return false; }
   };
   modal({ title: 'Comments and suggestions', wide: true, body: h('div.col', { style: { gap: '10px' } },
-    h('p.note', 'Tell us how SDA Sabbath can be better. Every message is read.'),
+    h('p.note', 'Tell us how Sabbath Service Desk can be better. Every message is read.'),
     seg([['idea', 'Idea'], ['problem', 'Something is wrong'], ['praise', 'Thanks'], ['other', 'Other']], k, (v) => { k = v; }),
     msg, email,
     toggle('Add technical details (app version, browser, screen layout)', true, (v) => { withInfo = v; }),
@@ -113,7 +113,7 @@ export function accountSection(box, ctx) {
   const paint = () => {
     clear(box);
     if (!cloud.enabled()) {
-      box.append(h('p', 'Accounts and statistics are not switched on for this copy of SDA Sabbath.'),
+      box.append(h('p', 'Accounts and statistics are not switched on for this copy of Sabbath Service Desk.'),
         h('div.row.wrap', h('button.btn', { type: 'button', onclick: () => openFeedback(ctx) }, icon('msg'), h('span', 'Send a comment or suggestion'))));
       return;
     }
@@ -126,7 +126,7 @@ export function accountSection(box, ctx) {
           cloud.admin ? h('a.btn.primary', { href: 'admin.html', target: '_blank', rel: 'noopener' }, icon('grid'), h('span', 'Statistics and feedback (maintainer)')) : null,
           h('button.btn', { type: 'button', onclick: async () => { await cloud.signOut(); toast('Signed out.', 'ok'); } }, icon('x'), h('span', 'Sign out')),
           h('button.btn.danger', { type: 'button', onclick: async () => {
-            if (!(await confirmBox('Delete your account?', 'This deletes your account, your messages and the statistics of the devices you signed in on. SDA Sabbath keeps working on this device.', 'Delete my account', true))) return;
+            if (!(await confirmBox('Delete your account?', 'This deletes your account, your messages and the statistics of the devices you signed in on. Sabbath Service Desk keeps working on this device.', 'Delete my account', true))) return;
             try { await cloud.forgetMe(); toast('Your account and its data were deleted.', 'ok', 5000); } catch (e) { toast('Could not delete: ' + e.message, 'err', 6000); }
           } }, icon('trash'), h('span', 'Delete my account'))));
     } else {

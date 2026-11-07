@@ -50,7 +50,7 @@ show/hide next, plan, notes and picture, 12/24-hour clock, and **mirror** for te
 | **Another monitor on this PC** | Tools → Stage → **Open stage screen** (or the **Stage** button in the top bar). It opens full screen on a screen that is neither this one nor the projector; **Choose screen…** picks one. |
 | **Cast** | **Cast stage screen** — Chromecast, Google TV, Android TV (a second cast session, separate from the projector). Miracast TVs: connect them in Windows (Win + K → Extend) and use *Open stage screen*. |
 | **Phones, tablets, laptops (internet)** | Turn on **Phones & laptops**. People scan the **QR code**, or open the short address **ssdesk.online/stage** and type the **room code** (e.g. `K7F Q2M`). No app, no account. |
-| **Church network without internet** | With the SDA Sabbath companion running, screens on the church Wi-Fi open `http://<pc>:7777/stage.html?via=lan`. |
+| **Church network without internet** | With the Sabbath Service Desk companion running, screens on the church Wi-Fi open `http://<pc>:7777/stage.html?via=lan`. |
 
 How the phone link works: the slides go **directly from the media-desk PC to each phone** over an encrypted WebRTC
 connection. Public Nostr relays are only used for the two devices to find each other, and the room code is also the key
@@ -74,7 +74,7 @@ the whole media desk (reloading or rejoining does not reset it). Switching **Con
 it reloads with a saved PIN; **New PIN** takes away control given by PIN (devices you allowed by hand keep it). The stage window on this PC may control by default (a touch screen on the platform).
 
 **Talk back:** every stage screen has **Talk to the media desk** — quick replies ("Ready", "Need 5 more minutes",
-"Microphone problem"…) or typed text. It appears as a notice in SDA Sabbath and in Tools → Stage, with *Reply*.
+"Microphone problem"…) or typed text. It appears as a notice in Sabbath Service Desk and in Tools → Stage, with *Reply*.
 
 **Timers:** a *Speaker* count-down and a *Service* stopwatch to start with; add count-downs, stopwatches and
 "ends at 12:00" clocks (up to 8). Start / Pause, Reset, ±1 minute and 5–45 minute presets. One is **featured** large on
@@ -87,35 +87,35 @@ how many stage screens follow, the running timer and a yellow dot while a messag
 
 ## Live stream (OBS)
 
-**Tools → Stream** (the third button at the top of the Tools tab) feeds OBS Studio. Two Browser Sources follow SDA Sabbath live:
+**Tools → Stream** (the third button at the top of the Tools tab) feeds OBS Studio. Two Browser Sources follow Sabbath Service Desk live:
 
 | Source | What it shows |
 |---|---|
-| **SDA Sabbath · Lower third** (transparent, over the camera) | **Automatically:** the reference and verse when a Bible passage goes on screen; the hymn words (or only the title) when a hymn is on screen: each verse appears along the bottom of the stream, labelled "Verse 2 of 4" (or Chorus), and changes as you move to the next verse; optionally other text slides. **Customise it** (Tools → Stream → *Customise the lower third*, with a live preview): dark box, light box or no box, left, centre or right, height from the bottom, text size, plain or serif letters, text colour, box colour and how see-through the box is, accent colour. **By hand:** a name and title ("Pastor … — Guest speaker", saved names one click away), an announcement, a **scrolling ticker**, the **church logo** in the corner. A name shown by hand goes over the automatic words while it is up. **Show overlays on the stream** off hides everything at once. |
-| **SDA Sabbath · Slides** (full screen) | The slides exactly as on the projector, for a "Presentation" scene. **Text over the camera** makes the background see-through, so Bible and hymn text sits over the camera picture. Black, videos, web pages and screen sharing show nothing here (add a Window Capture of the display window for videos). |
+| **Sabbath Service Desk · Lower third** (transparent, over the camera) | **Automatically:** the reference and verse when a Bible passage goes on screen; the hymn words (or only the title) when a hymn is on screen: each verse appears along the bottom of the stream, labelled "Verse 2 of 4" (or Chorus), and changes as you move to the next verse; optionally other text slides. **Customise it** (Tools → Stream → *Customise the lower third*, with a live preview): dark box, light box or no box, left, centre or right, height from the bottom, text size, plain or serif letters, text colour, box colour and how see-through the box is, accent colour. **By hand:** a name and title ("Pastor … — Guest speaker", saved names one click away), an announcement, a **scrolling ticker**, the **church logo** in the corner. A name shown by hand goes over the automatic words while it is up. **Show overlays on the stream** off hides everything at once. |
+| **Sabbath Service Desk · Slides** (full screen) | The slides exactly as on the projector, for a "Presentation" scene. **Text over the camera** makes the background see-through, so Bible and hymn text sits over the camera picture. Black, videos, web pages and screen sharing show nothing here (add a Window Capture of the display window for videos). |
 
 **Setting up OBS — two clicks:** in OBS (28 or newer) open **Tools → WebSocket Server Settings**, tick **Enable WebSocket
-server**, and copy the password (**Show Connect Info**). In SDA Sabbath → Tools → Stream, paste the password and press
-**Connect and set up OBS** (the scene with your webcam / capture card is picked automatically; you can change it afterwards and press **Set up OBS** again). SDA Sabbath adds the lower third on top of your camera scene and creates a **SDA Sabbath · Presentation**
+server**, and copy the password (**Show Connect Info**). In Sabbath Service Desk → Tools → Stream, paste the password and press
+**Connect and set up OBS** (the scene with your webcam / capture card is picked automatically; you can change it afterwards and press **Set up OBS** again). Sabbath Service Desk adds the lower third on top of your camera scene and creates a **Sabbath Service Desk · Presentation**
 scene with the slides. Press it again any time to repair or update the sources (a size or CSS you set in OBS is kept;
-choosing another camera scene moves the lower third). OBS on another computer: open SDA Sabbath from the companion on
+choosing another camera scene moves the lower third). OBS on another computer: open Sabbath Service Desk from the companion on
 that computer (an https page may only reach OBS on the same PC), or set it up by hand.
 
-**OBS on another computer (no WebSocket, any OBS version):** run the companion on the SDA Sabbath PC and open SDA Sabbath from it. In **Tools → Stream → OBS on another computer** press **Copy lower third address**, then in OBS on the other PC add a Browser Source with that address (1920 × 1080). It works over Wi-Fi or cable without internet.
+**OBS on another computer (no WebSocket, any OBS version):** run the companion on the Sabbath Service Desk PC and open Sabbath Service Desk from it. In **Tools → Stream → OBS on another computer** press **Copy lower third address**, then in OBS on the other PC add a Browser Source with that address (1920 × 1080). It works over Wi-Fi or cable without internet.
 
-**OBS on another PC through an HDMI cable:** a PC's HDMI port only sends a picture, so the OBS PC needs a USB HDMI capture card. Connect a spare HDMI output of the SDA Sabbath PC to it (Windows: Win+P → Extend), then **Tools → Stream → OBS through an HDMI cable → Show on a screen…** and choose that output. The lower third is shown on green: in OBS add **Video Capture Device** (the card) and a **Chroma Key** filter. The slides can go out the same way (on black) through a second output and card.
+**OBS on another PC through an HDMI cable:** a PC's HDMI port only sends a picture, so the OBS PC needs a USB HDMI capture card. Connect a spare HDMI output of the Sabbath Service Desk PC to it (Windows: Win+P → Extend), then **Tools → Stream → OBS through an HDMI cable → Show on a screen…** and choose that output. The lower third is shown on green: in OBS add **Video Capture Device** (the card) and a **Chroma Key** filter. The slides can go out the same way (on black) through a second output and card.
 
 **By hand:** Tools → Stream → *Set up OBS by hand* → **Copy address**, then in OBS: Sources → + → **Browser** → paste the URL,
 Width 1920, Height 1080. Or drag the **Drag into OBS** button onto the Sources list.
 
-**How OBS follows:** with the SDA Sabbath companion on the church PC, OBS loads the overlays from it
+**How OBS follows:** with the Sabbath Service Desk companion on the church PC, OBS loads the overlays from it
 (`http://localhost:7777/obs.html?via=lan&mode=lower`) and needs no internet. Otherwise the sources follow over the internet
 with the same room code as the stage screens (turned on automatically), peer to peer and encrypted, like phones do.
 
 **OBS control** (when connected): the scene list (click to put a scene on air — in **Studio Mode** into Preview, and you
 press Transition), **Start/Stop streaming** with a pre-flight check (lower third and slides connected, scene on air,
 overlays on), **recording**, stream health while live (connection, dropped frames, reconnecting), and a red
-**● LIVE 0:42:10 / ● REC** mark in the top bar of SDA Sabbath. Names of the people leading today's plan parts are one
+**● LIVE 0:42:10 / ● REC** mark in the top bar of Sabbath Service Desk. Names of the people leading today's plan parts are one
 click away under Lower thirds.
 **Follow the slides** switches OBS to the Presentation scene for slides, pictures and banners and back to the camera scene
 for Bible verses, hymns, black and clear (the lower third then carries the words — if automatic words are off, it
@@ -130,9 +130,9 @@ projector's), all inside the broadcast-safe area. The tab has a live preview ove
 
 ## Stream Deck and remote buttons
 
-Like OBS, SDA Sabbath can be driven by buttons: an Elgato Stream Deck, Bitfocus Companion (with a Stream Deck,
+Like OBS, Sabbath Service Desk can be driven by buttons: an Elgato Stream Deck, Bitfocus Companion (with a Stream Deck,
 X-keys or a phone), or any program that opens a web address. It needs the **companion** running on the service PC
-and SDA Sabbath opened from it at `http://localhost:7777`. **Tools → Stream → Stream Deck and remote buttons**
+and Sabbath Service Desk opened from it at `http://localhost:7777`. **Tools → Stream → Stream Deck and remote buttons**
 lists every address with a Copy button and a Test button.
 
 | Address (on the service PC) | What it does |

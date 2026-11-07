@@ -1,6 +1,6 @@
-# Offline safety: making sure SDA Sabbath never fails in a service
+# Offline safety: making sure Sabbath Service Desk never fails in a service
 
-SDA Sabbath is built so the service never depends on the internet. This page lists what protects it and
+Sabbath Service Desk is built so the service never depends on the internet. This page lists what protects it and
 the short check to do before every Sabbath.
 
 ## What the app does by itself
@@ -17,15 +17,15 @@ the short check to do before every Sabbath.
 ## Emergency USB copy
 
 Copy `sda-sabbath-windows-x64.exe` (Companion page → download) and a recent backup file
-(Settings → Backup) to a USB stick. On any PC: double-click the program, SDA Sabbath opens at
+(Settings → Backup) to a USB stick. On any PC: double-click the program, Sabbath Service Desk opens at
 `http://localhost:7777` with no internet; restore the backup there for plans and slides.
 See [companion.html#usb](../companion.html#usb).
 
 ## Before every Sabbath (2 minutes, Friday evening, on the church PC)
 
-1. Open SDA Sabbath with the internet on. Wait for **✔ Ready offline**.
+1. Open Sabbath Service Desk with the internet on. Wait for **✔ Ready offline**.
 2. Tap the badge: every line should have a tick (apply any waiting update now, not tomorrow).
-3. Switch the internet off (Wi‑Fi off or cable out). Close SDA Sabbath completely and open it again.
+3. Switch the internet off (Wi‑Fi off or cable out). Close Sabbath Service Desk completely and open it again.
 4. Show a Bible verse, a hymn with music, and the first slide of the plan on the projector.
 5. Switch the internet back on (or leave it off for the service).
 

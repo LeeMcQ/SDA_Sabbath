@@ -68,6 +68,7 @@ live.buildStyle = async () => {
   const s = settings.displayStyle();
   s.bgBlob = await fileBlob(s.bgImage);
   s.logoBlob = await fileBlob(s.logo);
+  for (const k of ['bible', 'hymn']) { const o = s.over && s.over[k]; if (o && o.img) o.imgBlob = await fileBlob(o.img); }
   live.style = s;
   live.emit('style', s);
   return s;

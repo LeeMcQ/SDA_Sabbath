@@ -1,6 +1,6 @@
 // The "Live English translation on your phone" slide: a light 1920 × 1080 picture for the projector with the
 // QR code and three easy steps (English with Afrikaans underneath). Drawn once on a canvas, so it shows the same
-// on every display (window, Cast, TV, companion). Identity: the neutral SDA Sabbath mark (one solid
+// on every display (window, Cast, TV, companion). Identity: the neutral Sabbath Service Desk mark (one solid
 // colour), denim blue as the core colour, Advent Sans for the headings and Atkinson Hyperlegible for reading.
 import { SYMBOL_ROUND } from '../core/symbol.js';
 

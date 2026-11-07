@@ -1,4 +1,4 @@
-// Where SDA Sabbath is published: https://ssdesk.online/ ("Sabbath Service Desk", live since 5 Nov 2026).
+// Where Sabbath Service Desk is published: https://ssdesk.online/ ("Sabbath Service Desk", live since 5 Nov 2026).
 // The previous address is kept here only so copies still installed there can move their data (js/move.js);
 // it redirects to ssdesk.online.
 export const LIVE = true;
